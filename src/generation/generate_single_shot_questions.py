@@ -4,6 +4,7 @@
 
 import sys
 import os
+import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -130,7 +131,7 @@ def parse_results(content: str) -> tuple[List[GeneratedQuestionAnswerPair], int]
         logger.error(f"Error evaluating content: {str(e)}")
         return [], 0
 
-def generate_questions(document_dataset: Dataset, engine: InferenceEngine, question_type: str) -> Dataset:
+def generate_questions(document_dataset: Dataset, engine: InferenceEngine, question_type: str, max_concurrent: int = 1024) -> Dataset:
     """Generate questions for a given dataset."""
     logger.info(f"Starting question generation for type: {question_type}")
     logger.info(f"Processing {len(document_dataset)} document chunks")
@@ -160,7 +161,7 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
             logger.debug(f"Prepared {idx}/{len(document_dataset)} messages")
     
     logger.info(f"Starting parallel inference for {len(message_list)} messages")
-    inference_results = engine.parallel_inference(message_list, max_concurrent_requests=1024)[0]
+    inference_results = engine.parallel_inference(message_list, max_concurrent_requests=max_concurrent)[0]
     generation_stats["total_generated_responses"] = len([r for r in inference_results if r and r.strip()])
     logger.info(f"Completed inference with {generation_stats['total_generated_responses']} responses")
     
@@ -313,21 +314,50 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
         raise
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Generate questions from a dataset')
     
-    document_dataset = load_dataset("sumuks/y1", split="train")
-    question_types_to_generate = ["analytical", "application-based", "clarification", "conceptual", "counterfactual", "edge-case", "factual", "false-premise", "open-ended", "true-false"]
+    # Dataset arguments
+    parser.add_argument('--dataset', type=str, default="sumuks/y1",
+                      help='HuggingFace dataset ID (default: sumuks/y1)')
+    parser.add_argument('--split', type=str, default="train",
+                      help='Dataset split to use (default: train)')
+    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-x2",
+                      help='Output dataset ID on HuggingFace (default: sumuks/y1-questions-x2)')
+    
+    # Question generation arguments
+    parser.add_argument('--question-types', nargs='+', 
+                      default=["analytical", "application-based", "clarification", 
+                              "conceptual", "counterfactual", "edge-case", "factual", 
+                              "false-premise", "open-ended", "true-false"],
+                      help='List of question types to generate')
+    
+    # Inference engine arguments
+    parser.add_argument('--strategy', type=str, default="openai",
+                      help='Inference strategy (default: openai)')
+    parser.add_argument('--api-key', type=str, default="EMPTY",
+                      help='API key for inference (default: EMPTY)')
+    parser.add_argument('--base-url', type=str, default="http://localhost:30000/v1/",
+                      help='Base URL for inference (default: http://localhost:30000/v1/)')
+    parser.add_argument('--model', type=str, default="mistralai/Mistral-Small-Instruct-2409",
+                      help='Model name (default: mistralai/Mistral-Small-Instruct-2409)')
+    parser.add_argument('--max-concurrent', type=int, default=1024,
+                      help='Maximum concurrent requests (default: 1024)')
+    
+    args = parser.parse_args()
+    
+    document_dataset = load_dataset(args.dataset, split=args.split)
     engine = InferenceEngine(
         connection_details = {
-            "strategy" : "openai",
-            "api_key" : "EMPTY",
-            "base_url" : "http://localhost:30000/v1/"
+            "strategy": args.strategy,
+            "api_key": args.api_key,
+            "base_url": args.base_url
         },
-        model_name="mistralai/Mistral-Small-Instruct-2409"
+        model_name=args.model
     )
-    for question_type in question_types_to_generate:
+
+    for question_type in args.question_types:
         start_time = time.time()
-        document_dataset_with_questions = generate_questions(document_dataset, engine, question_type)
+        document_dataset_with_questions = generate_questions(document_dataset, engine, question_type, args.max_concurrent)
         end_time = time.time()
         logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-        # Direct pass of Dataset object to push_to_huggingface
-        push_to_huggingface(document_dataset_with_questions, f"sumuks/y1-questions-x2")
+        push_to_huggingface(document_dataset_with_questions, args.output_dataset)

@@ -60,3 +60,49 @@ Benchmark Large Language Models Reliably On Your Data
    - Create a HuggingFace dataset with document metadata
    - Upload the dataset to the HuggingFace Hub
    - Generate logs of the process
+
+## Question Generation
+
+After preparing your dataset, you can generate questions using various question types:
+
+```bash
+python src/generation/generate_single_shot_questions.py \
+  --dataset "your-org/your-dataset-name" \
+  --split "train" \
+  --output-dataset "your-org/your-dataset-questions" \
+  --question-types analytical factual conceptual \
+  --strategy "openai" \
+  --api-key "your-api-key" \
+  --base-url "http://your-inference-endpoint/v1/" \
+  --model "your-model-name" \
+  --max-concurrent 1024
+```
+
+Parameters:
+- `--dataset`: HuggingFace dataset ID (default: "sumuks/y1")
+- `--split`: Dataset split to use (default: "train")
+- `--output-dataset`: Output dataset ID on HuggingFace (default: "sumuks/y1-questions-x2")
+- `--question-types`: List of question types to generate. Available types:
+  - analytical
+  - application-based
+  - clarification
+  - conceptual
+  - counterfactual
+  - edge-case
+  - factual
+  - false-premise
+  - open-ended
+  - true-false
+- `--strategy`: Inference strategy (default: "openai")
+- `--api-key`: API key for inference (default: "EMPTY")
+- `--base-url`: Base URL for inference (default: "http://localhost:30000/v1/")
+- `--model`: Model name (default: "mistralai/Mistral-Small-Instruct-2409")
+- `--max-concurrent`: Maximum concurrent requests (default: 1024)
+
+The script will:
+- Load your dataset from HuggingFace
+- Generate questions for each specified question type
+- Upload the generated questions to a new HuggingFace dataset
+- Generate detailed logs of the generation process
+
+Note: The question generation process requires access to an inference endpoint (OpenAI API or compatible).
