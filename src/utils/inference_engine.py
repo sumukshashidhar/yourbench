@@ -408,23 +408,26 @@ class InferenceEngine:
         messages: List[List[Dict[str, str]]],
         hyperparameters: Hyperparameters = Hyperparameters(),
         max_concurrent_requests: int = MAX_CONCURRENT_REQUESTS,
-    ) -> List[str]:
+    ) -> tuple[List[str], List[dict]]:
         semaphore = Semaphore(max_concurrent_requests)
         results = [None] * len(messages)
+        usages = [None] * len(messages)
         
         async def process_message(index, msgs):
             async with semaphore:
                 try:
                     result, usage = await self._async_single_message_inference(msgs, hyperparameters)
                     results[index] = result
+                    usages[index] = usage
                 except Exception as e:
                     logger.error(f"Inference task failed for index {index}: {e}")
                     results[index] = ""
+                    usages[index] = {}
 
         try:
             tasks = [asyncio.create_task(process_message(i, msgs)) for i, msgs in enumerate(messages)]
             await asyncio.gather(*tasks)
-            return results
+            return results, usages
         finally:
             if self._session and not self._session.closed:
                 await self._session.close()
@@ -435,7 +438,7 @@ class InferenceEngine:
         messages: List[List[Dict[str, str]]],
         hyperparameters: Hyperparameters = Hyperparameters(),
         max_concurrent_requests: int = MAX_CONCURRENT_REQUESTS
-    ) -> List[str]:
+    ) -> tuple[List[str], List[dict]]:
         async def run_inference():
             try:
                 return await self._improved_parallel_messages_inference(
@@ -570,7 +573,7 @@ class TestInferenceEngine(unittest.TestCase):
         
         # Test parallel inference
         try:
-            results = self.engine.parallel_inference(
+            results, usages = self.engine.parallel_inference(
                 messages=messages,
                 hyperparameters=Hyperparameters(temperature=0.0),
                 max_concurrent_requests=3  # Limit concurrent requests for testing
@@ -579,6 +582,8 @@ class TestInferenceEngine(unittest.TestCase):
             # Basic validation
             self.assertEqual(len(results), 5)
             self.assertTrue(all(isinstance(result, str) for result in results))
+            self.assertEqual(len(usages), 5)
+            self.assertTrue(all(isinstance(usage, dict) for usage in usages))
             
         except Exception as e:
             self.fail(f"Parallel inference failed with error: {str(e)}")
