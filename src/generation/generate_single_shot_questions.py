@@ -322,7 +322,7 @@ if __name__ == "__main__":
             "api_key" : "EMPTY",
             "base_url" : "http://localhost:30000/v1/"
         },
-        model_name="mistralai/Mistral-Large-Instruct-2407"
+        model_name="mistralai/Mistral-Small-Instruct-2409"
     )
     for question_type in question_types_to_generate:
         start_time = time.time()
@@ -330,4 +330,4 @@ if __name__ == "__main__":
         end_time = time.time()
         logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
         # Direct pass of Dataset object to push_to_huggingface
-        push_to_huggingface(document_dataset_with_questions, f"sumuks/y1-questions")
+        push_to_huggingface(document_dataset_with_questions, f"sumuks/y1-questions-x2")
