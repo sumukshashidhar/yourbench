@@ -36,3 +36,27 @@ Benchmark Large Language Models Reliably On Your Data
    - Create semantically coherent chunks based on the specified parameters
    - Save the chunks as JSON files in the output directory
    - Generate detailed logs in the `logs` directory
+
+3. **Create HuggingFace Dataset**
+   - Convert the processed chunks into a HuggingFace dataset and upload it to the Hub:
+   ```bash
+   python src/data_processing/make_dataset.py \
+     --chunk_directory data/YOURDATASET/semantic_chunks \
+     --summary_directory data/YOURDATASET/summaries \
+     --dataset_name your-dataset-name \
+     --organization your-org \
+     --private true
+   ```
+
+   Parameters:
+   - `--chunk_directory`: Path to your processed chunks (default: data/yourbench_y1/semantic_chunks)
+   - `--summary_directory`: Path to your summaries (default: data/yourbench_y1/summaries)
+   - `--dataset_name`: Name for your HuggingFace dataset (default: b1-mini-raw-gpt)
+   - `--organization`: Your HuggingFace organization name (default: anon)
+   - `--private`: Whether to make the dataset private (default: true)
+
+   The script will:
+   - Read all chunks and their corresponding summaries
+   - Create a HuggingFace dataset with document metadata
+   - Upload the dataset to the HuggingFace Hub
+   - Generate logs of the process
