@@ -21,8 +21,7 @@ df_agg = df.groupby('generator_model').agg({
 df_agg['generator_model'] = df_agg['generator_model'].apply(lambda x: x.split('/')[-1])
 df_agg['success_rate'] = df_agg['total_valid_jsons'] / (
     df_agg['total_extracted_valid_xml'] * 
-    df_agg['total_generated_responses'] * 
-    df_agg['total_generated_questions']
+    df_agg['total_generated_responses']
 )
 df_agg['success_rate'] = df_agg['success_rate'] * 1e7  # Scale up for better visibility
 

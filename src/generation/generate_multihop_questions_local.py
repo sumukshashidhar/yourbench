@@ -318,7 +318,7 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
             features=features
         )
         
-        combined_dataset.push_to_hub(repo_id, private=True)
+        combined_dataset.push_to_hub(repo_id, private=False)
         logger.success(f"Successfully pushed dataset to {repo_id}")
         
         # Cleanup
@@ -338,7 +338,7 @@ def start_openai_server(model_name: str) -> subprocess.Popen:
     if is_port_in_use(3000):
         raise RuntimeError("Port 3000 is already in use. Cannot start the OpenAI server.")
     
-    cmd = f"vllm serve {model_name} --trust-remote-code --dtype auto --port 3000 --tensor-parallel-size 4 --gpu-memory-utilization 0.94 --enable-prefix-caching"
+    cmd = f"vllm serve {model_name} --trust-remote-code --dtype auto --port 3000 --tensor-parallel-size 8 --gpu-memory-utilization 0.94 --enable-prefix-caching"
     process = subprocess.Popen(cmd, shell=True)
     return process
 
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         if args.start_server:
             server_process = start_openai_server(args.model)
             # Give the server a moment to start
-            time.sleep(50)
+            time.sleep(350)
         
         document_dataset = load_dataset(args.dataset, split=args.split)
         engine = InferenceEngine(
