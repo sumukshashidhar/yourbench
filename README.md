@@ -61,6 +61,27 @@ Benchmark Large Language Models Reliably On Your Data
    - Upload the dataset to the HuggingFace Hub
    - Generate logs of the process
 
+4. **Create Multi-hop Pairings**
+   - Generate multi-hop combinations from your dataset by combining 2-5 related chunks:
+   ```bash
+   python src/data_processing/make_multihop_pairings.py \
+     --source_dataset your-org/your-dataset-name \
+     --output_dataset your-org/your-dataset-multihop
+   ```
+
+   Parameters:
+   - `--source_dataset`: Your source HuggingFace dataset ID
+   - `--output_dataset`: Output dataset ID for the multi-hop version
+
+   The script will:
+   - Group chunks from the same document together
+   - Generate random combinations of 2-5 sequential chunks
+   - Create a new dataset with these multi-hop pairings
+   - Number of combinations per document scales with document length (using sqrt)
+   - Maintains original document order within each pairing
+   - Preserves all relevant metadata (title, document type, etc.)
+   - Upload the resulting dataset to HuggingFace Hub as private
+
 ## Question Generation
 
 After preparing your dataset, you can generate questions using various question types:

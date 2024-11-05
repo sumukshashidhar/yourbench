@@ -1,22 +1,8 @@
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import argparse
 import random
-
 import numpy as np
-
-from typing import List, Dict
-from datasets import Dataset, DatasetDict, load_dataset
-from dotenv import load_dotenv
 from collections import defaultdict
-
-# load environment variables
-load_dotenv()
-
-BETTERBENCH_SOURCE_DATASET = os.getenv("BETTERBENCH_SOURCE_DATASET")
-BETTERBENCH_MULTIHOP_PAIRINGS_DATASET = os.getenv("BETTERBENCH_MULTIHOP_PAIRINGS_DATASET")
+from datasets import load_dataset, Dataset, DatasetDict
 
 def generate_multihop_pairings(dataset: DatasetDict) -> Dataset:
     """
@@ -103,8 +89,11 @@ def generate_multihop_pairings(dataset: DatasetDict) -> Dataset:
     return new_dataset
 
 if __name__ == "__main__":
-    dataset = load_dataset(BETTERBENCH_SOURCE_DATASET)
+    parser = argparse.ArgumentParser(description='Process the source dataset.')
+    parser.add_argument('--source_dataset', type=str, default='sumuks/y1', help='Source dataset ID (username/dataset-name)')
+    parser.add_argument('--output_dataset', type=str, default='sumuks/y1-multihop', help='Output dataset ID (username/dataset-name)')
+    args = parser.parse_args()
+
+    dataset = load_dataset(args.source_dataset)
     multihop_pairings = generate_multihop_pairings(dataset)
-    # push to huggingface
-    multihop_pairings.push_to_hub(BETTERBENCH_MULTIHOP_PAIRINGS_DATASET, private=True)
-    pass
+    multihop_pairings.push_to_hub(args.output_dataset, private=True)
