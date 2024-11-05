@@ -5,6 +5,10 @@
 import sys
 import os
 import argparse
+import socket
+import psutil
+import subprocess
+import signal
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -313,6 +317,28 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
         logger.error(f"Error during push to HuggingFace: {str(e)}")
         raise
 
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+def start_openai_server(model_name: str) -> subprocess.Popen:
+    if is_port_in_use(3000):
+        raise RuntimeError("Port 3000 is already in use. Cannot start the OpenAI server.")
+    
+    cmd = f"vllm serve {model_name} --trust-remote-code --dtype auto --port 3000 --tensor-parallel-size 2 --gpu-memory-utilization 0.94 --enable-prefix-caching"
+    process = subprocess.Popen(cmd, shell=True)
+    return process
+
+def terminate_process_tree(pid: int, include_parent: bool = True):
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    for child in children:
+        child.terminate()
+    psutil.wait_procs(children, timeout=5)
+    if include_parent:
+        parent.terminate()
+        parent.wait(5)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate questions from a dataset')
     
@@ -321,7 +347,7 @@ if __name__ == "__main__":
                       help='HuggingFace dataset ID (default: sumuks/y1)')
     parser.add_argument('--split', type=str, default="train",
                       help='Dataset split to use (default: train)')
-    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions",
+    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-x4",
                       help='Output dataset ID on HuggingFace (default: sumuks/y1-questions)')
     
     # Question generation arguments
@@ -336,28 +362,59 @@ if __name__ == "__main__":
                       help='Inference strategy (default: openai)')
     parser.add_argument('--api-key', type=str, default="EMPTY",
                       help='API key for inference (default: EMPTY)')
-    parser.add_argument('--base-url', type=str, default="http://localhost:30000/v1/",
-                      help='Base URL for inference (default: http://localhost:30000/v1/)')
+    parser.add_argument('--base-url', type=str, default="http://localhost:3000/v1/",
+                      help='Base URL for inference (default: http://localhost:3000/v1/)')
     parser.add_argument('--model', type=str, default="meta-llama/Meta-Llama-3.1-70B-Instruct",
                       help='Model name (default: meta-llama/Meta-Llama-3.1-70B-Instruct)')
     parser.add_argument('--max-concurrent', type=int, default=1024,
                       help='Maximum concurrent requests (default: 1024)')
+    parser.add_argument('--start-server', action='store_true',
+                      help='Start the OpenAI-compatible server')
     
     args = parser.parse_args()
     
-    document_dataset = load_dataset(args.dataset, split=args.split)
-    engine = InferenceEngine(
-        connection_details = {
-            "strategy": args.strategy,
-            "api_key": args.api_key,
-            "base_url": args.base_url
-        },
-        model_name=args.model
-    )
+    server_process = None
+    try:
+        if args.start_server:
+            server_process = start_openai_server(args.model)
+            # Give the server a moment to start
+            time.sleep(300)
+        
+        document_dataset = load_dataset(args.dataset, split=args.split)
+        engine = InferenceEngine(
+            connection_details = {
+                "strategy": args.strategy,
+                "api_key": args.api_key,
+                "base_url": args.base_url
+            },
+            model_name=args.model
+        )
 
-    for question_type in args.question_types:
-        start_time = time.time()
-        document_dataset_with_questions = generate_questions(document_dataset, engine, question_type, args.max_concurrent)
-        end_time = time.time()
-        logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-        push_to_huggingface(document_dataset_with_questions, args.output_dataset)
+        for question_type in args.question_types:
+            start_time = time.time()
+            document_dataset_with_questions = generate_questions(document_dataset, engine, question_type, args.max_concurrent)
+            end_time = time.time()
+            logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
+            push_to_huggingface(document_dataset_with_questions, args.output_dataset)
+    finally:
+        if server_process:
+            try:
+                terminate_process_tree(server_process.pid)
+                logger.info("OpenAI server terminated gracefully")
+                
+                # Wait for port release
+                max_wait = 30
+                start = time.time()
+                while is_port_in_use(3000) and time.time() - start < max_wait:
+                    time.sleep(1)
+                
+                if is_port_in_use(3000):
+                    logger.warning("Port 3000 still in use after graceful shutdown. Forcing termination...")
+                    os.kill(server_process.pid, signal.SIGKILL)
+                
+            except Exception as e:
+                logger.error(f"Error during server shutdown: {e}")
+                try:
+                    os.kill(server_process.pid, signal.SIGKILL)
+                except:
+                    pass
