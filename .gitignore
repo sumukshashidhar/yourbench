@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 logs/
 log_backups/
+plots/
 
 # C extensions
 *.so
