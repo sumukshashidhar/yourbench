@@ -325,7 +325,7 @@ def start_openai_server(model_name: str) -> subprocess.Popen:
     if is_port_in_use(3000):
         raise RuntimeError("Port 3000 is already in use. Cannot start the OpenAI server.")
     
-    cmd = f"vllm serve {model_name} --trust-remote-code --dtype auto --port 3000 --tensor-parallel-size 2 --gpu-memory-utilization 0.94 --enable-prefix-caching"
+    cmd = f"vllm serve {model_name} --trust-remote-code --dtype auto --port 3000 --tensor-parallel-size 4 --gpu-memory-utilization 0.94 --enable-prefix-caching"
     process = subprocess.Popen(cmd, shell=True)
     return process
 
@@ -347,8 +347,8 @@ if __name__ == "__main__":
                       help='HuggingFace dataset ID (default: sumuks/y1)')
     parser.add_argument('--split', type=str, default="train",
                       help='Dataset split to use (default: train)')
-    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-x4",
-                      help='Output dataset ID on HuggingFace (default: sumuks/y1-questions)')
+    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-single-shot",
+                      help='Output dataset ID on HuggingFace (default: sumuks/y1-questions-single-shot)')
     
     # Question generation arguments
     parser.add_argument('--question-types', nargs='+', 

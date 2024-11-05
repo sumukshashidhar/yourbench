@@ -30,7 +30,7 @@ from pathlib import Path
 import time
 
 row_structure = {
-        "chunk_uuid" : "",
+        "chunk_uuids" : "",
         # everything is done by the generator model
         "generator_model" : "",
         "question_type" : "",
@@ -48,7 +48,6 @@ row_structure = {
         "difficulty_justification" : "",
         "quote_context" : "",
         "supporting_quotes" : "",
-        "chunk_analysis" : "",
     }
 
 
@@ -79,8 +78,15 @@ class QuestionQuality(BaseModel):
     text_based: bool = Field(...)
     no_tricks: bool = Field(...)
 
+class ChunkAnalysis(BaseModel):
+    chunk_id: str
+    content_summary: str
+    relevant_information: str
+    connection_points: List[str]
+
 class GeneratedQuestionAnswerPair(BaseModel):
     document_extract_analysis: str = Field(..., min_length=10)
+    chunk_analyses: List[ChunkAnalysis] = Field(..., min_items=2)
     testable_concepts: List[str] = Field(..., min_items=2)
     potential_question_directions: List[str] = Field(..., min_items=2)
     best_direction: str = Field(..., min_length=10)
@@ -152,14 +158,20 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
     }
     
     logger.debug("Loading prompts...")
-    prompt = load_prompt(f"question_generation/single_shot/{question_type}")
-    user_template = load_prompt("question_generation/single_shot/_user_template")
+    prompt = load_prompt(f"question_generation/multi_hop/{question_type}")
+    user_template = load_prompt("question_generation/multi_hop/_user_template")
     logger.info(f"Loaded prompts for {question_type}")
     
     logger.debug("Preparing message list...")
     message_list = []
     for idx, row in enumerate(document_dataset):
-        user_message = user_template.format(document_summary=row["summary"], chunk=row["chunk"])
+        chunks = row["chunks"]
+        chunk_string = ""
+        # make a string from these
+        for j in range(len(chunks)):
+            chunk_string += f"Chunk {j+1}:\n\ {chunks[j]}\n"
+
+        user_message = user_template.format(document_summary=row["summary"], chunk=chunk_string)
         message_list.append(make_messages(prompt, user_message))
         if idx % 100 == 0:
             logger.debug(f"Prepared {idx}/{len(document_dataset)} messages")
@@ -185,7 +197,7 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
     # Write statistics to JSONL file
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
-    log_file = log_dir / "generation_stats.jsonl"
+    log_file = log_dir / "generation_stats_multihop.jsonl"
     
     with open(log_file, "a") as f:
         f.write(json.dumps(generation_stats) + "\n")
@@ -195,16 +207,17 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
     logger.debug("Unwrapping results into dataset format...")
     unwrapped_results = []
     for idx, (dataset_item, parsed_result) in enumerate(zip(document_dataset, parsed_results)):
-        chunk_uuid = dataset_item["chunk_uuid"]
+        chunk_uuids = dataset_item["chunk_ids"]
         generator_model = engine.model_name
         for question in parsed_result:
             prepared_row = copy.deepcopy(row_structure)
-            prepared_row["chunk_uuid"] = chunk_uuid
+            prepared_row["chunk_ids"] = chunk_uuids
             prepared_row["generator_model"] = generator_model
             prepared_row["question_type"] = question.kind
             prepared_row["question"] = question.question
             prepared_row["answer"] = question.answer
             prepared_row["document_analysis"] = question.document_extract_analysis
+            prepared_row["chunk_analyses"] = question.chunk_analyses
             prepared_row["potential_question_directions"] = list(question.potential_question_directions)
             prepared_row["best_direction"] = question.best_direction
             prepared_row["direct_quotes"] = list(question.supporting_quotes)
@@ -280,13 +293,13 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
         from datasets.features import Features, Value, Sequence
 
         features = Features({
-            "chunk_uuid": Value("string"),
+            "chunk_ids": Sequence(Value("string")),
             "generator_model": Value("string"),
             "question_type": Value("string"),
             "question": Value("string"),
             "answer": Value("string"),
             "document_analysis": Value("string"),
-            "chunk_analysis": Value("string"),
+            "chunk_analyses": Sequence(Value("string")),
             "potential_question_directions": Sequence(Value("string")),
             "best_direction": Value("string"),
             "direct_quotes": Sequence(Value("string")),
@@ -343,12 +356,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate questions from a dataset')
     
     # Dataset arguments
-    parser.add_argument('--dataset', type=str, default="sumuks/y1",
-                      help='HuggingFace dataset ID (default: sumuks/y1)')
+    parser.add_argument('--dataset', type=str, default="sumuks/y1-multihop",
+                      help='HuggingFace dataset ID (default: sumuks/y1-multihop)')
     parser.add_argument('--split', type=str, default="train",
                       help='Dataset split to use (default: train)')
-    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-x4",
-                      help='Output dataset ID on HuggingFace (default: sumuks/y1-questions)')
+    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-multi-hop",
+                      help='Output dataset ID on HuggingFace (default: sumuks/y1-questions-multi-hop)')
     
     # Question generation arguments
     parser.add_argument('--question-types', nargs='+', 
@@ -378,7 +391,7 @@ if __name__ == "__main__":
         if args.start_server:
             server_process = start_openai_server(args.model)
             # Give the server a moment to start
-            time.sleep(300)
+            time.sleep(150)
         
         document_dataset = load_dataset(args.dataset, split=args.split)
         engine = InferenceEngine(
