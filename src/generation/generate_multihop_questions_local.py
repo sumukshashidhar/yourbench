@@ -30,7 +30,7 @@ from pathlib import Path
 import time
 
 row_structure = {
-        "chunk_uuids" : "",
+        "chunk_ids" : "",
         # everything is done by the generator model
         "generator_model" : "",
         "question_type" : "",
@@ -217,7 +217,7 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
             prepared_row["question"] = question.question
             prepared_row["answer"] = question.answer
             prepared_row["document_analysis"] = question.document_extract_analysis
-            prepared_row["chunk_analyses"] = question.chunk_analyses
+            prepared_row["chunk_analysis"] = [str(x.json()) for x in question.chunk_analyses]
             prepared_row["potential_question_directions"] = list(question.potential_question_directions)
             prepared_row["best_direction"] = question.best_direction
             prepared_row["direct_quotes"] = list(question.supporting_quotes)
@@ -299,7 +299,7 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
             "question": Value("string"),
             "answer": Value("string"),
             "document_analysis": Value("string"),
-            "chunk_analyses": Sequence(Value("string")),
+            "chunk_analysis": Sequence(Value("string")),
             "potential_question_directions": Sequence(Value("string")),
             "best_direction": Value("string"),
             "direct_quotes": Sequence(Value("string")),
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         if args.start_server:
             server_process = start_openai_server(args.model)
             # Give the server a moment to start
-            time.sleep(150)
+            time.sleep(50)
         
         document_dataset = load_dataset(args.dataset, split=args.split)
         engine = InferenceEngine(

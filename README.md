@@ -127,3 +127,41 @@ The script will:
 - Generate detailed logs of the generation process
 
 Note: The question generation process requires access to an inference endpoint (OpenAI API or compatible).
+
+### Multi-hop Question Generation
+
+For generating questions that require reasoning across multiple chunks of text:
+
+```bash
+python src/generation/generate_multihop_questions_local.py \
+  --dataset "your-org/your-dataset-multihop" \
+  --split "train" \
+  --output-dataset "your-org/your-dataset-multihop-questions" \
+  --question-types analytical factual conceptual \
+  --strategy "openai" \
+  --api-key "your-api-key" \
+  --base-url "http://your-inference-endpoint/v1/" \
+  --model "your-model-name" \
+  --max-concurrent 1024 \
+  --start-server
+```
+
+Parameters:
+- All parameters from single-shot generation, plus:
+- `--start-server`: Optional flag to start a local vLLM OpenAI-compatible server
+
+The script will:
+- Start a local vLLM server if requested (requires GPU)
+- Generate questions that require synthesizing information across multiple chunks
+- Support all question types from single-shot generation
+- Automatically handle server lifecycle and cleanup
+- Generate detailed generation statistics in `logs/generation_stats_multihop.jsonl`
+
+Server Configuration:
+- Uses vLLM for efficient inference
+- Runs on port 3000 by default
+- Configured with tensor parallelism (4 GPUs)
+- Enables prefix caching for better performance
+- Auto-selects optimal dtype based on model and hardware
+
+Note: The input dataset should be preprocessed using `make_multihop_pairings.py` as described in the Data Preparation section.

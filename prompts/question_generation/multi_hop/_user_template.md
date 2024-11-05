@@ -1,11 +1,11 @@
 Here is the summary of the document:
 
-{summary}
-
-Here is the title of the document:
-
-{title}
+<document_summary>
+{document_summary}
+</document_summary>
 
 Here are the chunks of the document:
 
-{chunks}
+<chunks>
+{chunk}
+</chunks>
