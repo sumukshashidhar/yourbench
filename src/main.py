@@ -5,16 +5,22 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from loguru import logger
 from dotenv import load_dotenv
+from datasets import Dataset
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.inference_engine import InferenceEngine, Hyperparameters
 from utils.standard_utilities import load_prompt, extract_content_from_xml_tags
 from data_processing.chunk_raw_data import process_files_with_settings
+from data_processing.make_dataset import read_chunks, make_huggingface_dataset, push_to_hub
+from data_processing.make_multihop_preparings import generate_multihop_pairings
+from generation.generate_single_shot_questions_local import generate_questions as generate_single_shot_questions
+from generation.generate_single_shot_questions_local import push_to_huggingface as push_single_shot_questions_to_huggingface
+from datasets import load_dataset
+import time
 
 # Load environment variables at startup
 load_dotenv()
-
 
 def setup_logger():
     """Configure loguru logger with appropriate formats and levels."""
@@ -34,7 +40,6 @@ def setup_logger():
         format="<red>{time:YYYY-MM-DD HH:mm:ss}</red> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         level="ERROR"
     )
-
 
 def validate_path(path: str, path_type: str, create: bool = False) -> Path:
     """
@@ -74,7 +79,6 @@ def validate_path(path: str, path_type: str, create: bool = False) -> Path:
         logger.error(f"Error during {path_type} path validation: {str(e)}")
         raise ValueError(f"Error validating {path_type} path: {str(e)}")
 
-
 def find_valid_files(path: Path) -> List[Path]:
     """Find all valid text/markdown files in directory tree."""
     valid_extensions = {'.md', '.txt', '.markdown'}
@@ -97,7 +101,6 @@ def find_valid_files(path: Path) -> List[Path]:
         logger.debug(f"  - {file.relative_to(path)}")
     
     return valid_files
-
 
 def get_path_from_args_or_env(args: argparse.Namespace, arg_name: str, env_var: str, path_type: str, create: bool = False) -> Path:
     """Get and validate path from either CLI arguments or environment variables."""
@@ -127,7 +130,6 @@ def get_path_from_args_or_env(args: argparse.Namespace, arg_name: str, env_var: 
         logger.error(f"Path validation failed: {str(e)}")
         sys.exit(1)
 
-
 def setup_argument_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser with all needed arguments."""
     logger.debug("Setting up argument parser")
@@ -148,6 +150,8 @@ Environment Variables:
     YOURBENCH_CHUNK_MIN_TOKENS: Default minimum tokens per chunk
     YOURBENCH_CHUNK_MAX_TOKENS: Default maximum tokens per chunk
     YOURBENCH_CHUNK_TARGET_SIZE: Default target chunk size
+    YOURBENCH_DATASET_NAME: Default name for the HuggingFace dataset
+    YOURBENCH_ORGANIZATION: Default HuggingFace organization name
         """
     )
     
@@ -245,9 +249,172 @@ Environment Variables:
         help='Enable debug mode',
         action='store_true'
     )
+
+    parser.add_argument(
+        '--dataset-name',
+        help='Name for the HuggingFace dataset. If not provided, will check YOURBENCH_DATASET_NAME',
+        type=str
+    )
     
+    parser.add_argument(
+        '--organization',
+        help='HuggingFace organization name. If not provided, will check YOURBENCH_ORGANIZATION',
+        type=str
+    )
+
+    parser.add_argument(
+        '--private',
+        help='Whether to make the dataset private',
+        action='store_true',
+        default=True
+    )
+
+    parser.add_argument('--question-types', nargs='+', 
+                    default=["analytical", "application-based", "clarification", 
+                            "conceptual", "counterfactual", "edge-case", "factual", 
+                            "false-premise", "open-ended", "true-false"],
+                    help='List of question types to generate')
+    
+    parser.add_argument(
+        '--split',
+        help='Dataset split to use',
+        type=str,
+        default='train'
+    )
+
+    parser.add_argument(
+        '--output-dataset',
+        help='Output dataset name on HuggingFace',
+        type=str
+    )
+
+    parser.add_argument(
+        '--dataset',
+        help='Dataset name',
+        required=False,
+        default= os.getenv("YOURBENCH_ORGANIZATION") + "/" + os.getenv("YOURBENCH_DATASET_NAME")
+    )
+
+    parser.add_argument(
+        '--max-concurrent',
+        help='Maximum number of concurrent question generation tasks',
+        type=int,
+        default=5
+    )
+
     return parser
 
+def process_dataset(
+    chunks_path: Path,
+    summary_path: Path,
+    dataset_settings: Dict[str, str]
+) -> Dataset:
+    """Create and upload dataset from chunks and summaries."""
+    logger.info("Starting dataset creation process...")
+    
+    try:
+        # Read chunks and create dataset
+        documents = read_chunks(str(chunks_path), str(summary_path))
+        dataset = make_huggingface_dataset(documents)
+        
+        logger.info(f"Created dataset with {len(dataset)} chunks")
+        
+        # Push to hub
+        push_to_hub(
+            dataset,
+            dataset_settings['dataset_name'],
+            dataset_settings['organization'],
+            dataset_settings['private']
+        )
+        
+        logger.info(f"Dataset pushed to HuggingFace Hub: {dataset_settings['organization']}/{dataset_settings['dataset_name']}")
+        return dataset
+        
+    except Exception as e:
+        logger.error(f"Error during dataset creation: {str(e)}")
+        raise
+
+def create_multihop_dataset(
+    base_dataset: Dataset,
+    dataset_settings: Dict[str, str]
+) -> None:
+    """Create and upload multi-hop version of the dataset."""
+    logger.info("Starting multi-hop dataset creation...")
+    
+    try:
+        # Create dataset dict structure expected by generate_multihop_pairings
+        dataset_dict = {'train': base_dataset}
+        
+        # Generate multi-hop pairings
+        multihop_dataset = generate_multihop_pairings(dataset_dict)
+        
+        # Push to hub with -multihop suffix
+        multihop_name = f"{dataset_settings['dataset_name']}-multihop"
+        push_to_hub(
+            multihop_dataset,
+            multihop_name,
+            dataset_settings['organization'],
+            dataset_settings['private']
+        )
+        
+        logger.info(f"Multi-hop dataset pushed to HuggingFace Hub: {dataset_settings['organization']}/{multihop_name}")
+        
+    except Exception as e:
+        logger.error(f"Error during multi-hop dataset creation: {str(e)}")
+        raise
+
+def get_dataset_settings(args: argparse.Namespace) -> Dict[str, str]:
+    """Get dataset settings from args or environment variables."""
+    settings = {}
+    
+    # Map of argument names to environment variables and default values
+    setting_map = {
+        'dataset_name': 'YOURBENCH_DATASET_NAME',
+        'organization': 'YOURBENCH_ORGANIZATION',
+    }
+    
+    for arg_name, env_var in setting_map.items():
+        value = getattr(args, arg_name) or os.getenv(env_var)
+        if not value:
+            logger.error(f"Missing required dataset setting: {arg_name}")
+            logger.error(
+                f"Please either:\n"
+                f"  1. Use --{arg_name.replace('_', '-')} argument\n"
+                f"  2. Set {env_var} environment variable"
+            )
+            sys.exit(1)
+        settings[arg_name] = value
+        logger.debug(f"Using {arg_name}: {value}")
+    
+    settings['private'] = args.private
+    return settings
+
+def get_single_shot_question_settings(args: argparse.Namespace) -> Dict[str, str]:
+    """Get single-shot question settings from args or environment variables."""
+    settings = {}
+    
+    # Map of argument names to environment variables and default values
+    setting_map = {
+        'dataset_name': 'YOURBENCH_DATASET_NAME',
+        'organization': 'YOURBENCH_ORGANIZATION',
+    }
+    
+    for arg_name, env_var in setting_map.items():
+        value = getattr(args, arg_name) or os.getenv(env_var)
+        if not value:
+            logger.error(f"Missing required dataset setting: {arg_name}")
+            logger.error(
+                f"Please either:\n"
+                f"  1. Use --{arg_name.replace('_', '-')} argument\n"
+                f"  2. Set {env_var} environment variable"
+            )
+            sys.exit(1)
+        settings[arg_name] = value
+        logger.debug(f"Using {arg_name}: {value}")
+    
+    settings['private'] = args.private
+    settings['output_dataset'] = f"sumuks/k1-single-shot-questions"
+    return settings
 
 def get_inference_settings(args: argparse.Namespace) -> Dict[str, str]:
     """Get inference settings from args or environment variables."""
@@ -275,7 +442,6 @@ def get_inference_settings(args: argparse.Namespace) -> Dict[str, str]:
         logger.debug(f"Using {arg_name}: {value}")
     
     return settings
-
 
 def mirror_directory_structure(
     raw_files: List[Path],
@@ -306,7 +472,6 @@ def mirror_directory_structure(
         file_mapping[raw_file] = summary_file
         
     return file_mapping
-
 
 def generate_summary(raw_file: Path, summary_file: Path, inference_settings: Dict[str, str]) -> None:
     """Generate a summary for a raw file."""
@@ -347,7 +512,6 @@ def generate_summary(raw_file: Path, summary_file: Path, inference_settings: Dic
     # write the summary to the summary file
     with open(summary_file, 'w') as f:
         f.write(summary)
-
 
 def check_and_generate_summaries(
     raw_files: List[Path],
@@ -413,7 +577,6 @@ def get_chunking_settings(args: argparse.Namespace) -> Dict[str, any]:
         logger.debug(f"Using {arg_name}: {value}")
     
     return settings
-
 
 def process_chunks(
     raw_files: List[Path],
@@ -494,6 +657,16 @@ def main():
     
     # Get inference settings
     inference_settings = get_inference_settings(args)
+
+    # make an inference engine
+    engine = InferenceEngine(
+        model_name=inference_settings['model'],
+        connection_details = {
+            'strategy': inference_settings['strategy'],
+            'base_url': inference_settings['base_url'],
+            'api_key': inference_settings['api_key'],
+        }
+    )
     
     # Find all valid files
     raw_files = find_valid_files(raw_data_path)
@@ -506,9 +679,25 @@ def main():
     
     # Process semantic chunks
     process_chunks(raw_files, raw_data_path, chunks_path, chunking_settings)
+
+    dataset_settings = get_dataset_settings(args)
+
+    base_dataset = process_dataset(chunks_path, summary_path, dataset_settings)
+
+    create_multihop_dataset(base_dataset, dataset_settings)
+
+    single_shot_question_settings = get_single_shot_question_settings(args)
+
+    # load the datasets
+    document_dataset = load_dataset(args.dataset, split=args.split)
+    for question_type in args.question_types:
+        start_time = time.time()
+        document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
+        end_time = time.time()
+        logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
+        push_single_shot_questions_to_huggingface(document_dataset_with_questions, single_shot_question_settings['output_dataset'])
     
     logger.info("Process completed successfully")
-
 
 if __name__ == "__main__":
     main()
