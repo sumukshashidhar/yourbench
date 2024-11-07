@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.inference_engine import InferenceEngine, Hyperparameters
 from utils.standard_utilities import load_prompt, extract_content_from_xml_tags
+from data_processing.chunk_raw_data import process_files_with_settings
 
 # Load environment variables at startup
 load_dotenv()
@@ -137,9 +138,16 @@ def setup_argument_parser() -> argparse.ArgumentParser:
 Environment Variables:
     YOURBENCH_RAW_FILE_PATH: Default path to raw data files if not specified via --raw-data-files
     YOURBENCH_SUMMARY_FILE_PATH: Default path to summary files if not specified via --summary-files
+    YOURBENCH_CHUNKS_FILE_PATH: Default path to chunk files if not specified via --chunks-files
     YOURBENCH_BASE_URL: Default base URL for inference API
     YOURBENCH_API_KEY: Default API key for inference API
     YOURBENCH_STRATEGY: Default strategy for inference
+    YOURBENCH_MODEL: Default model for inference
+    YOURBENCH_CHUNK_MODEL: Default model for semantic chunking
+    YOURBENCH_CHUNK_SIMILARITY_THRESHOLD: Default similarity threshold for chunking
+    YOURBENCH_CHUNK_MIN_TOKENS: Default minimum tokens per chunk
+    YOURBENCH_CHUNK_MAX_TOKENS: Default maximum tokens per chunk
+    YOURBENCH_CHUNK_TARGET_SIZE: Default target chunk size
         """
     )
     
@@ -187,11 +195,55 @@ Environment Variables:
         type=str
     )
     
-    # Debug flag
+    # Chunking arguments
+    parser.add_argument(
+        '--chunks-files',
+        help=(
+            'Directory for chunk files. '
+            'If not provided, will check YOURBENCH_CHUNKS_FILE_PATH environment variable.'
+        ),
+        type=str
+    )
+    
+    parser.add_argument(
+        '--chunk-model',
+        help='Model to use for semantic chunking. If not provided, will check YOURBENCH_CHUNK_MODEL',
+        type=str,
+        default='all-mpnet-base-v2'
+    )
+    
+    parser.add_argument(
+        '--chunk-similarity-threshold',
+        help='Similarity threshold for chunking. If not provided, will check YOURBENCH_CHUNK_SIMILARITY_THRESHOLD',
+        type=float,
+        default=0.9
+    )
+    
+    parser.add_argument(
+        '--chunk-min-tokens',
+        help='Minimum tokens per chunk. If not provided, will check YOURBENCH_CHUNK_MIN_TOKENS',
+        type=int,
+        default=256
+    )
+    
+    parser.add_argument(
+        '--chunk-max-tokens',
+        help='Maximum tokens per chunk. If not provided, will check YOURBENCH_CHUNK_MAX_TOKENS',
+        type=int,
+        default=1024
+    )
+    
+    parser.add_argument(
+        '--chunk-target-size',
+        help='Target chunk size. If not provided, will check YOURBENCH_CHUNK_TARGET_SIZE',
+        type=int,
+        default=512
+    )
+
     parser.add_argument(
         '--debug',
-        action='store_true',
-        help='Enable debug logging'
+        help='Enable debug mode',
+        action='store_true'
     )
     
     return parser
@@ -326,6 +378,89 @@ def check_and_generate_summaries(
         else:
             logger.debug(f"Summary exists for: {raw_file.relative_to(raw_path)}")
 
+def get_chunking_settings(args: argparse.Namespace) -> Dict[str, any]:
+    """Get chunking settings from args or environment variables."""
+    settings = {}
+    
+    # Map of argument names to environment variables and default values
+    setting_map = {
+        'chunk_model': ('YOURBENCH_CHUNK_MODEL', 'all-mpnet-base-v2'),
+        'chunk_similarity_threshold': ('YOURBENCH_CHUNK_SIMILARITY_THRESHOLD', 0.9),
+        'chunk_min_tokens': ('YOURBENCH_CHUNK_MIN_TOKENS', 256),
+        'chunk_max_tokens': ('YOURBENCH_CHUNK_MAX_TOKENS', 1024),
+        'chunk_target_size': ('YOURBENCH_CHUNK_TARGET_SIZE', 512)
+    }
+    
+    for arg_name, (env_var, default_value) in setting_map.items():
+        # Try command line argument first
+        value = getattr(args, arg_name)
+        
+        # Then environment variable
+        if value is None:
+            value = os.getenv(env_var)
+            
+        # Finally default value
+        if value is None:
+            value = default_value
+            
+        # Convert to correct type based on default value type
+        if isinstance(default_value, float):
+            value = float(value)
+        elif isinstance(default_value, int):
+            value = int(value)
+            
+        settings[arg_name] = value
+        logger.debug(f"Using {arg_name}: {value}")
+    
+    return settings
+
+
+def process_chunks(
+    raw_files: List[Path],
+    raw_path: Path,
+    chunks_path: Path,
+    chunking_settings: Dict[str, any]
+) -> None:
+    """Process raw files into semantic chunks."""
+    logger.info("Starting semantic chunking process...")
+    
+    # Create settings list for chunk_raw_data
+    settings_list = [{
+        'similarity_threshold': chunking_settings['chunk_similarity_threshold'],
+        'min_tokens': chunking_settings['chunk_min_tokens'],
+        'max_tokens': chunking_settings['chunk_max_tokens'],
+        'target_chunk_size': chunking_settings['chunk_target_size']
+    }]
+    
+    try:
+        # Process files using existing function
+        settings_chunk_lengths = process_files_with_settings(
+            str(raw_path),
+            str(chunks_path),
+            settings_list,
+            chunking_settings['chunk_model']
+        )
+        
+        # Log chunking results
+        for result in settings_chunk_lengths:
+            settings = result['settings']
+            mean_length = result['mean']
+            stdev_length = result['stdev']
+            variance_length = result['variance']
+            chunk_count = len(result['chunk_lengths'])
+            
+            logger.info("Chunking Results:")
+            logger.info(f"Settings: {settings}")
+            logger.info(f"Mean chunk length: {mean_length:.2f} tokens")
+            logger.info(f"Standard deviation: {stdev_length:.2f}")
+            logger.info(f"Variance: {variance_length:.2f}")
+            logger.info(f"Number of chunks: {chunk_count}")
+            
+        logger.info("Semantic chunking completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Error during semantic chunking: {str(e)}")
+        raise
 
 def main():
     """Main entry point for the question generation library."""
@@ -352,6 +487,10 @@ def main():
     summary_path = get_path_from_args_or_env(
         args, 'summary_files', 'YOURBENCH_SUMMARY_FILE_PATH', 'summary', create=True
     )
+
+    chunks_path = get_path_from_args_or_env(
+        args, 'chunks_files', 'YOURBENCH_CHUNKS_FILE_PATH', 'chunks', create=True
+    )
     
     # Get inference settings
     inference_settings = get_inference_settings(args)
@@ -361,6 +500,12 @@ def main():
     
     # Check and generate summaries
     check_and_generate_summaries(raw_files, raw_data_path, summary_path, inference_settings)
+
+    # Get chunking settings
+    chunking_settings = get_chunking_settings(args)
+    
+    # Process semantic chunks
+    process_chunks(raw_files, raw_data_path, chunks_path, chunking_settings)
     
     logger.info("Process completed successfully")
 
