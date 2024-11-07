@@ -30,3 +30,9 @@ def extract_content_from_xml_tags(full_content, xml_tag):
     except Exception as extraction_error:
         print(f"Error extracting content from XML tags: {extraction_error}")
         return ""
+
+# basic file utilities
+
+def load_prompt(filename: str) -> str:
+    with open(f"prompts/{filename}.md", "r") as file:
+        return file.read()

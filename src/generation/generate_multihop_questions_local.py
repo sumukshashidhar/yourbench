@@ -360,7 +360,7 @@ if __name__ == "__main__":
                       help='HuggingFace dataset ID (default: sumuks/y1-multihop)')
     parser.add_argument('--split', type=str, default="train",
                       help='Dataset split to use (default: train)')
-    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-questions-multi-hop",
+    parser.add_argument('--output-dataset', type=str, default="sumuks/y1-hq-questions-multi-hop",
                       help='Output dataset ID on HuggingFace (default: sumuks/y1-questions-multi-hop)')
     
     # Question generation arguments
@@ -399,6 +399,8 @@ if __name__ == "__main__":
                 "strategy": args.strategy,
                 "api_key": args.api_key,
                 "base_url": args.base_url
+                # "azure_endpoint" : args.base_url,
+                # "api_version" : "2024-02-01"
             },
             model_name=args.model
         )

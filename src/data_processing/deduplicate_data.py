@@ -19,11 +19,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Deduplicate questions in a dataset using semantic similarity')
     
     # Dataset arguments
-    parser.add_argument('--input_dataset', type=str, default="sumuks/y1-questions-x2",
+    parser.add_argument('--input_dataset', type=str, default="sumuks/y1-questions-single-shot",
                        help='Input dataset name on HuggingFace Hub')
     parser.add_argument('--input_split', type=str, default="train",
                        help='Dataset split to process')
-    parser.add_argument('--output_dataset', type=str, default="sumuks/y1-questions-x2-diverse",
+    parser.add_argument('--output_dataset', type=str, default="sumuks/y1-questions-single-shot-diverse",
                        help='Output dataset name for HuggingFace Hub')
     
     # Model arguments

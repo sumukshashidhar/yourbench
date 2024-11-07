@@ -210,7 +210,7 @@ class InferenceEngine:
         self.client = self._initialize_client(connection_details)
         self.model_name = model_name
         self.base_url = connection_details["azure_endpoint"] if connection_details["strategy"] == "azure" else connection_details["base_url"]
-        self.api_version = connection_details["api_version"] if connection_details["strategy"] == "azure" else None
+        self.api_version = connection_details["api_version"] if connection_details["strategy"] == "azure" else "2024-02-01"
         # Initialize session to None - will be created when needed
         self._session = None
         return
