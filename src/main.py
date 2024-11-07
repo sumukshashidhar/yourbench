@@ -413,7 +413,7 @@ def get_single_shot_question_settings(args: argparse.Namespace) -> Dict[str, str
         logger.debug(f"Using {arg_name}: {value}")
     
     settings['private'] = args.private
-    settings['output_dataset'] = f"sumuks/k1-single-shot-questions"
+    settings['output_dataset'] = f"{settings['organization']}/{settings['dataset_name']}-single-shot-questions"
     return settings
 
 def get_inference_settings(args: argparse.Namespace) -> Dict[str, str]:
