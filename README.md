@@ -3,11 +3,14 @@ Benchmark Large Language Models Reliably On Your Data
 
 # Installation
 First install the requirements, doing `pip install -r requirements.txt` in the environment of your choice.
+
 Then, download punktab using nltk, by launching python and doing
 ```python
 import nltk
 nltk.download('punkt_tab')
 ```
+
+and make sure you are logged in with your Hugging Face account using `huggingface_hub`.
 
 # Usage
 ## Data Preparation

@@ -1,3 +1,5 @@
 nltk
 sentence_transformers
 loguru
+datasets
+huggingface_hub
