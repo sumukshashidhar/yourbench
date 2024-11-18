@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List, Dict
 from loguru import logger
 from dotenv import load_dotenv
 from datasets import Dataset
@@ -16,6 +16,8 @@ from data_processing.make_dataset import read_chunks, make_huggingface_dataset, 
 from data_processing.make_multihop_preparings import generate_multihop_pairings
 from generation.generate_single_shot_questions_local import generate_questions as generate_single_shot_questions
 from generation.generate_single_shot_questions_local import push_to_huggingface as push_single_shot_questions_to_huggingface
+from generation.generate_multihop_questions_local import generate_questions as generate_multihop_questions
+from generation.generate_multihop_questions_local import push_to_huggingface as push_multihop_questions_to_huggingface
 from datasets import load_dataset
 import time
 
@@ -689,13 +691,25 @@ def main():
     single_shot_question_settings = get_single_shot_question_settings(args)
 
     # load the datasets
-    document_dataset = load_dataset(args.dataset, split=args.split)
+    # document_dataset = load_dataset(args.dataset, split=args.split)
+    # for question_type in args.question_types:
+    #     start_time = time.time()
+    #     document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
+    #     end_time = time.time()
+    #     logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
+    #     push_single_shot_questions_to_huggingface(document_dataset_with_questions, single_shot_question_settings['output_dataset'])
+
+    logger.info("Single-shot questions generated successfully")
+    
+    # now we touch multihop reasoning
+    multihop_dataset = load_dataset(f"{dataset_settings['organization']}/{dataset_settings['dataset_name']}-multihop", split=args.split)
     for question_type in args.question_types:
         start_time = time.time()
-        document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
+        multihop_dataset_with_questions = generate_multihop_questions(multihop_dataset, engine, question_type, args.max_concurrent)
         end_time = time.time()
-        logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-        push_single_shot_questions_to_huggingface(document_dataset_with_questions, single_shot_question_settings['output_dataset'])
+        logger.info(f"Generated {len(multihop_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
+        push_multihop_questions_to_huggingface(multihop_dataset_with_questions, single_shot_question_settings['output_dataset'])
+
     
     logger.info("Process completed successfully")
 
