@@ -229,171 +229,174 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Principle Understanding (Medium)
+### Example 1
 
 ```json
 {
-    "document_extract_analysis": "The text explains climate change across multiple sections, connecting atmospheric composition changes with global temperature effects and ecosystem impacts.",
+    "document_extract_analysis": "The text explores quantum computing fundamentals across sections, connecting quantum mechanics principles with computational implementations and algorithmic advantages.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Explains greenhouse gas composition changes",
-            "relevant_information": "Details CO2 increase and atmospheric changes",
-            "connection_points": ["Links to temperature effects", "Connects to industrial activities"]
+            "content_summary": "Quantum mechanics foundations",
+            "relevant_information": "Explains superposition and entanglement",
+            "connection_points": ["Links to qubit behavior", "Connects to quantum gates"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Describes global temperature impacts",
-            "relevant_information": "Shows temperature rise patterns and effects",
-            "connection_points": ["References gas composition", "Links to ecosystem changes"]
+            "content_summary": "Quantum computing implementation",
+            "relevant_information": "Details qubit manipulation and quantum circuits",
+            "connection_points": ["References quantum principles", "Links to algorithms"]
         }
     ],
     "testable_concepts": [
-        "greenhouse effect",
-        "atmospheric composition",
-        "temperature change",
-        "climate impact"
+        "quantum superposition",
+        "entanglement",
+        "quantum gates",
+        "quantum algorithms",
+        "computational advantage"
     ],
     "potential_question_directions": [
-        "How do changes in atmospheric composition affect global temperatures?",
-        "What is the relationship between industrial activities and climate change?",
-        "How do greenhouse gases influence global temperature patterns?"
+        "How does quantum entanglement enable computational advantages?",
+        "What role does superposition play in quantum algorithms?",
+        "How do quantum gates manipulate qubits for computation?"
     ],
-    "best_direction": "How do changes in atmospheric composition affect global temperatures?",
-    "comprehension_type": "relationship_comprehension",
+    "best_direction": "How does quantum entanglement enable computational advantages?",
+    "comprehension_type": "mechanism_understanding",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Greenhouse gas concentrations have increased by 40% since pre-industrial times",
-        "Global temperatures have risen by 1°C corresponding to atmospheric changes",
-        "The relationship between CO2 and temperature shows a clear correlation"
+        "Entanglement allows multiple qubits to be correlated in ways impossible for classical bits",
+        "Quantum algorithms leverage entanglement to perform parallel computations",
+        "The quantum speedup comes from exploiting entangled states"
     ],
-    "quote_context": "The quotes establish the connection between atmospheric changes and temperature effects across multiple sections",
+    "quote_context": "The quotes demonstrate how entanglement provides the foundation for quantum computational advantages",
     "kind": "conceptual",
-    "question": "Based on the text's explanation, how do industrial-era changes in atmospheric composition contribute to global temperature increases?",
-    "answer": "Industrial activities have increased greenhouse gas concentrations by 40%, which trap more heat in the atmosphere, leading to a measured 1°C rise in global temperatures",
-    "reasoning": "The text connects industrial activities to increased greenhouse gas concentrations, which then affect global temperatures through the greenhouse effect mechanism",
-    "difficulty": 3,
-    "difficulty_justification": "Requires synthesizing information about atmospheric composition and temperature effects from multiple sections"
-}
-```
-
-### Example 2: Multi-Chunk Model Comprehension (Hard)
-
-```json
-{
-    "document_extract_analysis": "The text describes neural network learning across multiple sections, connecting initial network structure with training processes and final behavior.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "chunk1",
-            "content_summary": "Explains neural network architecture",
-            "relevant_information": "Details network layers and connections",
-            "connection_points": ["Links to training process", "Connects to data flow"]
-        },
-        {
-            "chunk_id": "chunk2",
-            "content_summary": "Describes training methodology",
-            "relevant_information": "Explains backpropagation and weight updates",
-            "connection_points": ["References network structure", "Links to learning outcomes"]
-        },
-        {
-            "chunk_id": "chunk3",
-            "content_summary": "Outlines network behavior",
-            "relevant_information": "Shows how trained networks process new data",
-            "connection_points": ["References training process", "Connects to architecture"]
-        }
-    ],
-    "testable_concepts": [
-        "neural architecture",
-        "network training",
-        "learning process",
-        "data processing"
-    ],
-    "potential_question_directions": [
-        "How does network architecture influence the training process?",
-        "What role does backpropagation play in network learning?",
-        "How do initial network structure and training combine to determine final behavior?"
-    ],
-    "best_direction": "How do initial network structure and training combine to determine final behavior?",
-    "comprehension_type": "model_comprehension",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "Network architecture defines possible connection patterns",
-        "Training adjusts connection weights through backpropagation",
-        "Final behavior emerges from the combination of structure and learned weights"
-    ],
-    "quote_context": "The quotes show how network structure and training process interact to produce final behavior",
-    "kind": "conceptual",
-    "question": "According to the text, how do the initial network architecture and training process work together to create the final behavioral capabilities of a neural network?",
-    "answer": "The initial architecture defines possible connection patterns, while training adjusts these connections' weights through backpropagation, together determining how the network processes new information",
-    "reasoning": "The text explains how network structure provides the framework, while training optimizes this structure through weight adjustments, jointly creating the network's processing capabilities",
+    "question": "How does quantum entanglement fundamentally enable quantum computers to achieve computational advantages over classical computers?",
+    "answer": "Quantum entanglement allows qubits to be correlated in ways impossible for classical bits, enabling quantum algorithms to perform massive parallel computations through the manipulation of entangled states, leading to exponential speedups for certain problems.",
+    "reasoning": "The text explains how entanglement creates quantum correlations that classical computers cannot achieve, and how quantum algorithms specifically exploit these entangled states to perform parallel computations that result in computational speedups.",
     "difficulty": 4,
-    "difficulty_justification": "Requires understanding and integrating complex relationships between network structure, training, and behavior from multiple sections"
+    "difficulty_justification": "Requires understanding complex quantum mechanical principles and their relationship to computational advantages, synthesizing information from multiple sections."
 }
 ```
 
-### Example 3: Cross-Section Concept Synthesis (Very Hard)
+### Example 2
 
 ```json
 {
-    "document_extract_analysis": "The text explains ecosystem resilience across multiple sections, connecting species diversity, environmental pressures, and adaptation mechanisms.",
+    "document_extract_analysis": "The text discusses evolutionary biology across sections, linking genetic variation, natural selection mechanisms, and species adaptation patterns.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Explains biodiversity importance",
-            "relevant_information": "Details species interactions and roles",
-            "connection_points": ["Links to environmental stress", "Connects to adaptation"]
+            "content_summary": "Genetic variation mechanisms",
+            "relevant_information": "Details mutation and recombination",
+            "connection_points": ["Links to selection pressure", "Connects to adaptation"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Describes environmental pressures",
-            "relevant_information": "Shows how changes affect ecosystems",
-            "connection_points": ["References species diversity", "Links to resilience"]
+            "content_summary": "Natural selection processes",
+            "relevant_information": "Explains selection mechanisms",
+            "connection_points": ["References genetic variation", "Links to fitness"]
         },
         {
             "chunk_id": "chunk3",
-            "content_summary": "Outlines adaptation mechanisms",
-            "relevant_information": "Explains how ecosystems adapt over time",
-            "connection_points": ["References environmental pressure", "Connects to diversity"]
+            "content_summary": "Species adaptation",
+            "relevant_information": "Shows long-term evolutionary changes",
+            "connection_points": ["References selection", "Connects to genetics"]
         }
     ],
     "testable_concepts": [
-        "biodiversity",
-        "environmental pressure",
-        "ecosystem adaptation",
-        "system resilience"
+        "genetic variation",
+        "natural selection",
+        "adaptation mechanisms",
+        "evolutionary change",
+        "population dynamics"
     ],
     "potential_question_directions": [
-        "How does biodiversity contribute to ecosystem resilience?",
-        "What role do adaptation mechanisms play in response to environmental pressure?",
-        "How do species diversity and adaptation mechanisms together determine ecosystem stability?"
+        "How do genetic variations influence natural selection?",
+        "What role does population size play in evolution?",
+        "How do selection pressures drive adaptation?"
     ],
-    "best_direction": "How do species diversity and adaptation mechanisms together determine ecosystem stability?",
-    "comprehension_type": "concept_synthesis",
+    "best_direction": "How do genetic variations influence natural selection?",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Species diversity provides multiple response pathways to stress",
-        "Environmental pressures trigger various adaptation mechanisms",
-        "Ecosystem stability depends on both diversity and adaptation capacity"
+        "Genetic mutations provide raw material for evolution",
+        "Selection acts on existing variations within populations",
+        "Beneficial mutations increase in frequency over generations"
     ],
-    "quote_context": "The quotes establish how diversity and adaptation work together for ecosystem stability",
+    "quote_context": "The quotes show the progression from genetic variation to evolutionary change through selection",
     "kind": "conceptual",
-    "question": "Based on the text's explanation, how do species diversity and adaptation mechanisms interact to maintain ecosystem stability under environmental pressure?",
-    "answer": "Species diversity provides multiple possible response pathways, while adaptation mechanisms enable species to adjust to changes, together creating a resilient system that can maintain stability under various environmental pressures",
-    "reasoning": "The text shows how diversity creates response options and adaptation mechanisms enable actual changes, working together to maintain ecosystem function under stress",
+    "question": "What is the relationship between genetic variation and the effectiveness of natural selection in driving evolutionary change?",
+    "answer": "Genetic variation provides the raw material upon which natural selection acts, with beneficial mutations increasing in frequency over generations, leading to adaptive evolution. Without sufficient genetic variation, natural selection cannot effectively drive evolutionary change.",
+    "reasoning": "The text demonstrates how genetic variation creates the foundation for natural selection by providing different traits that can be selected for or against, with beneficial variations becoming more common over time through selective pressures.",
+    "difficulty": 3,
+    "difficulty_justification": "Requires understanding the interplay between genetic mechanisms and selection processes, integrating concepts from multiple sections."
+}
+```
+
+### Example 3
+
+```json
+{
+    "document_extract_analysis": "The text examines cognitive development across sections, connecting neuroplasticity, learning mechanisms, and environmental influences.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Brain plasticity fundamentals",
+            "relevant_information": "Explains synaptic changes and neural growth",
+            "connection_points": ["Links to learning", "Connects to environment"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Learning mechanisms",
+            "relevant_information": "Details memory formation and skill acquisition",
+            "connection_points": ["References plasticity", "Links to development"]
+        },
+        {
+            "chunk_id": "chunk3",
+            "content_summary": "Environmental influences",
+            "relevant_information": "Shows impact of experience on brain development",
+            "connection_points": ["References learning", "Connects to plasticity"]
+        }
+    ],
+    "testable_concepts": [
+        "neuroplasticity",
+        "learning mechanisms",
+        "environmental factors",
+        "cognitive development",
+        "synaptic changes"
+    ],
+    "potential_question_directions": [
+        "How does neuroplasticity enable learning?",
+        "What role does environment play in brain development?",
+        "How do experience and plasticity interact in cognitive development?"
+    ],
+    "best_direction": "How do experience and plasticity interact in cognitive development?",
+    "comprehension_type": "system_analysis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Neuroplasticity allows the brain to reorganize based on experience",
+        "Environmental stimuli trigger specific patterns of neural activation",
+        "Repeated experiences strengthen neural connections through plasticity"
+    ],
+    "quote_context": "The quotes establish the dynamic interaction between experience and brain plasticity in development",
+    "kind": "conceptual",
+    "question": "How do environmental experiences and neuroplasticity mechanisms work together to shape cognitive development?",
+    "answer": "Environmental experiences trigger specific patterns of neural activation, while neuroplasticity enables the brain to reorganize and strengthen these activated neural connections. This interaction leads to lasting changes in brain structure and function, driving cognitive development.",
+    "reasoning": "The text explains how environmental stimuli activate specific neural patterns, and through plasticity mechanisms, these activations lead to structural changes in the brain, creating a dynamic system of experience-dependent development.",
     "difficulty": 5,
-    "difficulty_justification": "Requires synthesizing complex relationships between diversity, adaptation, and stability from multiple sections while understanding their dynamic interaction"
+    "difficulty_justification": "Requires synthesizing complex interactions between environmental factors, neural mechanisms, and developmental processes, while understanding their dynamic relationships across multiple time scales."
 }
 ```
 

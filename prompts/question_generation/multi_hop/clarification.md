@@ -229,154 +229,153 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Term Definition (Easy)
+### Example 1
 
 ```json
 {
-    "document_extract_analysis": "The text discusses photosynthesis across multiple sections, with different chunks focusing on structure and process aspects.",
+    "document_extract_analysis": "The text explores quantum entanglement across multiple sections, covering theoretical foundations and practical applications.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Describes cellular structures involved in photosynthesis",
-            "relevant_information": "Details about thylakoids and chloroplasts",
-            "connection_points": ["Links to energy capture", "Cellular organization"]
+            "content_summary": "Introduces quantum entanglement basics",
+            "relevant_information": "Definition and properties of entangled particles",
+            "connection_points": ["Measurement effects", "Particle relationships"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Explains the light-dependent reactions",
-            "relevant_information": "Role of thylakoids in energy capture",
-            "connection_points": ["Structure function relationship", "Energy transfer"]
+            "content_summary": "Details measurement impact",
+            "relevant_information": "How measuring one particle affects another",
+            "connection_points": ["Theoretical implications", "Practical applications"]
         }
     ],
     "testable_concepts": [
-        "photosynthesis components",
-        "cellular structures",
-        "biological terminology",
-        "structure-function relationships"
+        "quantum entanglement principles",
+        "measurement effects",
+        "particle relationships",
+        "quantum mechanics fundamentals"
     ],
     "potential_question_directions": [
-        "How do thylakoids' structure support their function in photosynthesis?",
-        "What is the relationship between chloroplast organization and energy capture?",
-        "How does the arrangement of thylakoids facilitate light-dependent reactions?"
+        "How does measurement of one particle influence its entangled partner?",
+        "What makes quantum entanglement different from classical particle behavior?",
+        "Why is entanglement considered 'spooky action at a distance'?"
     ],
-    "best_direction": "How do thylakoids' structure support their function in photosynthesis?",
-    "comprehension_type": "term_definition",
+    "best_direction": "How does measurement of one particle influence its entangled partner?",
+    "comprehension_type": "mechanism_understanding",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Thylakoids are membrane-bound compartments inside chloroplasts",
-        "The stacked arrangement of thylakoids maximizes light capture",
-        "Energy transfer occurs across thylakoid membranes during light-dependent reactions"
+        "Entangled particles share a quantum state regardless of distance",
+        "Measuring one particle instantly affects its partner's state",
+        "This phenomenon defies classical physics principles"
     ],
-    "quote_context": "The quotes connect structural and functional aspects of thylakoids from different sections",
+    "quote_context": "The quotes establish the unique relationship between entangled particles and measurement effects",
     "kind": "clarification",
-    "question": "Based on the information from both passages, how does the structure of thylakoids support their role in photosynthesis?",
-    "answer": "Thylakoids' membrane-bound structure and stacked arrangement maximize light capture and facilitate energy transfer during light-dependent reactions",
-    "reasoning": "The answer combines structural information from the first chunk with functional details from the second chunk to explain the structure-function relationship",
-    "difficulty": 2,
-    "difficulty_justification": "Requires connecting structural and functional information across chunks, but relationship is directly stated"
-}
-```
-
-### Example 2: Cross-Chunk Process Explanation (Medium)
-
-```json
-{
-    "document_extract_analysis": "The text describes blood clotting across multiple sections, with different chunks covering initiation and cascade processes.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "chunk1",
-            "content_summary": "Describes initial platelet response",
-            "relevant_information": "Platelet activation and signal release",
-            "connection_points": ["Cascade initiation", "Chemical signaling"]
-        },
-        {
-            "chunk_id": "chunk2",
-            "content_summary": "Details clotting factor cascade",
-            "relevant_information": "Sequential activation of factors",
-            "connection_points": ["Signal response", "Clot formation"]
-        },
-        {
-            "chunk_id": "chunk3",
-            "content_summary": "Explains final clot structure",
-            "relevant_information": "Fibrin mesh formation",
-            "connection_points": ["Cascade results", "Final structure"]
-        }
-    ],
-    "testable_concepts": [
-        "clotting sequence",
-        "signal cascades",
-        "cellular interaction",
-        "process integration"
-    ],
-    "potential_question_directions": [
-        "How do platelet signals trigger and maintain the clotting cascade?",
-        "What is the sequence of events from vessel damage to final clot formation?",
-        "How do different clotting factors coordinate throughout the process?"
-    ],
-    "best_direction": "How do platelet signals trigger and maintain the clotting cascade?",
-    "comprehension_type": "process_explanation",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "Platelets release chemical signals upon detecting damage",
-        "These signals activate the first clotting factors in the cascade",
-        "Each activated factor triggers the next in sequence",
-        "The cascade culminates in fibrin formation"
-    ],
-    "quote_context": "The quotes trace the process from initial signaling through cascade completion",
-    "kind": "clarification",
-    "question": "Could you explain how platelet signals initiate and drive the clotting cascade through to final clot formation?",
-    "answer": "Platelets release chemical signals upon detecting damage, which activate initial clotting factors. These factors trigger a sequential cascade, with each factor activating the next, ultimately leading to fibrin formation and clot structure",
-    "reasoning": "The answer integrates information across all three chunks to explain the complete process from initiation to completion",
+    "question": "What happens to an entangled particle pair when one particle is measured, and why is this behavior significant?",
+    "answer": "When one entangled particle is measured, its partner's state is instantly determined, regardless of distance. This instantaneous influence defies classical physics and demonstrates quantum mechanics' unique properties.",
+    "reasoning": "The answer combines fundamental principles from the first chunk with measurement effects from the second to explain this counter-intuitive phenomenon",
     "difficulty": 3,
-    "difficulty_justification": "Requires synthesizing a multi-step process across multiple chunks while maintaining logical sequence"
+    "difficulty_justification": "Requires understanding abstract quantum concepts and connecting theoretical principles with practical effects"
 }
 ```
 
-### Example 3: Cross-Chunk System-Level Understanding (Very Hard)
+### Example 2
 
 ```json
 {
-    "document_extract_analysis": "The text explains immune system coordination across multiple sections, detailing different cell types and their interactions.",
+    "document_extract_analysis": "The text examines climate feedback loops across multiple sections, focusing on interconnected environmental systems.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Describes B-cell function and antibody production",
-            "relevant_information": "B-cell activation and antibody specificity",
-            "connection_points": ["T-cell interaction", "Cytokine signaling"]
+            "content_summary": "Describes Arctic ice melt feedback",
+            "relevant_information": "Ice reflectivity and heat absorption",
+            "connection_points": ["Temperature effects", "Ocean circulation"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Details T-cell coordination role",
-            "relevant_information": "T-cell signaling and response direction",
-            "connection_points": ["B-cell activation", "Memory cell development"]
+            "content_summary": "Details ocean circulation changes",
+            "relevant_information": "Current patterns and heat distribution",
+            "connection_points": ["Global impacts", "System interactions"]
         },
         {
             "chunk_id": "chunk3",
-            "content_summary": "Explains memory cell formation",
-            "relevant_information": "Long-term immunity development",
-            "connection_points": ["Cell type interaction", "Response persistence"]
+            "content_summary": "Explains atmospheric consequences",
+            "relevant_information": "Weather pattern shifts",
+            "connection_points": ["Climate stability", "Global effects"]
         }
     ],
     "testable_concepts": [
-        "immune coordination",
-        "cellular communication",
-        "system integration",
-        "response development"
+        "feedback mechanisms",
+        "system interactions",
+        "environmental change",
+        "global impacts"
     ],
     "potential_question_directions": [
-        "How do different immune cells coordinate their responses through cytokine signaling?",
-        "What is the relationship between initial response and memory formation?",
-        "How do B-cells, T-cells, and memory cells maintain long-term immunity?"
+        "How do Arctic ice changes trigger multiple environmental responses?",
+        "What connects ocean circulation to atmospheric patterns?",
+        "Why do small changes amplify through the climate system?"
     ],
-    "best_direction": "How do different immune cells coordinate their responses through cytokine signaling?",
+    "best_direction": "How do Arctic ice changes trigger multiple environmental responses?",
+    "comprehension_type": "chain_effect",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Melting ice reduces surface reflectivity, increasing heat absorption",
+        "Changed temperature gradients affect ocean current patterns",
+        "Altered circulation influences global weather systems"
+    ],
+    "quote_context": "The quotes trace the cascade of effects from ice melt through ocean and atmospheric systems",
+    "kind": "clarification",
+    "question": "How does Arctic ice melt initiate a chain of environmental changes affecting global climate patterns?",
+    "answer": "Arctic ice melt reduces surface reflectivity, increasing heat absorption. This affects ocean temperature gradients, altering circulation patterns, which in turn influences global weather systems and climate stability.",
+    "reasoning": "The answer integrates information across all chunks to explain the interconnected chain of environmental responses",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding complex system interactions and tracing multiple cause-effect relationships across different environmental components"
+}
+```
+
+### Example 3
+
+```json
+{
+    "document_extract_analysis": "The text discusses neural network architecture and learning processes across multiple sections.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Describes network structure",
+            "relevant_information": "Layer organization and connections",
+            "connection_points": ["Information flow", "Weight adjustments"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Explains backpropagation",
+            "relevant_information": "Error calculation and weight updates",
+            "connection_points": ["Learning process", "Optimization"]
+        },
+        {
+            "chunk_id": "chunk3",
+            "content_summary": "Details optimization techniques",
+            "relevant_information": "Learning rate and momentum",
+            "connection_points": ["Training efficiency", "Error reduction"]
+        }
+    ],
+    "testable_concepts": [
+        "neural architecture",
+        "learning algorithms",
+        "optimization methods",
+        "network training"
+    ],
+    "potential_question_directions": [
+        "How do network structure and backpropagation interact during learning?",
+        "What role do optimization techniques play in training efficiency?",
+        "How does information flow through the network during training?"
+    ],
+    "best_direction": "How do network structure and backpropagation interact during learning?",
     "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
@@ -384,18 +383,17 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "supporting_quotes": [
-        "B-cells produce antibodies following T-cell signals",
-        "T-cells coordinate responses through cytokine release",
-        "Memory cells develop from successful B-cell and T-cell interactions",
-        "Cytokine networks maintain long-term immune memory"
+        "Network layers process information forward through weighted connections",
+        "Backpropagation calculates errors and updates weights backward through layers",
+        "Optimization techniques control weight adjustment magnitude and direction"
     ],
-    "quote_context": "The quotes demonstrate the interconnected nature of immune cell communication",
+    "quote_context": "The quotes explain the bidirectional flow of information and learning processes",
     "kind": "clarification",
-    "question": "Could you explain how cytokine signaling enables coordination between B-cells, T-cells, and memory cells in developing and maintaining immune responses?",
-    "answer": "Cytokines released by T-cells direct B-cells to produce specific antibodies, while also guiding the development of memory cells. This signaling network maintains coordination between all cell types for both immediate response and long-term immunity",
-    "reasoning": "The answer synthesizes information about cellular communication and system coordination from all chunks to explain the complex interaction network",
+    "question": "How do neural network structure, backpropagation, and optimization techniques work together to enable effective learning?",
+    "answer": "The network's layered structure enables forward information flow, while backpropagation calculates errors and propagates them backward. Optimization techniques then guide weight adjustments to improve learning efficiency and reduce errors systematically.",
+    "reasoning": "The answer synthesizes structural, algorithmic, and optimization aspects from all chunks to explain the complete learning process",
     "difficulty": 5,
-    "difficulty_justification": "Requires understanding and connecting multiple levels of cellular interaction and signaling across different text sections while maintaining system-level perspective"
+    "difficulty_justification": "Requires understanding complex technical concepts and their interactions across multiple aspects of neural network function"
 }
 ```
 

@@ -40,11 +40,11 @@ row_structure = {
         "chunk_analysis" : "",
         "potential_question_directions" : "",
         "best_direction" : "",
-        "direct_quotes" : "",
+        # "direct_quotes" : "",
         "reasoning" : "",
         "estimated_difficulty" : "",
         "testable_concepts" : "",
-        "quality_metrics" : "",
+        # "quality_metrics" : "",
         "difficulty_justification" : "",
         "quote_context" : "",
         "supporting_quotes" : "",
@@ -212,7 +212,7 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
             prepared_row["estimated_difficulty"] = int(question.difficulty)
             prepared_row["difficulty_justification"] = question.difficulty_justification
             prepared_row["testable_concepts"] = list(question.testable_concepts)
-            prepared_row["quality_metrics"] = question.quality_metrics.json()
+            # prepared_row["quality_metrics"] = question.quality_metrics.json()
             prepared_row["supporting_quotes"] = list(question.supporting_quotes)
             unwrapped_results.append(prepared_row)
         if idx % 100 == 0:
@@ -291,7 +291,7 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
             "reasoning": Value("string"),
             "estimated_difficulty": Value("int64"),
             "testable_concepts": Sequence(Value("string")),
-            "quality_metrics": Value("string"),
+            # "quality_metrics": Value("string"),
             "difficulty_justification": Value("string"),
             "quote_context": Value("string"),
             "supporting_quotes": Sequence(Value("string")),

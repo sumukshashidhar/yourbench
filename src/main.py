@@ -302,7 +302,7 @@ Environment Variables:
         '--max-concurrent',
         help='Maximum number of concurrent question generation tasks',
         type=int,
-        default=5
+        default=1024
     )
 
     # Deduplication arguments
@@ -766,23 +766,32 @@ def main():
     # Dictionary to accumulate questions by type
     questions_by_type = {}
     
-    # Generate questions for each type
+    # Generate and push questions for each type incrementally
+    all_questions = []
     for question_type in args.question_types:
         start_time = time.time()
         document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
         end_time = time.time()
+        
+        # Add question type to each item
+        typed_questions = [{**item, 'question_type': question_type} for item in document_dataset_with_questions]
+        all_questions.extend(typed_questions)
+        
+        # Create intermediate dataset and push
+        intermediate_dataset = Dataset.from_list(all_questions)
+        intermediate_output = f"{single_shot_question_settings['output_dataset']}-original-{len(args.question_types)}-types-in-progress"
+        logger.info(f"Pushing intermediate results after completing {question_type} ({len(all_questions)} total questions)")
+        push_single_shot_questions_to_huggingface(intermediate_dataset, intermediate_output)
+        
         logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
         questions_by_type[question_type] = document_dataset_with_questions
-    
-    # Combine all questions into a single dataset
-    all_questions = []
-    for question_type, dataset in questions_by_type.items():
-        all_questions.extend([{**item, 'question_type': question_type} for item in dataset])
+
+    # Create final combined dataset
     combined_dataset = Dataset.from_list(all_questions)
     
-    # Push original single-shot questions to HuggingFace
+    # Push final version with different name
     original_output = f"{single_shot_question_settings['output_dataset']}-original"
-    logger.info(f"Pushing original single-shot questions to {original_output}")
+    logger.info(f"Pushing final combined single-shot questions to {original_output}")
     push_single_shot_questions_to_huggingface(combined_dataset, original_output)
     
     # Deduplicate single-shot questions
@@ -792,12 +801,13 @@ def main():
     dedup_output = f"{single_shot_question_settings['output_dataset']}-deduplicated"
     logger.info(f"Pushing deduplicated single-shot questions to {dedup_output}")
     push_single_shot_questions_to_huggingface(deduplicated_dataset, dedup_output)
-    
-    # Generate multi-hop questions from deduplicated single-shot questions
-    multihop_dataset = generate_multihop_questions(deduplicated_dataset, engine, args.max_concurrent)
-    
-    # Push original multi-hop questions to HuggingFace
-    original_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-original"
+
+    for question_type in args.question_types:
+        # Generate multi-hop questions from deduplicated single-shot questions
+        multihop_dataset = generate_multihop_questions(deduplicated_dataset, engine, question_type, args.max_concurrent)
+        
+        # Push original multi-hop questions to HuggingFace
+        original_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-original-{question_type}"
     logger.info(f"Pushing original multi-hop questions to {original_multihop_output}")
     push_multihop_questions_to_huggingface(multihop_dataset, original_multihop_output)
     
@@ -813,14 +823,32 @@ def main():
     
     # now we touch multihop reasoning
     multihop_dataset = load_dataset(f"{dataset_settings['organization']}/{dataset_settings['dataset_name']}-multihop", split=args.split)
+    
+    # Generate and push multi-hop questions incrementally
+    all_multihop_questions = []
     for question_type in args.question_types:
         start_time = time.time()
         multihop_dataset_with_questions = generate_multihop_questions(multihop_dataset, engine, question_type, args.max_concurrent)
         end_time = time.time()
-        logger.info(f"Generated {len(multihop_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-        push_multihop_questions_to_huggingface(multihop_dataset_with_questions, single_shot_question_settings['output_dataset'])
+        
+        # Add question type to each item
+        typed_questions = [{**item, 'question_type': question_type} for item in multihop_dataset_with_questions]
+        all_multihop_questions.extend(typed_questions)
+        
+        # Create and push intermediate dataset
+        intermediate_dataset = Dataset.from_list(all_multihop_questions)
+        intermediate_output = f"{single_shot_question_settings['output_dataset']}-multihop-original-{len(args.question_types)}-types-in-progress"
+        logger.info(f"Pushing intermediate multi-hop results after completing {question_type} ({len(all_multihop_questions)} total questions)")
+        push_multihop_questions_to_huggingface(intermediate_dataset, intermediate_output)
+        
+        logger.info(f"Generated {len(multihop_dataset_with_questions)} multi-hop questions for {question_type} in {end_time - start_time:.2f} seconds")
 
-    
+    # Create and push final combined multi-hop dataset
+    final_multihop_dataset = Dataset.from_list(all_multihop_questions)
+    final_output = f"{single_shot_question_settings['output_dataset']}-multihop-original"
+    logger.info(f"Pushing final combined multi-hop questions to {final_output}")
+    push_multihop_questions_to_huggingface(final_multihop_dataset, final_output)
+
     logger.info("Process completed successfully")
 
 if __name__ == "__main__":

@@ -229,162 +229,173 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Fact Contradiction (Medium)
-
+### Example 1
 ```json
 {
-    "document_extract_analysis": "The text discusses climate change impacts across different regions and time periods.",
+    "document_extract_analysis": "The text explores the evolution of early computing systems, focusing on ENIAC, UNIVAC, and their impact on modern computing architecture.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Arctic temperature changes from 1980-2000",
-            "relevant_information": "2°C increase in Arctic temperatures",
-            "connection_points": ["temperature trends", "timeline connection"]
+            "content_summary": "ENIAC development and specifications",
+            "relevant_information": "ENIAC was completed in 1945, used vacuum tubes, required manual rewiring",
+            "connection_points": ["technological evolution", "programming methods"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Arctic temperature changes from 2000-2020",
-            "relevant_information": "Additional 3°C increase",
-            "connection_points": ["temperature trends", "cumulative effects"]
+            "content_summary": "UNIVAC innovations",
+            "relevant_information": "UNIVAC introduced stored programs in 1951, eliminated manual rewiring",
+            "connection_points": ["programming evolution", "architectural changes"]
         }
     ],
     "testable_concepts": [
-        "temperature changes",
-        "cumulative effects",
-        "temporal progression"
+        "computer architecture evolution",
+        "programming paradigm shifts",
+        "technological transitions",
+        "historical progression"
     ],
     "potential_question_directions": [
-        "How do the temperature changes compare across periods?",
-        "What is the total temperature increase described?",
-        "How do the chunks show progression of change?"
+        "How did programming methods evolve between systems?",
+        "What were the key architectural differences?",
+        "How did storage mechanisms change?",
+        "What impact did these changes have on computing?"
     ],
-    "best_direction": "What is the total temperature increase described?",
-    "comprehension_type": "fact_contradiction",
+    "best_direction": "How did programming methods evolve between systems?",
+    "comprehension_type": "process_evolution",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "2°C increase in Arctic temperatures from 1980-2000",
-        "Additional 3°C increase from 2000-2020"
+        "ENIAC required manual rewiring for each new program",
+        "UNIVAC introduced stored programs, eliminating manual rewiring"
     ],
-    "quote_context": "The quotes establish a total 5°C increase across both periods.",
+    "quote_context": "The quotes demonstrate the fundamental shift from physical to stored program computing",
     "kind": "false-premise",
-    "question": "The text indicates that Arctic temperatures increased by only 1°C total from 1980-2020. What's wrong with this premise and what do the texts actually say?",
-    "answer": "The texts show a total increase of 5°C: 2°C from 1980-2000 and an additional 3°C from 2000-2020",
-    "reasoning": "Requires combining information from both chunks to determine total change.",
+    "question": "How accurate is the claim that ENIAC introduced stored program computing while UNIVAC still required manual rewiring for new programs?",
+    "answer": "This claim inverts the historical reality. ENIAC required manual rewiring for new programs, while UNIVAC actually introduced stored program computing in 1951, marking a significant advance in computer architecture.",
+    "reasoning": "The question requires understanding the chronological development of programming methods and recognizing that UNIVAC's introduction of stored programs was a progression from ENIAC's manual rewiring approach.",
     "difficulty": 3,
-    "difficulty_justification": "Requires synthesizing numerical information across multiple chunks."
+    "difficulty_justification": "Requires synthesizing historical information and understanding technological progression across multiple chunks while identifying reversed attribution of innovations."
 }
 ```
 
-### Example 2: Multi-Hop Process Inversion (Hard)
-
+### Example 2
 ```json
 {
-    "document_extract_analysis": "The text explains photosynthesis and cellular respiration processes.",
+    "document_extract_analysis": "The text details the nitrogen cycle in ecosystems, focusing on bacterial roles and plant interactions.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Photosynthesis process and inputs",
-            "relevant_information": "Plants use sunlight to convert CO2 and water into glucose",
-            "connection_points": ["glucose production", "energy flow"]
+            "content_summary": "Nitrogen fixation process",
+            "relevant_information": "Bacteria convert atmospheric N2 to usable forms",
+            "connection_points": ["bacterial processes", "nitrogen transformation"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Cellular respiration process",
-            "relevant_information": "Glucose broken down to release energy",
-            "connection_points": ["glucose usage", "energy production"]
-        }
-    ],
-    "testable_concepts": [
-        "energy transformation",
-        "process sequence",
-        "molecular changes"
-    ],
-    "potential_question_directions": [
-        "How do these processes relate to each other?",
-        "What is the sequence of energy transformation?",
-        "How do materials flow through both processes?"
-    ],
-    "best_direction": "How do these processes relate to each other?",
-    "comprehension_type": "process_inversion",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "Plants use sunlight to convert CO2 and water into glucose",
-        "Glucose broken down to release energy"
-    ],
-    "quote_context": "The quotes establish the correct sequence of glucose production then consumption.",
-    "kind": "false-premise",
-    "question": "The text suggests that cellular respiration produces glucose which is then used in photosynthesis to create energy. What's wrong with this premise and what is the actual sequence described?",
-    "answer": "The texts describe the opposite sequence: photosynthesis produces glucose first, which is then broken down during cellular respiration to release energy",
-    "reasoning": "Requires understanding the relationship between processes described in separate chunks.",
-    "difficulty": 4,
-    "difficulty_justification": "Requires synthesizing process information across chunks and understanding causal relationships."
-}
-```
-
-### Example 3: Cross-Chunk System Contradiction (Very Hard)
-
-```json
-{
-    "document_extract_analysis": "The text explains ecosystem relationships in a coral reef.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "chunk1",
-            "content_summary": "Coral-algae symbiosis",
-            "relevant_information": "Corals provide shelter, algae provide nutrients",
-            "connection_points": ["symbiotic relationships", "nutrient cycling"]
-        },
-        {
-            "chunk_id": "chunk2",
-            "content_summary": "Reef fish interactions",
-            "relevant_information": "Fish clean corals and control algae growth",
-            "connection_points": ["ecosystem balance", "species interactions"]
+            "content_summary": "Plant nitrogen utilization",
+            "relevant_information": "Plants absorb fixed nitrogen from soil",
+            "connection_points": ["nutrient uptake", "plant growth"]
         },
         {
             "chunk_id": "chunk3",
-            "content_summary": "Environmental impacts",
-            "relevant_information": "Temperature affects all relationships",
-            "connection_points": ["environmental factors", "system stability"]
+            "content_summary": "Decomposition cycle",
+            "relevant_information": "Dead organisms return nitrogen to soil",
+            "connection_points": ["nutrient recycling", "ecosystem balance"]
         }
     ],
     "testable_concepts": [
-        "ecosystem relationships",
-        "symbiotic interactions",
-        "environmental effects"
+        "nitrogen transformation",
+        "ecosystem cycles",
+        "bacterial-plant relationships",
+        "nutrient flow patterns"
     ],
     "potential_question_directions": [
-        "How do different species interact in the reef?",
-        "What maintains ecosystem balance?",
-        "How do environmental factors affect relationships?"
+        "How does nitrogen move through the ecosystem?",
+        "What roles do different organisms play?",
+        "How are processes interconnected?",
+        "What maintains cycle balance?"
     ],
-    "best_direction": "How do different species interact in the reef?",
-    "comprehension_type": "system_contradiction",
+    "best_direction": "How does nitrogen move through the ecosystem?",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Corals provide shelter, algae provide nutrients",
-        "Fish clean corals and control algae growth",
-        "Temperature affects all relationships"
+        "Bacteria convert atmospheric N2 to usable forms",
+        "Plants absorb fixed nitrogen from soil",
+        "Dead organisms return nitrogen to soil"
     ],
-    "quote_context": "The quotes establish complex interdependencies between species.",
+    "quote_context": "The quotes establish the complete nitrogen cycle pathway through multiple organisms",
     "kind": "false-premise",
-    "question": "The text suggests that coral reef species operate independently, with corals harming algae, fish avoiding corals, and temperature having no effect on these relationships. What's wrong with these premises and how does the system actually work according to the texts?",
-    "answer": "The texts describe a highly interdependent system where corals and algae have a mutually beneficial relationship, fish actively help maintain coral health, and temperature affects all these relationships",
-    "reasoning": "Requires synthesizing information about multiple relationships across all three chunks.",
-    "difficulty": 5,
-    "difficulty_justification": "Requires understanding complex system interactions described across multiple chunks and identifying multiple contradictions."
+    "question": "The text suggests that plants directly convert atmospheric nitrogen to usable forms, while bacteria only decompose dead matter. What's incorrect about this understanding?",
+    "answer": "This completely misrepresents the process. According to the text, bacteria (not plants) convert atmospheric nitrogen to usable forms, plants then absorb this fixed nitrogen from the soil, and decomposition returns nitrogen to the soil.",
+    "reasoning": "Understanding requires synthesizing information about multiple organisms' roles and their sequence in the nitrogen cycle across all three chunks.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding complex system interactions, process sequences, and correcting multiple role reversals across three text chunks."
 }
 ```
+
+### Example 3
+```json
+{
+    "document_extract_analysis": "The text examines quantum entanglement and its implications for quantum computing.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Quantum entanglement definition",
+            "relevant_information": "Particles remain connected regardless of distance",
+            "connection_points": ["quantum properties", "particle relationships"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Quantum computing applications",
+            "relevant_information": "Entanglement enables parallel processing",
+            "connection_points": ["practical applications", "computational advantages"]
+        },
+        {
+            "chunk_id": "chunk3",
+            "content_summary": "Measurement effects",
+            "relevant_information": "Measuring one particle affects its entangled partner",
+            "connection_points": ["observation impacts", "quantum behavior"]
+        }
+    ],
+    "testable_concepts": [
+        "quantum entanglement",
+        "measurement effects",
+        "computational implications",
+        "particle behavior"
+    ],
+    "potential_question_directions": [
+        "How does entanglement affect computation?",
+        "What happens during measurement?",
+        "How do particles maintain connections?",
+        "What enables quantum advantages?"
+    ],
+    "best_direction": "How does entanglement affect computation?",
+    "comprehension_type": "mechanism_understanding",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Particles remain connected regardless of distance",
+        "Entanglement enables parallel processing",
+        "Measuring one particle affects its entangled partner"
+    ],
+    "quote_context": "The quotes establish the fundamental properties and computational implications of entanglement",
+    "kind": "false-premise",
+    "question": "The text indicates that quantum entanglement slows down computation because measuring one particle has no effect on others, and particles must be physically connected to maintain their relationship. What's wrong with these premises?",
+    "answer": "This contradicts multiple key points: entanglement actually enables faster parallel processing, measuring one particle does affect its entangled partner, and particles remain connected regardless of physical distance.",
+    "reasoning": "Requires understanding quantum mechanical principles across multiple chunks and identifying multiple conceptual errors in the premise.",
+    "difficulty": 5,
+    "difficulty_justification": "Requires synthesizing complex physics concepts across three chunks while identifying multiple fundamental misconceptions about quantum behavior."
+}
+```
+
 
 ## Common Pitfalls to Avoid
 

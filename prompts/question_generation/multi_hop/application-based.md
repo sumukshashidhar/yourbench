@@ -229,154 +229,159 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Principle Application (Easy)
+### Example 1: Economic Policy Impact Analysis (Medium)
 
 ```json
 {
-    "document_extract_analysis": "The text explains both photosynthesis mechanisms and plant growth factors across multiple sections.",
+    "document_extract_analysis": "The text discusses monetary policy mechanisms and their effects on international trade relationships across multiple sections, including central bank operations and global market dynamics.",
     "chunk_analyses": [
         {
-            "chunk_id": "A1",
-            "content_summary": "Details of photosynthesis process",
-            "relevant_information": "Light energy conversion to chemical energy",
-            "connection_points": ["energy production", "carbon dioxide usage"]
+            "chunk_id": "E1",
+            "content_summary": "Central bank interest rate mechanisms",
+            "relevant_information": "Impact of rate changes on domestic economy",
+            "connection_points": ["currency value", "investment flows", "lending patterns"]
         },
         {
-            "chunk_id": "A2",
-            "content_summary": "Plant growth requirements",
-            "relevant_information": "Nutrient uptake and environmental factors",
-            "connection_points": ["energy usage", "growth conditions"]
+            "chunk_id": "E2",
+            "content_summary": "International trade dynamics",
+            "relevant_information": "Exchange rate effects on trade balances",
+            "connection_points": ["export competitiveness", "import costs", "trade deficits"]
         }
     ],
     "testable_concepts": [
-        "energy conversion",
-        "growth factors",
-        "environmental conditions"
+        "monetary policy transmission",
+        "exchange rate mechanisms",
+        "international trade flows",
+        "economic equilibrium"
     ],
     "potential_question_directions": [
-        "How might varying light conditions affect both photosynthesis and growth in an indoor garden?",
-        "What impact would different nutrient levels have on energy production and plant development?",
-        "How do temperature changes influence both photosynthesis efficiency and growth rates?"
+        "How would aggressive interest rate hikes affect both domestic lending and international trade?",
+        "What impact would currency devaluation have on both local businesses and trade relationships?",
+        "How might changes in central bank policy affect both domestic investment and foreign trade patterns?"
     ],
-    "best_direction": "How might varying light conditions affect both photosynthesis and growth in an indoor garden?",
-    "comprehension_type": "principle_application",
+    "best_direction": "How would aggressive interest rate hikes affect both domestic lending and international trade?",
+    "comprehension_type": "chain_effect",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Photosynthesis requires light energy for chemical conversion",
-        "Plant growth depends on energy availability and environmental conditions"
+        "Interest rates directly influence domestic borrowing and investment decisions",
+        "Exchange rate fluctuations impact international competitiveness and trade flows",
+        "Monetary policy changes create ripple effects through both domestic and international markets"
     ],
-    "quote_context": "The quotes connect energy production to growth requirements",
+    "quote_context": "The quotes establish the interconnected nature of monetary policy effects on both domestic and international economic spheres",
     "kind": "application",
-    "question": "Using principles from both passages, how would changing light conditions in an indoor garden affect both photosynthesis and plant growth rates?",
-    "answer": "Reduced light would decrease photosynthesis efficiency, leading to less energy production, which would then result in slower growth rates due to limited energy availability",
-    "reasoning": "Applies connected principles from both chunks to show cause-effect relationship",
-    "difficulty": 2,
-    "difficulty_justification": "Straightforward application of related concepts from multiple chunks"
-}
-```
-
-### Example 2: Multi-Process Adaptation (Medium)
-
-```json
-{
-    "document_extract_analysis": "The text covers both cellular respiration and energy distribution systems in organisms.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "B1",
-            "content_summary": "Cellular respiration process",
-            "relevant_information": "Energy extraction from glucose",
-            "connection_points": ["ATP production", "oxygen use"]
-        },
-        {
-            "chunk_id": "B2",
-            "content_summary": "Energy distribution in organisms",
-            "relevant_information": "ATP transport and usage",
-            "connection_points": ["energy distribution", "cellular needs"]
-        }
-    ],
-    "testable_concepts": [
-        "energy extraction",
-        "distribution systems",
-        "cellular efficiency"
-    ],
-    "potential_question_directions": [
-        "How would altitude changes affect both energy production and distribution in athletes?",
-        "What adaptations might occur in both systems during extended exercise?",
-        "How do temperature changes impact both energy generation and distribution?"
-    ],
-    "best_direction": "How would altitude changes affect both energy production and distribution in athletes?",
-    "comprehension_type": "process_adaptation",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "Cellular respiration requires oxygen for maximum efficiency",
-        "Energy distribution depends on ATP availability and transport"
-    ],
-    "quote_context": "The quotes establish the connection between oxygen availability and energy systems",
-    "kind": "application",
-    "question": "Using the principles from both passages, how would high-altitude training affect an athlete's cellular energy production and distribution systems?",
-    "answer": "Lower oxygen availability would reduce cellular respiration efficiency, leading to decreased ATP production, which would then impact the energy distribution system's ability to supply working muscles",
-    "reasoning": "Integrates understanding of both energy production and distribution processes in a new context",
+    "question": "If a country's central bank raises interest rates by 2% over three months, how would this affect both domestic lending markets and international trade patterns?",
+    "answer": "Higher interest rates would reduce domestic borrowing and investment due to increased costs, while simultaneously strengthening the currency, which would make exports more expensive and imports cheaper, potentially worsening the trade balance but helping control inflation",
+    "reasoning": "This requires understanding the dual impact of interest rates on domestic credit markets and international trade through exchange rate mechanisms, demonstrating the interconnected nature of monetary policy effects",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding and connecting multiple biological processes in a specific scenario"
+    "difficulty_justification": "Requires synthesizing multiple economic relationships and understanding both direct and indirect effects across different markets"
 }
 ```
 
-### Example 3: System-Level Integration (Very Hard)
+### Example 2: Environmental Science Ecosystem Analysis (Hard)
 
 ```json
 {
-    "document_extract_analysis": "The text explains both ecosystem nutrient cycles and climate impact on biodiversity.",
+    "document_extract_analysis": "The text covers marine ecosystem dynamics and climate change impacts on ocean chemistry, focusing on feedback loops and species adaptation.",
     "chunk_analyses": [
         {
-            "chunk_id": "C1",
-            "content_summary": "Nutrient cycling in ecosystems",
-            "relevant_information": "Carbon and nitrogen cycles",
-            "connection_points": ["nutrient flow", "biological processes"]
+            "chunk_id": "M1",
+            "content_summary": "Marine ecosystem food webs",
+            "relevant_information": "Trophic level interactions and energy flow",
+            "connection_points": ["species interdependence", "nutrient cycling", "population dynamics"]
         },
         {
-            "chunk_id": "C2",
-            "content_summary": "Climate effects on biodiversity",
-            "relevant_information": "Species adaptation and interaction",
-            "connection_points": ["environmental change", "species response"]
+            "chunk_id": "M2",
+            "content_summary": "Ocean acidification processes",
+            "relevant_information": "Chemical changes and biological impacts",
+            "connection_points": ["pH effects", "carbonate availability", "species adaptation"]
         }
     ],
     "testable_concepts": [
-        "nutrient cycles",
-        "climate impacts",
-        "ecosystem adaptation"
+        "trophic cascades",
+        "chemical equilibrium",
+        "species adaptation",
+        "ecosystem resilience"
     ],
     "potential_question_directions": [
-        "How might warming temperatures affect both nutrient cycling and species interactions in a forest ecosystem?",
-        "What cascading effects would altered precipitation have on both nutrient availability and biodiversity?",
-        "How do seasonal changes impact both nutrient flows and species adaptation?"
+        "How would increased ocean acidification affect both coral reefs and dependent species?",
+        "What cascading effects would temperature changes have on both water chemistry and food webs?",
+        "How might changes in primary producer populations affect both nutrient cycles and species distribution?"
     ],
-    "best_direction": "How might warming temperatures affect both nutrient cycling and species interactions in a forest ecosystem?",
-    "comprehension_type": "system_analysis",
+    "best_direction": "How would increased ocean acidification affect both coral reefs and dependent species?",
+    "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Temperature influences rate of nutrient cycling",
-        "Species interactions depend on resource availability",
-        "Climate changes affect both chemical and biological processes"
+        "Ocean acidification directly impacts carbonate availability for reef-building organisms",
+        "Coral reef ecosystems support complex food webs and species interactions",
+        "Changes in reef structure affect multiple trophic levels and habitat availability"
     ],
-    "quote_context": "The quotes link environmental changes to both chemical and biological systems",
+    "quote_context": "The quotes link chemical changes to biological impacts across multiple ecosystem levels",
     "kind": "application",
-    "question": "Using principles from both passages, analyze how a 2°C temperature increase would affect both nutrient cycling and species interactions in a forest ecosystem over a decade.",
-    "answer": "Warmer temperatures would accelerate nutrient cycling, potentially leading to initial increased availability but possible long-term depletion, while simultaneously affecting species interactions through changed resource availability and timing mismatches",
-    "reasoning": "Requires integration of multiple system-level processes and their interactions over time",
+    "question": "How would a 0.3 pH decrease in ocean acidity affect both coral reef formation and the survival of reef-dependent species over a 20-year period?",
+    "answer": "The pH decrease would reduce carbonate availability, slowing coral growth and potentially causing reef deterioration, which would then reduce habitat availability for dependent species, leading to population declines and possible local extinctions, especially for specialist species",
+    "reasoning": "This requires understanding both the chemical impacts on reef formation and the biological consequences for dependent species, including long-term ecosystem effects",
+    "difficulty": 4,
+    "difficulty_justification": "Involves complex system interactions, multiple timescales, and understanding of both chemical and biological processes"
+}
+```
+
+### Example 3: Technological Innovation Impact (Very Hard)
+
+```json
+{
+    "document_extract_analysis": "The text examines artificial intelligence development and its societal implications, including technological advancement patterns and social adaptation mechanisms.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "T1",
+            "content_summary": "AI development trajectories",
+            "relevant_information": "Technical advancement patterns and capabilities",
+            "connection_points": ["learning algorithms", "processing power", "application domains"]
+        },
+        {
+            "chunk_id": "T2",
+            "content_summary": "Societal adaptation to AI",
+            "relevant_information": "Social and economic impacts",
+            "connection_points": ["workforce changes", "skill requirements", "economic restructuring"]
+        }
+    ],
+    "testable_concepts": [
+        "technological advancement",
+        "social adaptation",
+        "economic transformation",
+        "skill evolution"
+    ],
+    "potential_question_directions": [
+        "How might accelerated AI development affect both job markets and education systems?",
+        "What impact would widespread AI adoption have on both workforce skills and economic structures?",
+        "How could AI advancement change both professional roles and educational requirements?"
+    ],
+    "best_direction": "How might accelerated AI development affect both job markets and education systems?",
+    "comprehension_type": "implication_analysis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "AI capabilities are advancing exponentially in specific domains",
+        "Workforce adaptation requires fundamental shifts in skill development",
+        "Educational systems must evolve to meet changing technological demands"
+    ],
+    "quote_context": "The quotes establish the relationship between technological advancement and societal adaptation requirements",
+    "kind": "application",
+    "question": "Given a significant breakthrough in AI natural language processing, analyze how both job markets and higher education systems would need to transform over the next decade.",
+    "answer": "Job markets would shift away from routine language processing tasks, creating demand for AI-complementary skills like complex problem-solving and creative thinking. Higher education would need to restructure curricula to emphasize these skills while incorporating AI literacy, potentially leading to new hybrid disciplines and teaching methods",
+    "reasoning": "This requires understanding both the technical implications of AI advancement and the complex adaptations needed in multiple societal systems, including feedback loops between education and employment",
     "difficulty": 5,
-    "difficulty_justification": "Demands understanding of complex system interactions and long-term effects across multiple domains"
+    "difficulty_justification": "Requires complex systems thinking, understanding of multiple interconnected domains, and long-term impact analysis"
 }
 ```
 

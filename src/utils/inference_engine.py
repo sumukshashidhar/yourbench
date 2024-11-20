@@ -463,7 +463,12 @@ class InferenceEngine:
         """Get or create aiohttp session"""
         if self._session is None or self._session.closed:
             timeout = aiohttp.ClientTimeout(total=6000)
-            connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+            connector = aiohttp.TCPConnector(
+                limit=0,  # Set the limit here
+                limit_per_host=0,  # Set the limit per host here
+                force_close=True,
+                enable_cleanup_closed=True
+            )
             self._session = aiohttp.ClientSession(timeout=timeout, connector=connector)
         return self._session
 

@@ -229,150 +229,168 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Personal Response (Easy)
+
+Markdown
+Text
+### Example 1
 
 ```json
 {
-    "document_extract_analysis": "The text discusses climate change impacts across different regions and time periods.",
+    "document_extract_analysis": "The text explores the evolution of artificial intelligence in healthcare, focusing on diagnostic accuracy, patient care transformation, and ethical implications.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Arctic ice melt patterns and wildlife impact",
-            "relevant_information": "Accelerating ice melt affecting polar bear habitats",
-            "connection_points": ["temperature changes", "wildlife adaptation", "ecosystem impact"]
+            "content_summary": "AI diagnostic capabilities and accuracy rates",
+            "relevant_information": "Machine learning algorithms showing superior detection rates",
+            "connection_points": ["diagnostic accuracy", "technology adoption", "clinical validation"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Coastal community responses to rising seas",
-            "relevant_information": "Communities developing adaptation strategies",
-            "connection_points": ["human adaptation", "community response", "environmental change"]
-        }
-    ],
-    "testable_concepts": [
-        "environmental adaptation",
-        "community resilience",
-        "ecosystem change"
-    ],
-    "potential_question_directions": [
-        "How do different groups adapt to environmental changes?",
-        "What parallels exist between wildlife and human adaptation?",
-        "How do responses to change vary across regions?"
-    ],
-    "best_direction": "What parallels exist between wildlife and human adaptation?",
-    "comprehension_type": "compare_contrast",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "Polar bears are changing hunting patterns as ice melts earlier",
-        "Coastal communities are developing new building techniques",
-        "Both groups show remarkable adaptability to changing conditions"
-    ],
-    "quote_context": "The quotes demonstrate parallel adaptation strategies across species.",
-    "kind": "open-ended",
-    "question": "How do the adaptation strategies of wildlife and human communities described in the text reflect different approaches to similar environmental challenges?",
-    "answer": "Multiple valid responses comparing adaptation methods, supported by examples from both chunks",
-    "reasoning": "The text provides parallel examples of adaptation, allowing exploration of different response strategies.",
-    "difficulty": 2,
-    "difficulty_justification": "Requires connecting information across chunks but allows flexible interpretation."
-}
-```
-
-### Example 2: Multi-Hop Problem Exploration (Medium)
-
-```json
-{
-    "document_extract_analysis": "The text examines technological innovation's impact on workplace culture and productivity across different sectors.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "chunk1",
-            "content_summary": "Remote work technology adoption",
-            "relevant_information": "Rapid shift to digital collaboration tools",
-            "connection_points": ["technology adoption", "workplace change", "communication patterns"]
-        },
-        {
-            "chunk_id": "chunk2",
-            "content_summary": "Productivity measurement evolution",
-            "relevant_information": "New metrics for remote work effectiveness",
-            "connection_points": ["performance metrics", "management adaptation", "work assessment"]
+            "content_summary": "Patient care personalization through AI",
+            "relevant_information": "Customized treatment plans and monitoring",
+            "connection_points": ["patient experience", "care optimization", "treatment efficacy"]
         },
         {
             "chunk_id": "chunk3",
-            "content_summary": "Employee well-being initiatives",
-            "relevant_information": "Digital wellness programs and support",
-            "connection_points": ["employee support", "work-life balance", "mental health"]
+            "content_summary": "Ethical considerations in AI healthcare",
+            "relevant_information": "Privacy concerns and decision-making accountability",
+            "connection_points": ["ethical frameworks", "patient rights", "healthcare access"]
         }
     ],
     "testable_concepts": [
-        "workplace transformation",
-        "digital adaptation",
-        "organizational change"
+        "AI integration in healthcare",
+        "patient-centered care",
+        "medical ethics",
+        "technological transformation",
+        "healthcare equity"
     ],
     "potential_question_directions": [
-        "How do different aspects of workplace digitalization interact?",
-        "What challenges arise from rapid technological change?",
-        "How do organizations balance efficiency and well-being?"
+        "How does AI impact the doctor-patient relationship?",
+        "What ethical considerations arise from AI diagnostics?",
+        "How might healthcare access change with AI adoption?",
+        "What role does patient privacy play in AI healthcare?"
     ],
-    "best_direction": "How do organizations balance efficiency and well-being?",
-    "comprehension_type": "system_analysis",
+    "best_direction": "How does AI impact the doctor-patient relationship?",
+    "comprehension_type": "relationship_comprehension",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Companies are adopting new collaboration platforms",
-        "Traditional productivity metrics are being reconsidered",
-        "Digital wellness programs address remote work challenges"
+        "AI algorithms demonstrate 95% accuracy in early disease detection",
+        "Personalized treatment plans show 40% better outcomes",
+        "Ethical frameworks must balance innovation with patient rights"
     ],
-    "quote_context": "The quotes show the interplay between technology, productivity, and well-being.",
+    "quote_context": "The quotes demonstrate the interplay between technological capability, patient care, and ethical considerations.",
     "kind": "open-ended",
-    "question": "How might organizations redesign their approach to workplace technology to better integrate productivity goals with employee well-being, based on the patterns described across the text?",
-    "answer": "Multiple valid approaches addressing technology integration, measurement systems, and support structures",
-    "reasoning": "The text identifies various aspects of workplace transformation that need integration.",
+    "question": "How might the integration of AI in healthcare transform the traditional doctor-patient relationship, considering both the benefits of enhanced diagnostic accuracy and the challenges of maintaining personal connection?",
+    "answer": "Multiple valid responses exploring the balance between technological advancement and human connection in healthcare delivery",
+    "reasoning": "The question requires synthesis of technical capabilities, patient care aspects, and ethical considerations while encouraging exploration of future healthcare dynamics",
     "difficulty": 3,
-    "difficulty_justification": "Requires synthesis across multiple chunks and consideration of complex interactions."
+    "difficulty_justification": "Requires understanding of multiple aspects of healthcare transformation and ability to analyze complex relationships"
 }
 ```
 
-### Example 3: Cross-Chunk Future Implications (Very Hard)
+### Example 2
 
 ```json
 {
-    "document_extract_analysis": "The text explores space exploration developments across private and public sectors.",
+    "document_extract_analysis": "The text examines global biodiversity loss across different ecosystems and its cascading effects on climate stability and human societies.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Private space company innovations",
-            "relevant_information": "New rocket technology and cost reduction",
-            "connection_points": ["technology advancement", "commercial space", "innovation"]
+            "content_summary": "Rainforest ecosystem collapse",
+            "relevant_information": "Accelerating species extinction rates",
+            "connection_points": ["habitat loss", "species interdependence", "ecosystem stability"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "International space agency collaboration",
-            "relevant_information": "Joint mission planning and resource sharing",
-            "connection_points": ["cooperation", "resource allocation", "mission planning"]
+            "content_summary": "Ocean acidification impacts",
+            "relevant_information": "Marine food web disruption",
+            "connection_points": ["marine ecosystems", "food security", "climate regulation"]
         },
         {
             "chunk_id": "chunk3",
-            "content_summary": "Space law evolution",
-            "relevant_information": "Developing frameworks for space resource use",
-            "connection_points": ["regulation", "resource rights", "international law"]
+            "content_summary": "Indigenous knowledge and conservation",
+            "relevant_information": "Traditional ecological practices",
+            "connection_points": ["cultural preservation", "sustainable practices", "local solutions"]
         }
     ],
     "testable_concepts": [
-        "space commercialization",
-        "international cooperation",
-        "regulatory development"
+        "ecosystem interconnectedness",
+        "biodiversity preservation",
+        "traditional ecological knowledge",
+        "environmental justice",
+        "conservation strategies"
     ],
     "potential_question_directions": [
-        "How might private-public space partnerships evolve?",
-        "What challenges arise from commercializing space?",
-        "How could space law adapt to new developments?"
+        "How do different ecosystem collapses interact?",
+        "What role can traditional knowledge play in conservation?",
+        "How might biodiversity loss affect human societies?",
+        "What are the most effective conservation approaches?"
     ],
-    "best_direction": "How might private-public space partnerships evolve?",
+    "best_direction": "How do different ecosystem collapses interact?",
+    "comprehension_type": "system_impact",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Rainforest species loss accelerating at 1000x natural rate",
+        "Ocean acidification threatening 60% of marine species",
+        "Indigenous practices maintain 80% of global biodiversity"
+    ],
+    "quote_context": "The quotes illustrate the interconnected nature of ecosystem collapse and potential solutions.",
+    "kind": "open-ended",
+    "question": "What cascading effects might emerge from the simultaneous collapse of rainforest and marine ecosystems, and how could traditional ecological knowledge inform potential solutions?",
+    "answer": "Multiple valid responses exploring ecosystem interactions, feedback loops, and integration of traditional and modern conservation approaches",
+    "reasoning": "The question requires understanding of complex ecological relationships and the value of diverse knowledge systems",
+    "difficulty": 5,
+    "difficulty_justification": "Requires deep understanding of ecological systems, ability to analyze complex interactions, and integration of different knowledge frameworks"
+}
+```
+
+### Example 3
+
+```json
+{
+    "document_extract_analysis": "The text discusses quantum computing developments and their potential impact on cryptography, drug discovery, and financial systems.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Quantum computing breakthroughs",
+            "relevant_information": "Recent advances in qubit stability",
+            "connection_points": ["technological progress", "computational power", "research milestones"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Cryptographic implications",
+            "relevant_information": "Vulnerability of current encryption",
+            "connection_points": ["security risks", "data protection", "encryption standards"]
+        },
+        {
+            "chunk_id": "chunk3",
+            "content_summary": "Pharmaceutical applications",
+            "relevant_information": "Molecular simulation capabilities",
+            "connection_points": ["drug discovery", "medical advancement", "research efficiency"]
+        }
+    ],
+    "testable_concepts": [
+        "quantum computing applications",
+        "cybersecurity evolution",
+        "pharmaceutical innovation",
+        "technological disruption",
+        "risk management"
+    ],
+    "potential_question_directions": [
+        "How might quantum computing transform multiple industries?",
+        "What security challenges emerge from quantum advancement?",
+        "How could quantum computing accelerate scientific discovery?",
+        "What societal impacts might quantum computing create?"
+    ],
+    "best_direction": "How might quantum computing transform multiple industries?",
     "comprehension_type": "implication_analysis",
     "quality_metrics": {
         "clear_language": true,
@@ -380,19 +398,20 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Private companies are reducing launch costs significantly",
-        "Agencies are developing new collaboration frameworks",
-        "Space law is adapting to commercial activities"
+        "Quantum computers achieve 100-qubit stability",
+        "Current encryption vulnerable to quantum attacks",
+        "Molecular simulations 1000x faster with quantum computing"
     ],
-    "quote_context": "The quotes establish current trends in space sector development.",
+    "quote_context": "The quotes demonstrate quantum computing's transformative potential across different sectors.",
     "kind": "open-ended",
-    "question": "Based on the developments described across the text, how might the relationship between private space companies, international agencies, and regulatory frameworks evolve over the next decade, and what challenges might this evolution present?",
-    "answer": "Multiple valid responses exploring sector interactions, regulatory adaptation, and development challenges",
-    "reasoning": "The text provides foundation for analyzing complex interactions between different space sector elements.",
-    "difficulty": 5,
-    "difficulty_justification": "Requires synthesis across multiple chunks, consideration of complex interactions, and future projection."
+    "question": "How might the simultaneous advancement of quantum computing in cryptography and drug discovery reshape our approach to both data security and medical innovation over the next decade?",
+    "answer": "Multiple valid responses exploring technological transformation, security adaptation, and scientific advancement",
+    "reasoning": "The question requires understanding of quantum computing's diverse applications and ability to project future developments",
+    "difficulty": 4,
+    "difficulty_justification": "Requires technical understanding, cross-sector analysis, and ability to project future implications"
 }
 ```
+   
 
 ## Common Pitfalls to Avoid
 

@@ -40,11 +40,11 @@ row_structure = {
         "chunk_analysis" : "",
         "potential_question_directions" : "",
         "best_direction" : "",
-        "direct_quotes" : "",
+        # "direct_quotes" : "",
         "reasoning" : "",
         "estimated_difficulty" : "",
         "testable_concepts" : "",
-        "quality_metrics" : "",
+        # "quality_metrics" : "",
         "difficulty_justification" : "",
         "quote_context" : "",
         "supporting_quotes" : "",
@@ -220,13 +220,13 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
             prepared_row["chunk_analysis"] = [str(x.json()) for x in question.chunk_analyses]
             prepared_row["potential_question_directions"] = list(question.potential_question_directions)
             prepared_row["best_direction"] = question.best_direction
-            prepared_row["direct_quotes"] = list(question.supporting_quotes)
+            # prepared_row["direct_quotes"] = list(question.supporting_quotes)
             prepared_row["quote_context"] = question.quote_context
             prepared_row["reasoning"] = question.reasoning
             prepared_row["estimated_difficulty"] = int(question.difficulty)
             prepared_row["difficulty_justification"] = question.difficulty_justification
             prepared_row["testable_concepts"] = list(question.testable_concepts)
-            prepared_row["quality_metrics"] = question.quality_metrics.json()
+            # prepared_row["quality_metrics"] = question.quality_metrics.json()
             prepared_row["supporting_quotes"] = list(question.supporting_quotes)
             unwrapped_results.append(prepared_row)
         if idx % 100 == 0:
@@ -302,11 +302,11 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
             "chunk_analysis": Sequence(Value("string")),
             "potential_question_directions": Sequence(Value("string")),
             "best_direction": Value("string"),
-            "direct_quotes": Sequence(Value("string")),
+            # "direct_quotes": Sequence(Value("string")),
             "reasoning": Value("string"),
             "estimated_difficulty": Value("int64"),
             "testable_concepts": Sequence(Value("string")),
-            "quality_metrics": Value("string"),
+            # "quality_metrics": Value("string"),
             "difficulty_justification": Value("string"),
             "quote_context": Value("string"),
             "supporting_quotes": Sequence(Value("string")),

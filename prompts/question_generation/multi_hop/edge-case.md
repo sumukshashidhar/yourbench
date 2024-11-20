@@ -229,175 +229,168 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Exception Case (Easy)
+### Example 1
 
 ```json
 {
-    "document_extract_analysis": "The texts explain climate adaptation in different species, noting interconnected exceptions across environments.",
+    "document_extract_analysis": "The texts explore quantum computing principles, focusing on qubit behavior under different conditions and error correction mechanisms.",
     "chunk_analyses": [
         {
-            "chunk_id": "A1",
-            "content_summary": "Desert species adaptations",
-            "relevant_information": "Most desert animals are nocturnal",
-            "connection_points": ["temperature adaptation", "behavioral patterns"]
+            "chunk_id": "Q1",
+            "content_summary": "Qubit decoherence patterns",
+            "relevant_information": "Qubits maintain coherence for microseconds",
+            "connection_points": ["quantum states", "time limitations"]
         },
         {
-            "chunk_id": "A2",
-            "content_summary": "Arctic species behaviors",
-            "relevant_information": "Arctic foxes remain active during polar day",
-            "connection_points": ["temperature adaptation", "circadian rhythms"]
+            "chunk_id": "Q2",
+            "content_summary": "Error correction methods",
+            "relevant_information": "Surface codes require physical qubit overhead",
+            "connection_points": ["error rates", "resource requirements"]
         }
     ],
     "testable_concepts": [
-        "circadian adaptations",
-        "environmental exceptions",
-        "behavioral patterns"
+        "quantum coherence",
+        "error correction thresholds",
+        "resource scaling"
     ],
     "potential_question_directions": [
-        "How do circadian patterns differ between desert and arctic species?",
-        "What exceptions exist to typical day/night activity patterns?",
-        "How do environmental conditions influence behavioral adaptations?"
+        "How do decoherence times affect error correction requirements?",
+        "What trade-offs exist between physical qubits and error rates?",
+        "When do error correction methods become impractical?"
     ],
-    "best_direction": "What exceptions exist to typical day/night activity patterns?",
-    "comprehension_type": "exception_case",
+    "best_direction": "How do decoherence times affect error correction requirements?",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Most desert animals are nocturnal to avoid heat",
-        "Arctic foxes maintain activity during constant daylight",
-        "These adaptations represent exceptions to normal circadian patterns"
+        "Qubits lose coherence within microseconds",
+        "Surface code correction requires 1000 physical qubits per logical qubit",
+        "Error rates must stay below 1% for effective correction"
     ],
-    "quote_context": "The quotes establish contrasting exceptions to normal activity patterns in different environments",
+    "quote_context": "The quotes establish the relationship between coherence time, error rates, and resource requirements",
     "kind": "edge-case",
-    "question": "Based on the texts, what specific environmental conditions create exceptions to normal day/night activity patterns in both desert and arctic species?",
-    "answer": "Desert animals become nocturnal due to heat, while Arctic foxes remain active during constant daylight, both representing exceptions to typical circadian patterns",
-    "reasoning": "The question tests understanding of how different environmental pressures create exceptions to normal behavioral patterns across species",
-    "difficulty": 2,
-    "difficulty_justification": "Requires connecting simple exceptions from two different chunks but with clear relationship"
+    "question": "How does the microsecond-scale coherence time of qubits influence the minimum number of physical qubits needed for effective error correction?",
+    "answer": "The brief coherence time leads to higher error rates, requiring at least 1000 physical qubits per logical qubit to implement surface code correction effectively when error rates approach 1%",
+    "reasoning": "The question tests understanding of how temporal limitations create resource requirements through their effect on error rates",
+    "difficulty": 1,
+    "difficulty_justification": "Requires simple connection between time limitations and resource needs"
 }
 ```
 
-### Example 2: Multi-Hop Boundary Condition (Medium)
+### Example 2
 
 ```json
 {
-    "document_extract_analysis": "The passages describe enzyme function across temperature and pH ranges, with interconnected boundary conditions.",
+    "document_extract_analysis": "The passages detail neural network training dynamics, focusing on gradient descent behavior in different optimization scenarios.",
     "chunk_analyses": [
         {
-            "chunk_id": "B1",
-            "content_summary": "Temperature effects on enzymes",
-            "relevant_information": "Enzymes denature above 40°C",
-            "connection_points": ["protein stability", "reaction rate"]
+            "chunk_id": "N1",
+            "content_summary": "Learning rate effects",
+            "relevant_information": "High rates cause divergence",
+            "connection_points": ["optimization stability", "convergence speed"]
         },
         {
-            "chunk_id": "B2",
-            "content_summary": "pH influence on enzyme activity",
-            "relevant_information": "Optimal pH varies by location",
-            "connection_points": ["protein stability", "environmental conditions"]
+            "chunk_id": "N2",
+            "content_summary": "Batch size impact",
+            "relevant_information": "Larger batches affect gradient noise",
+            "connection_points": ["training stability", "computational efficiency"]
         },
         {
-            "chunk_id": "B3",
-            "content_summary": "Combined environmental effects",
-            "relevant_information": "Temperature and pH interact",
-            "connection_points": ["stability conditions", "multiple factors"]
+            "chunk_id": "N3",
+            "content_summary": "Memory constraints",
+            "relevant_information": "GPU memory limits batch size",
+            "connection_points": ["hardware limitations", "training options"]
         }
     ],
     "testable_concepts": [
-        "enzyme stability",
-        "environmental boundaries",
-        "condition interactions"
+        "optimization dynamics",
+        "resource constraints",
+        "training stability"
     ],
     "potential_question_directions": [
-        "How do temperature and pH interact to affect enzyme function?",
-        "What boundary conditions exist for enzyme stability?",
-        "When do multiple factors create stability limits?"
+        "How do hardware constraints affect training strategies?",
+        "What relationships exist between batch size and learning rate?",
+        "When do multiple constraints force training compromises?"
     ],
-    "best_direction": "How do temperature and pH interact to affect enzyme function?",
-    "comprehension_type": "boundary_condition",
+    "best_direction": "How do hardware constraints affect training strategies?",
+    "comprehension_type": "condition_interaction",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Enzymes denature above 40°C",
-        "Optimal pH varies by cellular location",
-        "Combined effects of temperature and pH can lower stability thresholds"
+        "Learning rates above 0.1 often cause divergence",
+        "Larger batches reduce gradient noise but increase memory usage",
+        "GPU memory limits maximum batch size to 256 samples"
     ],
-    "quote_context": "The quotes establish how multiple factors interact to create boundary conditions",
+    "quote_context": "The quotes establish interactions between hardware constraints, training parameters, and optimization behavior",
     "kind": "edge-case",
-    "question": "According to the texts, how do the combined effects of temperature and pH create boundary conditions for enzyme stability that differ from their individual effects?",
-    "answer": "The texts indicate that while enzymes normally denature above 40°C, the presence of non-optimal pH can lower this temperature threshold, creating a combined boundary condition",
-    "reasoning": "Tests understanding of how multiple factors interact to create new boundary conditions beyond their individual effects",
+    "question": "When GPU memory limits batch size to 256 samples, what adjustments to the learning rate become necessary to maintain training stability, and why?",
+    "answer": "With batch size limited to 256, learning rates must be reduced below 0.1 to compensate for increased gradient noise, maintaining stability despite suboptimal conditions",
+    "reasoning": "Tests understanding of how hardware constraints create cascading effects on training parameters and stability",
     "difficulty": 3,
-    "difficulty_justification": "Requires synthesizing information about multiple interacting factors across three chunks"
+    "difficulty_justification": "Requires understanding complex interactions between hardware limitations and training dynamics"
 }
 ```
 
-### Example 3: System Boundary Synthesis (Very Hard)
+### Example 3
 
 ```json
 {
-    "document_extract_analysis": "The texts discuss ecosystem resilience across different stress conditions, requiring synthesis of multiple interacting factors.",
+    "document_extract_analysis": "The texts examine cellular stress responses, focusing on heat shock protein expression and metabolic adaptations.",
     "chunk_analyses": [
         {
             "chunk_id": "C1",
-            "content_summary": "Species interdependence",
-            "relevant_information": "Keystone species effects",
-            "connection_points": ["population dynamics", "system stability"]
+            "content_summary": "Heat shock response",
+            "relevant_information": "HSP70 expression timing",
+            "connection_points": ["protein protection", "stress threshold"]
         },
         {
             "chunk_id": "C2",
-            "content_summary": "Resource limitations",
-            "relevant_information": "Critical resource thresholds",
-            "connection_points": ["carrying capacity", "system stress"]
+            "content_summary": "Metabolic changes",
+            "relevant_information": "ATP consumption patterns",
+            "connection_points": ["energy usage", "cellular resources"]
         },
         {
             "chunk_id": "C3",
-            "content_summary": "Recovery patterns",
-            "relevant_information": "Tipping points",
-            "connection_points": ["system collapse", "resilience factors"]
-        },
-        {
-            "chunk_id": "C4",
-            "content_summary": "Compound effects",
-            "relevant_information": "Multiple stressor interactions",
-            "connection_points": ["synergistic effects", "system boundaries"]
+            "content_summary": "Recovery phases",
+            "relevant_information": "Protein refolding requirements",
+            "connection_points": ["damage repair", "resource allocation"]
         }
     ],
     "testable_concepts": [
-        "ecosystem resilience",
-        "tipping points",
-        "compound stressors"
+        "stress response timing",
+        "resource allocation",
+        "recovery mechanisms"
     ],
     "potential_question_directions": [
-        "How do multiple stressors interact to affect system stability?",
-        "What combinations of factors create irreversible change?",
-        "When do compound effects exceed system resilience?"
+        "How do cells prioritize responses under limited resources?",
+        "What trade-offs occur during stress recovery?",
+        "When do multiple stressors overwhelm cellular responses?"
     ],
-    "best_direction": "What combinations of factors create irreversible change?",
-    "comprehension_type": "system_boundary",
+    "best_direction": "How do cells prioritize responses under limited resources?",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Keystone species loss exceeding 30% reduces stability",
-        "Resource depletion below 40% of normal levels stresses systems",
-        "Multiple simultaneous stressors can create irreversible tipping points",
-        "Recovery becomes impossible when three or more major stressors combine"
+        "HSP70 expression peaks within 30 minutes",
+        "ATP reserves deplete by 60% during stress",
+        "Protein refolding requires sustained ATP availability"
     ],
-    "quote_context": "The quotes establish multiple interacting conditions that create system boundaries",
+    "quote_context": "The quotes establish temporal and resource constraints on cellular stress responses",
     "kind": "edge-case",
-    "question": "Based on the texts, what specific combination of conditions creates an irreversible tipping point in ecosystem stability, and how do these factors interact differently than when occurring individually?",
-    "answer": "The texts indicate that irreversible change occurs when keystone species loss exceeds 30%, resource levels fall below 40%, and these stressors occur simultaneously, creating effects more severe than the sum of individual impacts",
-    "reasoning": "Tests understanding of complex system boundaries created by multiple interacting factors across different aspects of ecosystem function",
-    "difficulty": 5,
-    "difficulty_justification": "Requires synthesizing multiple complex interactions across four chunks and understanding emergent effects"
+    "question": "If ATP reserves deplete by 60% during the first 30 minutes of stress response, how does this affect the cell's ability to maintain HSP70 expression and protein refolding activities simultaneously?",
+    "answer": "The severe ATP depletion forces cells to prioritize immediate HSP70 expression over protein refolding, creating a backlog of damaged proteins that extends recovery time",
+    "reasoning": "Tests understanding of how resource limitations create competing demands between immediate stress response and recovery processes",
+    "difficulty": 4,
+    "difficulty_justification": "Requires analyzing complex resource allocation decisions and their consequences across multiple cellular processes"
 }
 ```
 

@@ -167,136 +167,36 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Entity Relationship (Medium)
+### Example 1
 
 ```json
 {
-    "document_extract_analysis": "The extracts describe Einstein's work on relativity and its impact on nuclear physics.",
+    "document_extract_analysis": "The extracts detail the evolution of renewable energy technologies, focusing on solar panel efficiency improvements and their market adoption.",
     "chunk_analyses": [
         {
             "chunk_id": "chunk1",
-            "content_summary": "Einstein's publication of special relativity in 1905",
-            "relevant_information": "Publication date and core concepts of special relativity",
-            "connection_points": ["Einstein", "relativity theory", "1905"]
+            "content_summary": "Early solar panel development and initial efficiency rates",
+            "relevant_information": "First-generation solar panels achieved 12% efficiency in 1990",
+            "connection_points": ["efficiency rates", "1990", "first generation"]
         },
         {
             "chunk_id": "chunk2",
-            "content_summary": "Application of E=mc² in nuclear physics",
-            "relevant_information": "Connection between mass-energy equivalence and nuclear reactions",
-            "connection_points": ["Einstein", "E=mc²", "nuclear physics"]
+            "content_summary": "Modern solar technology advancements",
+            "relevant_information": "Current panels reach 26% efficiency with new materials",
+            "connection_points": ["efficiency improvement", "new materials", "2023 data"]
         }
     ],
     "testable_concepts": [
-        "theoretical physics development",
-        "scientific applications",
-        "historical timeline"
+        "technological advancement",
+        "efficiency metrics",
+        "historical progression"
     ],
     "potential_question_directions": [
-        "How did Einstein's 1905 theory connect to nuclear physics?",
-        "What was the timeline of relativity's application to nuclear science?",
-        "How did E=mc² bridge theoretical and applied physics?"
+        "How has solar panel efficiency evolved?",
+        "What technological breakthroughs enabled improvement?",
+        "What is the rate of efficiency increase over time?"
     ],
-    "best_direction": "How did Einstein's 1905 theory connect to nuclear physics?",
-    "comprehension_type": "relationship",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "Einstein published his special theory of relativity in 1905",
-        "The equation E=mc² became fundamental to understanding nuclear reactions"
-    ],
-    "quote_context": "The quotes connect Einstein's 1905 theory to nuclear physics applications through E=mc²",
-    "kind": "factual",
-    "question": "What equation from Einstein's 1905 theory became fundamental to nuclear physics?",
-    "answer": "E=mc²",
-    "reasoning": "The text shows that Einstein published special relativity in 1905, which included E=mc², and this equation became crucial for nuclear physics.",
-    "difficulty": 3,
-    "difficulty_justification": "Requires connecting information across chunks about theory and application."
-}
-```
-
-### Example 2: Cross-Chunk Temporal Sequence (Hard)
-
-```json
-{
-    "document_extract_analysis": "The extracts detail the development and testing of the atomic bomb across multiple locations and timeframes.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "chunk1",
-            "content_summary": "Manhattan Project initiation and early development",
-            "relevant_information": "Project start date and initial research phase",
-            "connection_points": ["Manhattan Project", "1942", "research phase"]
-        },
-        {
-            "chunk_id": "chunk2",
-            "content_summary": "Trinity test and subsequent events",
-            "relevant_information": "Test date and location details",
-            "connection_points": ["Trinity test", "July 1945", "Alamogordo"]
-        }
-    ],
-    "testable_concepts": [
-        "project timeline",
-        "location sequence",
-        "development phases"
-    ],
-    "potential_question_directions": [
-        "What was the timeline from project start to first test?",
-        "How did locations change throughout the project?",
-        "What were the key development milestones?"
-    ],
-    "best_direction": "What was the timeline from project start to first test?",
-    "comprehension_type": "temporal",
-    "quality_metrics": {
-        "clear_language": true,
-        "text_based": true,
-        "no_tricks": true
-    },
-    "supporting_quotes": [
-        "The Manhattan Project began in 1942",
-        "The Trinity test was conducted on July 16, 1945"
-    ],
-    "quote_context": "The quotes establish the start and end points of the initial development phase",
-    "kind": "factual",
-    "question": "How many years passed between the Manhattan Project's initiation and the Trinity test?",
-    "answer": "3 years",
-    "reasoning": "By comparing the project's start in 1942 to the Trinity test in July 1945, we can determine the time span.",
-    "difficulty": 4,
-    "difficulty_justification": "Requires synthesizing dates from multiple chunks and calculating time difference."
-}
-```
-
-### Example 3: Cross-Chunk Quantitative Analysis (Very Hard)
-
-```json
-{
-    "document_extract_analysis": "The extracts provide detailed statistics about global climate change across different decades.",
-    "chunk_analyses": [
-        {
-            "chunk_id": "chunk1",
-            "content_summary": "1980s temperature and CO2 levels",
-            "relevant_information": "Baseline measurements from 1980s",
-            "connection_points": ["temperature", "CO2 levels", "1980s"]
-        },
-        {
-            "chunk_id": "chunk2",
-            "content_summary": "2020s climate measurements",
-            "relevant_information": "Current measurements and changes",
-            "connection_points": ["temperature increase", "CO2 change", "2020s"]
-        }
-    ],
-    "testable_concepts": [
-        "climate change metrics",
-        "long-term trends",
-        "measurement comparisons"
-    ],
-    "potential_question_directions": [
-        "How have temperature measurements changed?",
-        "What is the rate of CO2 increase?",
-        "What are the comparative statistics?"
-    ],
-    "best_direction": "What is the rate of CO2 increase?",
+    "best_direction": "Calculate the percentage point increase in solar panel efficiency",
     "comprehension_type": "quantitative",
     "quality_metrics": {
         "clear_language": true,
@@ -304,16 +204,229 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "supporting_quotes": [
-        "CO2 levels in 1980 were 340ppm",
-        "By 2020, CO2 levels reached 415ppm"
+        "First-generation panels achieved 12% efficiency in 1990",
+        "Modern panels utilizing perovskite materials reach 26% efficiency"
     ],
-    "quote_context": "The quotes provide measurements for calculating the CO2 increase rate",
+    "quote_context": "The quotes establish baseline and current efficiency levels for calculation",
     "kind": "factual",
-    "question": "What was the total increase in CO2 levels from 1980 to 2020?",
-    "answer": "75ppm",
-    "reasoning": "By subtracting the 1980 level (340ppm) from the 2020 level (415ppm), we can determine the total increase.",
+    "question": "How many percentage points did solar panel efficiency improve from 1990 to 2023?",
+    "answer": "14 percentage points",
+    "reasoning": "By subtracting the 1990 efficiency rate (12%) from the 2023 rate (26%), we can determine the total improvement in percentage points.",
+    "difficulty": 2,
+    "difficulty_justification": "Simple subtraction of two clearly stated percentages across chunks."
+}
+```
+
+### Example 2
+
+```json
+{
+    "document_extract_analysis": "The extracts describe the complex relationship between ocean acidification, marine ecosystems, and coral reef decline.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Ocean pH changes and initial impacts",
+            "relevant_information": "pH dropped from 8.2 to 8.1, causing initial stress",
+            "connection_points": ["pH level", "acidification", "marine impact"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Coral reef response to acidification",
+            "relevant_information": "30% reduction in calcification rates",
+            "connection_points": ["coral health", "calcification", "ecosystem impact"]
+        },
+        {
+            "chunk_id": "chunk3",
+            "content_summary": "Marine species adaptation",
+            "relevant_information": "Some species showing limited adaptive capacity",
+            "connection_points": ["adaptation", "species survival", "long-term effects"]
+        }
+    ],
+    "testable_concepts": [
+        "chemical changes",
+        "biological responses",
+        "ecosystem interactions"
+    ],
+    "potential_question_directions": [
+        "How do pH changes affect coral growth?",
+        "What is the relationship between acidification and calcification?",
+        "How do different species respond to pH changes?"
+    ],
+    "best_direction": "Synthesize the cascade of effects from pH change to species impact",
+    "comprehension_type": "causal",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Ocean pH dropped from 8.2 to 8.1",
+        "Resulted in 30% reduction in calcification",
+        "Limited adaptive capacity observed in marine species"
+    ],
+    "quote_context": "The quotes establish the chain of events from chemical change to biological impact",
+    "kind": "factual",
+    "question": "What percentage decrease in calcification occurred when ocean pH dropped by 0.1 units?",
+    "answer": "30%",
+    "reasoning": "The text shows that a pH drop from 8.2 to 8.1 (0.1 units) led to a 30% reduction in calcification rates in coral reefs.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires connecting pH change to specific biological impact across multiple chunks and understanding the relationship."
+}
+```
+
+### Example 3
+
+```json
+{
+    "document_extract_analysis": "The extracts detail the development of artificial intelligence, focusing on neural network architectures and their applications.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Early neural network development",
+            "relevant_information": "Initial networks had 3 layers and 1000 neurons",
+            "connection_points": ["network architecture", "processing power", "early development"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Modern AI capabilities",
+            "relevant_information": "Current networks feature 100 layers and 175 billion parameters",
+            "connection_points": ["modern architecture", "processing capability", "complexity"]
+        }
+    ],
+    "testable_concepts": [
+        "technological evolution",
+        "computational complexity",
+        "architectural changes"
+    ],
+    "potential_question_directions": [
+        "How has neural network architecture evolved?",
+        "What are the key differences in processing capability?",
+        "How has complexity increased over time?"
+    ],
+    "best_direction": "Compare architectural complexity changes",
+    "comprehension_type": "comparative",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Early neural networks consisted of 3 layers and 1000 neurons",
+        "Modern architectures utilize 100 layers with 175 billion parameters"
+    ],
+    "quote_context": "The quotes provide specific metrics for comparing architectural complexity",
+    "kind": "factual",
+    "question": "How many more layers do modern neural networks have compared to their early counterparts?",
+    "answer": "97 layers",
+    "reasoning": "By subtracting the number of layers in early networks (3) from modern networks (100), we can determine the increase in architectural complexity.",
+    "difficulty": 3,
+    "difficulty_justification": "Requires identifying and comparing specific architectural metrics across different time periods."
+}
+```
+
+### Example 4
+
+```json
+{
+    "document_extract_analysis": "The extracts examine the impact of deforestation on biodiversity and carbon sequestration across different time periods and regions.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Amazon rainforest coverage and species density",
+            "relevant_information": "5.5 million km² of forest containing 1000 species per km²",
+            "connection_points": ["forest area", "biodiversity", "baseline data"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Deforestation rates and impact",
+            "relevant_information": "17% reduction in forest cover over 20 years",
+            "connection_points": ["forest loss", "time period", "percentage change"]
+        },
+        {
+            "chunk_id": "chunk3",
+            "content_summary": "Species loss correlation",
+            "relevant_information": "Each 10% forest loss results in 7% species decline",
+            "connection_points": ["correlation", "species impact", "mathematical relationship"]
+        }
+    ],
+    "testable_concepts": [
+        "environmental impact",
+        "statistical relationships",
+        "biodiversity metrics"
+    ],
+    "potential_question_directions": [
+        "How does forest loss affect species numbers?",
+        "What is the rate of biodiversity decline?",
+        "How are deforestation and species loss correlated?"
+    ],
+    "best_direction": "Calculate total species loss based on deforestation rate",
+    "comprehension_type": "mathematical",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "17% reduction in forest cover",
+        "Each 10% forest loss results in 7% species decline"
+    ],
+    "quote_context": "The quotes provide the necessary data to calculate species loss based on forest reduction",
+    "kind": "factual",
+    "question": "Given a 17% forest cover reduction, what percentage of species were lost based on the stated relationship?",
+    "answer": "11.9%",
+    "reasoning": "Using the relationship that 10% forest loss = 7% species loss, we can calculate that 17% forest loss would result in (17/10 × 7) = 11.9% species loss.",
     "difficulty": 5,
-    "difficulty_justification": "Requires identifying and calculating change from measurements across multiple chunks."
+    "difficulty_justification": "Requires understanding proportional relationships and performing multi-step calculations using data from multiple chunks."
+}
+```
+
+### Example 5
+
+```json
+{
+    "document_extract_analysis": "The extracts describe the evolution of electric vehicle battery technology and market adoption rates.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "chunk1",
+            "content_summary": "Early EV battery capacity and range",
+            "relevant_information": "2010 models averaged 100 miles range with 24kWh batteries",
+            "connection_points": ["battery capacity", "range", "early technology"]
+        },
+        {
+            "chunk_id": "chunk2",
+            "content_summary": "Current EV capabilities",
+            "relevant_information": "2023 models average 300 miles range with 75kWh batteries",
+            "connection_points": ["modern capacity", "improved range", "efficiency"]
+        }
+    ],
+    "testable_concepts": [
+        "technological improvement",
+        "efficiency metrics",
+        "performance evolution"
+    ],
+    "potential_question_directions": [
+        "How has range efficiency improved?",
+        "What is the relationship between battery size and range?",
+        "How has miles-per-kWh changed?"
+    ],
+    "best_direction": "Calculate efficiency improvement in miles per kWh",
+    "comprehension_type": "analytical",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "2010: 100 miles range with 24kWh batteries",
+        "2023: 300 miles range with 75kWh batteries"
+    ],
+    "quote_context": "The quotes provide data points for calculating and comparing efficiency metrics",
+    "kind": "factual",
+    "question": "How has the miles-per-kWh efficiency of electric vehicles changed from 2010 to 2023?",
+    "answer": "No change (4.17 miles per kWh in both years)",
+    "reasoning": "2010: 100 miles ÷ 24kWh = 4.17 miles/kWh; 2023: 300 miles ÷ 75kWh = 4.17 miles/kWh. While absolute range and battery capacity increased, efficiency remained constant.",
+    "difficulty": 5,
+    "difficulty_justification": "Requires complex calculation and analysis across multiple data points, revealing a counter-intuitive conclusion about efficiency."
 }
 ```
 
