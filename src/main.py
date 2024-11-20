@@ -6,6 +6,7 @@ from typing import List, Dict
 from loguru import logger
 from dotenv import load_dotenv
 from datasets import Dataset
+from data_processing.deduplicate_data import analyze_and_deduplicate_questions
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -304,6 +305,38 @@ Environment Variables:
         default=5
     )
 
+    # Deduplication arguments
+    parser.add_argument(
+        '--dedup-model',
+        help='SentenceTransformer model to use for deduplication',
+        type=str,
+        default='sentence-transformers/msmarco-MiniLM-L-12-v3'
+    )
+    parser.add_argument(
+        '--dedup-similarity-threshold',
+        help='Threshold for considering questions similar during deduplication',
+        type=float,
+        default=0.9
+    )
+    parser.add_argument(
+        '--dedup-batch-size',
+        help='Batch size for similarity computation during deduplication',
+        type=int,
+        default=8192
+    )
+    parser.add_argument(
+        '--dedup-num-gpus',
+        help='Number of GPUs to use for deduplication',
+        type=int,
+        default=1
+    )
+    parser.add_argument(
+        '--dedup-plots-dir',
+        help='Directory to save deduplication plots',
+        type=str,
+        default='plots'
+    )
+
     return parser
 
 def process_dataset(
@@ -417,6 +450,43 @@ def get_single_shot_question_settings(args: argparse.Namespace) -> Dict[str, str
     settings['private'] = args.private
     settings['output_dataset'] = f"{settings['organization']}/{settings['dataset_name']}-single-shot-questions"
     return settings
+
+def deduplicate_questions(dataset: Dataset, args: argparse.Namespace, dataset_type: str) -> Dataset:
+    """Deduplicate questions in a dataset using semantic similarity.
+    
+    Args:
+        dataset: The dataset to deduplicate
+        args: Command line arguments containing deduplication settings
+        dataset_type: Type of dataset ('single-shot' or 'multi-hop') for logging
+        
+    Returns:
+        Dataset: Deduplicated dataset
+    """
+    logger.info(f"Starting deduplication for {dataset_type} questions...")
+    
+    # Create a namespace object with the deduplication settings
+    dedup_args = argparse.Namespace(
+        model_name=args.dedup_model,
+        similarity_threshold=args.dedup_similarity_threshold,
+        batch_size=args.dedup_batch_size,
+        num_gpus=args.dedup_num_gpus,
+        plots_dir=os.path.join(args.dedup_plots_dir, dataset_type)
+    )
+    
+    try:
+        deduplicated_dataset, similarities, num_removed, clusters = analyze_and_deduplicate_questions(dataset, dedup_args)
+        
+        logger.info(f"Deduplication results for {dataset_type} questions:")
+        logger.info(f"Original dataset size: {len(dataset)}")
+        logger.info(f"Deduplicated dataset size: {len(deduplicated_dataset)}")
+        logger.info(f"Number of questions removed: {num_removed}")
+        logger.info(f"Number of clusters: {len(clusters)}")
+        
+        return deduplicated_dataset
+        
+    except Exception as e:
+        logger.error(f"Error during {dataset_type} question deduplication: {str(e)}")
+        raise
 
 def get_inference_settings(args: argparse.Namespace) -> Dict[str, str]:
     """Get inference settings from args or environment variables."""
@@ -692,12 +762,52 @@ def main():
 
     # load the datasets
     document_dataset = load_dataset(args.dataset, split=args.split)
+    
+    # Dictionary to accumulate questions by type
+    questions_by_type = {}
+    
+    # Generate questions for each type
     for question_type in args.question_types:
         start_time = time.time()
         document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
         end_time = time.time()
         logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-        push_single_shot_questions_to_huggingface(document_dataset_with_questions, single_shot_question_settings['output_dataset'])
+        questions_by_type[question_type] = document_dataset_with_questions
+    
+    # Combine all questions into a single dataset
+    all_questions = []
+    for question_type, dataset in questions_by_type.items():
+        all_questions.extend([{**item, 'question_type': question_type} for item in dataset])
+    combined_dataset = Dataset.from_list(all_questions)
+    
+    # Push original single-shot questions to HuggingFace
+    original_output = f"{single_shot_question_settings['output_dataset']}-original"
+    logger.info(f"Pushing original single-shot questions to {original_output}")
+    push_single_shot_questions_to_huggingface(combined_dataset, original_output)
+    
+    # Deduplicate single-shot questions
+    deduplicated_dataset = deduplicate_questions(combined_dataset, args, 'single-shot')
+    
+    # Push deduplicated single-shot questions to HuggingFace
+    dedup_output = f"{single_shot_question_settings['output_dataset']}-deduplicated"
+    logger.info(f"Pushing deduplicated single-shot questions to {dedup_output}")
+    push_single_shot_questions_to_huggingface(deduplicated_dataset, dedup_output)
+    
+    # Generate multi-hop questions from deduplicated single-shot questions
+    multihop_dataset = generate_multihop_questions(deduplicated_dataset, engine, args.max_concurrent)
+    
+    # Push original multi-hop questions to HuggingFace
+    original_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-original"
+    logger.info(f"Pushing original multi-hop questions to {original_multihop_output}")
+    push_multihop_questions_to_huggingface(multihop_dataset, original_multihop_output)
+    
+    # Deduplicate multi-hop questions
+    deduplicated_multihop = deduplicate_questions(multihop_dataset, args, 'multi-hop')
+    
+    # Push deduplicated multi-hop questions to HuggingFace
+    dedup_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-deduplicated"
+    logger.info(f"Pushing deduplicated multi-hop questions to {dedup_multihop_output}")
+    push_multihop_questions_to_huggingface(deduplicated_multihop, dedup_multihop_output)
 
     logger.info("Single-shot questions generated successfully")
     
