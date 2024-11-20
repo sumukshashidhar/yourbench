@@ -218,116 +218,186 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Event Change (Easy)
-
+### Example 1: Decision Change (Easy)
 ```json
 {
-    "document_extract_analysis": "The text describes how Alexander Fleming discovered penicillin when he noticed mold contaminating his bacterial cultures in 1928.",
+    "document_extract_analysis": "The text describes how Marie Curie chose to share her radium purification process freely instead of patenting it, enabling widespread medical research.",
     "testable_concepts": [
-        "accidental discovery",
-        "observation importance",
-        "research methods"
+        "scientific ethics",
+        "knowledge sharing",
+        "research impact",
+        "medical advancement"
     ],
     "potential_question_directions": [
-        "What might have occurred if Fleming had chosen to discard the contaminated petri dish without further investigation?",
-        "In what ways does the text highlight the significance of observation in the scientific discovery process?",
-        "What critical elements contributed to the serendipitous discovery of penicillin by Fleming?"
+        "How would patenting the process have affected medical research?",
+        "What role did open access play in radiation therapy development?",
+        "How might research collaboration patterns have differed with a patent?"
     ],
-    "best_direction": "What might have occurred if Fleming had chosen to discard the contaminated petri dish without further investigation?",
-    "comprehension_type": "event_change",
+    "best_direction": "How would patenting the process have affected medical research? This tests understanding of scientific collaboration and knowledge dissemination impacts.",
+    "comprehension_type": "decision_change",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Fleming noticed that mold had contaminated one of his petri dishes.",
-        "He observed that bacteria wouldn't grow near the mold.",
-        "This accidental contamination led to the discovery of penicillin."
-    ],
-    "quote_context": "The quotes establish the accidental nature of the discovery and its significance.",
     "kind": "counterfactual",
-    "question": "Based on the text's description of events, what would likely have happened if Fleming had immediately discarded the contaminated petri dish instead of examining it?",
-    "answer": "The discovery of penicillin's antibacterial properties would have been missed at this time",
-    "reasoning": "The text shows that Fleming's observation of the contaminated dish was crucial to discovering penicillin's properties. Discarding it would have eliminated this opportunity for discovery.",
+    "question": "How would the development of radiation therapy have been different if Curie had patented her radium purification process?",
+    "answer": "Medical research would have been significantly slowed, with fewer hospitals and researchers able to access and develop radiation therapy techniques",
+    "reasoning": "The text emphasizes how Curie's open-sharing policy enabled rapid adoption and development of radiation therapy across multiple institutions. A patent would have restricted access, limiting research to those who could afford licensing fees.",
     "difficulty": 2,
-    "difficulty_justification": "Requires understanding a simple cause-effect relationship and its alternative."
+    "difficulty_justification": "Requires basic understanding of how patents restrict access and their impact on research, with direct cause-effect relationship.",
+    "supporting_quotes": [
+        "Marie Curie refused to patent the radium-isolation process, leaving it open for the scientific community to use freely",
+        "Within five years, over 100 hospitals had established radiation therapy programs using Curie's published methods"
+    ],
+    "quote_context": "These quotes demonstrate both Curie's deliberate choice to not patent the process and the direct impact this had on medical advancement through widespread adoption. The rapid establishment of hospital programs directly resulted from the open access to the methodology."
 }
 ```
 
-### Example 2: Process Change (Medium)
-
+### Example 2: Process Analysis (Medium)
 ```json
 {
-    "document_extract_analysis": "The passage describes how the Panama Canal uses a system of locks to raise and lower ships between sea level and Gatun Lake.",
+    "document_extract_analysis": "The passage details how photosynthesis converts sunlight into chemical energy, emphasizing the role of chlorophyll and carbon dioxide absorption.",
     "testable_concepts": [
-        "lock system operation",
-        "water level management",
-        "ship transit process"
+        "energy conversion",
+        "chemical processes",
+        "plant biology",
+        "resource utilization"
     ],
     "potential_question_directions": [
-        "What would be the consequences if Gatun Lake were at the same elevation as sea level?",
-        "In what ways does the text illustrate the importance of gravity in the operation of the lock system?",
-        "What factors are essential for the effective functioning of the Panama Canal's lock system?"
+        "What would happen if plants absorbed a different wavelength of light?",
+        "How would changes in chlorophyll structure affect energy production?",
+        "What if plants used a different molecule for energy storage?"
     ],
-    "best_direction": "What would be the consequences if Gatun Lake were at the same elevation as sea level?",
-    "comprehension_type": "process_change",
+    "best_direction": "What would happen if plants absorbed a different wavelength of light? This tests understanding of energy conversion efficiency and biological adaptation.",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "The locks work like water elevators, raising ships 85 feet above sea level.",
-        "Each lock chamber fills with water from Gatun Lake using gravity alone.",
-        "The system requires no pumps, saving significant energy.",
-        "Ships are raised and lowered in a series of three locks."
-    ],
-    "quote_context": "The quotes detail the gravity-based lock system and its operation.",
     "kind": "counterfactual",
-    "question": "According to the text's description of the canal system, how would the operation of the Panama Canal be affected if Gatun Lake were at sea level instead of 85 feet above?",
-    "answer": "The gravity-based lock system would not function as no elevation difference would exist to move water naturally",
-    "reasoning": "The text emphasizes that the system works by gravity due to Gatun Lake's elevation. Without this height difference, the fundamental mechanism would fail.",
+    "question": "If plants evolved to absorb primarily blue light instead of red and blue light, how would their energy production efficiency change?",
+    "answer": "Energy production would decrease as plants would capture less total solar energy, leading to slower growth and reduced glucose production",
+    "reasoning": "The text explains that current chlorophyll molecules are optimized for red and blue light absorption, maximizing energy capture. Using only blue light would reduce the total energy available for glucose production.",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding the relationship between elevation, gravity, and system function to trace consequences."
+    "difficulty_justification": "Requires understanding of wavelength absorption, energy conversion processes, and their interconnected effects on plant growth.",
+    "supporting_quotes": [
+        "Chlorophyll molecules are specifically adapted to absorb red light at 680nm and blue light at 425nm, maximizing energy capture from the sun's spectrum",
+        "The dual-wavelength absorption capability allows plants to capture approximately 45% of available solar energy in optimal conditions"
+    ],
+    "quote_context": "The quotes establish the specific wavelengths of light that chlorophyll has evolved to use and quantifies the energy capture efficiency, providing the basis for understanding how changes would impact energy production."
 }
 ```
 
 ### Example 3: System Impact (Very Hard)
-
 ```json
 {
-    "document_extract_analysis": "The text explains how the Gulf Stream affects climate patterns across the North Atlantic region.",
+    "document_extract_analysis": "The text explains how the Earth's magnetic field protects against solar radiation and its interaction with the atmosphere.",
     "testable_concepts": [
-        "ocean current patterns",
-        "climate influence",
-        "temperature regulation"
+        "magnetic field dynamics",
+        "atmospheric protection",
+        "radiation effects",
+        "planetary systems"
     ],
     "potential_question_directions": [
-        "What would be the impact on Northern European climate if the Gulf Stream transported cold water instead of warm water?",
-        "Which factors are essential in determining the Gulf Stream's effect on European climate?",
-        "In what ways does the temperature of the Gulf Stream influence atmospheric circulation in the North Atlantic?"
+        "How would a weaker magnetic field affect Earth's systems?",
+        "What role does field strength play in atmospheric composition?",
+        "How might life adapt to changed radiation levels?"
     ],
-    "best_direction": "What would be the impact on Northern European climate if the Gulf Stream transported cold water instead of warm water?",
+    "best_direction": "How would a weaker magnetic field affect Earth's systems? This tests understanding of complex planetary interactions.",
     "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "The Gulf Stream carries warm water from the Caribbean to Northern Europe.",
-        "This warm current keeps European coastal temperatures 5-8°C warmer than similar latitudes.",
-        "The temperature difference drives atmospheric circulation patterns.",
-        "These patterns influence rainfall and storm systems across the region."
-    ],
-    "quote_context": "The quotes establish the Gulf Stream's role in climate regulation.",
     "kind": "counterfactual",
-    "question": "Based on the text's description of the Gulf Stream system, how would Northern European climate patterns change if the Gulf Stream carried cold water instead of warm water?",
-    "answer": "European coastal temperatures would drop 5-8°C, altering atmospheric circulation and changing rainfall and storm patterns across the region",
-    "reasoning": "The text describes how the warm water directly affects temperatures, which drive atmospheric patterns. Reversing the temperature effect would impact the entire connected system.",
+    "question": "If Earth's magnetic field were half its current strength, how would this affect atmospheric composition and surface life?",
+    "answer": "Increased solar radiation would break down atmospheric molecules, leading to atmospheric thinning, higher surface radiation levels, and significant challenges for surface life forms",
+    "reasoning": "The text shows how the magnetic field deflects charged particles and protects atmospheric molecules. Reduced protection would accelerate atmospheric loss, increase mutation rates, and require significant biological adaptations.",
     "difficulty": 5,
-    "difficulty_justification": "Requires understanding complex system interactions and tracing multiple levels of consequences."
+    "difficulty_justification": "Requires understanding complex interactions between magnetic fields, radiation, atmospheric chemistry, and biological systems.",
+    "supporting_quotes": [
+        "Earth's magnetic field deflects approximately 98% of harmful solar radiation, preventing atmospheric degradation",
+        "The interaction between the magnetic field and solar wind maintains the atmosphere's current density and composition",
+        "Complex life forms depend on the atmosphere's protective properties against UV radiation and cosmic rays"
+    ],
+    "quote_context": "These quotes establish the critical relationship between magnetic field strength and atmospheric protection, showing how the field maintains atmospheric integrity and protects life forms through multiple mechanisms."
+}
+```
+
+### Example 4: Chain Effect (Hard)
+```json
+{
+    "document_extract_analysis": "The passage describes how pollinator decline affects agricultural productivity and ecosystem stability.",
+    "testable_concepts": [
+        "ecosystem relationships",
+        "agricultural systems",
+        "species interdependence",
+        "food web dynamics"
+    ],
+    "potential_question_directions": [
+        "How would specialized pollinator loss affect plant diversity?",
+        "What cascading effects would occur in food chains?",
+        "How might agricultural practices adapt?"
+    ],
+    "best_direction": "How would specialized pollinator loss affect plant diversity? This tests understanding of ecological relationships and cascade effects.",
+    "comprehension_type": "chain_effect",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "kind": "counterfactual",
+    "question": "How would the extinction of specialized bee species affect plant diversity and subsequent ecosystem relationships over multiple generations?",
+    "answer": "Plant species requiring specific pollinators would decline, leading to reduced biodiversity, altered food web relationships, and eventual ecosystem restructuring",
+    "reasoning": "The text establishes tight coupling between specific pollinators and plants. Loss of specialized pollinators would trigger plant species decline, affecting dependent species and forcing ecosystem adaptation.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires tracking multiple generations of changes across different species and understanding complex ecological relationships.",
+    "supporting_quotes": [
+        "83% of flowering plant species require specific pollinator relationships for successful reproduction",
+        "The loss of a single pollinator species can affect up to 30 different plant species in a given ecosystem",
+        "Plant-pollinator relationships have co-evolved over millions of years, creating highly specialized dependencies"
+    ],
+    "quote_context": "The quotes demonstrate the tight interdependence between specific pollinators and plant species, quantifying the potential cascade effects of pollinator loss on plant diversity and ecosystem stability."
+}
+```
+
+### Example 5: Temporal Change (Medium)
+```json
+{
+    "document_extract_analysis": "The text describes the Industrial Revolution's transition from water to steam power in manufacturing.",
+    "testable_concepts": [
+        "technological transition",
+        "economic development",
+        "energy systems",
+        "industrial growth"
+    ],
+    "potential_question_directions": [
+        "How would delayed steam engine development affect industrialization?",
+        "What role did timing play in industrial growth?",
+        "How might different energy transition timing affect urban development?"
+    ],
+    "best_direction": "How would delayed steam engine development affect industrialization? This tests understanding of technological and social change timing.",
+    "comprehension_type": "temporal_change",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "kind": "counterfactual",
+    "question": "If steam engine technology had been developed 50 years later, how would this have altered the pattern of industrial development?",
+    "answer": "Industrial growth would have remained geographically limited to water sources longer, slowing urban development and delaying the concentration of manufacturing in cities",
+    "reasoning": "The text shows how steam power freed manufacturing from water source locations. A later transition would have maintained water-dependent industrial patterns, affecting urbanization and economic development timing.",
+    "difficulty": 3,
+    "difficulty_justification": "Requires understanding the relationship between technology timing, geographic constraints, and social development patterns.",
+    "supporting_quotes": [
+        "The transition from water to steam power allowed factories to locate anywhere, not just along rivers",
+        "By 1850, steam-powered factories had enabled the growth of major industrial cities more than 50 miles from any significant water source",
+        "Water-powered mills were limited to producing 15 horsepower on average, while steam engines could generate over 100 horsepower"
+    ],
+    "quote_context": "These quotes establish how steam power removed geographic constraints on industrial development and significantly increased available power, showing the direct relationship between steam technology timing and industrial growth patterns."
 }
 ```
 
@@ -366,13 +436,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Event Change)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Process)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/System)
+        // Question 3 
     },
     // ...
 ]

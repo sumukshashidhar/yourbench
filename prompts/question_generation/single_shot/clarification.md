@@ -218,115 +218,193 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Term Definition (Easy)
-
+### Example 1: Quantitative Analysis (Easy)
 ```json
 {
-    "document_extract_analysis": "The text introduces photosynthesis and uses several specialized terms including 'thylakoid' and 'chlorophyll'.",
+    "kind": "clarification",
+    "document_extract_analysis": "The text discusses global carbon emissions, presenting specific data about different countries' contributions and their reduction targets.",
     "testable_concepts": [
-        "photosynthesis components",
-        "cellular structures",
-        "biological terminology"
+        "emission measurements",
+        "country comparisons",
+        "reduction targets",
+        "environmental impact assessment"
     ],
     "potential_question_directions": [
-        "What are the essential components that facilitate photosynthesis?",
-        "In what ways do thylakoids function within the photosynthesis process?",
-        "How do chlorophyll molecules contribute to the overall process of photosynthesis?"
+        "How do different countries' carbon emissions compare?",
+        "What metrics are used to measure emission reductions?",
+        "What is the relationship between GDP and carbon emissions?",
+        "How are reduction targets calculated and implemented?"
     ],
-    "best_direction": "In what ways do thylakoids function within the photosynthesis process?", 
-    "comprehension_type": "term_definition",
+    "best_direction": "What metrics are used to measure emission reductions?",
+    "comprehension_type": "quantitative",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "The process occurs in thylakoids, membrane-bound compartments inside chloroplasts.",
-        "Chlorophyll molecules within the thylakoid capture light energy.",
-        "These specialized pigments are essential for photosynthesis."
-    ],
-    "quote_context": "The text defines thylakoids in relation to photosynthesis.",
-    "kind": "clarification",
-    "question": "Based on the text's description, what exactly is a thylakoid and what is its role in photosynthesis?",
-    "answer": "A thylakoid is a membrane-bound compartment inside chloroplasts where chlorophyll captures light energy",
-    "reasoning": "The text provides both the structural definition and functional role of thylakoids.",
+    "question": "How do scientists measure and compare carbon emissions across different industrial sectors?",
+    "answer": "Carbon emissions are measured in metric tons of CO2 equivalent, with specific calculations for each industrial sector based on energy consumption and production processes",
+    "reasoning": "The text provides detailed measurement methodologies and comparison frameworks, requiring understanding of both the metrics and their application",
     "difficulty": 2,
-    "difficulty_justification": "Requires identifying and combining definition and function from text."
+    "difficulty_justification": "While involving numbers and measurements, the concept is straightforward and clearly explained in the text",
+    "supporting_quotes": [
+        "Global carbon emissions reached 36.3 billion metric tons CO2-equivalent in 2021",
+        "Industrial sectors are measured using standardized protocols, with direct measurements from power plants accounting for 40% of total emissions",
+        "Emissions calculations factor in both direct energy consumption and indirect emissions from production processes"
+    ],
+    "quote_context": "The quotes establish the measurement methodology, providing specific metrics and explaining how different industrial sectors are evaluated. They demonstrate both the quantitative nature of measurements and the standardized approach across sectors."
 }
 ```
 
-### Example 2: Process Explanation (Medium)
-
+### Example 2: Process Analysis (Medium)
 ```json
 {
-    "document_extract_analysis": "The passage describes the complex process of blood clotting, involving multiple steps and factors.",
+    "kind": "clarification",
+    "document_extract_analysis": "The text explains quantum entanglement and its implications for quantum computing",
     "testable_concepts": [
-        "clotting sequence",
-        "blood components",
-        "cellular interaction"
+        "quantum entanglement",
+        "particle behavior",
+        "measurement effects",
+        "quantum computing applications"
     ],
     "potential_question_directions": [
-        "What are the essential stages in the blood clotting process?",
-        "In what way do platelets trigger the initiation of blood clotting?",
-        "What subsequent actions occur after the activation of platelets?"
+        "How does quantum entanglement occur?",
+        "What role does measurement play in quantum states?",
+        "How do entangled particles maintain their connection?",
+        "What are the practical applications in computing?"
     ],
-    "best_direction": "In what way do platelets trigger the initiation of blood clotting?",
-    "comprehension_type": "process_explanation",
+    "best_direction": "How does quantum entanglement occur?",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Blood clotting begins when platelets detect vessel damage.",
-        "Platelets release chemical signals triggering a cascade of clotting factors.",
-        "The cascade results in fibrin formation, creating a mesh that traps blood cells."
-    ],
-    "quote_context": "The quotes outline the blood clotting sequence.",
-    "kind": "clarification",
-    "question": "Could you clarify how platelets initiate the blood clotting process and what specific steps follow?",
-    "answer": "Platelets detect vessel damage, release chemical signals, which trigger clotting factors, leading to fibrin formation that creates a mesh trapping blood cells",
-    "reasoning": "The text describes the sequence of events in the clotting process, from initial detection to final clot formation.",
+    "question": "What is the mechanism through which particles become quantum entangled, and how does this affect their behavior?",
+    "answer": "Particles become entangled when they interact at the quantum level, causing their quantum states to become correlated regardless of distance",
+    "reasoning": "Understanding quantum entanglement requires grasping both the physical process and its counterintuitive implications",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding and clarifying a multi-step process."
+    "difficulty_justification": "Requires understanding of abstract concepts and their interconnections",
+    "supporting_quotes": [
+        "When two particles interact at extremely close distances, their quantum states become correlated through a process called quantum entanglement",
+        "Once entangled, measuring the state of one particle instantaneously determines the state of its partner, regardless of their separation distance",
+        "This 'spooky action at a distance,' as Einstein called it, forms the basis for quantum computing operations"
+    ],
+    "quote_context": "These quotes outline the fundamental process of quantum entanglement, from the initial interaction to the resulting behavior, and connect it to practical applications in computing."
 }
 ```
 
-### Example 3: System-Level Understanding (Very Hard)
-
+### Example 3: System Impact (Hard)
 ```json
 {
-    "document_extract_analysis": "The text explains how different components of the immune system work together to fight infection.",
+    "kind": "clarification",
+    "document_extract_analysis": "The text describes the complex interactions within marine ecosystems and the impact of climate change",
     "testable_concepts": [
-        "immune response",
-        "cellular coordination",
-        "system integration"
-    ],  
-    "potential_question_directions": [
-        "In what ways do B-cells, T-cells, and memory cells interact through cytokines to effectively respond to infections?",
-        "What roles do cytokines play in the communication between different immune cells during an immune response?",
-        "How do the interactions among B-cells, T-cells, and memory cells contribute to a coordinated immune response against pathogens?"
+        "ecosystem dynamics",
+        "climate change effects",
+        "species interactions",
+        "environmental adaptation"
     ],
-    "best_direction": "In what ways do B-cells, T-cells, and memory cells interact through cytokines to effectively respond to infections?",
-    "comprehension_type": "technical_clarification",
+    "potential_question_directions": [
+        "How do changes in ocean temperature affect marine food webs?",
+        "What are the cascading effects of coral bleaching?",
+        "How do species adapt to changing conditions?",
+        "What role do microorganisms play in ecosystem stability?"
+    ],
+    "best_direction": "How do changes in ocean temperature affect marine food webs?",
+    "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "How do incremental changes in ocean temperature create ripple effects throughout marine ecosystems?",
+    "answer": "Temperature changes affect phytoplankton productivity, which impacts all higher trophic levels, altering predator-prey relationships and nutrient cycling",
+    "reasoning": "The answer requires understanding multiple interconnected systems and their responses to environmental changes",
+    "difficulty": 4,
+    "difficulty_justification": "Involves complex system interactions and multiple cause-effect relationships",
     "supporting_quotes": [
-        "B-cells produce antibodies specific to the detected pathogen.",
-        "T-cells coordinate the immune response and directly attack infected cells.",
-        "Memory cells retain information about past infections.",
-        "These components communicate through chemical signals called cytokines."
+        "A 1°C increase in ocean temperature reduces phytoplankton productivity by 12%, affecting the entire marine food web",
+        "Declining phytoplankton populations have led to a 30% reduction in fish populations in affected areas",
+        "Changes in temperature alter the timing of plankton blooms, creating mismatches between predator and prey life cycles"
     ],
-    "quote_context": "The quotes describe immune system component interactions.",
+    "quote_context": "The quotes demonstrate the cascading effects of temperature changes, starting with primary producers (phytoplankton) and showing how these changes ripple through the food web to affect higher trophic levels."
+}
+```
+
+### Example 4: Evidence Synthesis (Very Hard)
+```json
+{
     "kind": "clarification",
-    "question": "Could you explain how B-cells, T-cells, and memory cells coordinate their activities through cytokines to mount an effective immune response?",
-    "answer": "B-cells produce specific antibodies while T-cells coordinate response and attack infected cells, with both using cytokines for communication, and memory cells storing infection information",
-    "reasoning": "The text describes multiple components and their communication methods, requiring clarification of their coordination.",
+    "document_extract_analysis": "The text examines multiple theories about consciousness and their supporting evidence",
+    "testable_concepts": [
+        "consciousness theories",
+        "neural correlates",
+        "experimental evidence",
+        "philosophical implications"
+    ],
+    "potential_question_directions": [
+        "How do different theories of consciousness explain subjective experience?",
+        "What evidence supports each major theory?",
+        "How do researchers measure consciousness?",
+        "What are the implications for artificial consciousness?"
+    ],
+    "best_direction": "How do different theories of consciousness explain subjective experience?",
+    "comprehension_type": "evidence_synthesis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How do the neural correlates of consciousness support or challenge different theories about subjective experience?",
+    "answer": "Neural correlates provide evidence for both integrated information theory and global workspace theory, while challenging pure computational theories",
+    "reasoning": "Requires synthesizing complex theoretical frameworks with empirical evidence and understanding their implications",
     "difficulty": 5,
-    "difficulty_justification": "Requires clarifying complex interactions between multiple system components."
+    "difficulty_justification": "Demands integration of multiple complex theories with empirical evidence and philosophical concepts",
+    "supporting_quotes": [
+        "fMRI studies show integrated information patterns in the brain correlating with reported conscious experiences",
+        "Global workspace activation patterns support the theory of consciousness as a broadcasting mechanism",
+        "Patients with damaged thalamic regions show reduced consciousness while maintaining computational abilities, challenging pure computational theories"
+    ],
+    "quote_context": "These quotes provide empirical evidence from multiple sources - neuroimaging, theoretical predictions, and clinical observations - allowing comparison and synthesis across different theories of consciousness."
+}
+```
+
+### Example 5: Relationship Comprehension (Medium-Hard)
+```json
+{
+    "kind": "clarification",
+    "document_extract_analysis": "The text explores the relationship between genetic expression and environmental factors",
+    "testable_concepts": [
+        "epigenetics",
+        "gene-environment interaction",
+        "phenotypic expression",
+        "hereditary patterns"
+    ],
+    "potential_question_directions": [
+        "How do environmental factors influence gene expression?",
+        "What role does timing play in genetic activation?",
+        "How do epigenetic changes affect future generations?",
+        "What mechanisms control gene silencing?"
+    ],
+    "best_direction": "How do environmental factors influence gene expression?",
+    "comprehension_type": "relationship_comprehension",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How do specific environmental triggers interact with genetic predispositions to influence phenotypic expression?",
+    "answer": "Environmental factors can activate or suppress genes through epigenetic mechanisms, leading to changes in protein production and cellular behavior",
+    "reasoning": "Understanding requires knowledge of both genetic mechanisms and environmental influences, plus their interaction",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding complex biological mechanisms and their interactions with external factors",
+    "supporting_quotes": [
+        "Environmental stress triggers methylation patterns that can silence specific genes without altering DNA sequence",
+        "Studies show that early-life nutrition can influence gene expression patterns that persist into adulthood",
+        "Transgenerational effects have been observed, with parental environmental exposures affecting offspring gene expression"
+    ],
+    "quote_context": "The quotes establish the mechanistic link between environmental factors and genetic expression, providing specific examples of how external influences can create lasting changes in gene activity."
 }
 ```
 
@@ -365,13 +443,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Term)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Process)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/System)
+        // Question 3 
     },
     // ...
 ]

@@ -218,115 +218,192 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Fact Contradiction (Easy)
-
+### Example 1: Quantitative Analysis (Easy)
 ```json
 {
-    "document_extract_analysis": "The text discusses Thomas Edison's invention of the light bulb, detailing his use of carbonized bamboo filaments.",
+    "document_extract_analysis": "The text details NASA's Mars Rover mission, specifically discussing the rover's speed capabilities and distance covered on Mars' surface.",
     "testable_concepts": [
-        "invention details",
-        "material choice",
-        "development process"
+        "rover specifications",
+        "operational capabilities",
+        "mission achievements",
+        "technical limitations"
     ],
     "potential_question_directions": [
-        "What specific details about Edison's light bulb invention are highlighted in the text?",
-        "In what ways does the text illustrate the significance of the materials used in Edison's invention?",
-        "How do the details provided in the text reflect the overall development process of the light bulb?"
+        "How does the rover's actual speed compare to initial expectations?",
+        "What factors influence the rover's movement capabilities?",
+        "How do environmental conditions affect the rover's performance?",
+        "What technical specifications enable the rover's successful operation?"
     ],
-    "best_direction": "What specific details about Edison's light bulb invention are highlighted in the text?", 
-    "comprehension_type": "fact_contradiction",
+    "best_direction": "The question about speed comparison effectively tests quantitative comprehension while requiring understanding of technical limitations.",
+    "kind": "false-premise",
+    "comprehension_type": "quantitative",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "The rover travels at 50 kilometers per hour across Mars' surface. What's incorrect about this statement according to the mission data?",
+    "answer": "The text specifies that the rover moves at a maximum speed of 0.14 kilometers per hour due to terrain challenges and safety protocols.",
+    "reasoning": "This tests understanding of specific numerical data while highlighting the importance of accurate technical specifications in space missions.",
+    "difficulty": 1,
+    "difficulty_justification": "Simple numerical comparison that requires only basic fact-checking against the text.",
     "supporting_quotes": [
-        "Edison discovered that carbonized bamboo filaments could last over 1200 hours.",
-        "This breakthrough came after testing thousands of materials.",
-        "The bamboo filaments were far more durable than previous carbon ones."
+        "The Mars Rover's top speed is limited to 0.14 kilometers per hour",
+        "Due to challenging terrain and safety protocols, the rover must move slowly and deliberately across the Martian surface"
     ],
-    "quote_context": "The quotes establish Edison's use of bamboo filaments.",
-    "kind": "false-premise",
-    "question": "The text states that Edison's main breakthrough was using steel filaments in his light bulbs. What's wrong with this premise and what does the text actually say?",
-    "answer": "The text states Edison used carbonized bamboo filaments, not steel, and this was crucial because they lasted over 1200 hours",
-    "reasoning": "Direct contradiction with text's specific mention of bamboo filaments and their importance.",
-    "difficulty": 2,
-    "difficulty_justification": "Simple factual contradiction easily verified in text."
+    "quote_context": "These quotes directly contradict the false premise by providing the actual speed limit and explaining why such limitations exist. The first quote gives the specific numerical value, while the second provides contextual reasoning for the speed restriction."
 }
 ```
 
-### Example 2: Process Inversion (Medium)
-
+### Example 2: Process Analysis (Medium)
 ```json
 {
-    "document_extract_analysis": "The passage explains the water cycle, specifically the sequence from evaporation to precipitation.",
+    "document_extract_analysis": "The passage explains photosynthesis, detailing the transformation of sunlight into chemical energy and the role of chlorophyll.",
     "testable_concepts": [
-        "water cycle stages",
-        "process sequence",
-        "state changes"
+        "energy transformation",
+        "chemical processes",
+        "cellular mechanisms",
+        "biological systems"
     ],
     "potential_question_directions": [
-        "What are the stages of the water cycle as described in the text?",
-        "How does the passage illustrate the process of evaporation leading to precipitation?",
-        "What sequence of events in the water cycle is outlined in the text?"
+        "How does energy flow through the photosynthetic process?",
+        "What role do different cellular components play?",
+        "How do environmental factors affect photosynthesis?",
+        "What are the key stages of the process?"
     ],
-    "best_direction": "What are the stages of the water cycle as described in the text?",
-    "comprehension_type": "process_inversion",
+    "best_direction": "The energy flow question effectively tests understanding of complex biological processes while maintaining clear assessment criteria.",
+    "kind": "false-premise",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Water first evaporates from surface water bodies due to solar heating.",
-        "The water vapor then rises and condenses into clouds.",
-        "Finally, when conditions are right, precipitation occurs."
-    ],
-    "quote_context": "The quotes establish the correct sequence of the water cycle.",
-    "kind": "false-premise",
-    "question": "The text suggests that water first forms clouds, then heats up, and finally evaporates from the surface. What's wrong with this premise and what is the actual sequence described?",
-    "answer": "The text describes the opposite sequence: water evaporates first due to heating, then rises and forms clouds, before falling as precipitation",
-    "reasoning": "The premise inverts the clear sequence presented in the text.",
+    "question": "How accurate is the statement that plants release oxygen first, which then enables them to absorb sunlight and produce glucose?",
+    "answer": "This is incorrect. The text explains that plants first absorb sunlight, which enables the splitting of water to produce oxygen as a byproduct, while glucose production occurs simultaneously.",
+    "reasoning": "Tests understanding of process sequence and causal relationships in biological systems.",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding process sequence and identifying incorrect order."
+    "difficulty_justification": "Requires understanding of multiple steps and their correct sequence in a complex biological process.",
+    "supporting_quotes": [
+        "The process begins when chlorophyll molecules absorb sunlight energy",
+        "This absorbed energy drives the splitting of water molecules, releasing oxygen as a byproduct",
+        "Simultaneously, the energy is used to combine CO2 and water into glucose molecules"
+    ],
+    "quote_context": "These quotes establish the correct sequence of photosynthesis, showing that light absorption initiates the process, followed by simultaneous oxygen release and glucose production, directly contradicting the premise's incorrect sequence."
 }
 ```
 
-### Example 3: System Contradiction (Very Hard)
-
+### Example 3: System Impact (Very Hard)
 ```json
 {
-    "document_extract_analysis": "The text explains how the immune system recognizes and responds to specific pathogens.",
+    "document_extract_analysis": "The text examines global economic systems, focusing on international trade relationships and their effects on national economies.",
     "testable_concepts": [
-        "immune recognition",
-        "response specificity",
-        "system coordination"
+        "economic interdependence",
+        "trade dynamics",
+        "market effects",
+        "global systems"
     ],
     "potential_question_directions": [
-        "What mechanisms enable the immune system to identify and target specific pathogens?",
-        "Which elements are crucial for the specificity of immune responses?",
-        "In what ways does the immune system coordinate its response to ensure efficiency against pathogens?"
+        "How do trade relationships affect economic stability?",
+        "What role do international markets play in local economies?",
+        "How do policy changes impact global trade?",
+        "What are the key factors in economic interdependence?"
     ],
-    "best_direction": "What mechanisms enable the immune system to identify and target specific pathogens?",
-    "comprehension_type": "system_contradiction",
+    "best_direction": "The trade relationship question effectively tests understanding of complex system interactions while maintaining clear assessment criteria.",
+    "kind": "false-premise",
+    "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Antibodies are produced specifically for each type of pathogen.",
-        "Memory cells retain information about previous infections.",
-        "This allows for rapid response to repeated exposures.",
-        "Different pathogens trigger different antibody types."
-    ],
-    "quote_context": "The quotes establish the specificity of immune responses.",
-    "kind": "false-premise",
-    "question": "The text indicates that the immune system produces the same generic antibody for all pathogens and doesn't remember previous infections. What's wrong with these premises and how does the system actually work according to the text?",
-    "answer": "The text states that antibodies are pathogen-specific, not generic, and memory cells retain information about previous infections for rapid future response",
-    "reasoning": "Multiple contradictions with the text's description of immune system specificity and memory.",
+    "question": "The text suggests that increased tariffs in one country automatically improve its economic growth while having no effect on its trading partners. What's wrong with this interpretation?",
+    "answer": "The text explicitly states that tariffs create complex ripple effects throughout the global economy, affecting both the implementing country and its trading partners through reduced trade volume, retaliatory measures, and altered supply chains.",
+    "reasoning": "Tests understanding of complex system interactions and multi-layered economic relationships.",
     "difficulty": 5,
-    "difficulty_justification": "Requires understanding complex system behavior and identifying multiple contradictions."
+    "difficulty_justification": "Requires deep understanding of system-wide interactions and ability to trace multiple cause-effect relationships.",
+    "supporting_quotes": [
+        "When Country A implements new tariffs, its trading partners typically respond with retaliatory measures",
+        "The interconnected nature of global trade means that tariff increases often lead to reduced trade volumes across multiple markets",
+        "Studies show that protective tariffs frequently result in higher consumer prices and disrupted supply chains in both the implementing nation and its trading partners"
+    ],
+    "quote_context": "These quotes demonstrate the complex ripple effects of tariff implementation, showing how trade actions affect multiple parties and lead to various economic consequences, directly contradicting the simplified premise of unilateral benefit."
+}
+```
+
+### Example 4: Relationship Comprehension (Hard)
+```json
+{
+    "document_extract_analysis": "The passage details the relationship between ocean currents and global climate patterns, emphasizing their interconnected nature.",
+    "testable_concepts": [
+        "oceanic-atmospheric coupling",
+        "climate systems",
+        "environmental feedback loops",
+        "global patterns"
+    ],
+    "potential_question_directions": [
+        "How do ocean currents influence climate patterns?",
+        "What role does temperature play in current formation?",
+        "How do atmospheric conditions affect ocean behavior?",
+        "What are the key factors in current-climate interaction?"
+    ],
+    "best_direction": "The ocean-climate interaction question effectively tests understanding of complex relationships while maintaining clear assessment criteria.",
+    "kind": "false-premise",
+    "comprehension_type": "relationship_comprehension",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "The text indicates that ocean currents and climate patterns operate independently, with no significant influence on each other. What's incorrect about this interpretation?",
+    "answer": "The text demonstrates that ocean currents and climate patterns are intricately connected, with currents affecting regional temperatures and weather patterns, while atmospheric conditions influence current formation and behavior.",
+    "reasoning": "Tests understanding of complex environmental relationships and feedback systems.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding of multiple interconnected systems and their bidirectional relationships.",
+    "supporting_quotes": [
+        "Ocean currents act as global heat distributors, directly influencing regional climate patterns",
+        "Changes in atmospheric temperature and wind patterns can alter ocean current behavior, creating a feedback loop",
+        "The Gulf Stream's warm waters significantly moderate the climate of Western Europe, demonstrating the direct relationship between oceanic and atmospheric systems"
+    ],
+    "quote_context": "These quotes establish the bidirectional relationship between ocean currents and climate patterns, showing how they influence and respond to each other, directly contradicting the premise of independent operation."
+}
+```
+
+### Example 5: Evidence Synthesis (Medium)
+```json
+{
+    "document_extract_analysis": "The text examines the impact of social media on modern communication patterns and interpersonal relationships.",
+    "testable_concepts": [
+        "communication patterns",
+        "social dynamics",
+        "technological impact",
+        "behavioral changes"
+    ],
+    "potential_question_directions": [
+        "How has social media changed communication?",
+        "What evidence supports behavioral changes?",
+        "How do different platforms affect interaction?",
+        "What are the key trends in modern communication?"
+    ],
+    "best_direction": "The communication change question effectively tests ability to synthesize multiple pieces of evidence while maintaining clear assessment criteria.",
+    "kind": "false-premise",
+    "comprehension_type": "evidence_synthesis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "The passage claims that social media has uniformly decreased the quality of personal relationships while increasing isolation. Is this an accurate summary?",
+    "answer": "No, the text presents a nuanced view, showing both positive and negative impacts: while some relationships become superficial, others are strengthened through increased connectivity and new forms of interaction.",
+    "reasoning": "Tests ability to synthesize multiple pieces of evidence and recognize complexity in social phenomena.",
+    "difficulty": 3,
+    "difficulty_justification": "Requires synthesis of multiple pieces of evidence and recognition of nuanced conclusions rather than binary outcomes.",
+    "supporting_quotes": [
+        "Social media platforms have enabled maintenance of long-distance relationships that would have been difficult in previous eras",
+        "While some users report increased feelings of isolation, others have found meaningful connections through online communities",
+        "Research indicates that the impact of social media on relationships varies significantly based on usage patterns and individual circumstances"
+    ],
+    "quote_context": "These quotes demonstrate the complex and nuanced effects of social media on relationships, showing both positive and negative impacts rather than the uniform negative effect suggested in the false premise."
 }
 ```
 
@@ -365,13 +442,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Fact)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Process)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/System)
+        // Question 3 
     },
     // ...
 ]

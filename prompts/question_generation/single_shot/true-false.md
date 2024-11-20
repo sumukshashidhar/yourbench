@@ -218,110 +218,197 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 Here are diverse examples showing different types of questions:
 
-### Example 1: Fact Recall (Very Easy)
+### Example 1: Process Analysis (Easy)
 
 ```json
 {
-    "document_extract_analysis": "The extract discusses the water cycle, specifically describing how water evaporates from oceans and forms clouds.",
+    "document_extract_analysis": "The text details photosynthesis in plants, explaining how sunlight is converted into chemical energy through a series of biochemical reactions.",
     "testable_concepts": [
-        "ocean evaporation",
-        "cloud formation",
-        "water cycle stages"
+        "light absorption",
+        "energy conversion",
+        "chlorophyll function",
+        "glucose production"
     ],
     "potential_question_directions": [
-        "What processes are involved in the stages of the water cycle?",
-        "How does the evaporation of water from the ocean contribute to cloud formation?",
-        "What role does ocean evaporation play in the overall water cycle?"
+        "How do plants capture and utilize sunlight?",
+        "What role does chlorophyll play in photosynthesis?",
+        "What is the primary output of photosynthesis?",
+        "How does energy transformation occur during photosynthesis?"
     ],
-    "best_direction": "How does the evaporation of water from the ocean contribute to cloud formation?",
-    "comprehension_type": "fact_recall",
+    "best_direction": "What role does chlorophyll play in photosynthesis? This tests understanding of a key component's function in the process.",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Water evaporates from the ocean's surface when heated by the sun."
-    ],
-    "quote_context": "The quote directly states the fact about ocean evaporation.",
     "kind": "true-false",
-    "question": "Water evaporates from the ocean's surface when heated by the sun.",
+    "question": "Chlorophyll molecules in plant cells are responsible for capturing sunlight energy during photosynthesis.",
     "answer": "True",
-    "reasoning": "This is directly stated in the text without any modification needed.",
-    "difficulty": 1,
-    "difficulty_justification": "Simple fact directly stated in the text requiring basic recognition."
+    "reasoning": "The text explicitly states that chlorophyll molecules are the primary light-capturing pigments in plant cells, essential for initiating the photosynthetic process.",
+    "difficulty": 2,
+    "difficulty_justification": "While it tests process understanding, the relationship between chlorophyll and light capture is clearly stated and represents a fundamental concept.",
+    "supporting_quotes": [
+        "Chlorophyll molecules embedded in the thylakoid membranes capture incoming solar radiation",
+        "These specialized pigment molecules are the primary light-harvesting components of photosynthesis"
+    ],
+    "quote_context": "These quotes directly establish chlorophyll's role in capturing light energy, confirming the statement's accuracy about chlorophyll's function in photosynthesis"
 }
 ```
 
-### Example 2: Relationship Understanding (Medium)
+### Example 2: System Impact (Very Hard)
 
 ```json
 {
-    "document_extract_analysis": "The extract explains how different factors in the water cycle interact, including the relationship between temperature and evaporation rate.",
+    "document_extract_analysis": "The passage examines the complex interplay between ocean currents, atmospheric patterns, and global climate systems.",
     "testable_concepts": [
-        "temperature effects",
-        "evaporation rate",
-        "environmental factors"
+        "thermohaline circulation",
+        "atmospheric feedback loops",
+        "climate system interactions",
+        "heat distribution patterns"
     ],
     "potential_question_directions": [
-        "What impact does temperature have on the rate of evaporation?",
-        "In what ways does the text illustrate the connection between temperature and evaporation rate?",
-        "How do temperature variations influence the evaporation process described in the text?"
+        "How do changes in ocean currents affect global weather patterns?",
+        "What role does salinity play in ocean circulation?",
+        "How do atmospheric and oceanic systems interact?",
+        "What are the long-term implications of current pattern changes?"
     ],
-    "best_direction": "What impact does temperature have on the rate of evaporation?",
-    "comprehension_type": "relationship",
+    "best_direction": "How do changes in ocean currents affect global weather patterns? This tests complex system understanding and interconnected effects.",
+    "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Higher temperatures accelerate the evaporation process, while cooler temperatures slow it down.",
-        "The rate of evaporation varies directly with surface temperature."
-    ],
-    "quote_context": "The quotes establish the direct relationship between temperature and evaporation rate.",
     "kind": "true-false",
-    "question": "Cooler temperatures increase the rate of water evaporation from the ocean's surface.",
+    "question": "A slowdown in thermohaline circulation would only affect local ocean temperatures without impacting global atmospheric patterns.",
     "answer": "False",
-    "reasoning": "The text explicitly states that cooler temperatures slow down evaporation, contradicting the statement.",
+    "reasoning": "The text demonstrates that thermohaline circulation is integrally connected to global atmospheric patterns, and changes would have far-reaching effects beyond local ocean temperatures.",
+    "difficulty": 5,
+    "difficulty_justification": "Requires understanding of complex system interactions, feedback loops, and the ability to trace multiple cause-effect relationships through different Earth systems.",
+    "supporting_quotes": [
+        "The thermohaline circulation acts as Earth's heat distribution system, moving warm water from the equator to the poles",
+        "Changes in ocean circulation patterns trigger cascading effects throughout the global climate system, altering precipitation patterns, wind systems, and temperature distributions across continents",
+        "The interconnected nature of oceanic and atmospheric systems means that perturbations in one component inevitably affect the other"
+    ],
+    "quote_context": "These quotes demonstrate the interconnected nature of ocean currents and global climate, showing how thermohaline circulation affects both oceanic and atmospheric systems globally"
+}
+```
+
+### Example 3: Comparative Analysis (Medium)
+
+```json
+{
+    "document_extract_analysis": "The text compares different types of renewable energy sources, focusing on their efficiency, cost, and environmental impact.",
+    "testable_concepts": [
+        "energy efficiency metrics",
+        "environmental impact factors",
+        "cost-benefit analysis",
+        "implementation challenges"
+    ],
+    "potential_question_directions": [
+        "What distinguishes solar from wind energy efficiency?",
+        "How do environmental impacts compare between different renewables?",
+        "What factors influence the cost-effectiveness of each source?",
+        "Which renewable source has the lowest environmental impact?"
+    ],
+    "best_direction": "How do environmental impacts compare between different renewables? This tests ability to analyze and compare multiple factors.",
+    "comprehension_type": "compare_contrast",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "kind": "true-false",
+    "question": "Solar panels have a higher manufacturing environmental impact but lower operational impact compared to wind turbines.",
+    "answer": "True",
+    "reasoning": "The text explicitly compares the environmental impacts of different renewable sources, noting this specific distinction between solar and wind power.",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding the relationship between temperature and evaporation rate, including the direction of the relationship."
+    "difficulty_justification": "Requires synthesizing information about two different technologies and understanding both manufacturing and operational impacts.",
+    "supporting_quotes": [
+        "Solar panel production requires energy-intensive manufacturing processes and rare earth elements, resulting in significant initial environmental impact",
+        "While wind turbines have lower manufacturing impacts, their operational phase involves wildlife disruption and noise pollution",
+        "Once installed, solar panels operate with minimal environmental impact, producing no emissions or noise pollution"
+    ],
+    "quote_context": "These quotes explicitly compare the environmental impacts of solar and wind power at different stages of their lifecycles, supporting the statement about their relative impacts"
 }
 ```
 
-### Example 3: Main Idea (Hard)
+### Example 4: Mechanism Understanding (Hard)
 
 ```json
 {
-    "document_extract_analysis": "The extract describes the carbon cycle's role in climate regulation, emphasizing the interconnected nature of various processes.",
+    "document_extract_analysis": "The passage explains the molecular mechanisms of antibiotic resistance, including genetic transfer and evolutionary adaptation.",
     "testable_concepts": [
-        "carbon cycle",
-        "climate regulation",
-        "system interconnections"
+        "horizontal gene transfer",
+        "mutation mechanisms",
+        "selective pressure",
+        "resistance development"
     ],
     "potential_question_directions": [
-        "What are the primary functions of the carbon cycle in regulating Earth's climate?",
-        "In what ways does the text illustrate the relationship between the carbon cycle and climate regulation?",
-        "How do the interactions within the carbon cycle influence global climate patterns?"
+        "How do bacteria develop antibiotic resistance?",
+        "What role does genetic transfer play in resistance?",
+        "How does selective pressure influence bacterial evolution?",
+        "What mechanisms enable rapid adaptation?"
     ],
-    "best_direction": "What are the primary functions of the carbon cycle in regulating Earth's climate?",
-    "comprehension_type": "main_idea",
+    "best_direction": "How do bacteria develop antibiotic resistance? This tests understanding of complex biological mechanisms and their interactions.",
+    "comprehension_type": "mechanism_understanding",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "The carbon cycle acts as Earth's thermostat, regulating global temperatures through complex feedback mechanisms.",
-        "Changes in one part of the cycle can cascade through the entire system, affecting global climate patterns."
-    ],
-    "quote_context": "The quotes establish the carbon cycle's regulatory role and system-wide impacts.",
     "kind": "true-false",
-    "question": "The carbon cycle operates independently of other Earth systems, with no impact on global climate patterns.",
+    "question": "Horizontal gene transfer allows bacteria to acquire resistance genes only from their direct ancestors.",
     "answer": "False",
-    "reasoning": "The text explicitly describes the carbon cycle as interconnected with other systems and having direct impacts on global climate patterns.",
+    "reasoning": "The text explains that horizontal gene transfer occurs between different bacterial species, not just from ancestors to descendants.",
     "difficulty": 4,
-    "difficulty_justification": "Requires synthesis of multiple concepts and understanding of system interconnections."
+    "difficulty_justification": "Requires understanding of complex biological mechanisms, genetic concepts, and the ability to distinguish between vertical and horizontal gene transfer.",
+    "supporting_quotes": [
+        "Horizontal gene transfer allows bacteria to share resistance genes across different species and genera",
+        "Unlike vertical inheritance from parent to offspring, horizontal gene transfer enables the rapid spread of resistance genes throughout bacterial populations regardless of ancestral relationships",
+        "This mechanism of genetic exchange has been observed between entirely unrelated bacterial species in clinical settings"
+    ],
+    "quote_context": "These quotes directly contradict the statement by showing that horizontal gene transfer occurs between different species, not just from ancestors"
+}
+```
+
+### Example 5: Evidence Synthesis (Medium)
+
+```json
+{
+    "document_extract_analysis": "The text discusses archaeological evidence for early human migrations, combining genetic, archaeological, and geological data.",
+    "testable_concepts": [
+        "migration patterns",
+        "dating techniques",
+        "archaeological evidence",
+        "genetic markers"
+    ],
+    "potential_question_directions": [
+        "How do different types of evidence support migration theories?",
+        "What role does genetic evidence play in tracking migrations?",
+        "How do archaeologists date ancient human settlements?",
+        "What can artifacts tell us about migration routes?"
+    ],
+    "best_direction": "How do different types of evidence support migration theories? This tests ability to synthesize multiple lines of evidence.",
+    "comprehension_type": "evidence_synthesis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "kind": "true-false",
+    "question": "Genetic evidence alone provides a complete picture of early human migration patterns.",
+    "answer": "False",
+    "reasoning": "The text emphasizes that understanding early human migrations requires combining multiple types of evidence, including genetic, archaeological, and geological data.",
+    "difficulty": 3,
+    "difficulty_justification": "Requires understanding how different types of evidence contribute to historical conclusions and why no single source is sufficient.",
+    "supporting_quotes": [
+        "While genetic evidence provides crucial insights into human migration patterns, it must be corroborated with archaeological findings and geological data",
+        "The most robust conclusions about early human migrations come from the synthesis of multiple lines of evidence, including artifact distributions, genetic markers, and dated geological features",
+        "No single type of evidence can provide a complete picture of ancient human movements"
+    ],
+    "quote_context": "These quotes explicitly state that multiple types of evidence are necessary and that genetic evidence alone is insufficient, directly contradicting the statement"
 }
 ```
 
@@ -356,13 +443,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Fact Recall)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Relationship)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/Main Idea)
+        // Question 3 
     },
     // ...
 ]

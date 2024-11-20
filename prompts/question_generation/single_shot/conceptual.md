@@ -218,116 +218,183 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Principle Understanding (Easy)
-
+### Example 1: Process Analysis (Easy)
 ```json
 {
-    "document_extract_analysis": "The text explains the principle of natural selection, focusing on how environmental pressures lead to differential survival.",
+    "document_extract_analysis": "The text describes photosynthesis as a process where plants convert sunlight, water, and carbon dioxide into glucose and oxygen.",
     "testable_concepts": [
-        "natural selection",
-        "environmental pressure",
-        "differential survival"
+        "energy conversion",
+        "reactants and products",
+        "cellular processes"
     ],
     "potential_question_directions": [
-        "What role do environmental pressures play in shaping the traits of a population?",
-        "How do variations in survival rates among organisms contribute to the process of natural selection?",
-        "In what ways do specific traits enhance an organism's chances of survival in changing environments?"
+        "How do plants transform solar energy into chemical energy?",
+        "What role does each reactant play in photosynthesis?",
+        "Why is photosynthesis essential for life on Earth?"
     ],
-    "best_direction": "What role do environmental pressures play in shaping the traits of a population?",
-    "comprehension_type": "principle_understanding",
+    "best_direction": "How do plants transform solar energy into chemical energy?",
+    "comprehension_type": "process_analysis",
+    "kind": "conceptual",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Natural selection occurs when environmental pressures favor certain traits.",
-        "Organisms with advantageous traits are more likely to survive and reproduce.",
-        "Over time, beneficial traits become more common in the population."
-    ],
-    "quote_context": "The quotes establish the basic principle of natural selection.",
-    "kind": "conceptual",
-    "question": "Based on the text's explanation, how does natural selection lead to changes in a population over time?",
-    "answer": "Environmental pressures favor certain traits, leading to increased survival and reproduction of organisms with these traits, making them more common over time",
-    "reasoning": "The text outlines the process of natural selection through environmental pressure, differential survival, and trait inheritance.",
+    "question": "What makes photosynthesis an energy transformation process rather than just a chemical reaction?",
+    "answer": "Photosynthesis converts light energy from the sun into stored chemical energy in glucose molecules, representing a fundamental energy transformation in nature",
+    "reasoning": "The question tests understanding of energy conversion principles and distinguishes between simple chemical reactions and energy transformation processes",
     "difficulty": 2,
-    "difficulty_justification": "Requires basic understanding of a fundamental principle explained in the text."
+    "difficulty_justification": "Requires basic understanding of energy transformation but concepts are clearly presented in the text",
+    "supporting_quotes": [
+        "Plants capture sunlight through chlorophyll molecules in their leaves",
+        "The process converts CO2 and H2O into glucose (C6H12O6) and oxygen (O2)",
+        "This energy transformation is fundamental to life on Earth"
+    ],
+    "quote_context": "These quotes establish the key components of photosynthesis, showing both the inputs and outputs while emphasizing its role as an energy transformation process rather than just a chemical reaction"
 }
 ```
 
-### Example 2: Model Comprehension (Medium)
-
+### Example 2: System Analysis (Medium)
 ```json
 {
-    "document_extract_analysis": "The passage explains the atomic model of matter, describing how different elements are determined by proton number.",
+    "document_extract_analysis": "The passage explains how the immune system recognizes and responds to pathogens through multiple coordinated mechanisms.",
     "testable_concepts": [
-        "atomic structure",
-        "element definition",
-        "atomic number"
+        "immune response",
+        "pathogen recognition",
+        "cellular coordination"
     ],
     "potential_question_directions": [
-        "In what way does the atomic number define the identity of an element?",
-        "What effects do variations in neutron numbers have on the properties of an element?",
-        "How is the atomic number connected to the arrangement of electrons in an atom?"
+        "How do different components of the immune system work together?",
+        "What triggers the initial immune response?",
+        "Why is the immune response both general and specific?"
     ],
-    "best_direction": "In what way does the atomic number define the identity of an element?",
-    "comprehension_type": "model_comprehension",
+    "best_direction": "How do different components of the immune system work together?",
+    "comprehension_type": "system_analysis",
+    "kind": "conceptual",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Each element has a unique number of protons in its nucleus.",
-        "This proton number, called the atomic number, defines the element.",
-        "Atoms of the same element can have different numbers of neutrons.",
-        "Electrons orbit the nucleus in specific energy levels."
-    ],
-    "quote_context": "The quotes outline the key aspects of atomic structure.",
-    "kind": "conceptual",
-    "question": "According to the text's model of atomic structure, what determines whether two atoms represent the same element?",
-    "answer": "The number of protons (atomic number) in the nucleus determines the element, regardless of neutron count",
-    "reasoning": "The text explicitly states that proton number defines the element, while allowing for variation in neutrons.",
+    "question": "How does the coordination between different immune cells enhance the body's defense against pathogens?",
+    "answer": "Different immune cells communicate and coordinate their actions, with some identifying threats, others signaling danger, and specialized cells mounting targeted responses",
+    "reasoning": "Tests understanding of system complexity and cellular interaction in immune response",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding the relationship between atomic structure and element identity."
+    "difficulty_justification": "Requires understanding multiple components and their interactions in a complex system",
+    "supporting_quotes": [
+        "White blood cells recognize specific molecular patterns on pathogen surfaces",
+        "Dendritic cells present antigens to T-cells, triggering a targeted immune response",
+        "Cytokines released by infected cells alert nearby immune cells to the threat"
+    ],
+    "quote_context": "These quotes demonstrate the coordinated nature of immune response, showing how different cell types communicate and work together to mount an effective defense"
 }
 ```
 
-### Example 3: Concept Synthesis (Very Hard)
-
+### Example 3: Relationship Comprehension (Hard)
 ```json
 {
-    "document_extract_analysis": "The text explains how memory formation involves both chemical and structural changes in neural networks.",
+    "document_extract_analysis": "The text explores the relationship between climate change, ocean acidification, and marine ecosystem collapse.",
     "testable_concepts": [
-        "synaptic plasticity",
-        "neural networks",
-        "memory formation"
+        "carbon cycle",
+        "ecosystem interdependence",
+        "environmental feedback loops"
     ],
     "potential_question_directions": [
-        "In what ways do chemical changes at synapses initiate memory formation?",
-        "What role does synaptic plasticity play in the process of memory retention?",
-        "How do the structural adaptations in neural networks facilitate long-term memory storage?"
+        "How do changes in ocean pH affect marine food webs?",
+        "What connects atmospheric carbon levels to marine life survival?",
+        "Why do small pH changes have large ecosystem effects?"
     ],
-    "best_direction": "In what ways do chemical changes at synapses initiate memory formation?",
-    "comprehension_type": "concept_synthesis",
+    "best_direction": "How do changes in ocean pH affect marine food webs?",
+    "comprehension_type": "relationship_comprehension",
+    "kind": "conceptual",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "Why does ocean acidification have cascading effects throughout marine ecosystems rather than just affecting single species?",
+    "answer": "Ocean acidification disrupts fundamental biological processes at the base of food webs, creating chain reactions that affect all dependent species through their ecological connections",
+    "reasoning": "Tests understanding of complex ecological relationships and system-wide effects",
+    "difficulty": 4,
+    "difficulty_justification": "Requires analysis of multiple interconnected ecological relationships and their consequences",
     "supporting_quotes": [
-        "Memory formation begins with chemical changes at synapses.",
-        "Repeated activation strengthens neural connections.",
-        "Structural changes occur in neural networks over time.",
-        "Both immediate chemical and long-term structural changes contribute to memory storage."
+        "As CO2 levels rise, ocean pH decreases, making it difficult for calcifying organisms to build shells",
+        "Pteropods, key prey species for many marine organisms, are particularly vulnerable to acidification",
+        "The loss of these base food chain organisms creates ripple effects throughout marine ecosystems"
     ],
-    "quote_context": "The quotes describe the multi-level process of memory formation.",
+    "quote_context": "These quotes establish the chain of causation from ocean acidification to ecosystem-wide effects, highlighting how the impact on fundamental species affects the entire food web"
+}
+```
+
+### Example 4: Evidence Synthesis (Very Hard)
+```json
+{
+    "document_extract_analysis": "The text discusses how quantum entanglement challenges classical physics principles and enables quantum computing.",
+    "testable_concepts": [
+        "quantum entanglement",
+        "classical physics limitations",
+        "quantum information theory"
+    ],
+    "potential_question_directions": [
+        "How does entanglement enable quantum advantages?",
+        "Why can't classical physics explain entanglement?",
+        "What makes quantum information fundamentally different?"
+    ],
+    "best_direction": "How does entanglement enable quantum advantages?",
+    "comprehension_type": "evidence_synthesis",
     "kind": "conceptual",
-    "question": "Based on the text's explanation, how do chemical and structural changes work together in the formation of lasting memories?",
-    "answer": "Initial chemical changes at synapses enable immediate memory formation, while repeated activation leads to structural changes in neural networks for long-term storage",
-    "reasoning": "The text describes a two-level process where immediate chemical changes and long-term structural modifications work together in memory formation.",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How does quantum entanglement's violation of classical physics principles create new possibilities for information processing?",
+    "answer": "Entanglement allows quantum systems to exist in multiple states simultaneously and maintain instantaneous correlations, enabling parallel processing and secure communication impossible in classical systems",
+    "reasoning": "Requires synthesizing concepts from quantum mechanics, information theory, and classical physics limitations",
     "difficulty": 5,
-    "difficulty_justification": "Requires synthesizing multiple concepts and understanding their interaction over time."
+    "difficulty_justification": "Demands integration of multiple complex concepts and understanding of paradigm-shifting principles",
+    "supporting_quotes": [
+        "Quantum entanglement allows particles to maintain instantaneous correlations regardless of distance",
+        "Unlike classical bits, quantum bits can exist in multiple states simultaneously through superposition",
+        "These quantum properties enable exponential increases in computational power for certain algorithms"
+    ],
+    "quote_context": "These quotes connect the fundamental quantum mechanical principle of entanglement to its practical applications in quantum computing, showing how it transcends classical physics limitations"
+}
+```
+
+### Example 5: Mechanism Understanding (Medium)
+```json
+{
+    "document_extract_analysis": "The text explains how neurons use action potentials and neurotransmitters to communicate information.",
+    "testable_concepts": [
+        "action potential generation",
+        "synaptic transmission",
+        "neural coding"
+    ],
+    "potential_question_directions": [
+        "How do electrical and chemical signals work together in neural communication?",
+        "What determines the strength of synaptic transmission?",
+        "Why is neural communication both electrical and chemical?"
+    ],
+    "best_direction": "How do electrical and chemical signals work together in neural communication?",
+    "comprehension_type": "mechanism_understanding",
+    "kind": "conceptual",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How does the conversion between electrical and chemical signals enable precise neural communication?",
+    "answer": "Neurons convert electrical action potentials into chemical neurotransmitter release, allowing for signal modification and specific targeting of recipient cells",
+    "reasoning": "Tests understanding of the dual nature of neural signaling and its functional significance",
+    "difficulty": 3,
+    "difficulty_justification": "Requires understanding of multiple mechanisms and their integration in neural communication",
+    "supporting_quotes": [
+        "Action potentials propagate electrically along the neuron's axon",
+        "At synapses, electrical signals trigger the release of chemical neurotransmitters",
+        "The amount of neurotransmitter released determines the strength of the signal received by the next neuron"
+    ],
+    "quote_context": "These quotes outline the sequence of neural communication, showing the transition from electrical to chemical signaling and how this enables signal modulation"
 }
 ```
 
@@ -366,13 +433,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Principle)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Model)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/Synthesis)
+        // Question 3 
     },
     // ...
 ]

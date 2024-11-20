@@ -217,115 +217,184 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Exception Case (Easy)
-
+### Example 1: Process Change (Easy)
 ```json
 {
-    "document_extract_analysis": "The text explains grammar rules about 'i before e' in English spelling, noting specific exceptions.",
+    "document_extract_analysis": "The text details photosynthesis in desert plants, specifically focusing on CAM metabolism adaptations.",
     "testable_concepts": [
-        "spelling rules",
-        "exceptions",
-        "word patterns"
+        "metabolic adaptations",
+        "water conservation",
+        "carbon fixation patterns"
     ],
     "potential_question_directions": [
-        "What specific examples illustrate the exceptions to the 'i before e' rule?",
-        "In what ways does the text clarify the relationship between the 'i before e' rule and its exceptions?",
-        "How do the exceptions mentioned in the text challenge the general spelling rule?"
+        "How do desert plants modify their photosynthetic process?",
+        "What triggers the switch between normal and CAM photosynthesis?",
+        "Why is nighttime CO2 absorption advantageous?"
     ],
-    "best_direction": "What specific examples illustrate the exceptions to the 'i before e' rule?",
-    "comprehension_type": "exception_case",
+    "best_direction": "How do desert plants modify their photosynthetic process?",
+    "comprehension_type": "process_change",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "The rule states 'i before e except after c'.",
-        "However, this rule doesn't apply to words like 'weird' and 'height'.",
-        "These exceptions occur mainly in words with the 'eigh' sound."
-    ],
-    "quote_context": "The quotes establish the rule and its exceptions.",
-    "kind": "edge-case",
-    "question": "Based on the text's explanation, why doesn't the 'i before e' rule apply to the word 'height', and what pattern does this exception follow?",
-    "answer": "According to the text, 'height' is an exception because it contains the 'eigh' sound pattern, which regularly breaks the general rule",
-    "reasoning": "The question tests understanding of a specific exception pattern mentioned in the text.",
+    "question": "What unique metabolic adaptation allows desert plants to perform photosynthesis differently from typical plants?",
+    "answer": "Desert plants use CAM metabolism, which allows them to absorb CO2 at night and store it for use during daytime photosynthesis, unlike typical plants that absorb CO2 during the day",
+    "reasoning": "This tests understanding of a fundamental process modification that distinguishes desert plants from typical plants, focusing on the temporal shift in CO2 absorption",
     "difficulty": 2,
-    "difficulty_justification": "Requires identifying a simple exception pattern explicitly stated in the text."
+    "difficulty_justification": "The concept is straightforward and explicitly stated in the text, requiring only basic comprehension of process modification",
+    "supporting_quotes": [
+        "CAM plants open their stomata at night to collect CO2, storing it as malate in their vacuoles",
+        "Unlike typical C3 plants that perform gas exchange during daylight hours, CAM plants have evolved to minimize water loss in arid conditions"
+    ],
+    "quote_context": "These quotes establish both the unique nighttime CO2 absorption mechanism of CAM plants and explicitly contrast it with normal plant behavior, providing direct evidence for the metabolic adaptation described in the answer",
+    "kind": "edge-case"
 }
 ```
 
-### Example 2: Boundary Condition (Medium)
-
+### Example 2: Condition Interaction (Medium)
 ```json
 {
-    "document_extract_analysis": "The passage describes water's behavior at different temperatures, including phase changes.",
+    "document_extract_analysis": "The passage explains quantum entanglement breaking under various environmental conditions.",
     "testable_concepts": [
-        "phase transitions",
-        "temperature boundaries",
-        "state changes"
+        "quantum coherence",
+        "environmental decoherence",
+        "measurement effects"
     ],
     "potential_question_directions": [
-        "What specific conditions allow water to transition between different phases?",
-        "In what ways does the text clarify the relationship between temperature and water's phase changes?",
-        "What unique characteristics define the boundary conditions for water's state changes?"
+        "What combination of factors causes entanglement to break?",
+        "How does temperature interact with other decoherence factors?",
+        "What role does measurement timing play in maintaining entanglement?"
     ],
-    "best_direction": "What specific conditions allow water to transition between different phases?",
-    "comprehension_type": "boundary_condition",
+    "best_direction": "What combination of factors causes entanglement to break?",
+    "comprehension_type": "condition_interaction",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Water typically freezes at 0°C at standard pressure.",
-        "However, super-cooled water can remain liquid below 0°C under specific conditions.",
-        "This metastable state occurs when water is very pure and undisturbed."
-    ],
-    "quote_context": "The quotes describe standard freezing and an exception case.",
-    "kind": "edge-case",
-    "question": "According to the text, under what specific boundary conditions can water exist below its normal freezing point while remaining liquid?",
-    "answer": "The text indicates that super-cooled water can remain liquid below 0°C when it's very pure and undisturbed",
-    "reasoning": "Tests understanding of specific conditions that create an exception to normal freezing behavior.",
+    "question": "How do temperature fluctuations and measurement timing collectively affect quantum entanglement maintenance?",
+    "answer": "When temperature exceeds 1K and measurements occur faster than 10^-6 seconds apart, entanglement breaks down due to combined environmental and measurement-induced decoherence",
+    "reasoning": "This tests understanding of multiple interacting conditions and their combined effects on a quantum system",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding multiple conditions that create a boundary case."
+    "difficulty_justification": "Requires synthesizing multiple conditions and understanding their interactive effects on a complex quantum phenomenon",
+    "supporting_quotes": [
+        "Quantum coherence breaks down rapidly when thermal energy exceeds 1 Kelvin",
+        "Measurements performed at intervals shorter than 10^-6 seconds introduce significant decoherence effects",
+        "The combination of thermal noise and frequent measurements creates an insurmountable barrier to maintaining quantum entanglement"
+    ],
+    "quote_context": "These quotes establish both the individual thermal and measurement timing thresholds, while the third quote explicitly confirms their combined detrimental effect on entanglement maintenance",
+    "kind": "edge-case"
 }
 ```
 
-### Example 3: System Boundary (Very Hard)
-
+### Example 3: System Impact (Hard)
 ```json
 {
-    "document_extract_analysis": "The text discusses ecosystem carrying capacity and population dynamics under stress conditions.",
+    "document_extract_analysis": "The text examines cascading failures in power grids during extreme weather events.",
     "testable_concepts": [
-        "carrying capacity",
-        "population limits",
-        "system stress"
+        "grid interconnectivity",
+        "failure propagation",
+        "system resilience"
     ],
     "potential_question_directions": [
-        "What specific factors influence the carrying capacity of an ecosystem?",
-        "In what ways does the text illustrate the relationship between population dynamics and ecosystem stress?",
-        "How do the described conditions affect the stability of an ecosystem's population?"
+        "How do multiple grid failures interact?",
+        "What conditions prevent system recovery?",
+        "Why do some failures lead to cascading effects while others don't?"
     ],
-    "best_direction": "What specific factors influence the carrying capacity of an ecosystem?",
-    "comprehension_type": "system_boundary",
+    "best_direction": "How do multiple grid failures interact?",
+    "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "Under what specific combination of conditions does a local power grid failure transform into a regional blackout?",
+    "answer": "A regional blackout occurs when three conditions align: peak demand exceeds 85% capacity, more than two major transmission lines fail, and backup systems can't respond within 30 seconds",
+    "reasoning": "Tests understanding of complex system interactions and threshold conditions that lead to catastrophic failures",
+    "difficulty": 4,
+    "difficulty_justification": "Requires analysis of multiple interacting conditions and understanding of systemic relationships in a complex infrastructure",
     "supporting_quotes": [
-        "Ecosystems typically maintain stable populations within carrying capacity.",
-        "Under extreme resource limitation, population dynamics become chaotic.",
-        "Recovery may be impossible if more than 60% of keystone species are lost.",
-        "System collapse occurs when multiple stress factors combine."
+        "Grid instability becomes critical when demand surpasses 85% of maximum capacity",
+        "The failure of two or more major transmission lines creates unsustainable load redistribution",
+        "Backup systems must engage within 30 seconds to prevent cascading failures",
+        "When these conditions coincide, localized failures invariably escalate to regional blackouts"
     ],
-    "quote_context": "The quotes describe system behavior at various boundaries.",
-    "kind": "edge-case",
-    "question": "Based on the text, what combination of conditions marks the boundary between ecosystem stress and irreversible system collapse?",
-    "answer": "The text indicates collapse occurs with both keystone species loss exceeding 60% and multiple stress factors present, marking the boundary of recovery possibility",
-    "reasoning": "Tests understanding of multiple interacting conditions that create a system boundary.",
+    "quote_context": "The quotes establish each critical threshold condition and explicitly confirm their combined role in causing regional blackouts, providing direct evidence for the systemic failure conditions",
+    "kind": "edge-case"
+}
+```
+
+### Example 4: Chain Effect (Very Hard)
+```json
+{
+    "document_extract_analysis": "The document describes the interconnected effects of ocean acidification on marine ecosystems.",
+    "testable_concepts": [
+        "pH threshold effects",
+        "species interdependence",
+        "ecosystem collapse scenarios"
+    ],
+    "potential_question_directions": [
+        "How do changes in ocean pH trigger cascade effects?",
+        "What sequence of events leads to ecosystem collapse?",
+        "Why are some species more vulnerable to acidification?"
+    ],
+    "best_direction": "How do changes in ocean pH trigger cascade effects?",
+    "comprehension_type": "chain_effect",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "What sequence of biological and chemical events occurs when ocean pH drops below 7.8, and how does this lead to ecosystem restructuring?",
+    "answer": "When pH drops below 7.8, calcifying organisms lose shell integrity within 48 hours, leading to plankton population collapse within 2 weeks, triggering fish population crashes by month 3, and ultimately causing predator species redistribution within 6 months",
+    "reasoning": "Tests understanding of complex temporal chains of cause and effect across multiple ecological levels",
     "difficulty": 5,
-    "difficulty_justification": "Requires synthesizing multiple boundary conditions and understanding their interactions at a system level."
+    "difficulty_justification": "Requires tracking multiple sequential effects across different timescales and understanding complex ecological interactions",
+    "supporting_quotes": [
+        "At pH levels below 7.8, calcifying organisms show severe shell degradation within 48 hours",
+        "Plankton population collapse occurs approximately 14 days after sustained exposure to acidic conditions",
+        "Fish populations dependent on planktonic food sources crash within three months of plankton decline",
+        "Apex predator redistribution is observed within 6 months of prey population collapse"
+    ],
+    "quote_context": "These quotes establish the precise timeline and causal chain of events following ocean acidification, providing explicit evidence for each stage of the ecosystem restructuring process",
+    "kind": "edge-case"
+}
+```
+
+### Example 5: Extreme Case (Medium-Hard)
+```json
+{
+    "document_extract_analysis": "The text discusses human adaptation to high-altitude environments.",
+    "testable_concepts": [
+        "physiological adaptation",
+        "oxygen utilization",
+        "genetic factors"
+    ],
+    "potential_question_directions": [
+        "What limits human adaptation to extreme altitudes?",
+        "How do different adaptation mechanisms interact?",
+        "Why do some populations adapt better than others?"
+    ],
+    "best_direction": "What limits human adaptation to extreme altitudes?",
+    "comprehension_type": "extreme_case",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "What physiological changes enable survival at 5000m altitude, and why do these mechanisms fail above 8000m?",
+    "answer": "At 5000m, increased red blood cell production and enhanced oxygen utilization enable survival, but above 8000m, these mechanisms become insufficient as oxygen partial pressure drops below 30% of sea level, overwhelming compensatory mechanisms",
+    "reasoning": "Tests understanding of physiological adaptations and their limitations under extreme conditions",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding complex physiological mechanisms and their limitations under extreme conditions",
+    "supporting_quotes": [
+        "Human settlements at 5000m altitude show successful adaptation through increased erythropoiesis and enhanced oxygen utilization efficiency",
+        "Above 8000m, where oxygen partial pressure drops below 30% of sea level values, physiological compensation mechanisms become inadequate",
+        "No permanent human habitation exists above 8000m due to the fundamental limitations of human physiology"
+    ],
+    "quote_context": "The quotes directly establish both the successful adaptation mechanisms at 5000m and their failure above 8000m, providing specific evidence for the physiological threshold described",
+    "kind": "edge-case"
 }
 ```
 
@@ -364,13 +433,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Exception)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Boundary)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/System)
+        // Question 3 
     },
     // ...
 ]

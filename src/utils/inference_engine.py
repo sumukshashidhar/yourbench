@@ -209,8 +209,8 @@ class InferenceEngine:
         self.strategy = connection_details["strategy"]
         self.client = self._initialize_client(connection_details)
         self.model_name = model_name
-        self.base_url = connection_details["azure_endpoint"] if connection_details["strategy"] == "azure" else connection_details["base_url"]
-        self.api_version = connection_details["api_version"] if connection_details["strategy"] == "azure" else "2024-02-01"
+        self.base_url = connection_details["base_url"]
+        self.api_version = "2024-02-01"
         # Initialize session to None - will be created when needed
         self._session = None
         return
@@ -225,10 +225,11 @@ class InferenceEngine:
                 base_url = connection_details["base_url"],
             )
         elif connection_details["strategy"] == "azure":
+
             return AzureOpenAI(
                 api_key = connection_details["api_key"],
-                azure_endpoint = connection_details["azure_endpoint"],
-                api_version = connection_details["api_version"],
+                azure_endpoint = connection_details["base_url"],
+                api_version = connection_details["api_version"] if "api_version" in connection_details else "2024-02-01",
             )
         elif connection_details["strategy"] == "gemini":
             return genai.GenerativeModel(

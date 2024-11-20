@@ -217,115 +217,196 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cause-Effect Analysis (Easy)
-
+### Example 1: Pattern Recognition (Easy)
 ```json
 {
-    "document_extract_analysis": "The passage discusses how increased carbon dioxide levels affect ocean acidification and marine ecosystems.",
+    "document_extract_analysis": "The text discusses migration patterns of monarch butterflies, including their navigation methods and seasonal timing.",
+    "kind": "analytical",
     "testable_concepts": [
-        "ocean acidification",
-        "ecosystem impacts",
-        "chemical processes"
+        "navigation mechanisms",
+        "seasonal triggers",
+        "generational memory",
+        "environmental cues"
     ],
     "potential_question_directions": [
-        "In what ways does elevated CO2 contribute to ocean acidification?",
-        "What specific effects does ocean acidification have on marine life?",
-        "Can you explain the chemical mechanisms behind ocean acidification?"
+        "How do monarchs use environmental cues for navigation?",
+        "What role does generational memory play in migration?",
+        "Why do specific seasonal changes trigger migration?",
+        "How do different generations coordinate their movement patterns?"
     ],
-    "best_direction": "In what ways does elevated CO2 contribute to ocean acidification?",
-    "comprehension_type": "cause_effect",
+    "best_direction": "How do environmental cues and generational memory interact in monarch migration?",
+    "comprehension_type": "pattern_recognition",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Rising CO2 levels in the atmosphere cause the ocean to absorb more carbon dioxide.",
-        "This absorption leads to increased acidity in ocean waters.",
-        "Higher acidity makes it difficult for marine organisms to build calcium carbonate shells."
-    ],
-    "quote_context": "The quotes establish the causal chain from CO2 to marine impacts.",
-    "kind": "analytical",
-    "question": "According to the text, how does atmospheric CO2 impact marine organisms' ability to build shells?",
-    "answer": "Increased atmospheric CO2 causes ocean acidification, which makes shell formation difficult",
-    "reasoning": "The text presents a clear causal chain: increased CO2 → ocean absorption → acidification → difficulty building shells.",
+    "question": "What combination of factors enables monarch butterflies to maintain their migration patterns across generations?",
+    "answer": "Monarchs use a combination of environmental cues (sunlight position, magnetic fields) and inherited genetic programming to maintain consistent migration routes",
+    "reasoning": "The text shows how multiple factors work together - environmental sensing, genetic programming, and timing mechanisms all contribute to successful migration patterns across generations",
     "difficulty": 2,
-    "difficulty_justification": "Requires following a straightforward cause-effect chain through multiple steps."
+    "difficulty_justification": "Requires connecting multiple concepts but follows a clear pattern described in the text",
+    "supporting_quotes": [
+        "Monarchs use the position of the sun as a primary navigational cue, adjusting their internal compass throughout the day",
+        "Genetic studies have revealed that inherited DNA sequences encode timing mechanisms and directional preferences",
+        "Environmental factors including day length and temperature trigger hormonal changes that initiate migration"
+    ],
+    "quote_context": "These quotes demonstrate the dual nature of monarch navigation - both immediate environmental sensing and inherited genetic programming. The first quote shows active navigation, while the second and third quotes reveal the underlying biological mechanisms that enable this behavior across generations."
 }
 ```
 
 ### Example 2: Process Analysis (Medium)
-
 ```json
 {
-    "document_extract_analysis": "The text explains the complex process of photosynthesis and its role in plant growth.",
+    "document_extract_analysis": "The passage explains how neurons communicate through synaptic transmission using neurotransmitters and electrical signals.",
+    "kind": "analytical",
     "testable_concepts": [
-        "photosynthesis stages",
-        "energy transformation",
-        "resource utilization"
+        "synaptic transmission",
+        "neurotransmitter release",
+        "receptor activation",
+        "signal propagation"
     ],
     "potential_question_directions": [
-        "What are the key stages involved in the process of photosynthesis?",
-        "In what ways does photosynthesis facilitate energy transformation in plants?",
-        "How do plants utilize light energy to synthesize glucose during photosynthesis?"
+        "How does calcium influence neurotransmitter release?",
+        "What role do receptor proteins play in signal transmission?",
+        "How is the electrical signal converted to chemical transmission?",
+        "What mechanisms ensure precise timing of neural communication?"
     ],
-    "best_direction": "In what ways does photosynthesis facilitate energy transformation in plants?",
+    "best_direction": "How does the conversion between electrical and chemical signals enable neural communication?",
     "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Light energy is captured by chlorophyll in the thylakoid membranes.",
-        "This energy drives the conversion of water and CO2 into glucose.",
-        "The process requires specific enzymes and occurs in multiple stages."
-    ],
-    "quote_context": "The quotes outline the key steps and requirements of photosynthesis.",
-    "kind": "analytical",
-    "question": "Based on the text, explain how plants transform light energy into glucose during photosynthesis.",
-    "answer": "Chlorophyll captures light energy, which then drives the conversion of water and CO2 into glucose through multiple enzymatic stages",
-    "reasoning": "The text describes the process sequence from light capture to glucose production, including key components.",
+    "question": "How do neurons maintain precise timing in signal transmission while converting between electrical and chemical signals?",
+    "answer": "Neurons use voltage-gated calcium channels to trigger neurotransmitter release, coordinating electrical and chemical signals through precise molecular mechanisms",
+    "reasoning": "The text describes the complex interplay between electrical signals, calcium influx, vesicle release, and receptor activation, showing how timing is maintained through molecular mechanisms",
     "difficulty": 3,
-    "difficulty_justification": "Requires synthesizing multiple process steps and understanding their relationships."
+    "difficulty_justification": "Requires understanding multiple steps and their precise coordination in a complex biological process",
+    "supporting_quotes": [
+        "Action potentials trigger the opening of voltage-gated calcium channels in the presynaptic terminal",
+        "The influx of calcium ions causes synaptic vesicles to fuse with the membrane within microseconds",
+        "Neurotransmitter molecules bind to specific receptor proteins, initiating a new electrical signal in the postsynaptic neuron"
+    ],
+    "quote_context": "These quotes trace the precise sequence of neural signal transmission, from electrical signal to chemical release and back to electrical. They highlight the molecular mechanisms that maintain precise timing throughout the process."
 }
 ```
 
-### Example 3: System Analysis (Very Hard)
-
+### Example 3: System Impact (Hard)
 ```json
 {
-    "document_extract_analysis": "The passage describes the interconnected feedback loops in climate systems.",
+    "document_extract_analysis": "The text examines how deforestation affects global carbon cycles and local ecosystems simultaneously.",
+    "kind": "analytical",
     "testable_concepts": [
-        "feedback mechanisms",
-        "system interactions",
-        "climate stability"
+        "carbon cycle disruption",
+        "ecosystem cascade effects",
+        "biodiversity impact",
+        "climate feedback loops"
     ],
     "potential_question_directions": [
-        "In what ways does the feedback loop of Arctic ice melting contribute to climate change?",
-        "What impacts does the reduction of Arctic ice have on global climate patterns?",
-        "How does the decrease in Arctic ice influence the overall temperature of the Earth?"
+        "How does deforestation create multiple feedback loops?",
+        "What are the cascading effects on local ecosystems?",
+        "How do carbon cycle changes affect global systems?",
+        "What connections exist between local and global impacts?"
     ],
-    "best_direction": "In what ways does the feedback loop of Arctic ice melting contribute to climate change?",
-    "comprehension_type": "system_analysis",
+    "best_direction": "How do local ecosystem changes from deforestation connect to global climate effects?",
+    "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "How do the immediate effects of deforestation create long-term changes in both local ecosystems and global climate systems?",
+    "answer": "Deforestation triggers immediate biodiversity loss and soil degradation locally, while reducing carbon storage capacity and altering weather patterns globally",
+    "reasoning": "The text demonstrates how local ecosystem destruction creates ripple effects through multiple systems, connecting immediate habitat loss to long-term climate changes through various mechanisms",
+    "difficulty": 4,
+    "difficulty_justification": "Requires analyzing complex interactions between multiple systems across different scales and timeframes",
     "supporting_quotes": [
-        "Arctic ice reflects sunlight, helping maintain cooler temperatures.",
-        "As ice melts, less sunlight is reflected, leading to warmer temperatures.",
-        "Warmer temperatures cause more ice to melt, creating a self-reinforcing cycle.",
-        "This positive feedback loop accelerates the warming process."
+        "Local deforestation immediately reduces habitat complexity, leading to the loss of 75-80% of resident species within months",
+        "Soil erosion accelerates after tree removal, reducing agricultural productivity by 60% within 3 years",
+        "Each hectare of forest loss reduces carbon storage capacity by 250 metric tons while releasing stored carbon",
+        "Changes in local evapotranspiration patterns affect regional rainfall, creating feedback loops that extend beyond the deforested area"
     ],
-    "quote_context": "The quotes describe a complex feedback system in Arctic ice melt.",
+    "quote_context": "These quotes connect immediate local impacts to broader systemic effects, showing how deforestation creates cascading changes across multiple scales. They demonstrate both the direct consequences and the indirect feedback mechanisms that amplify the impact."
+}
+```
+
+### Example 4: Evidence Synthesis (Very Hard)
+```json
+{
+    "document_extract_analysis": "The passage details how quantum entanglement enables quantum computing advantages through parallel processing.",
     "kind": "analytical",
-    "question": "How does the Arctic ice feedback system demonstrate self-reinforcing climate change, according to the text?",
-    "answer": "Ice melt reduces sunlight reflection, causing warming that leads to more ice melt, creating an accelerating cycle",
-    "reasoning": "The text describes a positive feedback loop where each step amplifies the initial change.",
+    "testable_concepts": [
+        "quantum entanglement",
+        "superposition states",
+        "parallel computation",
+        "quantum algorithms"
+    ],
+    "potential_question_directions": [
+        "How does entanglement enable parallel processing?",
+        "What role does superposition play in quantum advantage?",
+        "How do quantum algorithms utilize entanglement?",
+        "What limitations affect quantum computing systems?"
+    ],
+    "best_direction": "How do multiple quantum properties combine to create computational advantages?",
+    "comprehension_type": "evidence_synthesis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How do quantum entanglement and superposition work together to enable computational advantages impossible in classical computers?",
+    "answer": "Entanglement allows multiple qubits to share states while superposition enables parallel processing of multiple states, creating exponential computational scaling",
+    "reasoning": "The text explains how quantum properties combine synergistically - entanglement enables state sharing, superposition allows parallel processing, and their combination creates unique computational capabilities",
     "difficulty": 5,
-    "difficulty_justification": "Requires understanding complex system interactions and feedback mechanisms."
+    "difficulty_justification": "Requires synthesizing complex quantum concepts and understanding their interrelated effects on computation",
+    "supporting_quotes": [
+        "Quantum entanglement allows multiple qubits to share quantum states, enabling instantaneous correlation across the system",
+        "Through superposition, each qubit exists in multiple states simultaneously, allowing n qubits to represent 2^n states",
+        "The combination of entanglement and superposition enables quantum algorithms to perform certain calculations exponentially faster than classical computers",
+        "Quantum error correction maintains coherence by distributing quantum information across multiple entangled qubits"
+    ],
+    "quote_context": "These quotes illustrate how quantum computing leverages multiple quantum phenomena synergistically. They show how entanglement and superposition work together to create computational capabilities that exceed classical limits, while also highlighting the practical challenges of maintaining quantum states."
+}
+```
+
+### Example 5: Mechanism Understanding (Medium-Hard)
+```json
+{
+    "document_extract_analysis": "The text explains how CRISPR gene editing achieves precise DNA modifications through molecular mechanisms.",
+    "kind": "analytical",
+    "testable_concepts": [
+        "guide RNA targeting",
+        "DNA cutting mechanism",
+        "repair pathways",
+        "precision control"
+    ],
+    "potential_question_directions": [
+        "How does guide RNA ensure targeting precision?",
+        "What controls the DNA cutting process?",
+        "How do repair mechanisms affect outcomes?",
+        "What factors influence editing efficiency?"
+    ],
+    "best_direction": "How do multiple molecular mechanisms ensure precise gene editing?",
+    "comprehension_type": "mechanism_understanding",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How do the molecular components of CRISPR work together to achieve precise genetic modifications while minimizing errors?",
+    "answer": "CRISPR combines specific guide RNA targeting, controlled Cas9 cutting, and cellular repair mechanisms to make precise DNA changes while preventing off-target effects",
+    "reasoning": "The text describes how multiple molecular mechanisms (RNA guidance, protein cutting, and DNA repair) coordinate to achieve accurate genetic modifications",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding multiple molecular mechanisms and their precise coordination in a complex biological process",
+    "supporting_quotes": [
+        "The guide RNA sequence contains 20 nucleotides that match the target DNA sequence with high specificity",
+        "Cas9 protein creates a precise double-strand break only when the guide RNA forms a complete match with the target",
+        "Cellular DNA repair mechanisms either join broken ends directly or use a template to insert new sequences",
+        "Off-target effects are minimized through careful guide RNA design and controlled Cas9 activity levels"
+    ],
+    "quote_context": "These quotes outline the sequential steps of CRISPR gene editing, showing how molecular specificity is maintained at each stage. They demonstrate the multiple layers of control that ensure precise genetic modifications while preventing unwanted changes."
 }
 ```
 
@@ -364,13 +445,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Cause-Effect)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Process)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/System)
+        // Question 3 
     },
     // ...
 ]

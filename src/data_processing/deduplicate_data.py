@@ -16,14 +16,20 @@ import argparse
 mp.set_start_method('spawn', force=True)
 
 def parse_args():
+    # Get dataset name from environment variable
+    dataset_name = os.getenv('YOURBENCH_DATASET_NAME', 'y1')
+    org_name = os.getenv('YOURBENCH_ORGANIZATION', 'sumuks')
+    base_dataset = f"{org_name}/{dataset_name}-questions-single-shot"
+    output_dataset = f"{org_name}/{dataset_name}-questions-single-shot-diverse"
+
     parser = argparse.ArgumentParser(description='Deduplicate questions in a dataset using semantic similarity')
     
     # Dataset arguments
-    parser.add_argument('--input_dataset', type=str, default="sumuks/y1-questions-single-shot",
+    parser.add_argument('--input_dataset', type=str, default=base_dataset,
                        help='Input dataset name on HuggingFace Hub')
     parser.add_argument('--input_split', type=str, default="train",
                        help='Dataset split to process')
-    parser.add_argument('--output_dataset', type=str, default="sumuks/y1-questions-single-shot-diverse",
+    parser.add_argument('--output_dataset', type=str, default=output_dataset,
                        help='Output dataset name for HuggingFace Hub')
     
     # Model arguments

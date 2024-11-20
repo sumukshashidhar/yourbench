@@ -207,7 +207,6 @@ def generate_questions(document_dataset: Dataset, engine: InferenceEngine, quest
             prepared_row["document_analysis"] = question.document_extract_analysis
             prepared_row["potential_question_directions"] = list(question.potential_question_directions)
             prepared_row["best_direction"] = question.best_direction
-            prepared_row["direct_quotes"] = list(question.supporting_quotes)
             prepared_row["quote_context"] = question.quote_context
             prepared_row["reasoning"] = question.reasoning
             prepared_row["estimated_difficulty"] = int(question.difficulty)
@@ -289,7 +288,6 @@ def push_to_huggingface(dataset: Dataset, repo_id: str) -> None:
             "chunk_analysis": Value("string"),
             "potential_question_directions": Sequence(Value("string")),
             "best_direction": Value("string"),
-            "direct_quotes": Sequence(Value("string")),
             "reasoning": Value("string"),
             "estimated_difficulty": Value("int64"),
             "testable_concepts": Sequence(Value("string")),

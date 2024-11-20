@@ -218,116 +218,188 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Principle Application (Easy)
-
+### Example 1: Historical Analysis (Easy)
 ```json
 {
-    "document_extract_analysis": "The text explains the principle of supply and demand, showing how prices change based on market conditions.",
+    "document_extract_analysis": "The text discusses the Industrial Revolution's impact on urbanization and social changes in 19th century Britain.",
     "testable_concepts": [
-        "price mechanism",
-        "market balance",
-        "economic responses"
+        "urbanization patterns",
+        "social mobility",
+        "technological impact",
+        "labor dynamics"
     ],
     "potential_question_directions": [
-        "In what ways does a surge in umbrella demand influence pricing during a rainy season?",
-        "What impact does a sudden influx of umbrella supply have on market prices?",
-        "How do fluctuations in demand and supply interact to determine umbrella pricing?"
+        "How might similar industrialization affect a modern rural society?",
+        "What social changes would emerge in a developing nation experiencing rapid industrialization?",
+        "How would technological advancement impact traditional farming communities today?"
     ],
-    "best_direction": "In what ways does a surge in umbrella demand influence pricing during a rainy season?",
-    "comprehension_type": "principle_application",
+    "best_direction": "How might similar industrialization affect a modern rural society?",
+    "comprehension_type": "pattern_recognition",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "When supply exceeds demand, prices typically fall.",
-        "Higher prices tend to reduce demand while encouraging more supply.",
-        "Markets seek equilibrium through price adjustments."
-    ],
-    "quote_context": "The quotes establish basic supply-demand principles.",
-    "kind": "application",
-    "question": "Using the supply and demand principles described in the text, what would likely happen to umbrella prices during an unexpected rainy season?",
-    "answer": "Based on the text's principles, increased demand for umbrellas would drive prices up, which might then encourage more supply",
-    "reasoning": "Applies the text's price mechanism principles to a specific scenario.",
+    "question": "How would the industrialization patterns described in the text likely manifest in a present-day agricultural community in a developing country?",
+    "answer": "The community would likely experience rapid urbanization, formation of factory-centered settlements, shift from agricultural to industrial labor, and emergence of new social classes, mirroring the British experience but at an accelerated pace due to modern technology.",
+    "reasoning": "The text's patterns of industrial development and social change can be mapped onto contemporary situations, accounting for modern factors like advanced technology and global connectivity.",
     "difficulty": 2,
-    "difficulty_justification": "Straightforward application of basic market principles to a simple scenario."
+    "difficulty_justification": "Requires straightforward pattern recognition and basic application of historical concepts to a modern context.",
+    "supporting_quotes": [
+        "The rapid growth of industrial cities led to unprecedented urban migration, with former agricultural workers flooding into manufacturing centers",
+        "New social classes emerged as factory owners and skilled workers created distinct societal strata",
+        "The transformation of rural communities was complete within a generation, as steam power and mechanization revolutionized production methods"
+    ],
+    "quote_context": "These quotes demonstrate the key patterns of industrialization: urban migration, social class formation, and technological transformation. They provide direct evidence of the processes that would likely repeat in modern developing nations.",
+    "kind": "application"
 }
 ```
 
-### Example 2: Process Adaptation (Medium)
-
+### Example 2: Scientific Method Application (Medium)
 ```json
 {
-    "document_extract_analysis": "The text details scientific method steps: observation, hypothesis formation, testing, and conclusion drawing.",
+    "document_extract_analysis": "The passage explains quantum entanglement and its implications for particle behavior.",
     "testable_concepts": [
-        "scientific method",
-        "research process",
-        "investigation steps"
+        "quantum correlation",
+        "measurement impact",
+        "particle interaction",
+        "observational effects"
     ],
     "potential_question_directions": [
-        "In what ways can the scientific method be utilized to explore the reasons behind varying success rates of houseplants in an office environment?",
-        "What essential steps are necessary for employing the scientific method to examine plant growth across different settings?",
-        "How can the scientific method enhance our understanding of the variables affecting plant growth in an office context?"
+        "How could entanglement principles improve secure communication?",
+        "What implications does quantum correlation have for data transmission?",
+        "How might entanglement affect future computing systems?"
     ],
-    "best_direction": "In what ways can the scientific method be utilized to explore the reasons behind varying success rates of houseplants in an office environment?",  
-    "comprehension_type": "process_adaptation",
+    "best_direction": "How could entanglement principles improve secure communication?",
+    "comprehension_type": "concept_application",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Scientists begin by observing a phenomenon.",
-        "They form a hypothesis to explain their observations.",
-        "Controlled experiments test the hypothesis.",
-        "Results lead to conclusions and potential theory revision."
-    ],
-    "quote_context": "The quotes outline the scientific method process.",
-    "kind": "application",
-    "question": "How could you apply the scientific method steps described in the text to investigate why some houseplants thrive better than others in an office environment?",
-    "answer": "Following the text's process: observe different plant success rates, form hypothesis about factors (light, water, etc.), test through controlled comparisons, and draw conclusions from results",
-    "reasoning": "Adapts the formal scientific method to a practical investigation.",
+    "question": "If you were designing a quantum-secure communication system, how would you utilize the entanglement principles described to ensure message privacy?",
+    "answer": "You would create entangled particle pairs, distribute them between sender and receiver, and use their correlated states to generate encryption keys, knowing that any interference would be detectable due to quantum measurement effects.",
+    "reasoning": "This applies quantum principles to practical security needs while demonstrating understanding of both theoretical concepts and their real-world applications.",
     "difficulty": 3,
-    "difficulty_justification": "Requires adapting a structured process to a new context while maintaining key elements."
+    "difficulty_justification": "Requires understanding of complex quantum concepts and ability to apply them to practical engineering challenges.",
+    "supporting_quotes": [
+        "Quantum entanglement creates an instantaneous correlation between particles, regardless of their physical separation",
+        "Any attempt to measure or observe an entangled particle immediately affects its paired counterpart",
+        "The act of measurement irreversibly changes the quantum state, making interference detection possible"
+    ],
+    "quote_context": "These quotes establish the fundamental principles of quantum entanglement and measurement effects that would be crucial for secure communication systems, particularly the ability to detect interference.",
+    "kind": "application"
 }
 ```
 
-### Example 3: System Application (Very Hard)
-
+### Example 3: Environmental Systems (Very Hard)
 ```json
 {
-    "document_extract_analysis": "The passage explains ecosystem feedback loops, particularly in predator-prey relationships.",
+    "document_extract_analysis": "The text details coral reef ecosystems and their responses to environmental stressors.",
     "testable_concepts": [
-        "feedback systems",
-        "population dynamics",
-        "ecosystem balance"
+        "ecosystem resilience",
+        "environmental adaptation",
+        "biodiversity relationships",
+        "stress responses"
     ],
     "potential_question_directions": [
-        "In what ways could the introduction of a new predator species alter the dynamics of predator-prey interactions on a remote island?",
-        "What ecological impacts might arise from adding a new predator species to an established ecosystem?",
-        "How could the introduction of a new predator species disrupt the existing balance of predator-prey relationships in a specific ecosystem?"
+        "How would artificial reef systems need to be designed to maximize resilience?",
+        "What intervention strategies could protect vulnerable reef species?",
+        "How might reef restoration efforts account for multiple stressors?"
     ],
-    "best_direction": "In what ways could the introduction of a new predator species alter the dynamics of predator-prey interactions on a remote island?",
-    "comprehension_type": "theory_application",
+    "best_direction": "How would artificial reef systems need to be designed to maximize resilience?",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Predator populations rise when prey is abundant.",
-        "Increased predation reduces prey populations.",
-        "Fewer prey leads to predator decline.",
-        "Reduced predation allows prey recovery, completing the cycle."
-    ],
-    "quote_context": "The quotes describe ecosystem feedback mechanisms.",
-    "kind": "application",
-    "question": "Using the ecosystem feedback principles described in the text, how might introducing a new predator species affect an isolated island's existing predator-prey relationships?",
-    "answer": "Based on the text's principles, the new predator would increase total predation, potentially disrupting existing cycles: faster prey decline, affecting original predators, leading to complex feedback loops until new balance emerges",
-    "reasoning": "Applies understanding of feedback mechanisms to a complex system modification.",
+    "question": "Design a coral reef restoration strategy that incorporates the text's principles about ecosystem resilience while accounting for predicted climate change impacts over the next 50 years.",
+    "answer": "The strategy should include: selecting heat-resistant coral species, creating diverse habitat structures, establishing multiple small reef patches for risk distribution, incorporating natural predator-prey relationships, and maintaining water quality parameters within historical ranges.",
+    "reasoning": "This requires synthesis of multiple ecosystem principles and their application to a complex, long-term environmental challenge with multiple interacting factors.",
     "difficulty": 5,
-    "difficulty_justification": "Requires applying system-level understanding to predict complex interactions and multiple feedback effects."
+    "difficulty_justification": "Demands integration of multiple complex systems, long-term planning, and consideration of numerous interacting variables and future scenarios.",
+    "supporting_quotes": [
+        "Coral reef resilience depends on multiple factors: species diversity, genetic variation within species, and the presence of functional redundancy in ecosystem roles",
+        "Temperature tolerance varies significantly among coral species, with some showing adaptation to higher thermal stress",
+        "Reef systems with distributed spatial patterns show greater resistance to environmental stressors"
+    ],
+    "quote_context": "These quotes outline the key factors in reef resilience and adaptation, providing the scientific basis for designing artificial reef systems that could withstand future environmental challenges.",
+    "kind": "application"
+}
+```
+
+### Example 4: Economic Policy Analysis (Hard)
+```json
+{
+    "document_extract_analysis": "The text examines monetary policy tools and their effects on inflation and economic growth.",
+    "testable_concepts": [
+        "interest rate mechanisms",
+        "inflation control",
+        "economic growth factors",
+        "policy timing"
+    ],
+    "potential_question_directions": [
+        "How should central banks respond to stagflation?",
+        "What policy mix would address both unemployment and inflation?",
+        "How might different monetary tools interact during crisis?"
+    ],
+    "best_direction": "How should central banks respond to stagflation?",
+    "comprehension_type": "decision_change",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "Using the monetary policy principles described, how would you address a situation where a country faces both high inflation and economic stagnation?",
+    "answer": "Implement a staged approach: first use targeted interest rate adjustments to control inflation while maintaining sector-specific stimulus programs, then gradually shift to broader growth policies once inflation stabilizes, carefully monitoring both metrics to adjust the balance.",
+    "reasoning": "This requires balancing competing economic pressures and understanding the complex interactions between different policy tools and their timing.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires sophisticated understanding of multiple economic principles and their complex interactions in challenging conditions.",
+    "supporting_quotes": [
+        "Interest rate adjustments have varying lag times for inflation control versus economic growth effects",
+        "Sector-specific monetary interventions can provide targeted stimulus while maintaining broader price stability",
+        "The effectiveness of monetary policy tools depends heavily on their sequential implementation and timing"
+    ],
+    "quote_context": "These quotes establish the relationship between different monetary policy tools and their timing effects, which is crucial for addressing the complex challenge of stagflation.",
+    "kind": "application"
+}
+```
+
+### Example 5: Psychological Theory (Medium)
+```json
+{
+    "document_extract_analysis": "The text explores cognitive behavioral therapy principles and their application in treating anxiety disorders.",
+    "testable_concepts": [
+        "cognitive restructuring",
+        "behavioral modification",
+        "therapeutic relationship",
+        "treatment progression"
+    ],
+    "potential_question_directions": [
+        "How could CBT principles be adapted for group therapy?",
+        "What modifications would be needed for online therapy?",
+        "How might these techniques work in different cultural contexts?"
+    ],
+    "best_direction": "How could CBT principles be adapted for group therapy?",
+    "comprehension_type": "process_change",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How would you modify the individual CBT techniques described in the text to create an effective group therapy program for social anxiety?",
+    "answer": "Adapt individual cognitive restructuring exercises for group discussion, use peer feedback for behavioral experiments, incorporate group dynamics for exposure therapy, and maintain individual progress tracking while leveraging group support mechanisms.",
+    "reasoning": "Requires understanding of core CBT principles and ability to adapt them to a different therapeutic context while maintaining their essential elements.",
+    "difficulty": 3,
+    "difficulty_justification": "Involves adapting established techniques to a new context while maintaining therapeutic effectiveness and managing group dynamics.",
+    "supporting_quotes": [
+        "Cognitive restructuring involves identifying and challenging maladaptive thought patterns through structured exercises",
+        "Behavioral experiments provide real-world validation of modified cognitive frameworks",
+        "The therapeutic relationship serves as a safe environment for practicing new coping strategies"
+    ],
+    "quote_context": "These quotes outline the core components of CBT, demonstrating the key elements that would need to be adapted for a group therapy setting while maintaining therapeutic effectiveness.",
+    "kind": "application"
 }
 ```
 
@@ -366,13 +438,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Principle)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Process)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/System)
+        // Question 3 
     },
     // ...
 ]

@@ -229,36 +229,37 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Cross-Chunk Cause-Effect Analysis (Medium)
+### Example 1: Historical Event Analysis (Easy)
 
 ```json
 {
-    "document_extract_analysis": "The passages discuss climate change impacts across different ecosystems, with interconnected effects between Arctic and tropical regions.",
+    "document_extract_analysis": "The passages examine the causes and consequences of the Industrial Revolution across different regions and time periods, highlighting technological, social, and economic transformations.",
     "chunk_analyses": [
         {
-            "chunk_id": "arctic_1",
-            "content_summary": "Details Arctic ice melt mechanisms",
-            "relevant_information": "Ice melt rates and reflection patterns",
-            "connection_points": ["temperature effects", "global circulation"]
+            "chunk_id": "tech_innovation",
+            "content_summary": "Key technological breakthroughs and their spread",
+            "relevant_information": "Steam engine development and factory systems",
+            "connection_points": ["technological adoption", "economic impact"]
         },
         {
-            "chunk_id": "tropical_1",
-            "content_summary": "Tropical ecosystem responses",
-            "relevant_information": "Coral bleaching and marine impacts",
-            "connection_points": ["temperature effects", "ocean chemistry"]
+            "chunk_id": "social_change",
+            "content_summary": "Social transformations in urban areas",
+            "relevant_information": "Urbanization patterns and working conditions",
+            "connection_points": ["population movement", "living standards"]
         }
     ],
     "testable_concepts": [
-        "global climate interconnections",
-        "ecosystem feedback loops",
-        "temperature impact chains"
+        "technological diffusion",
+        "urbanization patterns",
+        "social mobility changes",
+        "economic transformation"
     ],
     "potential_question_directions": [
-        "How do Arctic changes influence tropical ecosystems?",
-        "What connecting mechanisms link polar and equatorial regions?",
-        "How do feedback loops connect different climate zones?"
+        "What drove urban population growth during industrialization?",
+        "How did technological adoption affect social structures?",
+        "Why did certain regions industrialize faster than others?"
     ],
-    "best_direction": "How do Arctic changes influence tropical ecosystems?",
+    "best_direction": "What drove urban population growth during industrialization?",
     "comprehension_type": "cause_effect",
     "quality_metrics": {
         "clear_language": true,
@@ -266,50 +267,57 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Arctic ice melt alters global ocean circulation patterns",
-        "Changes in circulation affect tropical water temperatures",
-        "Warmer tropical waters lead to increased coral bleaching"
+        "Steam-powered factories created unprecedented demand for urban workers",
+        "Rural populations migrated to cities seeking higher wages",
+        "New transportation networks enabled mass population movement"
     ],
-    "quote_context": "The quotes establish a causal chain from Arctic to tropical regions through ocean circulation.",
+    "quote_context": "The quotes establish the relationship between technological change and demographic shifts.",
     "kind": "analytical",
-    "question": "Based on the text, explain how Arctic ice melt contributes to coral bleaching in tropical regions.",
-    "answer": "Arctic ice melt alters ocean circulation patterns, which affects tropical water temperatures, leading to increased coral bleaching",
-    "reasoning": "The text presents a multi-step causal chain connecting Arctic changes to tropical impacts through global ocean systems.",
-    "difficulty": 3,
-    "difficulty_justification": "Requires synthesizing information across chunks and understanding global system connections."
+    "question": "What factors drove the massive population shift from rural to urban areas during the Industrial Revolution?",
+    "answer": "The combination of steam-powered factories creating job opportunities, higher urban wages, and improved transportation networks enabled and encouraged rural populations to migrate to cities",
+    "reasoning": "The text shows how technological innovations created economic incentives for urbanization, while infrastructure improvements made such movement possible.",
+    "difficulty": 2,
+    "difficulty_justification": "Requires connecting basic cause-effect relationships across technological and social changes, but follows a clear logical sequence."
 }
 ```
 
-### Example 2: Cross-Chunk Process Analysis (Hard)
+### Example 2: Scientific Process Integration (Medium)
 
 ```json
 {
-    "document_extract_analysis": "The passages describe carbon cycle processes across terrestrial and marine environments.",
+    "document_extract_analysis": "The passages detail the complex process of photosynthesis and cellular respiration, emphasizing the interconnected nature of these biological processes at multiple scales.",
     "chunk_analyses": [
         {
-            "chunk_id": "land_carbon",
-            "content_summary": "Terrestrial carbon absorption processes",
-            "relevant_information": "Forest and soil carbon storage",
-            "connection_points": ["carbon exchange", "atmospheric levels"]
+            "chunk_id": "photosynthesis",
+            "content_summary": "Light-dependent and independent reactions",
+            "relevant_information": "Energy conversion and glucose production",
+            "connection_points": ["chemical processes", "energy transfer"]
         },
         {
-            "chunk_id": "ocean_carbon",
-            "content_summary": "Marine carbon sequestration",
-            "relevant_information": "Ocean absorption mechanisms",
-            "connection_points": ["carbon exchange", "chemical processes"]
+            "chunk_id": "cell_respiration",
+            "content_summary": "Cellular energy extraction methods",
+            "relevant_information": "ATP production and electron transport",
+            "connection_points": ["energy utilization", "chemical cycles"]
+        },
+        {
+            "chunk_id": "ecosystem_impact",
+            "content_summary": "Broader ecological effects",
+            "relevant_information": "Carbon cycling and oxygen production",
+            "connection_points": ["environmental impact", "global cycles"]
         }
     ],
     "testable_concepts": [
-        "carbon cycle interactions",
-        "ecosystem carbon exchange",
-        "sequestration processes"
+        "energy transformation",
+        "chemical cycling",
+        "cellular processes",
+        "ecosystem interactions"
     ],
     "potential_question_directions": [
-        "How do land and ocean carbon processes interact?",
-        "What role do different ecosystems play in carbon storage?",
-        "How do carbon exchange mechanisms differ between systems?"
+        "How do cellular processes contribute to ecosystem balance?",
+        "Why is energy transformation efficiency important?",
+        "What connects molecular and ecological processes?"
     ],
-    "best_direction": "How do land and ocean carbon processes interact?",
+    "best_direction": "How do cellular processes contribute to ecosystem balance?",
     "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
@@ -317,56 +325,57 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Forests absorb carbon through photosynthesis",
-        "Oceans exchange carbon through surface interactions",
-        "Atmospheric carbon levels influence both systems"
+        "Photosynthesis converts light energy into chemical energy",
+        "Cellular respiration releases stored energy for life processes",
+        "These processes drive global carbon and oxygen cycles"
     ],
-    "quote_context": "The quotes show interconnected carbon processes between land and ocean systems.",
+    "quote_context": "The quotes demonstrate the connection between cellular processes and global ecological cycles.",
     "kind": "analytical",
-    "question": "How do terrestrial and marine carbon absorption processes complement each other in the global carbon cycle?",
-    "answer": "Forests and oceans work together through complementary absorption mechanisms, with atmospheric carbon levels influencing both systems' effectiveness",
-    "reasoning": "The text describes how different ecosystems handle carbon absorption through distinct but interconnected processes.",
-    "difficulty": 4,
-    "difficulty_justification": "Requires understanding complex interactions between multiple environmental systems and processes."
+    "question": "How do the complementary processes of photosynthesis and cellular respiration maintain ecological balance at both cellular and ecosystem levels?",
+    "answer": "Photosynthesis and cellular respiration work together to maintain balance through energy conversion and chemical cycling, connecting cellular activities to ecosystem-wide processes of carbon and oxygen exchange",
+    "reasoning": "The text illustrates how molecular-level processes scale up to affect global ecological systems through interconnected chemical and energy transformations.",
+    "difficulty": 3,
+    "difficulty_justification": "Requires understanding both cellular processes and their ecological implications, while connecting multiple levels of biological organization."
 }
 ```
 
-### Example 3: Cross-Chunk System Analysis (Very Hard)
+### Example 3: Economic Policy Analysis (Hard)
 
 ```json
 {
-    "document_extract_analysis": "The passages detail global nutrient cycles and their disruption by human activities.",
+    "document_extract_analysis": "The passages examine monetary and fiscal policy interactions during economic crises, focusing on government responses and market outcomes.",
     "chunk_analyses": [
         {
-            "chunk_id": "nutrient_cycle",
-            "content_summary": "Natural nutrient cycling processes",
-            "relevant_information": "Nitrogen and phosphorus flows",
-            "connection_points": ["ecosystem balance", "human impacts"]
+            "chunk_id": "monetary_policy",
+            "content_summary": "Central bank interventions and effects",
+            "relevant_information": "Interest rate adjustments and market liquidity",
+            "connection_points": ["economic stability", "market response"]
         },
         {
-            "chunk_id": "human_impact",
-            "content_summary": "Anthropogenic disruptions",
-            "relevant_information": "Agricultural and industrial effects",
-            "connection_points": ["ecosystem balance", "feedback loops"]
+            "chunk_id": "fiscal_policy",
+            "content_summary": "Government spending and taxation",
+            "relevant_information": "Stimulus measures and debt management",
+            "connection_points": ["economic growth", "public finance"]
         },
         {
-            "chunk_id": "ecosystem_response",
-            "content_summary": "Environmental adaptations",
-            "relevant_information": "System responses to changes",
-            "connection_points": ["feedback loops", "stability mechanisms"]
+            "chunk_id": "market_outcomes",
+            "content_summary": "Economic indicators and market behavior",
+            "relevant_information": "Employment and inflation patterns",
+            "connection_points": ["policy effectiveness", "economic indicators"]
         }
     ],
     "testable_concepts": [
-        "nutrient cycle disruption",
-        "ecosystem adaptation",
-        "system stability"
+        "policy coordination",
+        "economic stabilization",
+        "market dynamics",
+        "intervention timing"
     ],
     "potential_question_directions": [
-        "How do human activities affect nutrient cycles?",
-        "What are the ecosystem responses to disruption?",
-        "How do feedback mechanisms maintain stability?"
+        "How do monetary and fiscal policies interact?",
+        "What determines policy effectiveness?",
+        "Why do similar interventions produce different outcomes?"
     ],
-    "best_direction": "How do human activities affect nutrient cycles?",
+    "best_direction": "How do monetary and fiscal policies interact?",
     "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
@@ -374,19 +383,137 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "supporting_quotes": [
-        "Agricultural runoff increases nitrogen levels",
-        "Ecosystems show varied adaptation responses",
-        "Feedback mechanisms attempt to restore balance"
+        "Monetary policy affects borrowing costs and investment",
+        "Fiscal stimulus influences aggregate demand",
+        "Policy coordination determines overall economic impact"
     ],
-    "quote_context": "The quotes demonstrate complex interactions between human activities and natural systems.",
+    "quote_context": "The quotes reveal the complex interactions between different policy tools and their economic effects.",
     "kind": "analytical",
-    "question": "How do ecosystem feedback mechanisms respond to human-induced nutrient cycle disruptions, and what are their limitations?",
-    "answer": "Ecosystems employ various feedback mechanisms to counter nutrient imbalances, but these mechanisms can be overwhelmed by sustained human impacts",
-    "reasoning": "The text describes multiple interacting systems and their responses to anthropogenic changes, including both adaptive mechanisms and their limitations.",
-    "difficulty": 5,
-    "difficulty_justification": "Requires synthesizing complex system interactions across multiple chunks and understanding feedback mechanisms."
+    "question": "Why might aggressive monetary easing be insufficient to stimulate economic recovery without corresponding fiscal policy support?",
+    "answer": "Monetary easing alone may fail because low interest rates cannot guarantee spending increases when fiscal policy doesn't support aggregate demand through direct government spending and income support",
+    "reasoning": "The text demonstrates how policy effectiveness depends on coordinated action between monetary and fiscal authorities, with each addressing different aspects of economic stability.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding complex policy interactions, market behavior, and economic theory while synthesizing multiple policy mechanisms."
 }
 ```
+
+### Example 4: Environmental Systems Analysis (Very Hard)
+
+```json
+{
+    "document_extract_analysis": "The passages explore the interconnections between oceanic thermohaline circulation, atmospheric patterns, and global climate stability.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "ocean_circulation",
+            "content_summary": "Deep ocean current patterns",
+            "relevant_information": "Salinity and temperature drivers",
+            "connection_points": ["heat transport", "global circulation"]
+        },
+        {
+            "chunk_id": "atmospheric_patterns",
+            "content_summary": "Wind systems and weather patterns",
+            "relevant_information": "Air pressure and precipitation",
+            "connection_points": ["climate stability", "weather systems"]
+        },
+        {
+            "chunk_id": "feedback_mechanisms",
+            "content_summary": "System interactions and responses",
+            "relevant_information": "Regulatory processes and tipping points",
+            "connection_points": ["system stability", "climate change"]
+        }
+    ],
+    "testable_concepts": [
+        "circulation patterns",
+        "feedback loops",
+        "system stability",
+        "climate regulation"
+    ],
+    "potential_question_directions": [
+        "How do ocean-atmosphere interactions maintain climate stability?",
+        "What role do feedback mechanisms play in regulation?",
+        "Where are the critical points in the system?"
+    ],
+    "best_direction": "How do ocean-atmosphere interactions maintain climate stability?",
+    "comprehension_type": "system_analysis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "Thermohaline circulation moves heat between hemispheres",
+        "Atmospheric patterns respond to ocean temperature gradients",
+        "Multiple feedback loops regulate global climate stability"
+    ],
+    "quote_context": "The quotes illustrate the complex interactions between oceanic and atmospheric systems in climate regulation.",
+    "kind": "analytical",
+    "question": "How might a significant disruption to thermohaline circulation trigger cascading effects across global climate systems, and what feedback mechanisms could either amplify or moderate these changes?",
+    "answer": "Disruption to thermohaline circulation would alter heat distribution patterns, affecting atmospheric circulation and precipitation patterns, while feedback mechanisms involving salinity, temperature, and wind patterns could either accelerate or dampen these changes through complex system interactions",
+    "reasoning": "The text describes interconnected global systems where changes in ocean circulation can trigger multiple feedback loops affecting climate stability through various physical and chemical processes.",
+    "difficulty": 5,
+    "difficulty_justification": "Requires deep understanding of multiple complex systems, their interactions, and potential feedback mechanisms while considering both direct and indirect effects across global scales."
+}
+```
+
+
+### Example 5: Technological Innovation Analysis (Medium-Hard)
+
+```json
+{
+    "document_extract_analysis": "The passages examine how artificial intelligence development affects various sectors of society, including economic structures, labor markets, and ethical frameworks.",
+    "chunk_analyses": [
+        {
+            "chunk_id": "tech_development",
+            "content_summary": "AI advancement patterns and capabilities",
+            "relevant_information": "Machine learning breakthroughs and applications",
+            "connection_points": ["innovation speed", "technical limitations"]
+        },
+        {
+            "chunk_id": "economic_impact",
+            "content_summary": "Labor market transformations",
+            "relevant_information": "Job displacement and creation patterns",
+            "connection_points": ["workforce changes", "skill demands"]
+        },
+        {
+            "chunk_id": "ethical_implications",
+            "content_summary": "Moral and social considerations",
+            "relevant_information": "Decision-making frameworks and accountability",
+            "connection_points": ["societal impact", "regulatory needs"]
+        }
+    ],
+    "testable_concepts": [
+        "technological disruption",
+        "labor market evolution",
+        "ethical frameworks",
+        "regulatory adaptation"
+    ],
+    "potential_question_directions": [
+        "How does AI development affect job markets?",
+        "What ethical challenges emerge from AI adoption?",
+        "Why do different sectors adapt differently to AI?"
+    ],
+    "best_direction": "How does AI development affect job markets?",
+    "comprehension_type": "implication_analysis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "supporting_quotes": [
+        "AI automation primarily affects routine cognitive tasks",
+        "New job categories emerge around AI development and maintenance",
+        "Skill requirements shift toward human-AI collaboration"
+    ],
+    "quote_context": "The quotes demonstrate the dynamic relationship between technological advancement and labor market transformation.",
+    "kind": "analytical",
+    "question": "How does the rate of AI capability advancement influence the balance between job displacement and creation, and what factors determine successful workforce adaptation?",
+    "answer": "The pace of AI advancement creates a dynamic tension between job displacement in routine tasks and new job creation in AI-related fields, with successful adaptation depending on workforce retraining capabilities and the development of complementary human-AI collaboration skills",
+    "reasoning": "The text shows how technological change drives labor market evolution through multiple mechanisms, requiring both individual and institutional adaptation strategies.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires analyzing complex interactions between technological advancement, economic systems, and human adaptation while considering multiple timeframes and stakeholder perspectives."
+}
+```
+
 
 ## Common Pitfalls to Avoid
 

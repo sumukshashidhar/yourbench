@@ -691,13 +691,13 @@ def main():
     single_shot_question_settings = get_single_shot_question_settings(args)
 
     # load the datasets
-    # document_dataset = load_dataset(args.dataset, split=args.split)
-    # for question_type in args.question_types:
-    #     start_time = time.time()
-    #     document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
-    #     end_time = time.time()
-    #     logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-    #     push_single_shot_questions_to_huggingface(document_dataset_with_questions, single_shot_question_settings['output_dataset'])
+    document_dataset = load_dataset(args.dataset, split=args.split)
+    for question_type in args.question_types:
+        start_time = time.time()
+        document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
+        end_time = time.time()
+        logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
+        push_single_shot_questions_to_huggingface(document_dataset_with_questions, single_shot_question_settings['output_dataset'])
 
     logger.info("Single-shot questions generated successfully")
     

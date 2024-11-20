@@ -216,109 +216,191 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Entity Identification (Very Easy)
+### Example 1: Process Analysis (Easy)
 
 ```json
 {
-    "document_extract_analysis": "The extract describes the discovery of penicillin, specifically naming Alexander Fleming as the discoverer in 1928.",
+    "document_extract_analysis": "The text explains the photosynthesis process in plants, detailing how sunlight is converted into chemical energy.",
+    "kind": "factual",
     "testable_concepts": [
-        "penicillin discovery",
-        "scientific attribution",
-        "historical timeline"
+        "energy conversion in plants",
+        "role of chlorophyll",
+        "carbon dioxide utilization",
+        "glucose production"
     ],
     "potential_question_directions": [
-        "Who is credited with the discovery of penicillin?",
-        "What significance does Alexander Fleming's discovery of penicillin hold in medical history?",
-        "In what year was penicillin discovered, and what circumstances led to its discovery?"
+        "How do plants convert sunlight into usable energy?",
+        "What role does chlorophyll play in photosynthesis?",
+        "What are the primary inputs and outputs of photosynthesis?",
+        "How is glucose formed during this process?"
     ],
-    "best_direction": "Who is credited with the discovery of penicillin?",
-    "comprehension_type": "entity",
+    "best_direction": "What is the primary function of chlorophyll in photosynthesis?",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "What specific role does chlorophyll perform in photosynthesis?",
+    "answer": "Chlorophyll captures sunlight and converts it into chemical energy",
+    "reasoning": "The text explicitly describes chlorophyll's function in capturing and converting solar energy, which is fundamental to understanding the photosynthesis process",
+    "difficulty": 2,
+    "difficulty_justification": "While the concept involves a process, the information is clearly stated and requires basic recall of a single function",
     "supporting_quotes": [
-        "Alexander Fleming discovered penicillin in 1928 when he noticed mold killing bacteria in a petri dish."
+        "Chlorophyll molecules in plant cells capture sunlight and convert it into chemical energy",
+        "This energy conversion process is the first step in photosynthesis, where light energy becomes usable chemical energy"
     ],
-    "quote_context": "The quote directly names the discoverer of penicillin.",
-    "kind": "factual",
-    "question": "Who discovered penicillin?",
-    "answer": "Alexander Fleming",
-    "reasoning": "The text explicitly states that Alexander Fleming discovered penicillin.",
-    "difficulty": 1,
-    "difficulty_justification": "Simple entity identification directly stated in text."
+    "quote_context": "These quotes directly establish chlorophyll's role in the energy conversion process, with the first quote stating the specific function and the second quote confirming its place in the broader photosynthesis process"
 }
 ```
 
-### Example 2: Temporal Fact (Medium)
+### Example 2: System Analysis (Very Hard)
 
 ```json
 {
-    "document_extract_analysis": "The text details the chronology of events in the Manhattan Project, including specific dates of key developments.",
+    "document_extract_analysis": "The passage details the complex interactions within Earth's climate system, including feedback loops between atmospheric CO2, ocean temperatures, and ice caps.",
+    "kind": "factual",
     "testable_concepts": [
-        "project timeline",
-        "key dates",
-        "development phases"
+        "climate system interactions",
+        "feedback mechanisms",
+        "carbon cycle",
+        "temperature regulation"
     ],
     "potential_question_directions": [
-        "What significant dates are associated with the Manhattan Project?",
-        "In what ways does the timeline provided in the text enhance our understanding of the project's key events?",
-        "What trends can be identified from the dates outlined in the text?"
+        "How do different components of Earth's climate system interact?",
+        "What role do feedback loops play in climate regulation?",
+        "How does oceanic CO2 absorption affect global temperature?"
     ],
-    "best_direction": "What significant dates are associated with the Manhattan Project?",
-    "comprehension_type": "temporal",
+    "best_direction": "Explain the relationship between oceanic CO2 absorption and global temperature regulation",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "How does the ocean's absorption of CO2 influence the global temperature regulation system?",
+    "answer": "The oceans absorb excess CO2, which affects their pH levels, altering their capacity to regulate global temperatures through heat absorption and circulation patterns",
+    "reasoning": "This answer synthesizes multiple interconnected concepts from the text about oceanic CO2 absorption, pH changes, and temperature regulation mechanisms",
+    "difficulty": 5,
+    "difficulty_justification": "Requires understanding of multiple interacting systems and their complex relationships, demanding high-level synthesis of information",
     "supporting_quotes": [
-        "The first successful test detonation, code-named Trinity, was conducted on July 16, 1945, at the Alamogordo Bombing Range in New Mexico."
+        "The oceans act as a carbon sink, absorbing approximately 30% of atmospheric CO2",
+        "This absorption leads to ocean acidification, altering pH levels",
+        "Changes in ocean chemistry affect global circulation patterns, which are crucial for temperature regulation"
     ],
-    "quote_context": "The quote provides the specific date of the Trinity test.",
+    "quote_context": "These quotes form a chain of evidence showing how ocean CO2 absorption triggers a cascade of effects impacting global temperature regulation, from initial absorption through chemical changes to circulation impacts"
+}
+```
+
+### Example 3: Relationship Comprehension (Medium)
+
+```json
+{
+    "document_extract_analysis": "The text explores the symbiotic relationship between flowering plants and their pollinators, particularly focusing on bees and butterflies.",
     "kind": "factual",
-    "question": "On what date was the Trinity test conducted?",
-    "answer": "July 16, 1945",
-    "reasoning": "The text explicitly states the date of the Trinity test detonation.",
+    "testable_concepts": [
+        "pollinator behavior",
+        "plant adaptations",
+        "mutual benefits",
+        "evolutionary relationships"
+    ],
+    "potential_question_directions": [
+        "What benefits do plants receive from pollinators?",
+        "How have plants adapted to attract specific pollinators?",
+        "What makes this relationship mutually beneficial?"
+    ],
+    "best_direction": "How do flowering plants and pollinators benefit from their relationship?",
+    "comprehension_type": "relationship_comprehension",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "What mutual benefits exist in the relationship between flowering plants and their pollinators?",
+    "answer": "Plants provide nectar and pollen for food, while pollinators facilitate plant reproduction through cross-pollination",
+    "reasoning": "The text describes the two-way beneficial relationship between plants and pollinators, showing how each species supports the other's survival",
     "difficulty": 3,
-    "difficulty_justification": "Requires identifying specific date from detailed historical information."
+    "difficulty_justification": "Requires understanding and connecting multiple aspects of the relationship between two species",
+    "supporting_quotes": [
+        "Flowering plants produce nectar and protein-rich pollen that serve as essential food sources for bees and butterflies",
+        "In return, these insects transfer pollen between flowers, enabling cross-pollination and sexual reproduction in plants"
+    ],
+    "quote_context": "The quotes explicitly outline both sides of the mutualistic relationship, showing how each species provides benefits to the other through their interactions"
 }
 ```
 
-### Example 3: Quantitative Fact (Hard)
+### Example 4: Evidence Synthesis (Hard)
 
 ```json
 {
-    "document_extract_analysis": "The passage describes specific measurements and calculations related to the Great Pyramid of Giza.",
+    "document_extract_analysis": "The document presents multiple archaeological findings that support the theory of early human migration patterns across Asia.",
+    "kind": "factual",
     "testable_concepts": [
-        "pyramid measurements",
-        "ancient architecture",
-        "construction details"
+        "archaeological evidence",
+        "migration routes",
+        "dating methods",
+        "cultural artifacts"
     ],
     "potential_question_directions": [
-        "What specific measurements are associated with the Great Pyramid?",
-        "In what ways do the measurements of the Great Pyramid reflect its architectural significance?",
-        "What insights can be drawn from the numerical data regarding the pyramid's construction?"
+        "What evidence supports the Asian migration theory?",
+        "How do different archaeological findings correlate?",
+        "What timeline do the artifacts suggest?"
     ],
-    "best_direction": "What specific measurements are associated with the Great Pyramid?",
-    "comprehension_type": "quantitative",
+    "best_direction": "How do multiple archaeological findings support the Asian migration theory?",
+    "comprehension_type": "evidence_synthesis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "The Great Pyramid was built using approximately 2.3 million limestone blocks, each weighing an average of 2.5 tons.",
-        "The entire structure took 20 years to complete."
-    ],
-    "quote_context": "The quote provides specific numerical data about the pyramid's construction.",
-    "kind": "factual",
-    "question": "How many limestone blocks were used to build the Great Pyramid?",
-    "answer": "2.3 million",
-    "reasoning": "The text explicitly states the number of limestone blocks used.",
+    "question": "What combination of archaeological evidence supports the theory of early human migration through Asia?",
+    "answer": "The presence of similar stone tools, dated human remains, and genetic evidence from multiple sites along the proposed migration route",
+    "reasoning": "The answer combines multiple pieces of evidence presented in the text to support a single theoretical framework",
     "difficulty": 4,
-    "difficulty_justification": "Requires identifying specific numerical value from detailed technical description."
+    "difficulty_justification": "Requires synthesis of multiple pieces of evidence and understanding their collective significance",
+    "supporting_quotes": [
+        "Stone tools found at sites in Mongolia and Siberia share distinctive manufacturing techniques with those discovered in China",
+        "Carbon dating of human remains along the proposed route indicates a consistent timeline of migration",
+        "DNA analysis of ancient remains shows genetic markers that can be traced from Southeast Asia through Northeast Asia"
+    ],
+    "quote_context": "These three quotes provide complementary lines of evidence - archaeological artifacts, dating analysis, and genetic data - all supporting the same migration pattern theory"
+}
+```
+
+### Example 5: Technical Clarification (Medium)
+
+```json
+{
+    "document_extract_analysis": "The text explains quantum entanglement and its implications for quantum computing.",
+    "kind": "factual",
+    "testable_concepts": [
+        "quantum entanglement principles",
+        "particle behavior",
+        "measurement effects",
+        "quantum computing applications"
+    ],
+    "potential_question_directions": [
+        "What is quantum entanglement?",
+        "How does entanglement affect particle behavior?",
+        "Why is entanglement important for quantum computing?"
+    ],
+    "best_direction": "What defines quantum entanglement at its most basic level?",
+    "comprehension_type": "technical_clarification",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How does the text define quantum entanglement in its most basic form?",
+    "answer": "Quantum entanglement occurs when two particles become connected in such a way that the quantum state of each particle cannot be described independently",
+    "reasoning": "The text provides a fundamental definition of quantum entanglement that serves as the basis for understanding more complex applications",
+    "difficulty": 3,
+    "difficulty_justification": "While the concept is technical, the definition is clearly stated and requires understanding of specific terminology",
+    "supporting_quotes": [
+        "Quantum entanglement is a phenomenon where two or more particles become inextricably linked",
+        "Once entangled, the quantum state of each particle cannot be described independently of the other, even when separated by vast distances"
+    ],
+    "quote_context": "These quotes provide the fundamental definition of quantum entanglement, with the first establishing the basic concept and the second elaborating on the key characteristic of non-independent states"
 }
 ```
 
@@ -357,13 +439,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Entity)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Temporal)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/Quantitative)
+        // Question 3 
     },
     // ...
 ]

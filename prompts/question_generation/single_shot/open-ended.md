@@ -218,115 +218,188 @@ class GeneratedQuestionAnswerPair(BaseModel):
 
 ## Examples
 
-### Example 1: Personal Response (Easy)
-
+### Example 1: Historical Analysis (Easy)
 ```json
 {
-    "document_extract_analysis": "The text discusses Marie Curie's dedication to science despite facing significant gender discrimination in the early 1900s.",
+    "document_extract_analysis": "The text examines the Industrial Revolution's impact on urban development and social structures in 19th century England, highlighting changes in working conditions and city growth.",
     "testable_concepts": [
-        "perseverance",
-        "gender discrimination",
-        "scientific dedication"
+        "urbanization patterns",
+        "social class dynamics",
+        "technological advancement",
+        "labor conditions"
     ],
     "potential_question_directions": [
-        "What elements illustrate Curie's commitment to her scientific work despite societal challenges?",
-        "In what ways does the text highlight Curie's resilience in the face of gender bias?",
-        "How do Curie's actions reflect her beliefs about the role of women in science?"
+        "How did rapid industrialization affect family structures?",
+        "What role did technology play in urban development?",
+        "How did working conditions influence social movements?",
+        "What were the environmental impacts of industrial growth?"
     ],
-    "best_direction": "What elements illustrate Curie's commitment to her scientific work despite societal challenges?",
-    "comprehension_type": "personal_response",
+    "best_direction": "How did rapid industrialization affect family structures?",
+    "comprehension_type": "cause_effect",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Despite being denied access to regular laboratory space because of her gender, Curie conducted experiments in a converted shed.",
-        "She became the first woman to win a Nobel Prize, and remains the only woman to win Nobel Prizes in two sciences.",
-        "Curie refused to patent her radium-isolation process, insisting that scientific discovery belonged to everyone."
-    ],
-    "quote_context": "The quotes show Curie's determination and principles.",
-    "kind": "open-ended",
-    "question": "How do you think Curie's decision to not patent her discoveries reflects her views about the purpose of scientific research?",
-    "answer": "Multiple valid responses focusing on scientific accessibility, public good, and research ethics, supported by Curie's actions described in the text",
-    "reasoning": "The text provides evidence of Curie's principles through her actions, allowing exploration of her scientific philosophy.",
+    "question": "What unexpected ways did factory work transform traditional family roles during the Industrial Revolution?",
+    "answer": "The transformation included children becoming wage earners, extended families splitting up, and women entering the workforce in unprecedented numbers, challenging Victorian family ideals.",
+    "reasoning": "The text provides evidence of how industrial work restructured family dynamics, with specific examples of women and children's changing roles, housing patterns, and economic relationships.",
     "difficulty": 2,
-    "difficulty_justification": "Requires personal engagement with text evidence but allows flexible interpretation."
+    "difficulty_justification": "Requires basic analysis of cause-effect relationships but draws directly from textual evidence without need for complex synthesis.",
+    "supporting_quotes": [
+        "Factory work drew women and children into the workforce in unprecedented numbers, with children as young as six working twelve-hour shifts",
+        "Traditional family households were forced to split as workers crowded into urban tenements, breaking extended family bonds",
+        "The 1833 Factory Act's restrictions on child labor marked a fundamental shift in family economic structures"
+    ],
+    "quote_context": "These quotes demonstrate the direct impact of industrialization on family structures, showing how economic pressures and new labor patterns fundamentally altered traditional Victorian family arrangements. The quotes specifically highlight the entry of women and children into the workforce and the physical separation of extended families."
 }
 ```
 
-### Example 2: Problem Exploration (Medium)
-
+### Example 2: Scientific Process (Medium)
 ```json
 {
-    "document_extract_analysis": "The passage discusses the impact of social media on modern communication patterns and relationships.",
+    "document_extract_analysis": "The passage details recent breakthroughs in quantum computing, focusing on technical challenges and potential applications.",
     "testable_concepts": [
-        "communication changes",
-        "social relationships",
-        "technology impact"
+        "quantum mechanics principles",
+        "computational limitations",
+        "practical applications",
+        "research methodology"
     ],
     "potential_question_directions": [
-        "What specific changes in communication patterns are attributed to social media?",
-        "In what ways does the text illustrate the effects of social media on interpersonal relationships?",
-        "How do the described impacts of social media reflect broader societal trends in communication?"
+        "How do quantum computers fundamentally differ from classical computers?",
+        "What are the main technical obstacles in quantum computing?",
+        "How might quantum computing affect current encryption methods?",
+        "What industries might be transformed by quantum computing?"
     ],
-    "best_direction": "What specific changes in communication patterns are attributed to social media?",
-    "comprehension_type": "problem_exploration",
+    "best_direction": "What are the main technical obstacles in quantum computing?",
+    "comprehension_type": "process_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "supporting_quotes": [
-        "Social media has increased the frequency of communication while potentially reducing its depth.",
-        "Users report having more connections but fewer close relationships.",
-        "The platform's design encourages quick interactions over sustained dialogue."
-    ],
-    "quote_context": "The quotes establish a tension between communication quantity and quality.",
-    "kind": "open-ended",
-    "question": "How might social media platforms be redesigned to better support meaningful relationships while maintaining their accessibility?",
-    "answer": "Multiple valid approaches addressing platform design, user behavior, and communication quality, based on issues identified in the text",
-    "reasoning": "The text identifies specific challenges in current social media design, providing a foundation for exploring solutions.",
+    "question": "How might solving the decoherence problem in quantum computing lead to unexpected advances in other fields of science?",
+    "answer": "Solutions could advance understanding of quantum systems, improve material science, and develop new error correction methods applicable across scientific fields.",
+    "reasoning": "The text discusses how quantum decoherence relates to broader scientific principles and how solutions might have wide-ranging implications.",
     "difficulty": 3,
-    "difficulty_justification": "Requires analysis of problems and creative solution development while staying grounded in text evidence."
+    "difficulty_justification": "Requires understanding of technical concepts and ability to connect ideas across scientific domains.",
+    "supporting_quotes": [
+        "The primary challenge of maintaining quantum coherence beyond microseconds continues to limit practical applications",
+        "Recent breakthroughs in error correction have implications for fields ranging from materials science to cryptography",
+        "The decoherence problem has led to unexpected insights in quantum measurement theory and fundamental physics"
+    ],
+    "quote_context": "These quotes establish the central challenge of decoherence in quantum computing while highlighting how research into this problem has yielded broader scientific benefits. They demonstrate the interconnected nature of quantum computing challenges with other scientific domains."
 }
 ```
 
-### Example 3: Future Implications (Very Hard)
-
+### Example 3: Environmental Systems (Hard)
 ```json
 {
-    "document_extract_analysis": "The text examines emerging artificial intelligence technologies and their potential impact on employment and skill requirements.",
+    "document_extract_analysis": "The text explores coral reef ecosystems and their response to climate change, including adaptation mechanisms and ecosystem services.",
     "testable_concepts": [
-        "technological change",
-        "workforce adaptation",
-        "skill evolution"
+        "ecosystem resilience",
+        "climate adaptation",
+        "biodiversity relationships",
+        "environmental feedback loops"
     ],
     "potential_question_directions": [
-        "What specific effects does AI have on job roles and responsibilities?",
-        "In what ways does the text illustrate the evolving skill sets required in an AI-driven workforce?",
-        "How might the trends discussed in the text influence future career paths and educational needs?"
+        "How do coral reefs adapt to environmental stress?",
+        "What role do symbiotic relationships play in reef survival?",
+        "How might reef ecosystems evolve under continued pressure?",
+        "What are the cascading effects of reef degradation?"
     ],
-    "best_direction": "What specific effects does AI have on job roles and responsibilities?",
-    "comprehension_type": "future_implications",
+    "best_direction": "How do coral reefs adapt to environmental stress?",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
+    "question": "If coral reefs develop heat resistance through evolutionary adaptation, how might this affect the broader marine ecosystem's balance?",
+    "answer": "Changes could impact species relationships, nutrient cycles, and ecosystem services, with complex ripple effects throughout marine food webs.",
+    "reasoning": "The text describes interconnected ecosystem relationships and adaptation mechanisms, allowing analysis of systemic changes.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding of complex systems, multiple variables, and ability to project ecological consequences.",
     "supporting_quotes": [
-        "AI is already automating routine cognitive tasks across industries.",
-        "Workers are increasingly required to develop skills in areas AI cannot easily replicate.",
-        "The pace of technological change is accelerating, requiring continuous learning.",
-        "Traditional career paths are being disrupted by technological advancement."
+        "Some coral species have shown remarkable heat tolerance, with genetic analysis revealing adaptive mutations in heat shock proteins",
+        "Changes in coral-algal symbiotic relationships have cascading effects through the reef ecosystem, affecting fish populations and nutrient cycling",
+        "Recent studies show coral adaptation can alter the competitive balance between species, potentially restructuring entire reef communities"
     ],
-    "quote_context": "The quotes outline current AI impacts and trends.",
-    "kind": "open-ended",
-    "question": "Based on the trends described in the text, what might be the most valuable human skills in a workforce increasingly shaped by AI, and how might education systems need to evolve to develop these skills?",
-    "answer": "Multiple valid responses exploring skill development, educational adaptation, and human-AI interaction, supported by trends identified in the text",
-    "reasoning": "The text establishes current patterns and challenges, providing a foundation for exploring future implications.",
+    "quote_context": "These quotes provide evidence of coral adaptation mechanisms while highlighting the complex interconnections within reef ecosystems. They demonstrate how individual adaptations can have broader systemic effects throughout marine food webs."
+}
+```
+
+### Example 4: Economic Policy (Very Hard)
+```json
+{
+    "document_extract_analysis": "The passage examines modern monetary policy tools and their effects on economic stability and wealth distribution.",
+    "testable_concepts": [
+        "monetary policy mechanisms",
+        "economic inequality",
+        "financial system stability",
+        "policy trade-offs"
+    ],
+    "potential_question_directions": [
+        "How do interest rate changes affect different economic groups?",
+        "What are the long-term implications of quantitative easing?",
+        "How might digital currencies affect monetary policy?",
+        "What role does wealth inequality play in policy effectiveness?"
+    ],
+    "best_direction": "What are the long-term implications of quantitative easing?",
+    "comprehension_type": "implication_analysis",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How might the current monetary policy tools need to evolve if global wealth inequality continues to increase while traditional economic indicators show growth?",
+    "answer": "Policy evolution could include new distribution mechanisms, alternative measurement metrics, and reformed financial instruments to address systemic inequalities.",
+    "reasoning": "The text provides foundation for analyzing policy limitations and potential reforms based on current economic trends and challenges.",
     "difficulty": 5,
-    "difficulty_justification": "Requires synthesis of trends, consideration of multiple factors, and complex future projection while maintaining text grounding."
+    "difficulty_justification": "Requires deep understanding of economic systems, policy mechanisms, and ability to synthesize complex socioeconomic factors.",
+    "supporting_quotes": [
+        "Traditional economic indicators like GDP growth have shown consistent improvement while wealth inequality metrics reach historic highs",
+        "Current monetary policy tools show diminishing effectiveness in addressing distributional challenges",
+        "Analysis suggests quantitative easing has disproportionately benefited asset holders while having limited impact on wage growth"
+    ],
+    "quote_context": "These quotes highlight the growing disconnect between traditional economic measures and wealth distribution, while demonstrating the limitations of current policy tools in addressing systemic inequalities."
+}
+```
+
+### Example 5: Cultural Analysis (Medium-Hard)
+```json
+{
+    "document_extract_analysis": "The text discusses how digital technology is reshaping cultural traditions and intergenerational knowledge transfer.",
+    "testable_concepts": [
+        "cultural preservation",
+        "technological impact",
+        "generational differences",
+        "traditional practices"
+    ],
+    "potential_question_directions": [
+        "How does digital documentation affect oral traditions?",
+        "What role does technology play in cultural evolution?",
+        "How might traditional practices adapt to digital spaces?",
+        "What are the benefits and drawbacks of digital preservation?"
+    ],
+    "best_direction": "How does digital documentation affect oral traditions?",
+    "comprehension_type": "relationship_comprehension",
+    "quality_metrics": {
+        "clear_language": true,
+        "text_based": true,
+        "no_tricks": true
+    },
+    "question": "How might the intersection of digital technology and traditional storytelling create new forms of cultural expression that preserve ancient wisdom while engaging younger generations?",
+    "answer": "New hybrid forms could emerge, combining traditional narrative structures with interactive digital elements, creating evolving cultural practices.",
+    "reasoning": "The text explores the tension between traditional and digital methods of cultural transmission, suggesting possibilities for synthesis.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding of cultural dynamics, technological impact, and ability to envision innovative solutions while respecting traditions.",
+    "supporting_quotes": [
+        "Digital documentation of oral traditions has preserved stories but altered traditional transmission patterns",
+        "Young people increasingly engage with cultural practices through digital platforms, creating hybrid forms of expression",
+        "Elder storytellers have begun incorporating interactive digital elements while maintaining traditional narrative structures"
+    ],
+    "quote_context": "These quotes demonstrate the evolving relationship between digital technology and traditional cultural practices, showing both the preservation benefits and transformative effects of digital documentation on cultural transmission."
 }
 ```
 
@@ -365,13 +438,13 @@ Enclose your output in <generated_questions> tags:
 <generated_questions>
 [
     {
-        // Question 1 (Easy/Personal)
+        // Question 1
     },
     {
-        // Question 2 (Medium/Problem)
+        // Question 2 
     },
     {
-        // Question 3 (Hard/Future)
+        // Question 3 
     },
     // ...
 ]
