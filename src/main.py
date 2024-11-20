@@ -807,7 +807,7 @@ def main():
             
             # Create intermediate dataset and push
             intermediate_dataset = Dataset.from_list(all_questions)
-            intermediate_output = f"{single_shot_question_settings['output_dataset']}-original-{len(args.question_types)}-types-in-progress"
+            intermediate_output = f"{single_shot_question_settings['output_dataset']}-original-in-progress"
             logger.info(f"Pushing intermediate results after completing {question_type} ({len(all_questions)} total questions)")
             push_single_shot_questions_to_huggingface(intermediate_dataset, intermediate_output)
             
@@ -850,7 +850,7 @@ def main():
         
         # Create and push intermediate dataset
         intermediate_dataset = Dataset.from_list(all_multihop_questions)
-        intermediate_output = f"{single_shot_question_settings['output_dataset']}-multihop-original-{len(args.question_types)}-types-in-progress"
+        intermediate_output = f"{single_shot_question_settings['output_dataset']}-multihop-original-in-progress"
         logger.info(f"Pushing intermediate multi-hop results after completing {question_type} ({len(all_multihop_questions)} total questions)")
         push_multihop_questions_to_huggingface(intermediate_dataset, intermediate_output)
         
