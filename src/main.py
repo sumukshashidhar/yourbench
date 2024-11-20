@@ -780,18 +780,34 @@ def main():
         all_questions.extend([{**item, 'question_type': question_type} for item in dataset])
     combined_dataset = Dataset.from_list(all_questions)
     
+    # Push original single-shot questions to HuggingFace
+    original_output = f"{single_shot_question_settings['output_dataset']}-original"
+    logger.info(f"Pushing original single-shot questions to {original_output}")
+    push_single_shot_questions_to_huggingface(combined_dataset, original_output)
+    
     # Deduplicate single-shot questions
     deduplicated_dataset = deduplicate_questions(combined_dataset, args, 'single-shot')
     
     # Push deduplicated single-shot questions to HuggingFace
-    push_single_shot_questions_to_huggingface(deduplicated_dataset, single_shot_question_settings['output_dataset'])
+    dedup_output = f"{single_shot_question_settings['output_dataset']}-deduplicated"
+    logger.info(f"Pushing deduplicated single-shot questions to {dedup_output}")
+    push_single_shot_questions_to_huggingface(deduplicated_dataset, dedup_output)
     
-    # Generate and deduplicate multi-hop questions
+    # Generate multi-hop questions from deduplicated single-shot questions
     multihop_dataset = generate_multihop_questions(deduplicated_dataset, engine, args.max_concurrent)
+    
+    # Push original multi-hop questions to HuggingFace
+    original_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-original"
+    logger.info(f"Pushing original multi-hop questions to {original_multihop_output}")
+    push_multihop_questions_to_huggingface(multihop_dataset, original_multihop_output)
+    
+    # Deduplicate multi-hop questions
     deduplicated_multihop = deduplicate_questions(multihop_dataset, args, 'multi-hop')
     
     # Push deduplicated multi-hop questions to HuggingFace
-    push_multihop_questions_to_huggingface(deduplicated_multihop, f"{single_shot_question_settings['output_dataset']}-multihop")
+    dedup_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-deduplicated"
+    logger.info(f"Pushing deduplicated multi-hop questions to {dedup_multihop_output}")
+    push_multihop_questions_to_huggingface(deduplicated_multihop, dedup_multihop_output)
 
     logger.info("Single-shot questions generated successfully")
     
