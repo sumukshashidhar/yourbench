@@ -337,6 +337,25 @@ Environment Variables:
         default='plots'
     )
 
+    # Add new control flags
+    parser.add_argument(
+        '--skip-chunking',
+        help='Skip the chunking process',
+        action='store_true'
+    )
+    
+    parser.add_argument(
+        '--skip-initial-dataset',
+        help='Skip the initial dataset creation process',
+        action='store_true'
+    )
+    
+    parser.add_argument(
+        '--skip-single-shot',
+        help='Skip single-shot question generation',
+        action='store_true'
+    )
+
     return parser
 
 def process_dataset(
@@ -451,7 +470,7 @@ def get_single_shot_question_settings(args: argparse.Namespace) -> Dict[str, str
     settings['output_dataset'] = f"{settings['organization']}/{settings['dataset_name']}-single-shot-questions"
     return settings
 
-def deduplicate_questions(dataset: Dataset, args: argparse.Namespace, dataset_type: str) -> Dataset:
+def deduplicate_questions(dataset: Dataset, args: argparse.Namespace, dataset_type: str, to_output_or_not: bool = True) -> Dataset:
     """Deduplicate questions in a dataset using semantic similarity.
     
     Args:
@@ -474,7 +493,7 @@ def deduplicate_questions(dataset: Dataset, args: argparse.Namespace, dataset_ty
     )
     
     try:
-        deduplicated_dataset, similarities, num_removed, clusters = analyze_and_deduplicate_questions(dataset, dedup_args)
+        deduplicated_dataset, similarities, num_removed, clusters = analyze_and_deduplicate_questions(dataset, dedup_args, to_output_or_not)
         
         logger.info(f"Deduplication results for {dataset_type} questions:")
         logger.info(f"Original dataset size: {len(dataset)}")
@@ -749,78 +768,72 @@ def main():
     # Get chunking settings
     chunking_settings = get_chunking_settings(args)
     
-    # Process semantic chunks
-    process_chunks(raw_files, raw_data_path, chunks_path, chunking_settings)
+    # Process semantic chunks if not skipped
+    if not args.skip_chunking:
+        process_chunks(raw_files, raw_data_path, chunks_path, chunking_settings)
+    else:
+        logger.info("Skipping chunking process")
 
     dataset_settings = get_dataset_settings(args)
-
-    base_dataset = process_dataset(chunks_path, summary_path, dataset_settings)
-
-    create_multihop_dataset(base_dataset, dataset_settings)
-
+    # Get single shot settings early - we'll need it for both single-shot and multihop
     single_shot_question_settings = get_single_shot_question_settings(args)
 
-    # load the datasets
-    document_dataset = load_dataset(args.dataset, split=args.split)
-    
-    # Dictionary to accumulate questions by type
-    questions_by_type = {}
-    
-    # Generate and push questions for each type incrementally
-    all_questions = []
-    for question_type in args.question_types:
-        start_time = time.time()
-        document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
-        end_time = time.time()
-        
-        # Add question type to each item
-        typed_questions = [{**item, 'question_type': question_type} for item in document_dataset_with_questions]
-        all_questions.extend(typed_questions)
-        
-        # Create intermediate dataset and push
-        intermediate_dataset = Dataset.from_list(all_questions)
-        intermediate_output = f"{single_shot_question_settings['output_dataset']}-original-{len(args.question_types)}-types-in-progress"
-        logger.info(f"Pushing intermediate results after completing {question_type} ({len(all_questions)} total questions)")
-        push_single_shot_questions_to_huggingface(intermediate_dataset, intermediate_output)
-        
-        logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
-        questions_by_type[question_type] = document_dataset_with_questions
+    # Create initial dataset if not skipped
+    if not args.skip_initial_dataset:
+        base_dataset = process_dataset(chunks_path, summary_path, dataset_settings)
+        create_multihop_dataset(base_dataset, dataset_settings)
+    else:
+        logger.info("Skipping initial dataset creation")
+        # Load existing dataset for subsequent steps
+        base_dataset = load_dataset(args.dataset, split=args.split)
 
-    # Create final combined dataset
-    combined_dataset = Dataset.from_list(all_questions)
-    
-    # Push final version with different name
-    original_output = f"{single_shot_question_settings['output_dataset']}-original"
-    logger.info(f"Pushing final combined single-shot questions to {original_output}")
-    push_single_shot_questions_to_huggingface(combined_dataset, original_output)
-    
-    # Deduplicate single-shot questions
-    deduplicated_dataset = deduplicate_questions(combined_dataset, args, 'single-shot')
-    
-    # Push deduplicated single-shot questions to HuggingFace
-    dedup_output = f"{single_shot_question_settings['output_dataset']}-deduplicated"
-    logger.info(f"Pushing deduplicated single-shot questions to {dedup_output}")
-    push_single_shot_questions_to_huggingface(deduplicated_dataset, dedup_output)
-
-    for question_type in args.question_types:
-        # Generate multi-hop questions from deduplicated single-shot questions
-        multihop_dataset = generate_multihop_questions(deduplicated_dataset, engine, question_type, args.max_concurrent)
+    # Generate single-shot questions if not skipped
+    if not args.skip_single_shot:
+        document_dataset = load_dataset(args.dataset, split=args.split)
         
-        # Push original multi-hop questions to HuggingFace
-        original_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-original-{question_type}"
-    logger.info(f"Pushing original multi-hop questions to {original_multihop_output}")
-    push_multihop_questions_to_huggingface(multihop_dataset, original_multihop_output)
-    
-    # Deduplicate multi-hop questions
-    deduplicated_multihop = deduplicate_questions(multihop_dataset, args, 'multi-hop')
-    
-    # Push deduplicated multi-hop questions to HuggingFace
-    dedup_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-deduplicated"
-    logger.info(f"Pushing deduplicated multi-hop questions to {dedup_multihop_output}")
-    push_multihop_questions_to_huggingface(deduplicated_multihop, dedup_multihop_output)
+        # Dictionary to accumulate questions by type
+        questions_by_type = {}
+        
+        # Generate and push questions for each type incrementally
+        all_questions = []
+        for question_type in args.question_types:
+            start_time = time.time()
+            document_dataset_with_questions = generate_single_shot_questions(document_dataset, engine, question_type, args.max_concurrent)
+            end_time = time.time()
+            
+            # Add question type to each item
+            typed_questions = [{**item, 'question_type': question_type} for item in document_dataset_with_questions]
+            all_questions.extend(typed_questions)
+            
+            # Create intermediate dataset and push
+            intermediate_dataset = Dataset.from_list(all_questions)
+            intermediate_output = f"{single_shot_question_settings['output_dataset']}-original-{len(args.question_types)}-types-in-progress"
+            logger.info(f"Pushing intermediate results after completing {question_type} ({len(all_questions)} total questions)")
+            push_single_shot_questions_to_huggingface(intermediate_dataset, intermediate_output)
+            
+            logger.info(f"Generated {len(document_dataset_with_questions)} questions for {question_type} in {end_time - start_time:.2f} seconds")
+            questions_by_type[question_type] = document_dataset_with_questions
 
-    logger.info("Single-shot questions generated successfully")
-    
+        # Create final combined dataset
+        combined_dataset = Dataset.from_list(all_questions)
+        
+        # Push final version with different name
+        original_output = f"{single_shot_question_settings['output_dataset']}-original"
+        logger.info(f"Pushing final combined single-shot questions to {original_output}")
+        push_single_shot_questions_to_huggingface(combined_dataset, original_output)
+        
+        # Deduplicate single-shot questions
+        deduplicated_dataset = deduplicate_questions(combined_dataset, args, 'single-shot')
+        
+        # Push deduplicated single-shot questions to HuggingFace
+        dedup_output = f"{single_shot_question_settings['output_dataset']}-deduplicated"
+        logger.info(f"Pushing deduplicated single-shot questions to {dedup_output}")
+        push_single_shot_questions_to_huggingface(deduplicated_dataset, dedup_output)
+
+        logger.info("Single-shot questions generated successfully")
+    else:
+        logger.info("Skipping single-shot question generation")
+
     # now we touch multihop reasoning
     multihop_dataset = load_dataset(f"{dataset_settings['organization']}/{dataset_settings['dataset_name']}-multihop", split=args.split)
     
@@ -848,6 +861,14 @@ def main():
     final_output = f"{single_shot_question_settings['output_dataset']}-multihop-original"
     logger.info(f"Pushing final combined multi-hop questions to {final_output}")
     push_multihop_questions_to_huggingface(final_multihop_dataset, final_output)
+
+    # Add deduplication for multi-hop questions
+    deduplicated_multihop_dataset = deduplicate_questions(final_multihop_dataset, args, 'multi-hop', False)
+    
+    # Push deduplicated multi-hop questions to HuggingFace
+    dedup_multihop_output = f"{single_shot_question_settings['output_dataset']}-multihop-deduplicated"
+    logger.info(f"Pushing deduplicated multi-hop questions to {dedup_multihop_output}")
+    push_multihop_questions_to_huggingface(deduplicated_multihop_dataset, dedup_multihop_output)
 
     logger.info("Process completed successfully")
 

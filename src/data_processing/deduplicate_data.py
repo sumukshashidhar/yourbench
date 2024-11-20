@@ -205,7 +205,7 @@ def process_on_gpu(args):
     
     return similarities, clusters
 
-def analyze_and_deduplicate_questions(dataset, args):
+def analyze_and_deduplicate_questions(dataset, args, to_output_or_not=True):
     torch.cuda.empty_cache()
     
     # Split dataset into chunks for each GPU
@@ -233,10 +233,11 @@ def analyze_and_deduplicate_questions(dataset, args):
     # Plot histogram
     plot_similarity_histogram(all_similarities, 
                             output_file=os.path.join(args.plots_dir, 'similarity_histogram.png'))
-    
-    # Output high-similarity clusters to file
-    output_high_similarity_clusters(all_clusters, dataset, 
-                                  output_base=os.path.join(args.plots_dir, 'high_similarity_clusters'))
+
+    if to_output_or_not:
+        # Output high-similarity clusters to file
+        output_high_similarity_clusters(all_clusters, dataset, 
+                                    output_base=os.path.join(args.plots_dir, 'high_similarity_clusters'))
     
     # Deduplicate dataset
     deduplicated_dataset, num_removed = deduplicate_dataset(dataset, all_clusters)
