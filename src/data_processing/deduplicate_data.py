@@ -242,29 +242,37 @@ def process_on_gpu(args):
     return similarities, clusters
 
 def analyze_and_deduplicate_questions(dataset, args, to_output_or_not=True):
-    torch.cuda.empty_cache()
-    
-    # Split dataset into chunks for each GPU
-    chunk_size = len(dataset) // args.num_gpus
-    chunks = [dataset.select(range(i * chunk_size, (i + 1) * chunk_size if i < args.num_gpus - 1 else len(dataset))) 
-              for i in range(args.num_gpus)]
-    
-    # Prepare arguments for multiprocessing
-    process_args = [(chunk, i, args.model_name) for i, chunk in enumerate(chunks)]
-    
-    # Use multiprocessing to run GPU tasks in parallel
-    with mp.Pool(args.num_gpus) as pool:
-        results = pool.map(process_on_gpu, process_args)
-    
-    # Combine results from all GPUs
-    all_similarities = []
-    all_clusters = defaultdict(list)
-    cluster_offset = 0
-    for i, (similarities, clusters) in enumerate(results):
-        all_similarities.extend(similarities)
-        for cluster_id, indices in clusters.items():
-            all_clusters[cluster_id + cluster_offset] = [idx + i * chunk_size for idx in indices]
-        cluster_offset += len(clusters)
+    if args.num_gpus > 0:
+        torch.cuda.empty_cache()
+        
+        # Split dataset into chunks for each GPU
+        chunk_size = len(dataset) // args.num_gpus
+        chunks = [dataset.select(range(i * chunk_size, (i + 1) * chunk_size if i < args.num_gpus - 1 else len(dataset))) 
+                for i in range(args.num_gpus)]
+        
+        # Prepare arguments for multiprocessing
+        process_args = [(chunk, i, args.model_name) for i, chunk in enumerate(chunks)]
+        
+        # Use multiprocessing to run GPU tasks in parallel
+        with mp.Pool(args.num_gpus) as pool:
+            results = pool.map(process_on_gpu, process_args)
+        
+        # Combine results from all GPUs
+        all_similarities = []
+        all_clusters = defaultdict(list)
+        cluster_offset = 0
+        for i, (similarities, clusters) in enumerate(results):
+            all_similarities.extend(similarities)
+            for cluster_id, indices in clusters.items():
+                all_clusters[cluster_id + cluster_offset] = [idx + i * chunk_size for idx in indices]
+            cluster_offset += len(clusters)
+    else:
+        # Process on CPU when num_gpus = 0
+        device = 'cpu'
+        model = SentenceTransformer(args.model_name)
+        
+        embeddings = model.encode(dataset['question'], show_progress_bar=True, convert_to_tensor=True)
+        all_similarities, all_clusters = compute_similarities_and_clusters(embeddings)
     
     # Plot histogram
     plot_similarity_histogram(all_similarities, 
