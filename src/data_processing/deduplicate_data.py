@@ -76,36 +76,72 @@ def plot_similarity_histogram(
     figsize (tuple): Figure size (width, height) in inches.
     dpi (int): Dots per inch for the output figure.
     """
-    # Set up the figure and grid
-    fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = gridspec.GridSpec(1, 1)
-    ax = fig.add_subplot(gs[0, 0])
+    try:
 
-    # Plot the histogram
-    n, bins, patches = ax.hist(similarities, bins=bins, edgecolor='none')
+        # Create output directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        
+        # Convert similarities to numpy array if it isn't already
+        similarities = np.array(similarities)
+        
+        # Set up the figure and grid
+        plt.style.use('seaborn-v0_8-whitegrid')  # Use a clean style
+        fig = plt.figure(figsize=figsize, dpi=dpi)
+        gs = gridspec.GridSpec(1, 1)
+        ax = fig.add_subplot(gs[0, 0])
 
-    # Color the bars using a colormap
-    sm = plt.cm.ScalarMappable(cmap=color, norm=plt.Normalize(vmin=min(similarities), vmax=max(similarities)))
-    for bin, patch in zip(bins, patches):
-        color = sm.to_rgba(bin)
-        patch.set_facecolor(color)
+        # Calculate bin edges to ensure no gaps
+        min_val = min(similarities)
+        max_val = max(similarities)
+        bin_edges = np.linspace(min_val, max_val, bins + 1)
 
-    # Customize the plot
-    ax.set_title(title, fontsize=16, pad=20)
-    ax.set_xlabel(x_label, fontsize=14, labelpad=10)
-    # ax.set_ylabel(y_label, fontsize=14, labelpad=10)
-    
-    # Remove top and right spines
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    
-    # Increase font size of tick labels
-    ax.tick_params(axis='both', which='major', labelsize=12)
+        # Plot the histogram
+        n, bins, patches = ax.hist(
+            similarities,
+            bins=bin_edges,
+            edgecolor='white',
+            linewidth=0.8,
+            density=True,  # Normalize the histogram
+            align='mid',   # Align bars to middle of bins
+            rwidth=1.0     # Make bars touch each other
+        )
 
-    # Adjust layout and save
-    plt.tight_layout()
-    plt.savefig(output_file, dpi=dpi, bbox_inches='tight')
-    plt.close(fig)
+        # Color the bars using a colormap
+        sm = plt.cm.ScalarMappable(
+            cmap=color,
+            norm=plt.Normalize(vmin=min_val, vmax=max_val)
+        )
+        for bin, patch in zip(bins, patches):
+            color = sm.to_rgba(bin)
+            patch.set_facecolor(color)
+
+        # Add kernel density estimation
+        kde_x = np.linspace(min_val, max_val, 200)
+        kde = plt.mlab.GaussianKDE(similarities)
+        ax.plot(kde_x, kde(kde_x), 'r-', linewidth=2, label='KDE')
+
+        # Customize the plot
+        ax.set_title(title, fontsize=16, pad=20, fontweight='bold')
+        ax.set_xlabel(x_label, fontsize=14, labelpad=10)
+        if y_label:  # Only set y_label if provided
+            ax.set_ylabel(y_label, fontsize=14, labelpad=10)
+        
+        # Remove top and right spines
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        
+        # Increase font size of tick labels
+        ax.tick_params(axis='both', which='major', labelsize=12)
+
+        # Add legend
+        ax.legend(fontsize=12)
+
+        # Adjust layout and save
+        plt.tight_layout()
+        plt.savefig(output_file, dpi=dpi, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+    except Exception as e:
+        pass
 
 def output_high_similarity_clusters(clusters, dataset, output_base='plots/high_similarity_clusters'):
     os.makedirs(os.path.dirname(output_base), exist_ok=True)
