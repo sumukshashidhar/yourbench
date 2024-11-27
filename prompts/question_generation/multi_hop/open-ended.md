@@ -270,8 +270,8 @@ Text
         "How might healthcare access change with AI adoption?",
         "What role does patient privacy play in AI healthcare?"
     ],
-    "best_direction": "How does AI impact the doctor-patient relationship?",
-    "comprehension_type": "relationship_comprehension",
+    "best_direction": "Examining the tension between AI efficiency and human medical care",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
@@ -282,13 +282,13 @@ Text
         "Personalized treatment plans show 40% better outcomes",
         "Ethical frameworks must balance innovation with patient rights"
     ],
-    "quote_context": "The quotes demonstrate the interplay between technological capability, patient care, and ethical considerations.",
+    "quote_context": "The quotes highlight the fundamental tension between technological advancement and maintaining human-centered healthcare delivery.",
     "kind": "open-ended",
-    "question": "How might the integration of AI in healthcare transform the traditional doctor-patient relationship, considering both the benefits of enhanced diagnostic accuracy and the challenges of maintaining personal connection?",
-    "answer": "Multiple valid responses exploring the balance between technological advancement and human connection in healthcare delivery",
-    "reasoning": "The question requires synthesis of technical capabilities, patient care aspects, and ethical considerations while encouraging exploration of future healthcare dynamics",
-    "difficulty": 3,
-    "difficulty_justification": "Requires understanding of multiple aspects of healthcare transformation and ability to analyze complex relationships"
+    "question": "To what extent can the demonstrated superiority of AI in diagnostic accuracy (95%) and treatment outcomes (40% improvement) justify a reduction in direct physician-patient interaction, given the ethical imperative to maintain human connection in healthcare delivery?",
+    "answer": "Multiple valid responses exploring the complex interplay between quantifiable improvements in healthcare outcomes and the intangible benefits of human medical care, considering ethical frameworks and patient rights",
+    "reasoning": "The question challenges respondents to weigh concrete performance metrics against abstract human values, while considering systemic implications for healthcare delivery and ethical frameworks",
+    "difficulty": 5,
+    "difficulty_justification": "Requires sophisticated analysis of quantitative benefits versus qualitative human factors, ethical considerations, and systemic healthcare implications"
 }
 ```
 

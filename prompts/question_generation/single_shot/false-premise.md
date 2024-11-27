@@ -304,12 +304,12 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "global systems"
     ],
     "potential_question_directions": [
-        "How do trade relationships affect economic stability?",
-        "What role do international markets play in local economies?",
-        "How do policy changes impact global trade?",
-        "What are the key factors in economic interdependence?"
+        "The relationship between protectionist policies and domestic prosperity",
+        "Interconnected nature of modern economic systems",
+        "Cascading effects of trade barriers on global supply chains",
+        "Balance between national sovereignty and economic interdependence"
     ],
-    "best_direction": "The trade relationship question effectively tests understanding of complex system interactions while maintaining clear assessment criteria.",
+    "best_direction": "The protectionist policy question effectively tests understanding of complex system interactions while challenging assumptions about economic isolation.",
     "kind": "false-premise",
     "comprehension_type": "system_impact",
     "quality_metrics": {
@@ -317,17 +317,17 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "text_based": true,
         "no_tricks": true
     },
-    "question": "The text suggests that increased tariffs in one country automatically improve its economic growth while having no effect on its trading partners. What's wrong with this interpretation?",
+    "question": "A nation's implementation of protective tariffs represents a purely domestic economic decision that strengthens its market independence and shields it from global economic volatility. Consider the accuracy of this interpretation based on the text's analysis.",
     "answer": "The text explicitly states that tariffs create complex ripple effects throughout the global economy, affecting both the implementing country and its trading partners through reduced trade volume, retaliatory measures, and altered supply chains.",
-    "reasoning": "Tests understanding of complex system interactions and multi-layered economic relationships.",
+    "reasoning": "Tests understanding of complex system interactions and multi-layered economic relationships while challenging the misconception of economic isolation in modern global markets.",
     "difficulty": 5,
-    "difficulty_justification": "Requires deep understanding of system-wide interactions and ability to trace multiple cause-effect relationships.",
+    "difficulty_justification": "Requires deep understanding of system-wide interactions and ability to trace multiple cause-effect relationships while evaluating complex economic assumptions.",
     "supporting_quotes": [
         "When Country A implements new tariffs, its trading partners typically respond with retaliatory measures",
         "The interconnected nature of global trade means that tariff increases often lead to reduced trade volumes across multiple markets",
         "Studies show that protective tariffs frequently result in higher consumer prices and disrupted supply chains in both the implementing nation and its trading partners"
     ],
-    "quote_context": "These quotes demonstrate the complex ripple effects of tariff implementation, showing how trade actions affect multiple parties and lead to various economic consequences, directly contradicting the simplified premise of unilateral benefit."
+    "quote_context": "These quotes demonstrate the complex ripple effects of tariff implementation, showing how trade actions affect multiple parties and lead to various economic consequences, directly contradicting the premise of economic isolation and unilateral benefit."
 }
 ```
 
@@ -342,12 +342,13 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "global patterns"
     ],
     "potential_question_directions": [
-        "How do ocean currents influence climate patterns?",
-        "What role does temperature play in current formation?",
-        "How do atmospheric conditions affect ocean behavior?",
-        "What are the key factors in current-climate interaction?"
+        "Misconceptions about the Gulf Stream's role in climate",
+        "Common misunderstandings of atmospheric-oceanic relationships",
+        "Oversimplification of climate system dependencies",
+        "Popular myths about ocean current impacts",
+        "Assumptions about climate pattern predictability"
     ],
-    "best_direction": "The ocean-climate interaction question effectively tests understanding of complex relationships while maintaining clear assessment criteria.",
+    "best_direction": "The Gulf Stream misconception effectively challenges common oversimplifications while testing deep systems understanding.",
     "kind": "false-premise",
     "comprehension_type": "relationship_comprehension",
     "quality_metrics": {
@@ -355,17 +356,17 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "text_based": true,
         "no_tricks": true
     },
-    "question": "The text indicates that ocean currents and climate patterns operate independently, with no significant influence on each other. What's incorrect about this interpretation?",
-    "answer": "The text demonstrates that ocean currents and climate patterns are intricately connected, with currents affecting regional temperatures and weather patterns, while atmospheric conditions influence current formation and behavior.",
-    "reasoning": "Tests understanding of complex environmental relationships and feedback systems.",
+    "question": "The Gulf Stream's warming effect on Western Europe must be relatively minor, since atmospheric conditions alone determine regional temperatures. Consider this statement's accuracy based on the passage.",
+    "answer": "The text explicitly contradicts this assumption, showing that the Gulf Stream significantly moderates Western Europe's climate through direct heat distribution, while participating in a complex feedback loop with atmospheric conditions.",
+    "reasoning": "Tests understanding of complex environmental relationships and challenges a common misconception about the relative importance of oceanic influences on climate.",
     "difficulty": 4,
-    "difficulty_justification": "Requires understanding of multiple interconnected systems and their bidirectional relationships.",
+    "difficulty_justification": "Requires understanding of multiple interconnected systems and their bidirectional relationships, while challenging intuitive but incorrect assumptions.",
     "supporting_quotes": [
         "Ocean currents act as global heat distributors, directly influencing regional climate patterns",
         "Changes in atmospheric temperature and wind patterns can alter ocean current behavior, creating a feedback loop",
         "The Gulf Stream's warm waters significantly moderate the climate of Western Europe, demonstrating the direct relationship between oceanic and atmospheric systems"
     ],
-    "quote_context": "These quotes establish the bidirectional relationship between ocean currents and climate patterns, showing how they influence and respond to each other, directly contradicting the premise of independent operation."
+    "quote_context": "These quotes directly contradict the premise by establishing the Gulf Stream's major role in climate moderation and highlighting the interconnected nature of oceanic-atmospheric systems, rather than atmospheric dominance."
 }
 ```
 

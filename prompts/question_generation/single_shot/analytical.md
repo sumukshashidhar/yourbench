@@ -229,19 +229,19 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "environmental cues"
     ],
     "potential_question_directions": [
-        "How do monarchs use environmental cues for navigation?",
+        "Why do monarchs rely on multiple navigation systems?",
         "What role does generational memory play in migration?",
         "Why do specific seasonal changes trigger migration?",
-        "How do different generations coordinate their movement patterns?"
+        "Why is coordination across generations essential?"
     ],
-    "best_direction": "How do environmental cues and generational memory interact in monarch migration?",
+    "best_direction": "Why is the combination of environmental cues and generational memory critical for monarch migration?",
     "comprehension_type": "pattern_recognition",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "What combination of factors enables monarch butterflies to maintain their migration patterns across generations?",
+    "question": "Why do monarch butterflies require both environmental cues and genetic programming to maintain their migration patterns?",
     "answer": "Monarchs use a combination of environmental cues (sunlight position, magnetic fields) and inherited genetic programming to maintain consistent migration routes",
     "reasoning": "The text shows how multiple factors work together - environmental sensing, genetic programming, and timing mechanisms all contribute to successful migration patterns across generations",
     "difficulty": 2,
@@ -344,30 +344,30 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "quantum algorithms"
     ],
     "potential_question_directions": [
-        "How does entanglement enable parallel processing?",
-        "What role does superposition play in quantum advantage?",
-        "How do quantum algorithms utilize entanglement?",
-        "What limitations affect quantum computing systems?"
+        "Where in quantum systems do computational bottlenecks occur?",
+        "In which scenarios do quantum advantages break down?",
+        "Where do classical and quantum computations diverge in performance?",
+        "At what points do error correction mechanisms become critical?"
     ],
-    "best_direction": "How do multiple quantum properties combine to create computational advantages?",
+    "best_direction": "Where in quantum computing systems do entanglement and superposition create the most significant advantages over classical computers?",
     "comprehension_type": "evidence_synthesis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How do quantum entanglement and superposition work together to enable computational advantages impossible in classical computers?",
-    "answer": "Entanglement allows multiple qubits to share states while superposition enables parallel processing of multiple states, creating exponential computational scaling",
-    "reasoning": "The text explains how quantum properties combine synergistically - entanglement enables state sharing, superposition allows parallel processing, and their combination creates unique computational capabilities",
+    "question": "Where in computational processes do quantum entanglement and superposition provide the most dramatic advantages over classical computing methods?",
+    "answer": "The most significant advantages appear in parallel processing scenarios where entangled qubits can represent exponentially more states (2^n) than classical bits, particularly in algorithms requiring simultaneous state calculations",
+    "reasoning": "The text demonstrates that quantum advantages are most pronounced in specific computational contexts where the exponential scaling of quantum states through entanglement and superposition can be effectively leveraged, particularly in parallel processing scenarios",
     "difficulty": 5,
-    "difficulty_justification": "Requires synthesizing complex quantum concepts and understanding their interrelated effects on computation",
+    "difficulty_justification": "Requires synthesizing complex quantum concepts and identifying specific computational contexts where quantum advantages manifest",
     "supporting_quotes": [
         "Quantum entanglement allows multiple qubits to share quantum states, enabling instantaneous correlation across the system",
         "Through superposition, each qubit exists in multiple states simultaneously, allowing n qubits to represent 2^n states",
         "The combination of entanglement and superposition enables quantum algorithms to perform certain calculations exponentially faster than classical computers",
         "Quantum error correction maintains coherence by distributing quantum information across multiple entangled qubits"
     ],
-    "quote_context": "These quotes illustrate how quantum computing leverages multiple quantum phenomena synergistically. They show how entanglement and superposition work together to create computational capabilities that exceed classical limits, while also highlighting the practical challenges of maintaining quantum states."
+    "quote_context": "These quotes pinpoint the specific computational scenarios where quantum advantages emerge. They illustrate how the combination of entanglement and superposition creates exponential advantages in state representation and parallel processing, while also indicating where error correction becomes necessary."
 }
 ```
 
@@ -383,19 +383,19 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "precision control"
     ],
     "potential_question_directions": [
-        "How does guide RNA ensure targeting precision?",
+        "What makes guide RNA targeting so precise?",
         "What controls the DNA cutting process?",
-        "How do repair mechanisms affect outcomes?",
+        "What role do repair mechanisms play?",
         "What factors influence editing efficiency?"
     ],
-    "best_direction": "How do multiple molecular mechanisms ensure precise gene editing?",
+    "best_direction": "What molecular mechanisms work together to ensure precise gene editing?",
     "comprehension_type": "mechanism_understanding",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How do the molecular components of CRISPR work together to achieve precise genetic modifications while minimizing errors?",
+    "question": "What molecular components of CRISPR coordinate to achieve precise genetic modifications while minimizing errors?",
     "answer": "CRISPR combines specific guide RNA targeting, controlled Cas9 cutting, and cellular repair mechanisms to make precise DNA changes while preventing off-target effects",
     "reasoning": "The text describes how multiple molecular mechanisms (RNA guidance, protein cutting, and DNA repair) coordinate to achieve accurate genetic modifications",
     "difficulty": 4,

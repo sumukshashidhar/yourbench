@@ -338,11 +338,12 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "food web dynamics"
     ],
     "potential_question_directions": [
-        "How would specialized pollinator loss affect plant diversity?",
-        "What cascading effects would occur in food chains?",
-        "How might agricultural practices adapt?"
+        "The role of pollinator specialization in maintaining ecosystem balance",
+        "Evolutionary implications of sudden pollinator population changes",
+        "Interconnected cascade effects across trophic levels",
+        "Adaptive capacity of plant-pollinator networks under stress"
     ],
-    "best_direction": "How would specialized pollinator loss affect plant diversity? This tests understanding of ecological relationships and cascade effects.",
+    "best_direction": "The role of pollinator specialization in maintaining ecosystem balance tests deep understanding of complex ecological relationships and system resilience.",
     "comprehension_type": "chain_effect",
     "quality_metrics": {
         "clear_language": true,
@@ -350,17 +351,17 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "no_tricks": true
     },
     "kind": "counterfactual",
-    "question": "How would the extinction of specialized bee species affect plant diversity and subsequent ecosystem relationships over multiple generations?",
-    "answer": "Plant species requiring specific pollinators would decline, leading to reduced biodiversity, altered food web relationships, and eventual ecosystem restructuring",
-    "reasoning": "The text establishes tight coupling between specific pollinators and plants. Loss of specialized pollinators would trigger plant species decline, affecting dependent species and forcing ecosystem adaptation.",
+    "question": "The sudden extinction of specialized bee species forces surviving generalist pollinators to expand their plant interactions - describe the cascading ecosystem transformations across three generations of affected species.",
+    "answer": "Plant species requiring specific pollinators would decline, while generalist-pollinated plants would experience increased reproduction, leading to reduced biodiversity, altered food web relationships, and eventual ecosystem restructuring favoring generalist species",
+    "reasoning": "The text establishes tight coupling between specific pollinators and plants. Loss of specialized pollinators would trigger selective plant species decline, while creating ecological opportunities for generalist-pollinated species, fundamentally reshaping community composition and interaction networks.",
     "difficulty": 4,
-    "difficulty_justification": "Requires tracking multiple generations of changes across different species and understanding complex ecological relationships.",
+    "difficulty_justification": "Requires tracking multiple generations of changes across different species and understanding complex ecological relationships, while considering evolutionary adaptation pressures.",
     "supporting_quotes": [
         "83% of flowering plant species require specific pollinator relationships for successful reproduction",
         "The loss of a single pollinator species can affect up to 30 different plant species in a given ecosystem",
         "Plant-pollinator relationships have co-evolved over millions of years, creating highly specialized dependencies"
     ],
-    "quote_context": "The quotes demonstrate the tight interdependence between specific pollinators and plant species, quantifying the potential cascade effects of pollinator loss on plant diversity and ecosystem stability."
+    "quote_context": "The quotes demonstrate the tight interdependence between specific pollinators and plant species, quantifying the potential cascade effects of pollinator loss on plant diversity and ecosystem stability, while highlighting the evolutionary significance of these relationships."
 }
 ```
 

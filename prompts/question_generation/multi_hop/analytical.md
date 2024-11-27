@@ -488,12 +488,12 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "regulatory adaptation"
     ],
     "potential_question_directions": [
-        "How does AI development affect job markets?",
-        "What ethical challenges emerge from AI adoption?",
-        "Why do different sectors adapt differently to AI?"
+        "Paradoxes in AI workforce transformation",
+        "Competing forces in labor markets",
+        "Systemic adaptation challenges"
     ],
-    "best_direction": "How does AI development affect job markets?",
-    "comprehension_type": "implication_analysis",
+    "best_direction": "Paradoxes in AI workforce transformation",
+    "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
@@ -504,13 +504,13 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "New job categories emerge around AI development and maintenance",
         "Skill requirements shift toward human-AI collaboration"
     ],
-    "quote_context": "The quotes demonstrate the dynamic relationship between technological advancement and labor market transformation.",
+    "quote_context": "The quotes reveal paradoxical dynamics between automation, job creation, and skill evolution.",
     "kind": "analytical",
-    "question": "How does the rate of AI capability advancement influence the balance between job displacement and creation, and what factors determine successful workforce adaptation?",
-    "answer": "The pace of AI advancement creates a dynamic tension between job displacement in routine tasks and new job creation in AI-related fields, with successful adaptation depending on workforce retraining capabilities and the development of complementary human-AI collaboration skills",
-    "reasoning": "The text shows how technological change drives labor market evolution through multiple mechanisms, requiring both individual and institutional adaptation strategies.",
+    "question": "To what extent does accelerated AI adoption create a self-reinforcing cycle where increased automation simultaneously undermines traditional employment while generating insufficient replacement roles, and could this cycle be interrupted by strategic workforce development or is it an inevitable technological trajectory?",
+    "answer": "The evidence suggests a complex feedback loop where AI automation outpaces job creation capacity, but this cycle isn't deterministic - strategic workforce development and human-AI complementary roles can potentially break the pattern, though success depends on institutional adaptation speed and proactive skill development programs",
+    "reasoning": "The text demonstrates how technological disruption creates competing forces in labor markets, where the rate of automation and new job creation exist in tension, mediated by institutional capacity for workforce transformation and the emergence of hybrid human-AI roles",
     "difficulty": 4,
-    "difficulty_justification": "Requires analyzing complex interactions between technological advancement, economic systems, and human adaptation while considering multiple timeframes and stakeholder perspectives."
+    "difficulty_justification": "Requires analyzing multiple interacting systems, understanding feedback loops, and evaluating competing hypotheses about technological determinism versus strategic intervention."
 }
 ```
 

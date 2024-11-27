@@ -372,11 +372,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "neural coding"
     ],
     "potential_question_directions": [
-        "How do electrical and chemical signals work together in neural communication?",
-        "What determines the strength of synaptic transmission?",
-        "Why is neural communication both electrical and chemical?"
+        "The evolutionary advantages of dual electrical-chemical neural signaling",
+        "Trade-offs between speed and precision in neural communication methods",
+        "Implications of modifiable synaptic strength for information processing"
     ],
-    "best_direction": "How do electrical and chemical signals work together in neural communication?",
+    "best_direction": "Trade-offs between speed and precision in neural communication methods",
     "comprehension_type": "mechanism_understanding",
     "kind": "conceptual",
     "quality_metrics": {
@@ -384,17 +384,17 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How does the conversion between electrical and chemical signals enable precise neural communication?",
-    "answer": "Neurons convert electrical action potentials into chemical neurotransmitter release, allowing for signal modification and specific targeting of recipient cells",
-    "reasoning": "Tests understanding of the dual nature of neural signaling and its functional significance",
+    "question": "Consider a neural communication system using only electrical or only chemical signaling - evaluate the biological constraints that necessitate the dual-signal approach in actual neurons.",
+    "answer": "A dual-signal system combines the rapid transmission of electrical signals along axons with the precise, modifiable strength of chemical synaptic transmission, overcoming the limitations of single-signal systems that would sacrifice either speed or specificity",
+    "reasoning": "Tests deeper understanding of the complementary nature of electrical and chemical signaling, requiring analysis of biological constraints and evolutionary adaptations",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding of multiple mechanisms and their integration in neural communication",
+    "difficulty_justification": "Requires understanding of multiple mechanisms and their integration in neural communication, plus ability to reason about theoretical alternatives",
     "supporting_quotes": [
         "Action potentials propagate electrically along the neuron's axon",
         "At synapses, electrical signals trigger the release of chemical neurotransmitters",
         "The amount of neurotransmitter released determines the strength of the signal received by the next neuron"
     ],
-    "quote_context": "These quotes outline the sequence of neural communication, showing the transition from electrical to chemical signaling and how this enables signal modulation"
+    "quote_context": "These quotes establish the complementary roles of electrical and chemical signaling, supporting the analysis of why both are necessary for effective neural communication"
 }
 ```
 

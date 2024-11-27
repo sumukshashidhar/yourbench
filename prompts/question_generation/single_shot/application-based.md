@@ -377,28 +377,28 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "treatment progression"
     ],
     "potential_question_directions": [
-        "How could CBT principles be adapted for group therapy?",
-        "What modifications would be needed for online therapy?",
-        "How might these techniques work in different cultural contexts?"
+        "What adaptations would make CBT effective for children?",
+        "What modifications are needed for crisis intervention settings?",
+        "What elements would change for chronic versus acute anxiety treatment?"
     ],
-    "best_direction": "How could CBT principles be adapted for group therapy?",
+    "best_direction": "What adaptations would make CBT effective for children?",
     "comprehension_type": "process_change",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How would you modify the individual CBT techniques described in the text to create an effective group therapy program for social anxiety?",
-    "answer": "Adapt individual cognitive restructuring exercises for group discussion, use peer feedback for behavioral experiments, incorporate group dynamics for exposure therapy, and maintain individual progress tracking while leveraging group support mechanisms.",
-    "reasoning": "Requires understanding of core CBT principles and ability to adapt them to a different therapeutic context while maintaining their essential elements.",
+    "question": "What specific modifications to the CBT techniques described would be necessary to create an age-appropriate therapy program for children with anxiety?",
+    "answer": "Key modifications would include simplifying cognitive restructuring exercises using age-appropriate metaphors, incorporating play-based behavioral experiments, developing child-friendly progress tracking tools, and integrating family involvement in the therapeutic process while maintaining the core CBT framework.",
+    "reasoning": "Requires understanding of core CBT principles and ability to translate complex therapeutic concepts into child-appropriate interventions while preserving therapeutic effectiveness.",
     "difficulty": 3,
-    "difficulty_justification": "Involves adapting established techniques to a new context while maintaining therapeutic effectiveness and managing group dynamics.",
+    "difficulty_justification": "Involves adapting sophisticated psychological concepts for young minds while ensuring therapeutic integrity and accounting for developmental stages.",
     "supporting_quotes": [
         "Cognitive restructuring involves identifying and challenging maladaptive thought patterns through structured exercises",
         "Behavioral experiments provide real-world validation of modified cognitive frameworks",
         "The therapeutic relationship serves as a safe environment for practicing new coping strategies"
     ],
-    "quote_context": "These quotes outline the core components of CBT, demonstrating the key elements that would need to be adapted for a group therapy setting while maintaining therapeutic effectiveness.",
+    "quote_context": "These quotes establish the fundamental CBT components that need to be adapted while maintaining their therapeutic function, showing how core principles can be modified for different populations while preserving their essential purpose.",
     "kind": "application"
 }
 ```

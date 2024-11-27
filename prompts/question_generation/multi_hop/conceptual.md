@@ -256,11 +256,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "computational advantage"
     ],
     "potential_question_directions": [
-        "How does quantum entanglement enable computational advantages?",
-        "What role does superposition play in quantum algorithms?",
-        "How do quantum gates manipulate qubits for computation?"
+        "Why do quantum algorithms fail without entanglement?",
+        "Why can't classical computers replicate entangled states?",
+        "Why is quantum parallelism dependent on both superposition and entanglement?"
     ],
-    "best_direction": "How does quantum entanglement enable computational advantages?",
+    "best_direction": "Why can't classical computers replicate entangled states?",
     "comprehension_type": "mechanism_understanding",
     "quality_metrics": {
         "clear_language": true,
@@ -269,16 +269,16 @@ class GeneratedQuestionAnswerPair(BaseModel):
     },
     "supporting_quotes": [
         "Entanglement allows multiple qubits to be correlated in ways impossible for classical bits",
-        "Quantum algorithms leverage entanglement to perform parallel computations",
-        "The quantum speedup comes from exploiting entangled states"
+        "The quantum state space grows exponentially with each additional qubit",
+        "Classical bits can only represent linear combinations of states"
     ],
-    "quote_context": "The quotes demonstrate how entanglement provides the foundation for quantum computational advantages",
+    "quote_context": "The quotes highlight the fundamental mathematical and physical limitations that prevent classical systems from achieving true quantum entanglement",
     "kind": "conceptual",
-    "question": "How does quantum entanglement fundamentally enable quantum computers to achieve computational advantages over classical computers?",
-    "answer": "Quantum entanglement allows qubits to be correlated in ways impossible for classical bits, enabling quantum algorithms to perform massive parallel computations through the manipulation of entangled states, leading to exponential speedups for certain problems.",
-    "reasoning": "The text explains how entanglement creates quantum correlations that classical computers cannot achieve, and how quantum algorithms specifically exploit these entangled states to perform parallel computations that result in computational speedups.",
-    "difficulty": 4,
-    "difficulty_justification": "Requires understanding complex quantum mechanical principles and their relationship to computational advantages, synthesizing information from multiple sections."
+    "question": "Why do the mathematical properties of quantum entanglement make it fundamentally impossible for classical computers to simulate quantum systems efficiently, even with unlimited computational power?",
+    "answer": "The exponential growth of quantum state space with each additional qubit, combined with the non-local correlations created by entanglement, means classical computers would require an exponentially increasing number of bits to represent quantum states. Even with unlimited processing power, classical systems are mathematically restricted to linear combinations of states, making it impossible to efficiently simulate the complex interference patterns and non-local correlations that emerge from quantum entanglement.",
+    "reasoning": "The text demonstrates how the fundamental mathematical structure of quantum mechanics, particularly the exponential growth of state space and non-local correlations, creates an insurmountable barrier for classical computation. This isn't just a practical limitation but a theoretical impossibility rooted in the mathematical differences between classical and quantum information.",
+    "difficulty": 5,
+    "difficulty_justification": "Requires deep understanding of both quantum and classical computational principles, mathematical concepts of state spaces, and the ability to reason about theoretical impossibilities rather than just practical limitations."
 }
 ```
 

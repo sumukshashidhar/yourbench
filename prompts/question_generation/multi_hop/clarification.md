@@ -313,11 +313,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "global impacts"
     ],
     "potential_question_directions": [
-        "How do Arctic ice changes trigger multiple environmental responses?",
+        "In what ways do Arctic ice changes catalyze a series of environmental responses that extend beyond immediate geographical boundaries?",
         "What connects ocean circulation to atmospheric patterns?",
         "Why do small changes amplify through the climate system?"
     ],
-    "best_direction": "How do Arctic ice changes trigger multiple environmental responses?",
+    "best_direction": "In what ways do Arctic ice changes catalyze a series of environmental responses that extend beyond immediate geographical boundaries?",
     "comprehension_type": "chain_effect",
     "quality_metrics": {
         "clear_language": true,
@@ -331,7 +331,7 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "quote_context": "The quotes trace the cascade of effects from ice melt through ocean and atmospheric systems",
     "kind": "clarification",
-    "question": "How does Arctic ice melt initiate a chain of environmental changes affecting global climate patterns?",
+    "question": "In what ways do Arctic ice changes catalyze a series of environmental responses that extend beyond immediate geographical boundaries, and how do these changes impact global climate patterns?",
     "answer": "Arctic ice melt reduces surface reflectivity, increasing heat absorption. This affects ocean temperature gradients, altering circulation patterns, which in turn influences global weather systems and climate stability.",
     "reasoning": "The answer integrates information across all chunks to explain the interconnected chain of environmental responses",
     "difficulty": 4,
@@ -371,11 +371,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "network training"
     ],
     "potential_question_directions": [
-        "How do network structure and backpropagation interact during learning?",
+        "Why might certain network architectures fail despite optimal backpropagation?",
         "What role do optimization techniques play in training efficiency?",
         "How does information flow through the network during training?"
     ],
-    "best_direction": "How do network structure and backpropagation interact during learning?",
+    "best_direction": "Why might certain network architectures fail despite optimal backpropagation?",
     "comprehension_type": "system_analysis",
     "quality_metrics": {
         "clear_language": true,
@@ -387,13 +387,13 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "Backpropagation calculates errors and updates weights backward through layers",
         "Optimization techniques control weight adjustment magnitude and direction"
     ],
-    "quote_context": "The quotes explain the bidirectional flow of information and learning processes",
+    "quote_context": "The quotes establish the critical interdependence between architecture and learning mechanisms",
     "kind": "clarification",
-    "question": "How do neural network structure, backpropagation, and optimization techniques work together to enable effective learning?",
-    "answer": "The network's layered structure enables forward information flow, while backpropagation calculates errors and propagates them backward. Optimization techniques then guide weight adjustments to improve learning efficiency and reduce errors systematically.",
-    "reasoning": "The answer synthesizes structural, algorithmic, and optimization aspects from all chunks to explain the complete learning process",
+    "question": "Why might a neural network with theoretically sound backpropagation and optimization techniques still fail to learn effectively, and what architectural considerations could be responsible for this breakdown in the learning process?",
+    "answer": "A neural network might fail despite proper backpropagation and optimization when its architecture creates inherent limitations, such as vanishing gradients in deep networks or insufficient layer capacity. The network's structure determines how effectively error signals can propagate backward, and even optimal weight adjustments cannot overcome fundamental architectural constraints on information flow.",
+    "reasoning": "The answer integrates architectural limitations with learning mechanisms to explain why structural decisions can override even well-implemented training processes, highlighting the complex interplay between network design and learning capability",
     "difficulty": 5,
-    "difficulty_justification": "Requires understanding complex technical concepts and their interactions across multiple aspects of neural network function"
+    "difficulty_justification": "Requires deep understanding of neural network failure modes and the complex relationships between architecture, learning algorithms, and optimization techniques"
 }
 ```
 

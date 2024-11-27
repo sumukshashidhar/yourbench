@@ -298,29 +298,30 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "system resilience"
     ],
     "potential_question_directions": [
-        "How do multiple grid failures interact?",
-        "What conditions prevent system recovery?",
-        "Why do some failures lead to cascading effects while others don't?"
+        "Where are power grids most vulnerable to cascading failures?",
+        "Which geographical regions face highest blackout risks?",
+        "What locations require enhanced grid protection?",
+        "Where do weather events most impact grid stability?"
     ],
-    "best_direction": "How do multiple grid failures interact?",
+    "best_direction": "Where are power grids most vulnerable to cascading failures?",
     "comprehension_type": "system_impact",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "Under what specific combination of conditions does a local power grid failure transform into a regional blackout?",
-    "answer": "A regional blackout occurs when three conditions align: peak demand exceeds 85% capacity, more than two major transmission lines fail, and backup systems can't respond within 30 seconds",
-    "reasoning": "Tests understanding of complex system interactions and threshold conditions that lead to catastrophic failures",
+    "question": "Where in the power grid infrastructure are cascading failures most likely to occur when system stress reaches critical levels?",
+    "answer": "Cascading failures are most likely at major grid interconnection points where peak demand exceeds 85% capacity, specifically at junctions connecting more than two major transmission lines and locations where backup systems have response times over 30 seconds",
+    "reasoning": "Tests understanding of spatial and infrastructural vulnerabilities in power grid systems under stress conditions",
     "difficulty": 4,
-    "difficulty_justification": "Requires analysis of multiple interacting conditions and understanding of systemic relationships in a complex infrastructure",
+    "difficulty_justification": "Requires analysis of multiple interacting conditions and understanding of systemic relationships in complex infrastructure locations",
     "supporting_quotes": [
         "Grid instability becomes critical when demand surpasses 85% of maximum capacity",
         "The failure of two or more major transmission lines creates unsustainable load redistribution",
         "Backup systems must engage within 30 seconds to prevent cascading failures",
         "When these conditions coincide, localized failures invariably escalate to regional blackouts"
     ],
-    "quote_context": "The quotes establish each critical threshold condition and explicitly confirm their combined role in causing regional blackouts, providing direct evidence for the systemic failure conditions",
+    "quote_context": "The quotes establish the critical conditions and thresholds that make specific grid locations particularly vulnerable to cascading failures, providing evidence for identifying high-risk infrastructure points",
     "kind": "edge-case"
 }
 ```
@@ -335,18 +336,19 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "ecosystem collapse scenarios"
     ],
     "potential_question_directions": [
-        "How do changes in ocean pH trigger cascade effects?",
-        "What sequence of events leads to ecosystem collapse?",
-        "Why are some species more vulnerable to acidification?"
+        "Temporal dependencies in marine ecosystem collapse",
+        "Threshold-triggered cascade patterns in ocean systems",
+        "Interspecies vulnerability chains in acidification events",
+        "Predictive indicators of ecosystem restructuring"
     ],
-    "best_direction": "How do changes in ocean pH trigger cascade effects?",
+    "best_direction": "Temporal dependencies in marine ecosystem collapse",
     "comprehension_type": "chain_effect",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "What sequence of biological and chemical events occurs when ocean pH drops below 7.8, and how does this lead to ecosystem restructuring?",
+    "question": "Given ocean pH reaching 7.8, map the progressive ecosystem deterioration timeline, accounting for each species level's collapse threshold and subsequent impact window.",
     "answer": "When pH drops below 7.8, calcifying organisms lose shell integrity within 48 hours, leading to plankton population collapse within 2 weeks, triggering fish population crashes by month 3, and ultimately causing predator species redistribution within 6 months",
     "reasoning": "Tests understanding of complex temporal chains of cause and effect across multiple ecological levels",
     "difficulty": 5,

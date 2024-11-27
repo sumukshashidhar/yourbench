@@ -316,11 +316,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "quote_context": "The quotes provide specific metrics for comparing architectural complexity",
     "kind": "factual",
-    "question": "How many more layers do modern neural networks have compared to their early counterparts?",
-    "answer": "97 layers",
-    "reasoning": "By subtracting the number of layers in early networks (3) from modern networks (100), we can determine the increase in architectural complexity.",
-    "difficulty": 3,
-    "difficulty_justification": "Requires identifying and comparing specific architectural metrics across different time periods."
+    "question": "Assuming neural network layer count increased linearly over time, during which year would networks have first exceeded 50 layers, given the progression from 3 layers in early development to 100 layers in modern architectures?",
+    "answer": "The midpoint year between early development and modern architecture, as 50 layers represents the halfway point between 3 and 100 layers",
+    "reasoning": "Since we're given the start point (3 layers) and end point (100 layers), and assuming linear growth, the 50-layer milestone represents the midpoint of this progression as it's roughly halfway between 3 and 100 layers. This requires understanding both the architectural progression and applying mathematical reasoning to timeline analysis.",
+    "difficulty": 4,
+    "difficulty_justification": "Requires understanding architectural evolution, applying mathematical reasoning about linear progression, and making informed deductions about technological development timelines based on multiple data points."
 }
 ```
 
@@ -401,15 +401,15 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "testable_concepts": [
         "technological improvement",
-        "efficiency metrics",
+        "efficiency metrics", 
         "performance evolution"
     ],
     "potential_question_directions": [
-        "How has range efficiency improved?",
-        "What is the relationship between battery size and range?",
-        "How has miles-per-kWh changed?"
+        "Compare efficiency ratios across time",
+        "Analyze technological tradeoffs",
+        "Evaluate performance metrics"
     ],
-    "best_direction": "Calculate efficiency improvement in miles per kWh",
+    "best_direction": "Calculate and compare efficiency ratios while considering scale",
     "comprehension_type": "analytical",
     "quality_metrics": {
         "clear_language": true,
@@ -422,11 +422,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "quote_context": "The quotes provide data points for calculating and comparing efficiency metrics",
     "kind": "factual",
-    "question": "How has the miles-per-kWh efficiency of electric vehicles changed from 2010 to 2023?",
-    "answer": "No change (4.17 miles per kWh in both years)",
-    "reasoning": "2010: 100 miles ÷ 24kWh = 4.17 miles/kWh; 2023: 300 miles ÷ 75kWh = 4.17 miles/kWh. While absolute range and battery capacity increased, efficiency remained constant.",
+    "question": "Despite a 3x increase in range and battery capacity from 2010 to 2023, which metric remained unchanged, and what does this reveal about EV technological progress?",
+    "answer": "The miles-per-kWh efficiency (4.17) remained constant, revealing that range improvements came from larger batteries rather than efficiency gains",
+    "reasoning": "2010: 100 miles ÷ 24kWh = 4.17 miles/kWh; 2023: 300 miles ÷ 75kWh = 4.17 miles/kWh. The identical efficiency ratios show that increased range was achieved through proportional battery size scaling rather than technological efficiency improvements.",
     "difficulty": 5,
-    "difficulty_justification": "Requires complex calculation and analysis across multiple data points, revealing a counter-intuitive conclusion about efficiency."
+    "difficulty_justification": "Requires multi-step analysis, understanding of proportional relationships, and ability to identify the counterintuitive implication that apparent progress masks unchanged efficiency."
 }
 ```
 

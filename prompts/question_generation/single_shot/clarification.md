@@ -344,29 +344,29 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "philosophical implications"
     ],
     "potential_question_directions": [
-        "How do different theories of consciousness explain subjective experience?",
-        "What evidence supports each major theory?",
-        "How do researchers measure consciousness?",
-        "What are the implications for artificial consciousness?"
+        "Where in the brain do consciousness processes primarily occur?",
+        "What role does the thalamus play in consciousness?",
+        "How do different brain regions contribute to awareness?",
+        "When do neural patterns indicate conscious experience?"
     ],
-    "best_direction": "How do different theories of consciousness explain subjective experience?",
+    "best_direction": "Where in the brain do consciousness processes primarily occur?",
     "comprehension_type": "evidence_synthesis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How do the neural correlates of consciousness support or challenge different theories about subjective experience?",
-    "answer": "Neural correlates provide evidence for both integrated information theory and global workspace theory, while challenging pure computational theories",
-    "reasoning": "Requires synthesizing complex theoretical frameworks with empirical evidence and understanding their implications",
+    "question": "Where in the brain's architecture do neural correlates of consciousness manifest most strongly, and how does this location evidence support competing theories?",
+    "answer": "Neural correlates of consciousness manifest strongly in the thalamic regions and integrated cortical networks, with activation patterns supporting both global workspace theory and integrated information theory",
+    "reasoning": "Requires synthesizing anatomical knowledge with theoretical frameworks and understanding how specific brain regions' functions support or challenge different consciousness theories",
     "difficulty": 5,
-    "difficulty_justification": "Demands integration of multiple complex theories with empirical evidence and philosophical concepts",
+    "difficulty_justification": "Demands integration of neuroanatomical knowledge with complex theories and understanding of how location-specific evidence supports different theoretical frameworks",
     "supporting_quotes": [
         "fMRI studies show integrated information patterns in the brain correlating with reported conscious experiences",
         "Global workspace activation patterns support the theory of consciousness as a broadcasting mechanism",
         "Patients with damaged thalamic regions show reduced consciousness while maintaining computational abilities, challenging pure computational theories"
     ],
-    "quote_context": "These quotes provide empirical evidence from multiple sources - neuroimaging, theoretical predictions, and clinical observations - allowing comparison and synthesis across different theories of consciousness."
+    "quote_context": "These quotes establish the spatial relationship between brain regions and consciousness, particularly highlighting the thalamus's role and integrated cortical networks, while connecting anatomical evidence to theoretical frameworks."
 }
 ```
 
@@ -382,29 +382,29 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "hereditary patterns"
     ],
     "potential_question_directions": [
-        "How do environmental factors influence gene expression?",
-        "What role does timing play in genetic activation?",
-        "How do epigenetic changes affect future generations?",
-        "What mechanisms control gene silencing?"
+        "What molecular mechanisms mediate environmental influences on genes?",
+        "What types of environmental stressors affect gene expression?",
+        "What are the long-term consequences of epigenetic modifications?",
+        "What role do parental experiences play in offspring genetics?"
     ],
-    "best_direction": "How do environmental factors influence gene expression?",
+    "best_direction": "What molecular mechanisms mediate environmental influences on genes?",
     "comprehension_type": "relationship_comprehension",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How do specific environmental triggers interact with genetic predispositions to influence phenotypic expression?",
-    "answer": "Environmental factors can activate or suppress genes through epigenetic mechanisms, leading to changes in protein production and cellular behavior",
-    "reasoning": "Understanding requires knowledge of both genetic mechanisms and environmental influences, plus their interaction",
+    "question": "What specific molecular mechanisms allow environmental factors to modify gene expression patterns?",
+    "answer": "Environmental factors modify gene expression through epigenetic mechanisms like DNA methylation, which can silence genes without changing the DNA sequence itself",
+    "reasoning": "Understanding requires knowledge of both the molecular mechanisms of epigenetics and how environmental factors trigger these changes",
     "difficulty": 4,
-    "difficulty_justification": "Requires understanding complex biological mechanisms and their interactions with external factors",
+    "difficulty_justification": "Requires understanding complex molecular mechanisms and their interaction with environmental factors",
     "supporting_quotes": [
         "Environmental stress triggers methylation patterns that can silence specific genes without altering DNA sequence",
         "Studies show that early-life nutrition can influence gene expression patterns that persist into adulthood",
         "Transgenerational effects have been observed, with parental environmental exposures affecting offspring gene expression"
     ],
-    "quote_context": "The quotes establish the mechanistic link between environmental factors and genetic expression, providing specific examples of how external influences can create lasting changes in gene activity."
+    "quote_context": "The quotes demonstrate the specific molecular mechanisms (methylation) and provide examples of environmental factors (nutrition, stress) that can trigger lasting epigenetic changes."
 }
 ```
 

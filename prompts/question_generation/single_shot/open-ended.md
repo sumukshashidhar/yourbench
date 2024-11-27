@@ -340,23 +340,23 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "policy trade-offs"
     ],
     "potential_question_directions": [
-        "How do interest rate changes affect different economic groups?",
-        "What are the long-term implications of quantitative easing?",
-        "How might digital currencies affect monetary policy?",
-        "What role does wealth inequality play in policy effectiveness?"
+        "The relationship between central bank independence and wealth inequality",
+        "Unintended consequences of monetary policy democratization",
+        "Technological disruption in traditional policy transmission channels",
+        "Behavioral economics implications for monetary policy effectiveness"
     ],
-    "best_direction": "What are the long-term implications of quantitative easing?",
+    "best_direction": "Unintended consequences of monetary policy democratization",
     "comprehension_type": "implication_analysis",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How might the current monetary policy tools need to evolve if global wealth inequality continues to increase while traditional economic indicators show growth?",
-    "answer": "Policy evolution could include new distribution mechanisms, alternative measurement metrics, and reformed financial instruments to address systemic inequalities.",
-    "reasoning": "The text provides foundation for analyzing policy limitations and potential reforms based on current economic trends and challenges.",
+    "question": "In a world where retail investors increasingly influence market dynamics, traditional monetary policy tools meet decentralized finance, and wealth gaps widen despite economic growth - imagine the evolution of central banking over the next decade.",
+    "answer": "Central banking could transform into a hybrid system incorporating direct citizen participation, algorithmic policy adjustments, and targeted wealth distribution mechanisms, while maintaining economic stability through adaptive regulatory frameworks.",
+    "reasoning": "The text establishes the foundation for analyzing how current monetary policy structures might adapt to democratized finance, technological disruption, and persistent inequality, requiring a complete reimagining of central banking's role and tools.",
     "difficulty": 5,
-    "difficulty_justification": "Requires deep understanding of economic systems, policy mechanisms, and ability to synthesize complex socioeconomic factors.",
+    "difficulty_justification": "Requires synthesis of multiple complex factors including technological change, economic theory, social dynamics, and policy evolution while considering systemic implications.",
     "supporting_quotes": [
         "Traditional economic indicators like GDP growth have shown consistent improvement while wealth inequality metrics reach historic highs",
         "Current monetary policy tools show diminishing effectiveness in addressing distributional challenges",

@@ -305,22 +305,23 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "evolutionary relationships"
     ],
     "potential_question_directions": [
-        "What benefits do plants receive from pollinators?",
-        "How have plants adapted to attract specific pollinators?",
-        "What makes this relationship mutually beneficial?"
+        "The evolutionary advantages gained through plant-pollinator relationships",
+        "The role of specific adaptations in maintaining symbiotic balance",
+        "The mechanisms behind successful cross-species cooperation",
+        "The impact of pollinator diversity on plant reproduction"
     ],
-    "best_direction": "How do flowering plants and pollinators benefit from their relationship?",
+    "best_direction": "Examining the reciprocal adaptations that maintain the plant-pollinator relationship",
     "comprehension_type": "relationship_comprehension",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "What mutual benefits exist in the relationship between flowering plants and their pollinators?",
+    "question": "Describe the reciprocal exchange system between flowering plants and their insect pollinators that ensures both species' survival.",
     "answer": "Plants provide nectar and pollen for food, while pollinators facilitate plant reproduction through cross-pollination",
-    "reasoning": "The text describes the two-way beneficial relationship between plants and pollinators, showing how each species supports the other's survival",
+    "reasoning": "The text describes the two-way beneficial relationship between plants and pollinators, showing how each species supports the other's survival through specific adaptations and behaviors",
     "difficulty": 3,
-    "difficulty_justification": "Requires understanding and connecting multiple aspects of the relationship between two species",
+    "difficulty_justification": "Requires understanding and connecting multiple aspects of the relationship between two species, including both the exchange system and its evolutionary significance",
     "supporting_quotes": [
         "Flowering plants produce nectar and protein-rich pollen that serve as essential food sources for bees and butterflies",
         "In return, these insects transfer pollen between flowers, enabling cross-pollination and sexual reproduction in plants"
@@ -375,32 +376,33 @@ class GeneratedQuestionAnswerPair(BaseModel):
     "kind": "factual",
     "testable_concepts": [
         "quantum entanglement principles",
-        "particle behavior",
-        "measurement effects",
-        "quantum computing applications"
+        "particle interdependence",
+        "quantum state behavior",
+        "distance effects"
     ],
     "potential_question_directions": [
-        "What is quantum entanglement?",
-        "How does entanglement affect particle behavior?",
-        "Why is entanglement important for quantum computing?"
+        "Why do quantum particles remain connected?",
+        "What role does distance play in entanglement?",
+        "How do measurement changes affect entangled particles?",
+        "When does quantum entanglement break down?"
     ],
-    "best_direction": "What defines quantum entanglement at its most basic level?",
+    "best_direction": "Why can't entangled particles be described independently?",
     "comprehension_type": "technical_clarification",
     "quality_metrics": {
         "clear_language": true,
         "text_based": true,
         "no_tricks": true
     },
-    "question": "How does the text define quantum entanglement in its most basic form?",
-    "answer": "Quantum entanglement occurs when two particles become connected in such a way that the quantum state of each particle cannot be described independently",
-    "reasoning": "The text provides a fundamental definition of quantum entanglement that serves as the basis for understanding more complex applications",
+    "question": "Why are entangled particles' quantum states impossible to describe independently?",
+    "answer": "Because they become inextricably linked, maintaining their connection even when separated by vast distances",
+    "reasoning": "The text emphasizes the fundamental characteristic of quantum entanglement where particles maintain their interconnected nature regardless of separation, making independent description impossible",
     "difficulty": 3,
-    "difficulty_justification": "While the concept is technical, the definition is clearly stated and requires understanding of specific terminology",
+    "difficulty_justification": "While the concept is technical, the explanation of particle interdependence is clearly stated and requires understanding of specific terminology",
     "supporting_quotes": [
         "Quantum entanglement is a phenomenon where two or more particles become inextricably linked",
         "Once entangled, the quantum state of each particle cannot be described independently of the other, even when separated by vast distances"
     ],
-    "quote_context": "These quotes provide the fundamental definition of quantum entanglement, with the first establishing the basic concept and the second elaborating on the key characteristic of non-independent states"
+    "quote_context": "These quotes establish both the fundamental linking of particles and the persistence of their connection across distances, explaining why independent description is impossible"
 }
 ```
 

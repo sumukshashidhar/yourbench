@@ -329,7 +329,7 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "quote_context": "The quotes establish how technical innovation shaped both artistic practice and patronage demands.",
     "kind": "counterfactual",
-    "question": "How would Renaissance art and patronage have developed if mathematical perspective had not been discovered?",
+    "question": "In the absence of mathematical perspective, to what extent would the evolution of Renaissance art have diverged from its historical trajectory, particularly in terms of the balance between symbolic and realistic representation, and how might this have influenced the broader cultural and intellectual landscape of the period?",
     "answer": "Religious art would have maintained medieval stylization, with patronage focusing more on symbolic rather than realistic representation, fundamentally altering Renaissance cultural expression",
     "reasoning": "Without perspective, the drive toward realism would have been limited, maintaining earlier symbolic styles. This would have changed patron demands and artistic focus, potentially keeping religious art more abstract and symbolic.",
     "difficulty": 3,
@@ -363,11 +363,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
         "population dynamics"
     ],
     "potential_question_directions": [
-        "What if humans couldn't digest grains?",
-        "How would different crop types affect settlement?",
-        "What if domestication occurred differently?"
+        "Consider alternate evolutionary paths without grain digestion",
+        "Explore societal development with different dietary constraints",
+        "Examine population dynamics under alternative food sources"
     ],
-    "best_direction": "What if humans couldn't digest grains?",
+    "best_direction": "Consider alternate evolutionary paths without grain digestion",
     "comprehension_type": "evolutionary_impact",
     "quality_metrics": {
         "clear_language": true,
@@ -381,11 +381,11 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "quote_context": "The quotes link biological adaptation to social development.",
     "kind": "counterfactual",
-    "question": "How would human social evolution have differed if our species had never developed the ability to digest grains efficiently?",
-    "answer": "Without efficient grain digestion, large settled populations would be impossible, preventing the development of complex hierarchical societies and keeping humans in smaller, mobile groups",
-    "reasoning": "The ability to digest grains enabled large-scale food storage and population growth, which led to settled communities and social hierarchies. Without this capability, human groups would remain smaller and more mobile, fundamentally altering social evolution.",
+    "question": "Assuming humans had evolved to efficiently process protein-rich insects instead of grains, contrast the resulting societal structures with our grain-based agricultural civilization, particularly focusing on population density limitations and social hierarchies.",
+    "answer": "A protein-insect based society would develop radically different settlement patterns, with dispersed communities following insect migrations rather than concentrated agricultural centers. Social hierarchies would emerge around insect harvesting expertise rather than land ownership, leading to more egalitarian but smaller-scale societies limited by the carrying capacity of local insect populations.",
+    "reasoning": "The shift from grain processing to insect protein would fundamentally alter food storage capabilities, seasonal dependencies, and land-use patterns. Unlike grains, insects cannot be stored long-term or cultivated in fixed locations, preventing the development of large permanent settlements. This would create a hybrid society combining aspects of hunter-gatherer mobility with specialized protein harvesting techniques, resulting in distributed networks of smaller communities rather than concentrated urban centers.",
     "difficulty": 5,
-    "difficulty_justification": "Requires understanding complex interactions between biology, technology, and social organization across evolutionary time scales."
+    "difficulty_justification": "Requires synthesizing complex relationships between biological adaptation, resource availability, social organization, and population dynamics while considering multiple interdependent factors across evolutionary timescales."
 }
 ```
 
@@ -433,7 +433,7 @@ class GeneratedQuestionAnswerPair(BaseModel):
     ],
     "quote_context": "The quotes show how institutional control of printing affected intellectual development.",
     "kind": "counterfactual",
-    "question": "How would European intellectual development have differed if printing technology had remained under exclusive church control rather than spreading to secular guilds?",
+    "question": "To what extent would the trajectory of European intellectual development have been altered if printing technology had remained under exclusive church control, thereby preventing its dissemination to secular guilds?",
     "answer": "Vernacular literature and secular knowledge would have developed much more slowly, with religious institutions maintaining greater control over education and intellectual discourse",
     "reasoning": "Church control of printing would have limited secular and vernacular publications, maintaining Latin dominance and religious oversight of education. This would have slowed the spread of secular knowledge and vernacular literacy.",
     "difficulty": 4,
