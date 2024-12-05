@@ -1,0 +1,18 @@
+task_name: test_simple_dataset
+datasets:
+  document_dataset_name: sumuks/fairytales
+  # if both the names are the same, we'll attempt to push back to the original dataset
+  document_with_summary_dataset_name: sumuks/fairytales 
+pipeline_config:
+  - generate_summaries
+model_config:
+  # models are prioritized by the order they are defined in the config
+  summarization_model:
+    model_name: gpt-4o
+    model_type: azure
+    # model_name: claude-3-5-sonnet-20241022
+    # model_name: claude-3-haiku-20240307
+    # model_type: anthropic
+
+  model_0:
+    model_name:  
