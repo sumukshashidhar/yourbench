@@ -11,7 +11,9 @@ def process_pipeline(config: dict):
 
     # check if we need summary generation
     if "generate_summaries" in config["pipeline_config"]:
-        generate_summaries_for_documents(config["datasets"]["document_dataset_name"])
+        generate_summaries_for_documents(
+            config["datasets"]["document_dataset_name"], config
+        )
 
 
 if __name__ == "__main__":
