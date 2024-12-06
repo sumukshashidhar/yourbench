@@ -1,8 +1,8 @@
 import argparse
 
+from yourbench.preprocessing.create_chunks import create_chunks_for_documents
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 from yourbench.utils.load_task_config import get_available_tasks, load_task_config
-from yourbench.preprocessing.create_chunks import create_chunks_for_documents
 
 
 def process_pipeline(config: dict):
@@ -17,13 +17,11 @@ def process_pipeline(config: dict):
         )
     else:
         print("Skipping summary generation as it is not specified in the task config")
-    
 
     if "create_chunks" in config["pipeline_config"]:
         create_chunks_for_documents(
             config["datasets"]["document_dataset_name"], config
         )
-
 
 
 if __name__ == "__main__":

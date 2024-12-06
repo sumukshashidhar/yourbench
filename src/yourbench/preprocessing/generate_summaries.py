@@ -1,7 +1,9 @@
 from datasets import load_dataset
-from yourbench.utils.load_prompt import load_prompt
+
 from yourbench.utils.inference_engine import get_batch_completion
+from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+
 
 TITLE_KEY = "title"
 CONTENT_KEY = "content"
