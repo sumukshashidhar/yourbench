@@ -4,8 +4,15 @@ datasets:
   # if both the names are the same, we'll attempt to push back to the original dataset
   document_with_summary_dataset_name: sumuks/fairytales
   chunked_doucments_dataset_name: sumuks/fairytales_semantically_chunked
+chunking_configuration:
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+  min_tokens: 512 # tokens
+  target_chunk_size: 1024 # tokens
+  max_tokens: 2048 # tokens
+  similarity_threshold: 0.7
+  device: cuda # if you have a GPU, you can use it here or set to cpu
 pipeline_config:
-  - generate_summaries
+  # - generate_summaries
   - create_chunks
 prompt_prefix: general
 model_config:

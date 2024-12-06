@@ -2,6 +2,7 @@ import argparse
 
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 from yourbench.utils.load_task_config import get_available_tasks, load_task_config
+from yourbench.preprocessing.create_chunks import create_chunks_for_documents
 
 
 def process_pipeline(config: dict):
