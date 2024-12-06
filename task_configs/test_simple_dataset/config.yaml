@@ -4,7 +4,7 @@ datasets:
   # if both the names are the same, we'll attempt to push back to the original dataset
   document_with_summary_dataset_name: sumuks/fairytales
   chunked_doucments_dataset_name: sumuks/fairytales_semantically_chunked
-  single_shot_questions_dataset_name: sumuks/fairytales_single_shot_questions
+  single_shot_questions_dataset_name: sumuks/fairytales_single_shot_questions_4o_mini_v2
 chunking_configuration:
   model_name: sentence-transformers/all-MiniLM-L6-v2
   min_tokens: 256 # tokens
@@ -14,7 +14,7 @@ chunking_configuration:
   device: cuda # if you have a GPU, you can use it here or set to cpu
 question_generation_config:
   prompt_prefix: simple_qg
-  test_audience: "kindergarten"
+  test_audience: "5th grader, with longer attention span, and longer answers"
   # test_audience: "phd"
 pipeline_config:
   # - generate_summaries
@@ -36,3 +36,6 @@ model_config:
     model_type: openai
     base_url: http://localhost:30000/v1/
     api_key: "EMPTY"
+  model_1:
+    model_name: gpt-4o-mini
+    model_type: azure

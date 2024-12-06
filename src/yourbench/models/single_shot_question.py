@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 
 class QuestionAnswerPair(BaseModel):
     """A single question and answer pair"""
-    question_type: Literal["analytical", "boolean", "factual"] = Field(
-        description="The type of question"
-    )
+    question_type: Literal["analytical", "application-based", "clarification",
+                          "counterfactual", "conceptual", "true-false",
+                          "factual", "open-ended", "false-premise", "edge-case"]
     question: str = Field(description="The question")
     answer: str = Field(description="The answer to the question")
     estimated_difficulty: int = Field(description="The estimated difficulty of the question")

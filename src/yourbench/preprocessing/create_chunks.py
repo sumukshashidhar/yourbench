@@ -1,7 +1,6 @@
 import re
 from typing import Dict
 
-import nltk
 import torch
 from datasets import Dataset, load_dataset
 from nltk.tokenize import sent_tokenize
@@ -11,7 +10,7 @@ from transformers import AutoTokenizer, GPT2Tokenizer
 
 
 # Download NLTK data
-nltk.download('punkt')
+# nltk.download('punkt')
 
 
 def _clean_text(text: str):

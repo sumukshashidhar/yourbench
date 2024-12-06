@@ -8,7 +8,9 @@ from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
+
 MODEL_INDEX = 1
+
 
 def _clean_questions(text: str):
     text = text.replace("```json", "").replace("```", "")
