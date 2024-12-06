@@ -14,6 +14,15 @@ def process_pipeline(config: dict):
         generate_summaries_for_documents(
             config["datasets"]["document_dataset_name"], config
         )
+    else:
+        print("Skipping summary generation as it is not specified in the task config")
+    
+
+    if "create_chunks" in config["pipeline_config"]:
+        create_chunks_for_documents(
+            config["datasets"]["document_dataset_name"], config
+        )
+
 
 
 if __name__ == "__main__":

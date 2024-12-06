@@ -46,6 +46,8 @@ def load_all_prompts(
             content = yaml.safe_load(file_path.read_text(encoding="utf-8"))
         elif file_path.suffix == ".json":
             content = json.load(file_path.open(encoding="utf-8"))
+        else:
+            raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
         prompts[prompt_name] = content
 

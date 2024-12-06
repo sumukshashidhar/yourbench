@@ -2,9 +2,11 @@ task_name: test_simple_dataset
 datasets:
   document_dataset_name: sumuks/fairytales
   # if both the names are the same, we'll attempt to push back to the original dataset
-  document_with_summary_dataset_name: sumuks/fairytales 
+  document_with_summary_dataset_name: sumuks/fairytales
+  chunked_doucments_dataset_name: sumuks/fairytales_semantically_chunked
 pipeline_config:
   - generate_summaries
+prompt_prefix: general
 model_config:
   # models are prioritized by the order they are defined in the config
   summarization_model:
