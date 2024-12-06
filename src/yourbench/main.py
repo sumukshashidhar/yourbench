@@ -2,6 +2,7 @@ import argparse
 
 from yourbench.preprocessing.create_chunks import create_chunks_for_documents
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
+from yourbench.question_generation.generate_questions import generate_single_shot_questions
 from yourbench.utils.load_task_config import get_available_tasks, load_task_config
 
 
@@ -22,6 +23,15 @@ def process_pipeline(config: dict):
         create_chunks_for_documents(
             config["datasets"]["document_dataset_name"], config
         )
+    else:
+        print("Skipping chunk creation as it is not specified in the task config")
+
+    if "create_single_shot_questions" in config["pipeline_config"]:
+        generate_single_shot_questions(
+            config["datasets"]["document_dataset_name"], config
+        )
+    else:
+        print("Skipping single-shot question creation as it is not specified in the task config")
 
 
 if __name__ == "__main__":
