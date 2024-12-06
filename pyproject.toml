@@ -3,6 +3,16 @@ name = "yourbench"
 version = "0.1.0"
 description = "A dynamic evaluation set generation tool for LLMs"
 requires-python = ">=3.10"
+dependencies = [
+    "nltk",
+    "sentence-transformers",
+    "torch",
+    "transformers",
+    "scikit-learn",
+    "numpy",
+    "datasets",
+    "loguru"
+]
 
 # Code style
 [tool.ruff]
