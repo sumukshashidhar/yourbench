@@ -8,6 +8,7 @@ from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
+MODEL_INDEX = 1
 
 def _clean_questions(text: str):
     text = text.replace("```json", "").replace("```", "")
@@ -57,7 +58,7 @@ def generate_single_shot_questions(document_dataset_name: str, config: dict):
         prompts.append(message)
 
     # do inference on the messages.
-    responses = run_parallel_inference(model_selection=0, prompts=prompts, config=config)
+    responses = run_parallel_inference(model_selection=MODEL_INDEX, prompts=prompts, config=config)
     # now, extract the questions properly, as well as the document analysis
     document_analysis = [extract_content_from_xml_tags(response, "document_analysis") for response in responses]
     questions = [extract_content_from_xml_tags(response, "output_json") for response in responses]
@@ -89,7 +90,8 @@ def generate_single_shot_questions(document_dataset_name: str, config: dict):
                 "question": question["question"],
                 "answer": question["answer"],
                 "estimated_difficulty": question["estimated_difficulty"],
-                "citations": str(question["citations"])
+                "citations": str(question["citations"]),
+                "generating_model": config["model_config"][f"model_{MODEL_INDEX}"]["model_name"]
             })
     new_dataset = Dataset.from_list(new_dataset_rows_expanded)
 
