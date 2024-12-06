@@ -53,10 +53,10 @@ async def _process_single_prompt(
     prompt: dict,
     model_type: str,
     model_name: str,
-    base_url: str,
-    api_key: str,
-    semaphore: asyncio.Semaphore,
-    retry_attempts: int = 3,
+    base_url: str = None,
+    api_key: str = None,
+    semaphore: asyncio.Semaphore = None,
+    retry_attempts: int = 6,
     timeout_seconds: int = 600,
 ) -> dict:
     async with semaphore:
@@ -82,11 +82,10 @@ async def perform_parallel_inference(model_selection: int, prompts: List[dict], 
     selected_model = config["model_config"][f"model_{model_selection}"]
     model_name = selected_model["model_name"]
     model_type = selected_model["model_type"]
-    model_base_url = selected_model["base_url"]
-    model_api_key = selected_model["api_key"]
-
+    model_base_url = selected_model.get("base_url")
+    model_api_key = selected_model.get("api_key")
     # Control concurrency with a semaphore (adjust based on API limits)
-    max_concurrent = 2048  # Adjust based on API rate limits
+    max_concurrent = 8  # Adjust based on API rate limits
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async with aiohttp.ClientSession() as session:
