@@ -1,8 +1,12 @@
+import asyncio
 from typing import List
 
+import aiohttp
 import litellm
+from async_timeout import timeout
 from dotenv import load_dotenv
 from tqdm import tqdm
+from tqdm.asyncio import tqdm_asyncio
 
 
 load_dotenv()
@@ -42,3 +46,74 @@ def get_batch_completion(
             print(f"Error processing response: {e}")
             final_responses.append("")
     return final_responses
+
+
+async def _process_single_prompt(
+    session: aiohttp.ClientSession,
+    prompt: dict,
+    model_type: str,
+    model_name: str,
+    base_url: str,
+    api_key: str,
+    semaphore: asyncio.Semaphore,
+    retry_attempts: int = 3,
+    timeout_seconds: int = 600,
+) -> dict:
+    async with semaphore:
+        for attempt in range(retry_attempts):
+            try:
+                async with timeout(timeout_seconds):  # 30 second timeout
+                    response = await litellm.acompletion(
+                        model=f"{model_type}/{model_name}",
+                        messages=prompt,
+                        api_base=base_url,
+                        api_key=api_key,
+                    )
+                    return response.choices[0].message.content
+            except Exception as e:
+                if attempt == retry_attempts - 1:
+                    print(f"Failed after {retry_attempts} attempts: {e}")
+                    return ""
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+
+
+async def perform_parallel_inference(model_selection: int, prompts: List[dict], config: dict):
+    """Perform parallel inference on a list of prompts with order preservation"""
+    selected_model = config["model_config"][f"model_{model_selection}"]
+    model_name = selected_model["model_name"]
+    model_type = selected_model["model_type"]
+    model_base_url = selected_model["base_url"]
+    model_api_key = selected_model["api_key"]
+
+    # Control concurrency with a semaphore (adjust based on API limits)
+    max_concurrent = 2048  # Adjust based on API rate limits
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async with aiohttp.ClientSession() as session:
+        tasks = [
+            _process_single_prompt(
+                session,
+                prompt,
+                model_type,
+                model_name,
+                model_base_url,
+                model_api_key,
+                semaphore,
+            )
+            for prompt in prompts
+        ]
+
+        # Use tqdm_asyncio to show progress while maintaining order
+        results = await tqdm_asyncio.gather(
+            *tasks,
+            desc="Processing prompts",
+            total=len(prompts)
+        )
+
+    return results
+
+
+# Add this to use the async function
+def run_parallel_inference(model_selection: int, prompts: List[dict], config: dict):
+    """Synchronous wrapper for the async function"""
+    return asyncio.run(perform_parallel_inference(model_selection, prompts, config))
