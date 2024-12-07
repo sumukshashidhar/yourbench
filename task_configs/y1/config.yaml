@@ -1,10 +1,12 @@
-task_name: test_simple_dataset
+task_name: y1
 datasets:
-  document_dataset_name: sumuks/fairytales
+  # where your text or markdown files are stored
+  source_directory: examples/yourbench_y1
+  document_dataset_name: sumuks/yourbench_y1
   # if both the names are the same, we'll attempt to push back to the original dataset
-  document_with_summary_dataset_name: sumuks/fairytales
-  chunked_doucments_dataset_name: sumuks/fairytales_semantically_chunked
-  single_shot_questions_dataset_name: sumuks/fairytales_single_shot_questions_llama3_3_70b
+  document_with_summary_dataset_name: sumuks/yourbench_y1
+  chunked_doucments_dataset_name: sumuks/yourbench_y1_semantically_chunked
+  single_shot_questions_dataset_name: sumuks/yourbench_y1_single_shot_questions_llama3_3_70b
 chunking_configuration:
   model_name: sentence-transformers/all-MiniLM-L6-v2
   min_tokens: 256 # tokens
@@ -17,8 +19,8 @@ question_generation_config:
   test_audience: "5th grader, with longer attention span, and longer answers"
   # test_audience: "phd"
 pipeline_config:
-  - generate_dataset
-  # - generate_summaries
+  # - generate_dataset
+  - generate_summaries
   # - create_chunks
   # - make_multihop_chunks
   # - create_single_shot_questions

@@ -1,6 +1,7 @@
 import argparse
 
 from yourbench.preprocessing.create_chunks import create_chunks_for_documents
+from yourbench.preprocessing.dataset_generation import generate_dataset
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 from yourbench.question_generation.generate_questions import generate_single_shot_questions
 from yourbench.utils.load_task_config import get_available_tasks, load_task_config
@@ -10,6 +11,11 @@ def process_pipeline(config: dict):
     """Process the yourbench pipeline for a given task"""
     if "pipeline_config" not in config:
         raise ValueError("Pipeline config not found in task config")
+
+    if "generate_dataset" in config["pipeline_config"]:
+        generate_dataset(config=config)
+    else:
+        print("Skipping dataset generation as it is not specified in the task config")
 
     # check if we need summary generation
     if "generate_summaries" in config["pipeline_config"]:
