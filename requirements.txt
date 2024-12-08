@@ -211,7 +211,7 @@ wrapt==1.17.0
 xformers==0.0.27.post2
 xxhash==3.5.0
 yarl==1.16.0
--e git+ssh://git@github.com/sumukshashidhar/yourbench.git@962daf6d06834bafa31bd1c801ca78cfb8c78469#egg=yourbench
+-e git+ssh://git@github.com/sumukshashidhar/yourbench.git@cd83d86044bc134346fe2e57560e79cc40138f87#egg=yourbench
 zipp==3.20.2
 zmq==0.0.0
 zstandard==0.23.0

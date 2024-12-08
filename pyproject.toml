@@ -9,7 +9,6 @@ dependencies = [
     "anthropic>=0.37.1",
     "async-timeout>=4.0.3",
     "datasets>=3.0.2",
-    "dotenv-python>=1.0.1",
     "huggingface-hub>=0.26.1",
     "langfuse>=2.55.0",
     "litellm>=1.51.0",
