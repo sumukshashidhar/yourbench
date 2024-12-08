@@ -1,6 +1,7 @@
 import argparse
 
 from yourbench.preprocessing.create_chunks import create_chunks_for_documents
+from yourbench.preprocessing.create_multihop_chunks import create_multihop_chunks
 from yourbench.preprocessing.dataset_generation import generate_dataset
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 from yourbench.question_generation.generate_questions import generate_single_shot_questions
@@ -31,6 +32,11 @@ def process_pipeline(config: dict):
         )
     else:
         print("Skipping chunk creation as it is not specified in the task config")
+
+    if "make_multihop_chunks" in config["pipeline_config"]:
+        create_multihop_chunks(config)
+    else:
+        print("Skipping multihop chunk creation as it is not specified in the task config")
 
     if "create_single_shot_questions" in config["pipeline_config"]:
         generate_single_shot_questions(
