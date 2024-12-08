@@ -136,8 +136,9 @@ def create_chunks_for_documents(hf_dataset_name: str, config: Dict):
             "title": document["title"],
             "summary": document["summary"],
             "chunk": chunk,
+            "chunk_location_id": i,
             "chunk_length": len(gpt2_tokenizer.encode(chunk))  # Add chunk length calculation
-        } for chunk in chunks]
+        } for i, chunk in enumerate(chunks)]
         chunk_list.extend(rich_chunks)
 
     chunks_dataset = Dataset.from_list(chunk_list)
