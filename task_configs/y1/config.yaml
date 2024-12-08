@@ -6,7 +6,8 @@ datasets:
   # if both the names are the same, we'll attempt to push back to the original dataset
   document_with_summary_dataset_name: sumuks/yourbench_y1
   chunked_doucments_dataset_name: sumuks/yourbench_y1_semantically_chunked
-  single_shot_questions_dataset_name: sumuks/yourbench_y1_single_shot_questions_llama3_3_70b
+  multihop_pairings_dataset_name: sumuks/yourbench_y1_multihop_pairings
+  single_shot_questions_dataset_name: sumuks/yourbench_y1_single_shot_questions_not_strict
 chunking_configuration:
   model_name: sentence-transformers/all-MiniLM-L6-v2
   min_tokens: 256 # tokens
@@ -20,12 +21,13 @@ question_generation_config:
   # test_audience: "phd"
 pipeline_config:
   # - generate_dataset
-  - generate_summaries
+  # - generate_summaries
   # - create_chunks
-  # - make_multihop_chunks
+  - make_multihop_chunks
   # - create_single_shot_questions
 prompt_prefix: general
 model_config:
+  model_index: 1
   # models are prioritized by the order they are defined in the config
   summarization_model:
     model_name: gpt-4o
@@ -33,7 +35,6 @@ model_config:
     # model_name: claude-3-5-sonnet-20241022
     # model_name: claude-3-haiku-20240307
     # model_type: anthropic
-
   model_0:
     model_name: meta-llama/Meta-Llama-3.3-70B-Instruct
     model_type: openai
