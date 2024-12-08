@@ -85,7 +85,7 @@ async def perform_parallel_inference(model_selection: int, prompts: List[dict], 
     model_base_url = selected_model.get("base_url")
     model_api_key = selected_model.get("api_key")
     # Control concurrency with a semaphore (adjust based on API limits)
-    max_concurrent = 8  # Adjust based on API rate limits
+    max_concurrent = 512  # Adjust based on API rate limits
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async with aiohttp.ClientSession() as session:
