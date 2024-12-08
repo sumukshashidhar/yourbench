@@ -14,9 +14,9 @@ Your input will consist of the following components:
 [Document title]
 </title>
 
-< document_summary >
+<document_summary>
 [Document summary]
-</document_summary >
+</document_summary>
 
 <text_chunk>
 [The text content to analyze]
