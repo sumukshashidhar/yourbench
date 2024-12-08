@@ -43,8 +43,3 @@ model_config:
   model_1:
     model_name: gpt-4o-mini
     model_type: azure
-  model_2:
-    model_name: meta-llama/llama-3.3-70b-instruct
-    model_type: openai
-    base_url: https://openrouter.ai/api/v1
-    api_key: "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"
