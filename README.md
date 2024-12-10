@@ -1,5 +1,7 @@
 # YourBench
 
+![YourBench Logo](static/images/yourbench.jpg)
+
 YourBench is a framework to dynamically generate reliable evaluation sets from source documents.
 
 ## Usage

@@ -1,14 +1,14 @@
-task_name: y1
+task_name: agriculture
 datasets:
   # where your text or markdown files are stored
-  source_directory: examples/yourbench_y1
-  document_dataset_name: sumuks/yourbench_y1
+  source_directory: examples/agriculture
+  document_dataset_name: sumuks/yourbench_agriculture
   # if both the names are the same, we'll attempt to push back to the original dataset
-  document_with_summary_dataset_name: sumuks/yourbench_y1
-  chunked_doucments_dataset_name: sumuks/yourbench_y1_semantically_chunked
-  multihop_pairings_dataset_name: sumuks/yourbench_y1_multihop_pairings
-  single_shot_questions_dataset_name: sumuks/yourbench_y1_single_shot_questions_not_strict
-  multihop_questions_dataset_name: sumuks/yourbench_y1_multihop_questions_gpt4omini_v2
+  document_with_summary_dataset_name: sumuks/yourbench_agriculture
+  chunked_doucments_dataset_name: sumuks/yourbench_agriculture_semantically_chunked
+  multihop_pairings_dataset_name: sumuks/yourbench_agriculture_multihop_pairings
+  single_shot_questions_dataset_name: sumuks/yourbench_agriculture_single_shot_questions_llama
+  multihop_questions_dataset_name: sumuks/yourbench_agriculture_multihop_questions_gpt4omini_v2
 chunking_configuration:
   model_name: sentence-transformers/all-MiniLM-L6-v2
   min_tokens: 256 # tokens
@@ -24,7 +24,7 @@ pipeline_config:
   # - generate_dataset
   # - generate_summaries
   # - create_chunks
-  - make_multihop_chunks
+  # - make_multihop_chunks
   # - create_single_shot_questions
   - create_multihop_questions
 prompt_prefix: general
