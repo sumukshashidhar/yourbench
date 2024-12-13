@@ -1,0 +1,11 @@
+task_name: yourbench_y1 # this is the name of your task, and will be used to identify the task in the logs and output files.
+configurations:
+  push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
+  set_hf_repo_visibility: private # this determines the visibility of the huggingface repo.
+  hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true.
+selected_choices: # this is a list of the pipeline parts to be executed.
+  generate_dataset:
+    execute: true
+    files_directory: examples/yourbench_y1 # this is the directory containing the source documents.
+    dataset_name: yourbench_y1 # this is the name of the dataset to be created.
+  

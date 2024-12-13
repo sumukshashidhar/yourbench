@@ -19,6 +19,7 @@ def _clean_questions(text: str):
     except Exception as _:
         return []
 
+
 def _validate_questions_multihop(questions: List[QuestionAnswerPairWithThoughtProcess]):
     # check if the questions are valid, with the pydantic model
     validated_questions = []
@@ -30,6 +31,7 @@ def _validate_questions_multihop(questions: List[QuestionAnswerPairWithThoughtPr
         except Exception as _:
             continue
     return validated_questions
+
 
 def _validate_questions(questions: List[QuestionAnswerPair]):
     # check if the questions are valid, with the pydantic model
@@ -58,7 +60,6 @@ def generate_multihop_questions(config: dict):
         document_summary = multihop_pairing["summary"]
         test_audience = config["question_generation_config"]["test_audience"]
         text_chunks = multihop_pairing["chunks"]
-
 
         # format the chunks properly
         chunks = ""
