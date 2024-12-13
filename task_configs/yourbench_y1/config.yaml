@@ -2,10 +2,38 @@ task_name: yourbench_y1 # this is the name of your task, and will be used to ide
 configurations:
   push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
   set_hf_repo_visibility: private # this determines the visibility of the huggingface repo.
-  hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true.
+  # hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
+  hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
+  model:
+    # here's an example of how to use azure openai,
+    # model_name: gpt-4o
+    # model_type: azure
+    # max_concurrent_requests: 32
+    model_name: meta-llama/Llama-3.3-70B-Instruct
+    model_type: openai
+    max_concurrent_requests: 512
+
 selected_choices: # this is a list of the pipeline parts to be executed.
   generate_dataset:
-    execute: true
+    execute: false
     files_directory: examples/yourbench_y1 # this is the directory containing the source documents.
     dataset_name: yourbench_y1 # this is the name of the dataset to be created.
-  
+  generate_summaries:
+    execute: true
+    document_dataset_name: yourbench_y1
+    summary_dataset_name: yourbench_y1
+  create_chunks:
+    execute: true
+    source_dataset_name: yourbench_y1
+    chunked_documents_dataset_name: yourbench_y1_semantically_chunked
+    chunking_configuration:
+      model_name: sentence-transformers/all-MiniLM-L6-v2
+      min_tokens: 256 # tokens
+      target_chunk_size: 512 # tokens
+      max_tokens: 1024 # tokens
+      similarity_threshold: 0.3
+      device: cuda # if you have a GPU, you can use it here or set to cpu
+
+  make_multihop_chunks:
+    execute: false
+    multihop_pairings_dataset_name: yourbench_y1_multihop_pairings

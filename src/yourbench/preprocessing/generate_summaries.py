@@ -1,6 +1,7 @@
-from datasets import load_dataset
+from datasets import Dataset, load_dataset
+from loguru import logger
 
-from yourbench.utils.inference_engine import get_batch_completion
+from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
@@ -11,32 +12,33 @@ SUMMARY_PROMPT_KEY = "general.summarize_document"
 FAILED_SUMMARY_STRING = "This document does not contain a summary."
 
 
-def _validate_dataset(hf_dataset_name: str):
-    """
-    Validate the dataset exists, and is compatible for generating summaries. Datasets
-    must contain a 'title' and 'content' column.
+def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
 
-    Args:
-        hf_dataset_name (str): The name of the huggingface dataset to validate.
+    if config["configurations"]["push_to_huggingface"]:
+        privacy = False if config["configurations"]["set_hf_repo_visibility"] != "private" else True
+        logger.info(f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})")
+        try:
+            dataset.push_to_hub(config["configurations"]["hf_organization"] + "/" + dataset_name, private=privacy)
+            logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
+        except Exception as error:
+            logger.error(f"Failed to push dataset to Hugging Face Hub: {str(error)}")
+            raise
+    else:
+        logger.info(f"Saving dataset locally to: {dataset_name}")
+        dataset.save_to_disk(dataset_name)
+        logger.success(f"Successfully saved dataset to disk: {dataset_name}")
 
-    Raises:
-        ValueError: If the dataset does not exist, or does not contain the required columns.
-    """
-    try:
-        dataset = load_dataset(hf_dataset_name, split="train")
-    except Exception as e:
-        raise ValueError(f"Dataset {hf_dataset_name} not found") from e
 
-    # check if the required columns are present
-    if TITLE_KEY not in dataset.column_names:
-        raise ValueError(f"Dataset must contain a '{TITLE_KEY}' column")
-    if CONTENT_KEY not in dataset.column_names:
-        raise ValueError(f"Dataset must contain a '{CONTENT_KEY}' column")
-
+def _load_dataset(config: dict):
+    organization = config["configurations"]["hf_organization"]
+    dataset_name = config["selected_choices"]["generate_summaries"]["document_dataset_name"]
+    logger.debug(f"Loading dataset from Hugging Face: {organization}/{dataset_name}")
+    dataset = load_dataset(f"{organization}/{dataset_name}", split="train")
+    logger.debug(f"Successfully loaded dataset with {len(dataset)} entries")
     return dataset
 
 
-def generate_summaries_for_documents(hf_dataset_name: str, config: dict):
+def generate_summaries_for_documents(config: dict):
     """
     Given a huggingface dataset in a compatible format, we generate summaries using the
     given LLM configurations.
@@ -45,54 +47,51 @@ def generate_summaries_for_documents(hf_dataset_name: str, config: dict):
         hf_dataset_name (str): The name of the huggingface dataset to generate summaries for.
 
     """
-    dataset = _validate_dataset(hf_dataset_name)
-    created_dataset_name = (
-        f"{hf_dataset_name}-w-summaries"
-        if "document_with_summary_dataset_name" not in config["datasets"]
-        else config["datasets"]["document_with_summary_dataset_name"]
-    )
+    logger.info("Starting summary generation process")
+
+    # load the dataset
+    dataset = _load_dataset(config)
+    created_dataset_name = config["selected_choices"]["generate_summaries"]["summary_dataset_name"]
+
+    logger.debug("Loading summary generation prompt template")
     prompt = load_prompt(SUMMARY_PROMPT_KEY)
+
+    logger.info("Preparing prompts for document summarization")
     user_prompts = []
-    for row in dataset:
+    for index, row in enumerate(dataset):
         templated_prompt = prompt.format(
             document=f"Title: {row[TITLE_KEY]}\nContent: {row[CONTENT_KEY]}"
         )
         user_prompt = [{"role": "user", "content": templated_prompt}]
         user_prompts.append(user_prompt)
+        if index % 100 == 0 and index > 0:
+            logger.debug(f"Prepared prompts for {index} documents")
 
-    # check if the model_config/summarization_model is defined
-    if "summarization_model" in config["model_config"]:
-        summarization_model = config["model_config"]["summarization_model"]
-    else:
-        # choose model_0 as the summarization model
-        summarization_model = config["model_config"]["model_0"]
+    logger.info(f"Starting parallel inference for {len(user_prompts)} documents")
+    responses = run_parallel_inference(user_prompts, config)
+    logger.success("Completed parallel inference")
 
-    responses = get_batch_completion(
-        model_name=summarization_model["model_name"],
-        model_type=summarization_model["model_type"],
-        user_prompts=user_prompts,
-        batch_size=2,
-    )
-
+    logger.info("Extracting summaries from model responses")
     parsed_responses = [
         extract_content_from_xml_tags(response, "final_summary")
         for response in responses
     ]
 
+    logger.debug("Validating generated summaries")
+    validation_failures = 0
     for i in range(len(parsed_responses)):
         if not parsed_responses[i] or len(parsed_responses[i]) < 10:
             parsed_responses[i] = FAILED_SUMMARY_STRING
+            validation_failures += 1
 
-    # Update or create the summary column
+    if validation_failures > 0:
+        logger.warning(f"Found {validation_failures} failed summaries out of {len(parsed_responses)} total documents")
+
+    logger.info("Updating dataset with generated summaries")
     if "summary" in dataset.column_names:
+        logger.debug("Removing existing summary column")
         dataset = dataset.remove_columns("summary")
     dataset = dataset.add_column("summary", parsed_responses)
-    try:
-        dataset.push_to_hub(created_dataset_name)
-    except Exception as push_error:
-        dataset.save_to_disk(created_dataset_name)
-        print(f"Failed to push dataset to hub: {push_error}")
 
-
-if __name__ == "__main__":
-    generate_summaries_for_documents("sumuks/fairytales")
+    handle_dataset_push(dataset, created_dataset_name, config)
+    logger.success("Summary generation process completed successfully")

@@ -1,10 +1,10 @@
 import argparse
 
-# from yourbench.preprocessing.create_chunks import create_chunks_for_documents
+from yourbench.preprocessing.create_chunks import create_chunks_for_documents
 # from yourbench.preprocessing.create_multihop_chunks import create_multihop_chunks
 from yourbench.preprocessing.dataset_generation import generate_dataset
+from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 
-# from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 # from yourbench.question_generation.generate_questions import (
 #     generate_multihop_questions,
 #     generate_single_shot_questions,
@@ -20,26 +20,26 @@ def _process_generate_dataset(config: dict):
         print("Skipping dataset generation as it is not specified in the task config")
 
 
+def _process_generate_summaries(config: dict):
+
+    if config["selected_choices"]["generate_summaries"]["execute"]:
+        generate_summaries_for_documents(config=config)
+    else:
+        print("Skipping summary generation as it is not specified in the task config")
+        
+def _process_create_chunks(config: dict):
+    if config["selected_choices"]["create_chunks"]["execute"]:
+        create_chunks_for_documents(config=config)
+    else:
+        print("Skipping chunk creation as it is not specified in the task config")
+
+
 def process_pipeline(config: dict):
     """Process the yourbench pipeline for a given task"""
     # process dataset generation
     _process_generate_dataset(config)
-
-    # if "pipeline_config" not in config:
-    #     raise ValueError("Pipeline config not found in task config")
-
-    # if "generate_dataset" in config["pipeline_config"]:
-    #     generate_dataset(config=config)
-    # else:
-    #     print("Skipping dataset generation as it is not specified in the task config")
-
-    # # check if we need summary generation
-    # if "generate_summaries" in config["pipeline_config"]:
-    #     generate_summaries_for_documents(
-    #         config["datasets"]["document_dataset_name"], config
-    #     )
-    # else:
-    #     print("Skipping summary generation as it is not specified in the task config")
+    _process_generate_summaries(config)
+    _process_create_chunks(config)
 
     # if "create_chunks" in config["pipeline_config"]:
     #     create_chunks_for_documents(

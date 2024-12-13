@@ -7,10 +7,10 @@ from nltk.tokenize import sent_tokenize
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer, GPT2Tokenizer
-
-
+from loguru import logger
+import nltk
 # Download NLTK data
-# nltk.download('punkt')
+nltk.download('punkt_tab')
 
 
 def _clean_text(text: str):
@@ -111,11 +111,30 @@ def semantic_chunking(document_text: str, chunking_configuration: Dict, model: S
 
     return chunks
 
+def get_full_dataset_name(config: Dict) -> str:
+    source_dataset_name = config["selected_choices"]["create_chunks"]["source_dataset_name"]
+    return config["configurations"]["hf_organization"] + "/" + source_dataset_name
 
-def create_chunks_for_documents(hf_dataset_name: str, config: Dict):
+def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
+
+    if config["configurations"]["push_to_huggingface"]:
+        privacy = False if config["configurations"]["set_hf_repo_visibility"] != "private" else True
+        logger.info(f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})")
+        try:
+            dataset.push_to_hub(config["configurations"]["hf_organization"] + "/" + dataset_name, private=privacy)
+            logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
+        except Exception as error:
+            logger.error(f"Failed to push dataset to Hugging Face Hub: {str(error)}")
+            raise
+    else:
+        logger.info(f"Saving dataset locally to: {dataset_name}")
+        dataset.save_to_disk(dataset_name)
+        logger.success(f"Successfully saved dataset to disk: {dataset_name}")
+
+def create_chunks_for_documents(config: Dict):
     """Create chunks for documents"""
     # extract the chunking configuration
-    chunking_configuration = config["chunking_configuration"]
+    chunking_configuration = config["selected_choices"]["create_chunks"]["chunking_configuration"]
     # check if we have a GPU + we're allowed to use it
     device = "cuda" if chunking_configuration["device"] == "cuda" and torch.cuda.is_available() else "cpu"
     # load the model
@@ -123,7 +142,7 @@ def create_chunks_for_documents(hf_dataset_name: str, config: Dict):
     tokenizer = AutoTokenizer.from_pretrained(chunking_configuration["model_name"], use_fast=True, model_max_length=512)
 
     # load the dataset
-    dataset = load_dataset(hf_dataset_name, split="train")
+    dataset = load_dataset(get_full_dataset_name(config), split="train")
 
     # Add GPT2 tokenizer initialization
     gpt2_tokenizer = GPT2Tokenizer.from_pretrained('openai-community/gpt2')
@@ -142,4 +161,4 @@ def create_chunks_for_documents(hf_dataset_name: str, config: Dict):
         chunk_list.extend(rich_chunks)
 
     chunks_dataset = Dataset.from_list(chunk_list)
-    chunks_dataset.push_to_hub(config["datasets"]["chunked_doucments_dataset_name"], private=True)
+    handle_dataset_push(chunks_dataset, config["selected_choices"]["create_chunks"]["chunked_documents_dataset_name"], config)

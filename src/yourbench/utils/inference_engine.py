@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import List
 
 import aiohttp
@@ -77,15 +78,15 @@ async def _process_single_prompt(
                 await asyncio.sleep(2 ** attempt)  # Exponential backoff
 
 
-async def perform_parallel_inference(model_selection: int, prompts: List[dict], config: dict):
+async def perform_parallel_inference(prompts: List[dict], config: dict):
     """Perform parallel inference on a list of prompts with order preservation"""
-    selected_model = config["model_config"][f"model_{model_selection}"]
+    selected_model = config["configurations"]["model"]
     model_name = selected_model["model_name"]
     model_type = selected_model["model_type"]
-    model_base_url = selected_model.get("base_url")
-    model_api_key = selected_model.get("api_key")
+    model_base_url = os.getenv("MODEL_BASE_URL") if model_type == "openai" else os.getenv("AZURE_BASE_URL")
+    model_api_key = os.getenv("MODEL_API_KEY") if model_type == "openai" else os.getenv("AZURE_API_KEY")
     # Control concurrency with a semaphore (adjust based on API limits)
-    max_concurrent = 512  # Adjust based on API rate limits
+    max_concurrent = selected_model["max_concurrent_requests"]
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async with aiohttp.ClientSession() as session:
@@ -113,6 +114,6 @@ async def perform_parallel_inference(model_selection: int, prompts: List[dict], 
 
 
 # Add this to use the async function
-def run_parallel_inference(model_selection: int, prompts: List[dict], config: dict):
+def run_parallel_inference(prompts: List[dict], config: dict):
     """Synchronous wrapper for the async function"""
-    return asyncio.run(perform_parallel_inference(model_selection, prompts, config))
+    return asyncio.run(perform_parallel_inference(prompts, config))
