@@ -1,4 +1,4 @@
-# Yourbench
+# 🤗 Yourbench
 
 ![Yourbench Logo](static/images/yourbench.jpg)
 
