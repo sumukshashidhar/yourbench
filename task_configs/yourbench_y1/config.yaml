@@ -1,7 +1,7 @@
 task_name: yourbench_y1 # this is the name of your task, and will be used to identify the task in the logs and output files.
 configurations:
   push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
-  set_hf_repo_visibility: private # this determines the visibility of the huggingface repo.
+  set_hf_repo_visibility: public # this determines the visibility of the huggingface repo.
   # hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
   hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
   model:
@@ -19,11 +19,11 @@ selected_choices: # this is a list of the pipeline parts to be executed.
     files_directory: examples/yourbench_y1 # this is the directory containing the source documents.
     dataset_name: yourbench_y1 # this is the name of the dataset to be created.
   generate_summaries:
-    execute: true
+    execute: false
     document_dataset_name: yourbench_y1
     summary_dataset_name: yourbench_y1
   create_chunks:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1
     chunked_documents_dataset_name: yourbench_y1_semantically_chunked
     chunking_configuration:
@@ -35,5 +35,6 @@ selected_choices: # this is a list of the pipeline parts to be executed.
       device: cuda # if you have a GPU, you can use it here or set to cpu
 
   make_multihop_chunks:
-    execute: false
+    execute: true
+    source_dataset_name: yourbench_y1_semantically_chunked
     multihop_pairings_dataset_name: yourbench_y1_multihop_pairings

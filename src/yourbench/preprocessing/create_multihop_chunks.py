@@ -1,24 +1,19 @@
 import random
 from collections import defaultdict
+from typing import Dict
 
 import numpy as np
 from datasets import Dataset, DatasetDict, load_dataset
+from loguru import logger
 
 
 def generate_multihop_pairings(dataset: DatasetDict) -> Dataset:
-    """
-    Generate multihop pairings from the dataset by grouping chunks from the same document
-    and creating random combinations of 2-5 chunks.
+    logger.info("Starting multihop pairings generation process")
 
-    Args:
-        dataset (DatasetDict): The input dataset containing document chunks
-
-    Returns:
-        Dataset: A new dataset with the multihop pairings
-    """
     # Set random seed for reproducibility
     random.seed(42)
     np.random.seed(42)
+    logger.debug("Set random seeds for reproducibility")
 
     # Group by unique_document_id
     doc_groups = defaultdict(list)
@@ -29,17 +24,22 @@ def generate_multihop_pairings(dataset: DatasetDict) -> Dataset:
             'title': example['title'],
             'summary': example['summary'],
         })
+    logger.info(f"Grouped {len(doc_groups)} unique documents for pairing generation")
 
     # Generate pairings
     pairings = []
+    logger.debug("Starting to generate chunk combinations")
 
     for doc_id, chunks in doc_groups.items():
-        # Skip documents with less than 2 chunks
         if len(chunks) < 2:
+            logger.debug(f"Skipping document {doc_id} - insufficient chunks ({len(chunks)})")
             continue
 
-        # Calculate number of combinations to generate based on number of chunks
         n_chunks = len(chunks)
+        n_combinations = max(1, int(np.sqrt(n_chunks)))
+        logger.debug(f"Generating {n_combinations} combinations for document {doc_id} with {n_chunks} chunks")
+
+        # Calculate number of combinations to generate based on number of chunks
         n_combinations = max(1, int(np.sqrt(n_chunks)))  # Using square root as a heuristic
 
         # Generate combinations for different numbers of chunks (2-5)
@@ -65,7 +65,10 @@ def generate_multihop_pairings(dataset: DatasetDict) -> Dataset:
 
             pairings.append(new_example)
 
+    logger.info(f"Generated {len(pairings)} multihop pairings in total")
+
     # Create new dataset
+    logger.debug("Converting pairings to Hugging Face Dataset format")
     new_dataset = Dataset.from_dict({
         'document_id': [p['id'] for p in pairings],
         'chunk_ids': [p['chunk_ids'] for p in pairings],
@@ -74,15 +77,50 @@ def generate_multihop_pairings(dataset: DatasetDict) -> Dataset:
         'title': [p['title'] for p in pairings],
         'summary': [p['summary'] for p in pairings],
     })
+    logger.success(f"Successfully created dataset with {len(new_dataset)} multihop entries")
 
     return new_dataset
 
 
+def get_full_dataset_name(config: Dict) -> str:
+    source_dataset_name = config["selected_choices"]["make_multihop_chunks"]["source_dataset_name"]
+    return config["configurations"]["hf_organization"] + "/" + source_dataset_name
+
+
+def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
+
+    if config["configurations"]["push_to_huggingface"]:
+        privacy = False if config["configurations"]["set_hf_repo_visibility"] != "private" else True
+        logger.info(f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})")
+        try:
+            dataset.push_to_hub(config["configurations"]["hf_organization"] + "/" + dataset_name, private=privacy)
+            logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
+        except Exception as error:
+            logger.error(f"Failed to push dataset to Hugging Face Hub: {str(error)}")
+            raise
+    else:
+        logger.info(f"Saving dataset locally to: {dataset_name}")
+        dataset.save_to_disk(dataset_name)
+        logger.success(f"Successfully saved dataset to disk: {dataset_name}")
+
+
 def create_multihop_chunks(config: dict):
+    logger.info("Starting multihop chunks creation process")
+
     # load the dataset
-    dataset = load_dataset(config["datasets"]["chunked_doucments_dataset_name"], split="train")
+    source_dataset_name = get_full_dataset_name(config)
+    logger.debug(f"Loading source dataset: {source_dataset_name}")
+    dataset = load_dataset(source_dataset_name, split="train")
+    logger.info(f"Loaded source dataset with {len(dataset)} entries")
+
     # generate the multihop pairings
+    logger.debug("Starting multihop pairings generation")
     multihop_pairings = generate_multihop_pairings(dataset)
+
     # save the multihop pairings
-    multihop_pairings.push_to_hub(config["datasets"]["multihop_pairings_dataset_name"], private=True)
+    output_dataset_name = config["selected_choices"]["make_multihop_chunks"]["multihop_pairings_dataset_name"]
+    logger.debug(f"Preparing to save multihop pairings dataset: {output_dataset_name}")
+    handle_dataset_push(multihop_pairings, output_dataset_name, config)
+
+    logger.success("Multihop chunks creation completed successfully")
     return

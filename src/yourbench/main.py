@@ -1,7 +1,7 @@
 import argparse
 
 from yourbench.preprocessing.create_chunks import create_chunks_for_documents
-# from yourbench.preprocessing.create_multihop_chunks import create_multihop_chunks
+from yourbench.preprocessing.create_multihop_chunks import create_multihop_chunks
 from yourbench.preprocessing.dataset_generation import generate_dataset
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 
@@ -26,12 +26,20 @@ def _process_generate_summaries(config: dict):
         generate_summaries_for_documents(config=config)
     else:
         print("Skipping summary generation as it is not specified in the task config")
-        
+
+
 def _process_create_chunks(config: dict):
     if config["selected_choices"]["create_chunks"]["execute"]:
         create_chunks_for_documents(config=config)
     else:
         print("Skipping chunk creation as it is not specified in the task config")
+
+
+def _process_make_multihop_chunks(config: dict):
+    if config["selected_choices"]["make_multihop_chunks"]["execute"]:
+        create_multihop_chunks(config=config)
+    else:
+        print("Skipping multihop chunk creation as it is not specified in the task config")
 
 
 def process_pipeline(config: dict):
@@ -40,7 +48,7 @@ def process_pipeline(config: dict):
     _process_generate_dataset(config)
     _process_generate_summaries(config)
     _process_create_chunks(config)
-
+    _process_make_multihop_chunks(config)
     # if "create_chunks" in config["pipeline_config"]:
     #     create_chunks_for_documents(
     #         config["datasets"]["document_dataset_name"], config

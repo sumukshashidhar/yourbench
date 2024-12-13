@@ -1,14 +1,16 @@
 import re
 from typing import Dict
 
+import nltk
 import torch
 from datasets import Dataset, load_dataset
+from loguru import logger
 from nltk.tokenize import sent_tokenize
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer, GPT2Tokenizer
-from loguru import logger
-import nltk
+
+
 # Download NLTK data
 nltk.download('punkt_tab')
 
@@ -84,10 +86,13 @@ def semantic_chunking(document_text: str, chunking_configuration: Dict, model: S
     sentences = [s.strip() for s in sent_tokenize(document_text) if s.strip()]
 
     if not sentences:
+        logger.warning("Document contains no sentences after cleaning")
         return []
 
+    logger.debug(f"Processing document with {len(sentences)} sentences")
     sentence_embeddings = model.encode(sentences, convert_to_tensor=True).cpu().numpy()
     chunk_boundaries = _create_chunk_boundaries(sentences, sentence_embeddings, chunking_configuration)
+    logger.debug(f"Created {len(chunk_boundaries) - 1} chunk boundaries")
 
     chunks = []
     current_chunk_sentences = []
@@ -111,9 +116,11 @@ def semantic_chunking(document_text: str, chunking_configuration: Dict, model: S
 
     return chunks
 
+
 def get_full_dataset_name(config: Dict) -> str:
     source_dataset_name = config["selected_choices"]["create_chunks"]["source_dataset_name"]
     return config["configurations"]["hf_organization"] + "/" + source_dataset_name
+
 
 def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
 
@@ -131,34 +138,56 @@ def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> No
         dataset.save_to_disk(dataset_name)
         logger.success(f"Successfully saved dataset to disk: {dataset_name}")
 
+
 def create_chunks_for_documents(config: Dict):
     """Create chunks for documents"""
+    logger.info("Starting document chunking process")
+
     # extract the chunking configuration
     chunking_configuration = config["selected_choices"]["create_chunks"]["chunking_configuration"]
+    logger.debug(f"Using chunking configuration: {chunking_configuration}")
+
     # check if we have a GPU + we're allowed to use it
     device = "cuda" if chunking_configuration["device"] == "cuda" and torch.cuda.is_available() else "cpu"
+    logger.info(f"Using device: {device}")
+
     # load the model
+    logger.debug(f"Loading SentenceTransformer model: {chunking_configuration['model_name']}")
     model = SentenceTransformer(chunking_configuration["model_name"], device=device)
     tokenizer = AutoTokenizer.from_pretrained(chunking_configuration["model_name"], use_fast=True, model_max_length=512)
+    logger.debug("Models loaded successfully")
 
     # load the dataset
-    dataset = load_dataset(get_full_dataset_name(config), split="train")
+    dataset_name = get_full_dataset_name(config)
+    logger.info(f"Loading dataset: {dataset_name}")
+    dataset = load_dataset(dataset_name, split="train")
+    logger.debug(f"Loaded dataset with {len(dataset)} documents")
 
     # Add GPT2 tokenizer initialization
+    logger.debug("Initializing GPT2 tokenizer")
     gpt2_tokenizer = GPT2Tokenizer.from_pretrained('openai-community/gpt2')
 
     chunk_list = []
-    for document in dataset:
+    logger.info("Starting document chunking process")
+    for index, document in enumerate(dataset):
+        logger.debug(f"Processing document {index + 1}/{len(dataset)}: {document['title']}")
         chunks = semantic_chunking(document["content"], chunking_configuration, model, tokenizer)
+        logger.debug(f"Created {len(chunks)} chunks for document: {document['title']}")
+
         rich_chunks = [{
             "id": document["id"],
             "title": document["title"],
             "summary": document["summary"],
             "chunk": chunk,
             "chunk_location_id": i,
-            "chunk_length": len(gpt2_tokenizer.encode(chunk))  # Add chunk length calculation
+            "chunk_length": len(gpt2_tokenizer.encode(chunk))
         } for i, chunk in enumerate(chunks)]
         chunk_list.extend(rich_chunks)
 
+    logger.info(f"Created total of {len(chunk_list)} chunks across all documents")
     chunks_dataset = Dataset.from_list(chunk_list)
-    handle_dataset_push(chunks_dataset, config["selected_choices"]["create_chunks"]["chunked_documents_dataset_name"], config)
+    logger.debug("Successfully created chunks dataset")
+
+    output_dataset_name = config["selected_choices"]["create_chunks"]["chunked_documents_dataset_name"]
+    handle_dataset_push(chunks_dataset, output_dataset_name, config)
+    logger.success("Document chunking process completed successfully")
