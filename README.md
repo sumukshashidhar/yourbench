@@ -1,10 +1,6 @@
-# 🎯 Yourbench
+# 🤗 Yourbench
 
-<div align="center">
-
-![Yourbench Logo](static/images/yourbench.jpg)
-
-**Dynamic Evaluation Set Generation for LLM Benchmarking**
+**Dynamic Evaluation Set Generation for LLM Benchmarking [NAACL '25*]*
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
@@ -37,7 +33,7 @@ Yourbench is a powerful framework for dynamically generating evaluation sets fro
 - [LiteLLM](https://github.com/BerriAI/litellm) for model inference
 - [Sentence Transformers](https://www.sbert.net/) for semantic chunking
 - [Hugging Face Datasets](https://huggingface.co/docs/datasets) for dataset management
-- OpenAI API key or Azure OpenAI access
+- OpenAI API Compatible API / Azure AI. (more model types coming soon!)
 
 ## 📦 Installation
 
@@ -50,14 +46,13 @@ source venv/bin/activate  # Linux/Mac
 
 # Install dependencies
 pip install -r requirements.txt
-pip install -e .
 ```
 
 ## 🚀 Quick Start
 
 1. Set up your environment:
 ```bash
-# For OpenAI
+# For OpenAI / OpenAI compatible APIs
 export MODEL_BASE_URL=your_openai_url
 export MODEL_API_KEY=your_openai_key
 
@@ -66,20 +61,11 @@ export AZURE_BASE_URL=your_azure_url
 export AZURE_API_KEY=your_azure_key
 ```
 
-2. Create a task configuration (`config.yaml`):
-```yaml
-task_name: my_task
-configurations:
-  push_to_huggingface: true
-  model:
-    model_name: gpt-4  # or your Azure deployment
-    model_type: openai  # or azure
-    max_concurrent_requests: 32
-```
+2. Create a task configuration (`config.yaml`). [Here is some more information!](docs/configuration.md). You can also look at an [example task configuration](task_configs/yourbench_y1/config.yaml)
 
-3. Run the task:
+3. Run the example task (after setting your 🤗 username / organization in the config!):
 ```bash
-python src/yourbench/run_task.py --task-name my_task
+python src/yourbench/run_task.py --task-name yourbench_y1
 ```
 
 ## 📚 Documentation
@@ -166,18 +152,7 @@ See [Configuration Guide](docs/configuration.md) for detailed options.
 We use:
 - [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting
 - [pytest](https://docs.pytest.org/) for testing
-- [pre-commit](https://pre-commit.com/) hooks for code quality
 
-```bash
-# Install dev dependencies
-pip install -r requirements-dev.txt
-
-# Install pre-commit hooks
-pre-commit install
-
-# Run tests
-pytest tests/
-```
 
 ## 🤝 Contributing
 
