@@ -1,20 +1,88 @@
-# 🤗 Yourbench
+# 🎯 Yourbench
+
+<div align="center">
 
 ![Yourbench Logo](static/images/yourbench.jpg)
 
+**Dynamic Evaluation Set Generation for LLM Benchmarking**
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![🤗 Hugging Face](https://img.shields.io/badge/huggingface-datasets-yellow)](https://huggingface.co/docs/datasets)
+
+</div>
+
+## 🌟 Overview
+
 Yourbench is a powerful framework for dynamically generating evaluation sets from source documents. It addresses the limitations of static benchmarks and benchmark saturation by creating diverse, contextually-rich questions tailored to specific educational levels.
 
-## Features
+### 🔄 Process Flow
+
+![Process Flow](static/images/process-figure.png)
+
+## ✨ Features
 
 - 🔄 **Dynamic Generation**: Create evaluation sets on-the-fly from any source documents
 - 📚 **Semantic Chunking**: Smart document splitting that maintains context and meaning
 - 🤔 **Multi-hop Questions**: Generate questions that require synthesizing information across document sections
 - 📊 **Configurable Difficulty**: Tailor questions to specific educational levels
 - 🔍 **Diverse Question Types**: Support for 10 different question types
-- 🤖 **Model Flexibility**: Works with OpenAI and Azure OpenAI models
+- 🤖 **Model Flexibility**: Works with OpenAI and Azure OpenAI models via LiteLLM
 - 📦 **Hugging Face Integration**: Direct dataset publishing to Hugging Face Hub
 
-## Documentation
+## 🛠️ Requirements
+
+- Python 3.10+
+- [LiteLLM](https://github.com/BerriAI/litellm) for model inference
+- [Sentence Transformers](https://www.sbert.net/) for semantic chunking
+- [Hugging Face Datasets](https://huggingface.co/docs/datasets) for dataset management
+- OpenAI API key or Azure OpenAI access
+
+## 📦 Installation
+
+```bash
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+.\venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+pip install -e .
+```
+
+## 🚀 Quick Start
+
+1. Set up your environment:
+```bash
+# For OpenAI
+export MODEL_BASE_URL=your_openai_url
+export MODEL_API_KEY=your_openai_key
+
+# For Azure OpenAI
+export AZURE_BASE_URL=your_azure_url
+export AZURE_API_KEY=your_azure_key
+```
+
+2. Create a task configuration (`config.yaml`):
+```yaml
+task_name: my_task
+configurations:
+  push_to_huggingface: true
+  model:
+    model_name: gpt-4  # or your Azure deployment
+    model_type: openai  # or azure
+    max_concurrent_requests: 32
+```
+
+3. Run the task:
+```bash
+python src/yourbench/run_task.py --task-name my_task
+```
+
+## 📚 Documentation
 
 Detailed documentation is available in the `docs` directory:
 
@@ -22,34 +90,7 @@ Detailed documentation is available in the `docs` directory:
 - [Question Generation](docs/question_generation.md): Details about the question generation process
 - [Chunking System](docs/chunking.md): Information about the semantic chunking system
 
-## Installation
-
-```bash
-pip install -r requirements.txt
-pip install -e .
-```
-
-## Quick Start
-
-1. Create a task configuration:
-```yaml
-task_name: my_task
-configurations:
-  push_to_huggingface: true
-  model:
-    model_name: your-model
-    model_type: openai
-    max_concurrent_requests: 32
-```
-
-2. Run the task:
-```bash
-python src/yourbench/run_task.py --task-name my_task
-```
-
-## Pipeline Components
-
-Yourbench consists of several modular components that can be enabled or disabled through configuration:
+## 🏗️ Pipeline Components
 
 ### 1. Dataset Generation
 - Processes source documents
@@ -83,7 +124,7 @@ Yourbench consists of several modular components that can be enabled or disabled
 - Local storage options
 - Dataset versioning
 
-## Question Types
+## 🎯 Question Types
 
 1. **Analytical**: Break down complex ideas
 2. **Application-based**: Apply concepts to scenarios
@@ -96,9 +137,9 @@ Yourbench consists of several modular components that can be enabled or disabled
 9. **False-premise**: Correct misconceptions
 10. **Edge-case**: Test boundaries
 
-## Configuration
+## ⚙️ Configuration
 
-Yourbench uses YAML configuration files for task definition. Example:
+Example configuration:
 
 ```yaml
 task_name: yourbench_y1
@@ -107,7 +148,7 @@ configurations:
   set_hf_repo_visibility: public
   hf_organization: your-org
   model:
-    model_name: model-name
+    model_name: gpt-4
     model_type: openai
     max_concurrent_requests: 512
 
@@ -120,27 +161,41 @@ selected_choices:
 
 See [Configuration Guide](docs/configuration.md) for detailed options.
 
-## Environment Setup
+## 🧰 Development
 
-Required environment variables:
+We use:
+- [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting
+- [pytest](https://docs.pytest.org/) for testing
+- [pre-commit](https://pre-commit.com/) hooks for code quality
 
-For OpenAI:
 ```bash
-export MODEL_BASE_URL=your_openai_url
-export MODEL_API_KEY=your_openai_key
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Install pre-commit hooks
+pre-commit install
+
+# Run tests
+pytest tests/
 ```
 
-For Azure:
-```bash
-export AZURE_BASE_URL=your_azure_url
-export AZURE_API_KEY=your_azure_key
-```
+## 🤝 Contributing
 
-## Contributing
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Install development dependencies
+4. Make your changes
+5. Run tests and ensure code style compliance
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 📄 License
 
-## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🙏 Acknowledgments
 
+- [LiteLLM](https://github.com/BerriAI/litellm) for model inference
+- [Sentence Transformers](https://www.sbert.net/) for semantic embeddings
+- [Hugging Face](https://huggingface.co/) for dataset infrastructure
