@@ -92,6 +92,7 @@ Generate a series of question-answer pairs that satisfy this Pydantic model:
 
 ```python
 class QuestionAnswerPair(BaseModel):
+    thought_process: str # Explanation of reasoning for question choice and chunk combination strategy
     question_type: Literal["analytical", "application-based", "clarification", 
                           "counterfactual", "conceptual", "true-false", 
                           "factual", "open-ended", "false-premise", "edge-case"]
@@ -114,6 +115,7 @@ First, analyze the document within <document_analysis> XML tags. Then, provide o
 ```
 [
     {
+        "thought_process" : "...", 
         "question" : "...",
         "answer" : "...",
         "estimated_difficulty" : 4,
@@ -140,5 +142,6 @@ First, analyze the document within <document_analysis> XML tags. Then, provide o
 9. Think deeply and carefully inside <document_analysis> XML tags before producing the final list of JSON output as <output_json>.
 10. Ensure all objects pass pydantic validation (i.e., correct field types, no missing fields, and citations pulled verbatim from <text_chunk>).
 11. Reflect the <test_audience> parameter in the complexity and difficulty ratings.
+12. Make sure the thought process entails how an examiner will look at the information, carefully analyzing the different chunks of information, before deciding upon directions to ask questions in.
 
-Remember: The goal is to create educationally valuable, clear, and appropriate questions that could be used in real teaching scenarios for the specified audience level.
+Remember: The goal is to create educationally valuable, clear, and appropriate questions that could be used in real teaching scenarios for the specified audience level. The questions should be as though a human interviewer is asking a member of the test audience to assess their knowledge and understanding. While generating questions, do not say "as per the text" or "as per the document" or anything similar.

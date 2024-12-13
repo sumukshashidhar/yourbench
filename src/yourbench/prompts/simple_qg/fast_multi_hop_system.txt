@@ -157,4 +157,4 @@ First, analyze the document within <document_analysis> XML tags. Then, provide o
 11. Reflect the <test_audience> parameter in the complexity and difficulty ratings.
 12. Make sure the thought process entails how an examiner will look at the information, carefully analyzing the different chunks of information, before deciding upon directions to ask questions in.
 
-Remember: The goal is to create educationally valuable, clear, and appropriate questions that could be used in real teaching scenarios for the specified audience level.
+Remember: The goal is to create educationally valuable, clear, and appropriate questions that could be used in real teaching scenarios for the specified audience level. The questions should be as though a human interviewer is asking a member of the test audience to assess their knowledge and understanding. While generating questions, do not say "as per the text" or "as per the document" or anything similar.

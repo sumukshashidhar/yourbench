@@ -7,6 +7,43 @@ from yourbench.models.single_shot_question import QuestionAnswerPair, QuestionAn
 from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from loguru import logger
+from typing import Dict
+
+def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
+    if config["configurations"]["push_to_huggingface"]:
+        privacy = False if config["configurations"]["set_hf_repo_visibility"] != "private" else True
+        logger.info(f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})")
+        
+        try:
+            hub_path = f"{config['configurations']['hf_organization']}/{dataset_name}"
+            # Try to load existing dataset
+            try:
+                existing_dataset = load_dataset(hub_path, split="train")
+                logger.info(f"Found existing dataset at {hub_path}, concatenating...")
+                dataset = concatenate_datasets([existing_dataset, dataset])
+            except Exception as _:
+                logger.info(f"No existing dataset found at {hub_path}, creating new...")
+            
+            # Push the dataset (either concatenated or new)
+            dataset.push_to_hub(hub_path, private=privacy)
+            logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
+        except Exception as error:
+            logger.error(f"Failed to push dataset to Hugging Face Hub: {str(error)}")
+            raise
+    else:
+        logger.info(f"Saving dataset locally to: {dataset_name}")
+        dataset.save_to_disk(dataset_name)
+        logger.success(f"Successfully saved dataset to disk: {dataset_name}")
+
+def get_full_dataset_name_for_single_shot_questions(config: Dict) -> str:
+    source_dataset_name = config["selected_choices"]["create_single_shot_questions"]["source_dataset_name"]
+    return config["configurations"]["hf_organization"] + "/" + source_dataset_name
+
+
+def get_full_dataset_name_for_multihop_questions(config: Dict) -> str:
+    source_dataset_name = config["selected_choices"]["create_multihop_questions"]["source_dataset_name"]
+    return config["configurations"]["hf_organization"] + "/" + source_dataset_name
 
 
 def _clean_questions(text: str):
@@ -39,7 +76,7 @@ def _validate_questions(questions: List[QuestionAnswerPair]):
     for i in range(len(questions)):
         try:
             validated_questions.append(
-                QuestionAnswerPair(**questions[i]).model_dump()
+                QuestionAnswerPairWithThoughtProcess(**questions[i]).model_dump()
                 )
         except Exception as _:
             continue
@@ -47,18 +84,16 @@ def _validate_questions(questions: List[QuestionAnswerPair]):
 
 
 def generate_multihop_questions(config: dict):
-    model_index = config["model_config"]["model_index"]
-    # load the multihop pairings
-    multihop_pairings = load_dataset(config["datasets"]["multihop_pairings_dataset_name"], split="train")
+    multihop_pairings = load_dataset(get_full_dataset_name_for_multihop_questions(config), split="train")
     # load the prompt
-    system_prompt = load_prompt(f'{config["question_generation_config"]["prompt_prefix"]}.fast_multi_hop_system')
-    user_prompt = load_prompt(f'{config["question_generation_config"]["prompt_prefix"]}.fast_multi_hop_user')
+    system_prompt = load_prompt(f'{config["selected_choices"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_system')
+    user_prompt = load_prompt(f'{config["selected_choices"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_user')
     # create the prompts to batch with
     prompts = []
     for multihop_pairing in multihop_pairings:
         title = multihop_pairing["title"]
         document_summary = multihop_pairing["summary"]
-        test_audience = config["question_generation_config"]["test_audience"]
+        test_audience = config["selected_choices"]["create_multihop_questions"]["test_audience"]
         text_chunks = multihop_pairing["chunks"]
 
         # format the chunks properly
@@ -75,7 +110,7 @@ def generate_multihop_questions(config: dict):
         prompts.append(message)
 
     # do inference on the messages.
-    responses = run_parallel_inference(model_selection=model_index, prompts=prompts, config=config)
+    responses = run_parallel_inference(prompts=prompts, config=config)
     # now, extract the questions properly, as well as the document analysis
     document_analysis = [extract_content_from_xml_tags(response, "document_analysis") for response in responses]
     questions = [extract_content_from_xml_tags(response, "output_json") for response in responses]
@@ -89,7 +124,7 @@ def generate_multihop_questions(config: dict):
             "chunk_ids": multihop_pairings[i]["chunk_ids"],
             "chunks": multihop_pairings[i]["chunks"],
             "document_analysis": document_analysis[i],
-            "test_audience": config["question_generation_config"]["test_audience"],
+            "test_audience": config["selected_choices"]["create_multihop_questions"]["test_audience"],
             "questions": questions[i]
         })
 
@@ -112,32 +147,19 @@ def generate_multihop_questions(config: dict):
                 "answer": question["answer"],
                 "estimated_difficulty": question["estimated_difficulty"],
                 "citations": str(question["citations"]),
-                "generating_model": config["model_config"][f"model_{model_index}"]["model_name"],
+                "generating_model": config["configurations"]["model"]["model_name"],
             })
 
     new_dataset = Dataset.from_list(new_dataset_rows_expanded)
-
-    # check if the single_shot_questions_dataset_name exists on the hub
-    try:
-        existing_dataset = load_dataset(config["datasets"]["multihop_questions_dataset_name"], split="train")
-        # it exists, so we need to append to the dataset
-        new_dataset = concatenate_datasets([existing_dataset, new_dataset])
-        new_dataset.push_to_hub(config["datasets"]["multihop_questions_dataset_name"], private=True)
-    except Exception as _:
-        # it does not exist, so we need to create a new dataset
-        new_dataset.push_to_hub(config["datasets"]["multihop_questions_dataset_name"], private=True)
-
-    return responses
+    handle_dataset_push(new_dataset, config["selected_choices"]["create_multihop_questions"]["multihop_questions_dataset_name"], config)
 
 
-def generate_single_shot_questions(document_dataset_name: str, config: dict):
-    # load the model index
-    model_index = config["model_config"]["model_index"]
+def generate_single_shot_questions(config: dict):
     # load the chunk dataset
-    chunk_dataset = load_dataset(config["datasets"]["chunked_doucments_dataset_name"], split="train")
+    chunk_dataset = load_dataset(get_full_dataset_name_for_single_shot_questions(config), split="train")
     # load the prompt
-    system_prompt = load_prompt(f'{config["question_generation_config"]["prompt_prefix"]}.fast_single_shot_system')
-    user_prompt = load_prompt(f'{config["question_generation_config"]["prompt_prefix"]}.fast_single_shot_user')
+    system_prompt = load_prompt(f'{config["selected_choices"]["create_single_shot_questions"]["prompt_prefix"]}.fast_single_shot_system')
+    user_prompt = load_prompt(f'{config["selected_choices"]["create_single_shot_questions"]["prompt_prefix"]}.fast_single_shot_user')
 
     # create the prompts to batch with
     prompts = []
@@ -145,7 +167,7 @@ def generate_single_shot_questions(document_dataset_name: str, config: dict):
         title = chunk_row["title"]
         document_summary = chunk_row["summary"]
         text_chunk = chunk_row["chunk"]
-        test_audience = config["question_generation_config"]["test_audience"]
+        test_audience = config["selected_choices"]["create_single_shot_questions"]["test_audience"]
 
         prompt = user_prompt.format(title=title, document_summary=document_summary, text_chunk=text_chunk, test_audience=test_audience)
 
@@ -156,7 +178,7 @@ def generate_single_shot_questions(document_dataset_name: str, config: dict):
         prompts.append(message)
 
     # do inference on the messages.
-    responses = run_parallel_inference(model_selection=model_index, prompts=prompts, config=config)
+    responses = run_parallel_inference(prompts=prompts, config=config)
     # now, extract the questions properly, as well as the document analysis
     document_analysis = [extract_content_from_xml_tags(response, "document_analysis") for response in responses]
     questions = [extract_content_from_xml_tags(response, "output_json") for response in responses]
@@ -168,7 +190,7 @@ def generate_single_shot_questions(document_dataset_name: str, config: dict):
             "title": chunk_dataset[i]["title"],
             "summary": chunk_dataset[i]["summary"],
             "chunk": chunk_dataset[i]["chunk"],
-            "test_audience": config["question_generation_config"]["test_audience"],
+            "test_audience": config["selected_choices"]["create_single_shot_questions"]["test_audience"],
             "document_analysis": document_analysis[i],
             "questions": questions[i]
         })
@@ -189,18 +211,7 @@ def generate_single_shot_questions(document_dataset_name: str, config: dict):
                 "answer": question["answer"],
                 "estimated_difficulty": question["estimated_difficulty"],
                 "citations": str(question["citations"]),
-                "generating_model": config["model_config"][f"model_{model_index}"]["model_name"]
+                "generating_model": config["configurations"]["model"]["model_name"]
             })
     new_dataset = Dataset.from_list(new_dataset_rows_expanded)
-
-    # check if the single_shot_questions_dataset_name exists on the hub
-    try:
-        existing_dataset = load_dataset(config["datasets"]["single_shot_questions_dataset_name"], split="train")
-        # it exists, so we need to append to the dataset
-        new_dataset = concatenate_datasets([existing_dataset, new_dataset])
-        new_dataset.push_to_hub(config["datasets"]["single_shot_questions_dataset_name"], private=True)
-    except Exception as _:
-        # it does not exist, so we need to create a new dataset
-        new_dataset.push_to_hub(config["datasets"]["single_shot_questions_dataset_name"], private=True)
-
-    return responses
+    handle_dataset_push(new_dataset, config["selected_choices"]["create_single_shot_questions"]["single_shot_questions_dataset_name"], config)

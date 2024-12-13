@@ -4,11 +4,10 @@ from yourbench.preprocessing.create_chunks import create_chunks_for_documents
 from yourbench.preprocessing.create_multihop_chunks import create_multihop_chunks
 from yourbench.preprocessing.dataset_generation import generate_dataset
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
-
-# from yourbench.question_generation.generate_questions import (
-#     generate_multihop_questions,
-#     generate_single_shot_questions,
-# )
+from yourbench.question_generation.generate_questions import (
+    generate_multihop_questions,
+    generate_single_shot_questions,
+)
 from yourbench.utils.load_task_config import get_available_tasks, load_task_config
 
 
@@ -40,6 +39,19 @@ def _process_make_multihop_chunks(config: dict):
         create_multihop_chunks(config=config)
     else:
         print("Skipping multihop chunk creation as it is not specified in the task config")
+        
+def _process_create_single_shot_questions(config: dict):
+    if config["selected_choices"]["create_single_shot_questions"]["execute"]:
+        generate_single_shot_questions(config=config)
+    else:
+        print("Skipping single-shot question creation as it is not specified in the task config")
+
+
+def _process_create_multihop_questions(config: dict):
+    if config["selected_choices"]["create_multihop_questions"]["execute"]:
+        generate_multihop_questions(config=config)
+    else:
+        print("Skipping multihop question creation as it is not specified in the task config")
 
 
 def process_pipeline(config: dict):
@@ -49,29 +61,8 @@ def process_pipeline(config: dict):
     _process_generate_summaries(config)
     _process_create_chunks(config)
     _process_make_multihop_chunks(config)
-    # if "create_chunks" in config["pipeline_config"]:
-    #     create_chunks_for_documents(
-    #         config["datasets"]["document_dataset_name"], config
-    #     )
-    # else:
-    #     print("Skipping chunk creation as it is not specified in the task config")
-
-    # if "make_multihop_chunks" in config["pipeline_config"]:
-    #     create_multihop_chunks(config)
-    # else:
-    #     print("Skipping multihop chunk creation as it is not specified in the task config")
-
-    # if "create_single_shot_questions" in config["pipeline_config"]:
-    #     generate_single_shot_questions(
-    #         config["datasets"]["document_dataset_name"], config
-    #     )
-    # else:
-    #     print("Skipping single-shot question creation as it is not specified in the task config")
-
-    # if "create_multihop_questions" in config["pipeline_config"]:
-    #     generate_multihop_questions(config)
-    # else:
-    #     print("Skipping multihop question creation as it is not specified in the task config")
+    _process_create_single_shot_questions(config)
+    _process_create_multihop_questions(config)
 
 
 if __name__ == "__main__":
