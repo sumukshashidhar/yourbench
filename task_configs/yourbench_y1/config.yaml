@@ -57,13 +57,19 @@ selected_choices: # this is a list of the pipeline parts to be executed.
       zero_shot:
         execute: false
         answer_dataset_name: yourbench_y1_singleshot_answers
+      answer_with_document_summary:
+        execute: false
+        answer_dataset_name: yourbench_y1_singleshot_answers
+      answer_with_relevant_chunks:
+        execute: false
+        answer_dataset_name: yourbench_y1_singleshot_answers
       gold_standard:
         execute: false
         answer_dataset_name: yourbench_y1_singleshot_answers
   reformat_for_judging:
     execute: true
     source_dataset_name: yourbench_y1_singleshot_answers
-    reformatted_dataset_name: yourbench_y1_singleshot_answers_reformatted
+    target_dataset_name: yourbench_y1_singleshot_answers_reformatted
     a:
       model: gpt-4o-mini
       answer_scenario: zero_shot
