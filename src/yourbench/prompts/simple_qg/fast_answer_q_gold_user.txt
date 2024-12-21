@@ -1,0 +1,17 @@
+Answer the following question:
+
+<question>
+{question}
+</question>
+
+The following document may be helpful:
+
+<document>
+{document}
+</document>
+
+Enclose your full answer in <answer> XML tags. For example:
+
+<answer>
+[your answer here]
+</answer>
