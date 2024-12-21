@@ -1,20 +1,20 @@
 import ast
-from typing import List
+from typing import Dict, List
 
 from datasets import Dataset, concatenate_datasets, load_dataset
+from loguru import logger
 
 from yourbench.models.single_shot_question import QuestionAnswerPair, QuestionAnswerPairWithThoughtProcess
 from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from loguru import logger
-from typing import Dict
+
 
 def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
     if config["configurations"]["push_to_huggingface"]:
         privacy = False if config["configurations"]["set_hf_repo_visibility"] != "private" else True
         logger.info(f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})")
-        
+
         try:
             hub_path = f"{config['configurations']['hf_organization']}/{dataset_name}"
             # Try to load existing dataset
@@ -24,7 +24,7 @@ def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> No
                 dataset = concatenate_datasets([existing_dataset, dataset])
             except Exception as _:
                 logger.info(f"No existing dataset found at {hub_path}, creating new...")
-            
+
             # Push the dataset (either concatenated or new)
             dataset.push_to_hub(hub_path, private=privacy)
             logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
@@ -35,6 +35,7 @@ def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> No
         logger.info(f"Saving dataset locally to: {dataset_name}")
         dataset.save_to_disk(dataset_name)
         logger.success(f"Successfully saved dataset to disk: {dataset_name}")
+
 
 def get_full_dataset_name_for_single_shot_questions(config: Dict) -> str:
     source_dataset_name = config["selected_choices"]["create_single_shot_questions"]["source_dataset_name"]
