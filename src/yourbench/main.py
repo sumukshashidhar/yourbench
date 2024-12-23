@@ -6,6 +6,7 @@ from yourbench.preprocessing.dataset_generation import generate_dataset
 from yourbench.preprocessing.generate_summaries import generate_summaries_for_documents
 from yourbench.postprocessing.reformat_dataset_for_judge import reformat_for_judging
 from yourbench.question_answering.answer_questions import answer_questions_with_llm
+from yourbench.judge.judge_answers import judge_answers
 from yourbench.question_generation.generate_questions import (
     generate_multihop_questions,
     generate_single_shot_questions,
@@ -70,6 +71,13 @@ def _process_reformat_for_judging(config: dict):
         print("Skipping question answering as it is not specified in the task config")
 
 
+def _process_judge_answers(config: dict):
+    if config["selected_choices"]["judge"]["execute"]:
+        judge_answers(config=config)
+    else:
+        print("Skipping question answering as it is not specified in the task config")
+
+
 def process_pipeline(config: dict):
     """Process the yourbench pipeline for a given task"""
     # process dataset generation
@@ -81,6 +89,8 @@ def process_pipeline(config: dict):
     _process_create_multihop_questions(config)
     _answer_questions_with_llm(config)
     _process_reformat_for_judging(config)
+    _process_judge_answers(config)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process a specific task")
