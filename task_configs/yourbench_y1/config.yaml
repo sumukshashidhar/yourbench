@@ -3,13 +3,15 @@ configurations:
   push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
   set_hf_repo_visibility: public # this determines the visibility of the huggingface repo.
   # hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
-  hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
+  hf_organization: sumuks # this is the organization to push the dataset to, if push_to_huggingface is true
   model:
     # here's an example of how to use azure openai,
     # model_name: gpt-4o-mini
     # model_type: azure
-    model_name: deepseek-chat
-    max_concurrent_requests: 512
+    # model_name: deepseek-chat
+    # model_name: meta-llama/Llama-3.3-70B-Instruct
+    model_name: mistralai/Mistral-Large-Instruct-2411
+    max_concurrent_requests: 256
     model_type: openai
     # model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
     # model_name: tiiuae/Falcon3-10B-Instruct
@@ -43,17 +45,23 @@ selected_choices: # this is a list of the pipeline parts to be executed.
     source_dataset_name: yourbench_y1_semantically_chunked
     multihop_pairings_dataset_name: yourbench_y1_multihop_pairings
   create_single_shot_questions:
-    execute: false
+    execute: true
     source_dataset_name: yourbench_y1_semantically_chunked
-    single_shot_questions_dataset_name: yourbench_y1_single_shot_questions_v2
+    single_shot_questions_dataset_name: yourbench_y1_single_hop_questions
     prompt_prefix: simple_qg
-    test_audience: "an expert phd student aiming for a faculty position"
+    test_audience: "an expert in the field"
   create_multihop_questions:
-    execute: false
+    execute: true
     source_dataset_name: yourbench_y1_multihop_pairings
-    multihop_questions_dataset_name: yourbench_y1_multihop_questions
+    multihop_questions_dataset_name: yourbench_y1_multi_hop_questions
     prompt_prefix: simple_qg
-    test_audience: "an expert phd student aiming for a faculty position"
+    test_audience: "an expert in the field"
+  reweight_and_deduplicate_questions:
+    execute: true
+    source_single_shot_questions_dataset_name: yourbench_y1_single_hop_questions
+    source_multihop_questions_dataset_name: yourbench_y1_multi_hop_questions
+    target_dataset_name: yourbench_y1_questions
+
   answer_questions_with_llm:
     execute: false
     source_dataset_name: yourbench_y1_single_shot_questions_v2
