@@ -1,10 +1,9 @@
-from datasets import load_dataset
+from datasets import Dataset, concatenate_datasets, load_dataset
+from loguru import logger
 
 from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.load_task_config import _get_full_dataset_name_for_questions
-from datasets import Dataset, concatenate_datasets, load_dataset
-from loguru import logger
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
 
@@ -45,13 +44,13 @@ def judge_answers(config: dict):
         dataset = load_dataset(dataset_name, split="train")
 
         print(dataset.column_names)
-        
+
         # Validate required columns
         required_columns = ["question", "oracle_answer", "chunk", "summary", "answer_a", "answer_b"]
         missing_columns = [col for col in required_columns if col not in dataset.column_names]
         if missing_columns:
             raise ValueError(f"Missing required columns in dataset: {missing_columns}")
-        
+
         # Load prompts
         prompt_base = config["selected_choices"]["judge"]["prompt_prefix"]
         prompt_name = config["selected_choices"]["judge"]["judge_prompt_name"]
