@@ -75,9 +75,9 @@ selected_choices: # this is a list of the pipeline parts to be executed.
         execute: true
         answer_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
   reformat_for_judging:
-    execute: false
+    execute: true
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
-    target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
+    target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted_2
     a:
       model: meta-llama/Meta-Llama-3.1-8B-Instruct
       answer_scenario: zero_shot
@@ -85,7 +85,7 @@ selected_choices: # this is a list of the pipeline parts to be executed.
       model: meta-llama/Meta-Llama-3.1-8B-Instruct
       answer_scenario: gold_standard
   judge:
-    execute: true
+    execute: false
     prompt_prefix: simple_judge
     judge_prompt_name: cot_judge
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
