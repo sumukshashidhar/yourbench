@@ -1,8 +1,9 @@
-from yourbench.utils.load_task_config import _get_full_dataset_name_for_questions
 from datasets import load_dataset
-from yourbench.utils.load_prompt import load_prompt
+
 from yourbench.utils.inference_engine import run_parallel_inference
-from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from yourbench.utils.load_prompt import load_prompt
+from yourbench.utils.load_task_config import _get_full_dataset_name_for_questions
+
 
 def judge_answers(config: dict):
     """
@@ -22,7 +23,7 @@ def judge_answers(config: dict):
     summaries = dataset["summary"]
     answers_a = dataset["answer_a"]
     answers_b = dataset["answer_b"]
-    
+
     # make prompts
     prompts = []
     for i in range(len(questions)):

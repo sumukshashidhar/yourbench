@@ -52,8 +52,7 @@ def _get_zeroshot_answers(config: dict) -> dict:
     # create the messages
     messages = []
     for prompt in prompts:
-        messages.append([{"role" : "user", "content" : prompt}])
-
+        messages.append([{"role": "user", "content": prompt}])
 
     # get the responses
     responses = run_parallel_inference(messages, config)
@@ -90,6 +89,7 @@ def _get_zeroshot_answers(config: dict) -> dict:
     # Handle dataset push (reusing the function from generate_questions.py)
     handle_dataset_push(new_dataset, dataset_name, config)
 
+
 def _get_relevant_chunk_answers(config: dict):
     # load the dataset
     dataset = load_dataset(_get_full_dataset_name_for_questions(config))
@@ -103,8 +103,7 @@ def _get_relevant_chunk_answers(config: dict):
     # create the messages
     messages = []
     for prompt in prompts:
-        messages.append([{"role" : "user", "content" : prompt}])
-
+        messages.append([{"role": "user", "content": prompt}])
 
     # get the responses
     responses = run_parallel_inference(messages, config)
@@ -139,6 +138,7 @@ def _get_relevant_chunk_answers(config: dict):
     # Handle dataset push (reusing the function from generate_questions.py)
     handle_dataset_push(new_dataset, dataset_name, config)
 
+
 def _get_zeroshot_cot_answers(config: dict):
     # load the dataset
     dataset = load_dataset(_get_full_dataset_name_for_questions(config))
@@ -152,8 +152,7 @@ def _get_zeroshot_cot_answers(config: dict):
     # create the messages
     messages = []
     for prompt in prompts:
-        messages.append([{"role" : "user", "content" : prompt}])
-
+        messages.append([{"role": "user", "content": prompt}])
 
     # get the responses
     responses = run_parallel_inference(messages, config)
@@ -188,12 +187,13 @@ def _get_zeroshot_cot_answers(config: dict):
     # Handle dataset push (reusing the function from generate_questions.py)
     handle_dataset_push(new_dataset, dataset_name, config)
 
+
 def _get_document_summary_answers(config: dict):
     # load the dataset
     dataset = load_dataset(_get_full_dataset_name_for_questions(config))
     # extract the questions
     questions = dataset["train"]["question"]
-    chunks = dataset["train"]["chunk"]
+    dataset["train"]["chunk"]
     summaries = dataset["train"]["summary"]
     # pass the relevant information to the prompt
     prompt = load_prompt(f'{config["selected_choices"]["answer_questions_with_llm"]["prompt_prefix"]}.fast_answer_q_docsummary_user')
@@ -202,8 +202,7 @@ def _get_document_summary_answers(config: dict):
     # create the messages
     messages = []
     for prompt in prompts:
-        messages.append([{"role" : "user", "content" : prompt}])
-
+        messages.append([{"role": "user", "content": prompt}])
 
     # get the responses
     responses = run_parallel_inference(messages, config)
@@ -238,6 +237,7 @@ def _get_document_summary_answers(config: dict):
     # Handle dataset push (reusing the function from generate_questions.py)
     handle_dataset_push(new_dataset, dataset_name, config)
 
+
 def _get_gold_answers(config: dict):
     # load the dataset
     dataset = load_dataset(_get_full_dataset_name_for_questions(config))
@@ -253,8 +253,7 @@ def _get_gold_answers(config: dict):
     # create the messages
     messages = []
     for prompt in prompts:
-        messages.append([{"role" : "user", "content" : prompt}])
-
+        messages.append([{"role": "user", "content": prompt}])
 
     # get the responses
     responses = run_parallel_inference(messages, config)
@@ -289,7 +288,6 @@ def _get_gold_answers(config: dict):
 
     # Handle dataset push (reusing the function from generate_questions.py)
     handle_dataset_push(new_dataset, dataset_name, config)
-
 
 
 def answer_questions_with_llm(config: dict):
