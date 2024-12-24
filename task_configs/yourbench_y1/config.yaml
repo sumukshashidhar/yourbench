@@ -75,7 +75,7 @@ selected_choices: # this is a list of the pipeline parts to be executed.
         execute: true
         answer_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
   reformat_for_judging:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
     target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted_2
     a:
@@ -90,3 +90,7 @@ selected_choices: # this is a list of the pipeline parts to be executed.
     judge_prompt_name: cot_judge
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
     target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
+  visualize_results:
+    execute: true
+    source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
+    plots_directory: results/yourbench_y1/plots

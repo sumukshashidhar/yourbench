@@ -11,6 +11,7 @@ from yourbench.question_generation.generate_questions import (
     generate_multihop_questions,
     generate_single_shot_questions,
 )
+from yourbench.visualizations.visualize_judge_results import visualize_judge_results
 from yourbench.utils.load_task_config import get_available_tasks, load_task_config
 
 
@@ -78,6 +79,12 @@ def _process_judge_answers(config: dict):
     else:
         print("Skipping question answering as it is not specified in the task config")
 
+def _process_visualize_results(config: dict):
+    if config["selected_choices"]["visualize_results"]["execute"]:
+        visualize_judge_results(config=config)
+    else:
+        print("Skipping question answering as it is not specified in the task config")
+
 
 def process_pipeline(config: dict):
     """Process the yourbench pipeline for a given task"""
@@ -91,7 +98,7 @@ def process_pipeline(config: dict):
     _answer_questions_with_llm(config)
     _process_reformat_for_judging(config)
     _process_judge_answers(config)
-
+    _process_visualize_results(config)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process a specific task")
