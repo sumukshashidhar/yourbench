@@ -1,5 +1,6 @@
 import ast
 from typing import Dict, List
+import uuid
 
 from datasets import Dataset, concatenate_datasets, load_dataset
 from loguru import logger
@@ -136,6 +137,7 @@ def generate_multihop_questions(config: dict):
         validated_questions = _validate_questions_multihop(cleaned_questions)
         for question in validated_questions:
             new_dataset_rows_expanded.append({
+                "question_id": str(uuid.uuid4()),
                 "title": new_dataset_rows[i]["title"],
                 "summary": new_dataset_rows[i]["summary"],
                 "chunk_ids": new_dataset_rows[i]["chunk_ids"],
@@ -202,6 +204,7 @@ def generate_single_shot_questions(config: dict):
         validated_questions = _validate_questions(cleaned_questions)
         for question in validated_questions:
             new_dataset_rows_expanded.append({
+                "question_id": str(uuid.uuid4()),
                 "title": new_dataset_rows[i]["title"],
                 "summary": new_dataset_rows[i]["summary"],
                 "chunk": new_dataset_rows[i]["chunk"],
