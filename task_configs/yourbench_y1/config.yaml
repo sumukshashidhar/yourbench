@@ -8,12 +8,14 @@ configurations:
     # here's an example of how to use azure openai,
     # model_name: gpt-4o-mini
     # model_type: azure
-    # max_concurrent_requests: 512
-    model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
+    model_name: deepseek-chat
+    max_concurrent_requests: 512
+    model_type: openai
+    # model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
     # model_name: tiiuae/Falcon3-10B-Instruct
     # model_name: meta-llama/llama-3.1-8b-instruct
-    model_type: openai
-    max_concurrent_requests: 1024
+    # model_type: openai
+    # max_concurrent_requests: 1024
     # max_concurrent_requests: 1
 
 selected_choices: # this is a list of the pipeline parts to be executed.
@@ -73,7 +75,7 @@ selected_choices: # this is a list of the pipeline parts to be executed.
         execute: true
         answer_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
   reformat_for_judging:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
     target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
     a:
@@ -83,8 +85,8 @@ selected_choices: # this is a list of the pipeline parts to be executed.
       model: meta-llama/Meta-Llama-3.1-8B-Instruct
       answer_scenario: gold_standard
   judge:
-    execute: false
+    execute: true
     prompt_prefix: simple_judge
     judge_prompt_name: cot_judge
-    source_dataset_name: yourbench_y1_single_shot_questions_v2.1_answers_reformatted
-    target_dataset_name: yourbench_y1_single_shot_questions_v2.1_answers_judged
+    source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
+    target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
