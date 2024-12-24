@@ -86,11 +86,6 @@ async def perform_parallel_inference(prompts: List[dict], config: dict):
     model_type = selected_model["model_type"]
     model_base_url = os.getenv("MODEL_BASE_URL") if model_type == "openai" else os.getenv("AZURE_BASE_URL")
     model_api_key = os.getenv("MODEL_API_KEY") if model_type == "openai" else os.getenv("AZURE_API_KEY")
-
-    print(model_name)
-    print(model_type)
-    print(model_base_url)
-    print(model_api_key)
     # Control concurrency with a semaphore (adjust based on API limits)
     max_concurrent = selected_model["max_concurrent_requests"]
     semaphore = asyncio.Semaphore(max_concurrent)
