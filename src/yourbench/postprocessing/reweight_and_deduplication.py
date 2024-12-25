@@ -2,7 +2,7 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 from loguru import logger
 
 from yourbench.utils.load_task_config import _get_full_dataset_name_for_questions
-
+from yourbench.postprocessing.clustering import cluster_and_dedupe
 
 def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
     if config["configurations"]["push_to_huggingface"]:
@@ -67,8 +67,13 @@ def reweight_and_deduplicate_questions(config: dict) -> None:
     # combine the two datasets
     large_q_dataset = concatenate_datasets([single_shot_questions_dataset, multihop_questions_dataset])
 
-    handle_dataset_push(large_q_dataset, config["selected_choices"]["reweight_and_deduplicate_questions"]["large_question_dataset_name"], config)
+    # when we have a large dataset, we can push it to the hub
+    # handle_dataset_push(large_q_dataset, config["selected_choices"]["reweight_and_deduplicate_questions"]["large_question_dataset_name"], config)
 
     # actual reweight and deduplication happens here:
+    deduplicated_dataset = cluster_and_dedupe(large_q_dataset, config)
+
+    # when we have a small dataset, we can push it to the hub
+    handle_dataset_push(deduplicated_dataset, config["selected_choices"]["reweight_and_deduplicate_questions"]["target_dataset_name"], config)
 
     pass
