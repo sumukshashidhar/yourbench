@@ -8,6 +8,11 @@ def _get_full_dataset_name_for_questions(config: dict, actual_dataset_name: str)
     return config["configurations"]["hf_organization"] + "/" + actual_dataset_name
 
 
+def _validate_task_config(config: dict) -> dict:
+    # check parts of the pipeline are present, else add a false for them
+    return config
+
+
 def load_task_config(task_name: str) -> Dict[str, Any]:
     """
     Loads task configuration from test_simple_dataset for a given task name.
@@ -38,6 +43,8 @@ def load_task_config(task_name: str) -> Dict[str, Any]:
         except yaml.YAMLError as e:
             raise yaml.YAMLError(f"Failed to parse config file: {e}")
 
+    # validate the config
+    config = _validate_task_config(config)
     return config
 
 
