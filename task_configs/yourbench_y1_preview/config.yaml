@@ -30,8 +30,20 @@ pipeline:
   
   # this is where we generate summaries of the documents
   generate_summaries:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_preview
     target_dataset_name: yourbench_y1_preview
   
+  create_chunks:
+    execute: true
+    source_dataset_name: yourbench_y1_preview
+    target_dataset_name: yourbench_y1_preview_segmented
+    chunking_configuration:
+      model_name: sentence-transformers/all-MiniLM-L6-v2
+      min_tokens: 256 # tokens
+      target_chunk_size: 512 # tokens
+      max_tokens: 1024 # tokens
+      similarity_threshold: 0.3
+      device: cuda # if you have a GPU, you can use it here or set to cpu
+
 
