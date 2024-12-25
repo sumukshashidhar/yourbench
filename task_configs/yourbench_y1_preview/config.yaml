@@ -23,11 +23,15 @@ configurations:
 pipeline:
   # this is where we transform source documents into a huggingface dataset
   generate_dataset:
-    execute: true
+    execute: false
     # this is where the source documents are located
     files_directory: examples/yourbench_y1_preview/
     dataset_name: yourbench_y1_preview
   
   # this is where we generate summaries of the documents
+  generate_summaries:
+    execute: true
+    source_dataset_name: yourbench_y1_preview
+    target_dataset_name: yourbench_y1_preview
   
 
