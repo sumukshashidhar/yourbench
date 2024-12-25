@@ -1,10 +1,12 @@
 import argparse
 import sys
+
 from loguru import logger
+
 
 # Configure Loguru
 logger.remove()  # Remove any default handlers
-logger.add(sys.stderr, level="DEBUG", colorize=True, 
+logger.add(sys.stderr, level="DEBUG", colorize=True,
            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
                   "<level>{level: <8}</level> | "
                   "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
@@ -53,6 +55,13 @@ def process_create_multihop_questions(config: dict) -> None:
     generate_multihop_questions(config=config)
 
 
+def process_reweight_and_deduplicate_questions(config: dict) -> None:
+    """Reweight and deduplicate questions based on the provided config."""
+    from yourbench.postprocessing.reweight_and_deduplication import reweight_and_deduplicate_questions
+    logger.info("Starting question reweighting and deduplication...", step="reweight_and_deduplicate_questions")
+    reweight_and_deduplicate_questions(config=config)
+
+
 def process_answer_questions_with_llm(config: dict) -> None:
     """Use an LLM to answer questions based on the provided config."""
     from yourbench.question_answering.answer_questions import answer_questions_with_llm
@@ -94,6 +103,7 @@ def process_pipeline(config: dict) -> None:
         ("make_multihop_chunks", process_make_multihop_chunks),
         ("create_single_shot_questions", process_create_single_shot_questions),
         ("create_multihop_questions", process_create_multihop_questions),
+        ("reweight_and_deduplicate_questions", process_reweight_and_deduplicate_questions),
         ("answer_questions_with_llm", process_answer_questions_with_llm),
         ("reformat_for_judging", process_reformat_for_judging),
         ("judge", process_judge_answers),
@@ -119,10 +129,10 @@ def main() -> None:
 
     # Import these functions only when needed at runtime
     from yourbench.utils.load_task_config import get_available_tasks, load_task_config
-    
+
     available_tasks = get_available_tasks()
     if args.task_name not in available_tasks:
-        logger.error("Invalid task: {}. Available tasks: {}", 
+        logger.error("Invalid task: {}. Available tasks: {}",
                      args.task_name, ", ".join(available_tasks))
         sys.exit(1)
 

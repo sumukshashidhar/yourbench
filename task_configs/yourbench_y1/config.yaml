@@ -10,8 +10,9 @@ configurations:
     # model_type: azure
     # model_name: deepseek-chat
     # model_name: meta-llama/Llama-3.3-70B-Instruct
-    model_name: mistralai/Mistral-Large-Instruct-2411
-    max_concurrent_requests: 256
+    # model_name: mistralai/Mistral-Large-Instruct-2411
+    model_name: Qwen/Qwen2.5-72B-Instruct
+    max_concurrent_requests: 4
     model_type: openai
     # model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
     # model_name: tiiuae/Falcon3-10B-Instruct
@@ -45,13 +46,13 @@ selected_choices: # this is a list of the pipeline parts to be executed.
     source_dataset_name: yourbench_y1_semantically_chunked
     multihop_pairings_dataset_name: yourbench_y1_multihop_pairings
   create_single_shot_questions:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_semantically_chunked
     single_shot_questions_dataset_name: yourbench_y1_single_hop_questions
     prompt_prefix: simple_qg
     test_audience: "an expert in the field"
   create_multihop_questions:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_multihop_pairings
     multihop_questions_dataset_name: yourbench_y1_multi_hop_questions
     prompt_prefix: simple_qg
@@ -99,6 +100,6 @@ selected_choices: # this is a list of the pipeline parts to be executed.
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
     target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
   visualize_results:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
     plots_directory: results/yourbench_y1/plots
