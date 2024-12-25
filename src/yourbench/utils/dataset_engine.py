@@ -1,5 +1,5 @@
+from datasets import Dataset, concatenate_datasets, load_dataset
 from loguru import logger
-from datasets import Dataset, load_dataset, concatenate_datasets
 
 
 def make_dataset_name(config: dict, dataset_name: str) -> str:

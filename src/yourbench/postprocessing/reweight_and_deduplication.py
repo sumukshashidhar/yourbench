@@ -1,8 +1,9 @@
 from datasets import Dataset, concatenate_datasets, load_dataset
 from loguru import logger
 
-from yourbench.utils.load_task_config import _get_full_dataset_name_for_questions
 from yourbench.postprocessing.clustering import cluster_and_dedupe
+from yourbench.utils.load_task_config import _get_full_dataset_name_for_questions
+
 
 def handle_dataset_push(dataset: Dataset, dataset_name: str, config: dict) -> None:
     if config["configurations"]["push_to_huggingface"]:

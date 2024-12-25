@@ -21,8 +21,13 @@ configurations:
 # these are where you decide which parts of the pipeline to activate and execute
 # to execute each pipeline part, you must set execute to true explicitly
 pipeline:
+  # this is where we transform source documents into a huggingface dataset
   generate_dataset:
     execute: true
     # this is where the source documents are located
     files_directory: examples/yourbench_y1_preview/
     dataset_name: yourbench_y1_preview
+  
+  # this is where we generate summaries of the documents
+  
+
