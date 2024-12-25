@@ -13,6 +13,7 @@ dependencies = [
     "litellm>=1.55.12",
     "loguru>=0.7.3",
     "nltk>=3.9.1",
+    "ruff>=0.8.4",
     "scikit-learn>=1.6.0",
     "sentence-transformers>=3.3.1",
     "torch>=2.5.1",

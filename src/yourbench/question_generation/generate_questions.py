@@ -2,17 +2,16 @@ import ast
 import uuid
 from typing import Dict, List
 
-from datasets import Dataset, concatenate_datasets, load_dataset
-from loguru import logger
+from datasets import Dataset, load_dataset
 
 from yourbench.models.single_shot_question import (
     QuestionAnswerPair,
     QuestionAnswerPairWithThoughtProcess,
 )
+from yourbench.utils.dataset_engine import handle_dataset_push, make_dataset_name
 from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from yourbench.utils.dataset_engine import handle_dataset_push, make_dataset_name
 
 
 def get_full_dataset_name_for_multihop_questions(config: Dict) -> str:
@@ -65,19 +64,17 @@ def generate_multihop_questions(config: dict):
     )
     # load the prompt
     system_prompt = load_prompt(
-        f'{config["selected_choices"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_system'
+        f'{config["pipeline"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_system'
     )
     user_prompt = load_prompt(
-        f'{config["selected_choices"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_user'
+        f'{config["pipeline"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_user'
     )
     # create the prompts to batch with
     prompts = []
     for multihop_pairing in multihop_pairings:
         title = multihop_pairing["title"]
         document_summary = multihop_pairing["summary"]
-        test_audience = config["selected_choices"]["create_multihop_questions"][
-            "test_audience"
-        ]
+        test_audience = config["pipeline"]["create_multihop_questions"]["test_audience"]
         text_chunks = multihop_pairing["chunks"]
 
         # format the chunks properly

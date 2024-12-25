@@ -38,7 +38,7 @@ pipeline:
   create_chunks:
     execute: false
     source_dataset_name: yourbench_y1_preview
-    target_dataset_name: yourbench_y1_preview_segmented
+    target_dataset_name: yourbench_y1_preview_segmented_single_hop
     chunking_configuration:
       model_name: sentence-transformers/all-MiniLM-L6-v2
       min_tokens: 256 # tokens
@@ -50,17 +50,25 @@ pipeline:
   # this is where we craft these into chunk pairings for multihop question generation
   make_chunk_pairings:
     execute: false
-    source_dataset_name: yourbench_y1_preview_segmented
-    target_dataset_name: yourbench_y1_preview_segmented_multihop
+    source_dataset_name: yourbench_y1_preview_segmented_single_hop
+    target_dataset_name: yourbench_y1_preview_segmented_multi_hop
     pairing_configuration:
       min_num_chunks: 2
       max_num_chunks: 5
   
   # this is the question generation step for single hop questions
   create_single_hop_questions:
-    execute: true
-    source_dataset_name: yourbench_y1_preview_segmented
+    execute: false
+    source_dataset_name: yourbench_y1_preview_segmented_single_hop
     target_dataset_name: yourbench_y1_preview_single_hop_questions
+    prompt_prefix: simple_qg
+    test_audience: "an expert in the field"
+  
+  # this is the question generation step for multihop questions
+  create_multi_hop_questions:
+    execute: true
+    source_dataset_name: yourbench_y1_preview_segmented_multi_hop
+    target_dataset_name: yourbench_y1_preview_multi_hop_questions
     prompt_prefix: simple_qg
     test_audience: "an expert in the field"
 
