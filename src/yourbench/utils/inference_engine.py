@@ -1,12 +1,13 @@
 import asyncio
 import os
-from asyncio import timeout
+
+# from asyncio import timeout
 from typing import List
 
 import aiohttp
 import litellm
 
-# from async_timeout import timeout
+from async_timeout import timeout
 from dotenv import load_dotenv
 from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio

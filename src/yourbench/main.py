@@ -133,8 +133,8 @@ def process_pipeline(config: dict) -> None:
         ("generate_dataset", process_generate_dataset),
         ("generate_summaries", process_generate_summaries),
         ("create_chunks", process_create_chunks),
-        ("make_multihop_chunks", process_make_multihop_chunks),
-        ("create_single_shot_questions", process_create_single_shot_questions),
+        ("make_chunk_pairings", process_make_multihop_chunks),
+        ("create_single_hop_questions", process_create_single_shot_questions),
         ("create_multihop_questions", process_create_multihop_questions),
         (
             "reweight_and_deduplicate_questions",

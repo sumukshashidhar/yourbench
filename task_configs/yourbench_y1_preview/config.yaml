@@ -34,8 +34,9 @@ pipeline:
     source_dataset_name: yourbench_y1_preview
     target_dataset_name: yourbench_y1_preview
   
+  # this is where we create chunks of the documents, to be used for question generation.
   create_chunks:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_preview
     target_dataset_name: yourbench_y1_preview_segmented
     chunking_configuration:
@@ -45,5 +46,23 @@ pipeline:
       max_tokens: 1024 # tokens
       similarity_threshold: 0.3
       device: cuda # if you have a GPU, you can use it here or set to cpu
+  
+  # this is where we craft these into chunk pairings for multihop question generation
+  make_chunk_pairings:
+    execute: false
+    source_dataset_name: yourbench_y1_preview_segmented
+    target_dataset_name: yourbench_y1_preview_segmented_multihop
+    pairing_configuration:
+      min_num_chunks: 2
+      max_num_chunks: 5
+  
+  # this is the question generation step for single hop questions
+  create_single_hop_questions:
+    execute: true
+    source_dataset_name: yourbench_y1_preview_segmented
+    target_dataset_name: yourbench_y1_preview_single_hop_questions
+    prompt_prefix: simple_qg
+    test_audience: "an expert in the field"
+
 
 
