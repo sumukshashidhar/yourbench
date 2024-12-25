@@ -12,7 +12,7 @@ configurations:
     # model_name: meta-llama/Llama-3.3-70B-Instruct
     # model_name: mistralai/Mistral-Large-Instruct-2411
     model_name: Qwen/Qwen2.5-72B-Instruct
-    max_concurrent_requests: 4
+    max_concurrent_requests: 8
     model_type: openai
     # model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
     # model_name: tiiuae/Falcon3-10B-Instruct
@@ -62,7 +62,7 @@ selected_choices: # this is a list of the pipeline parts to be executed.
     source_single_shot_questions_dataset_name: yourbench_y1_single_hop_questions
     source_multihop_questions_dataset_name: yourbench_y1_multi_hop_questions
     target_dataset_name: yourbench_y1_questions
-
+    large_question_dataset_name: yourbench_y1_complete_questions
   answer_questions_with_llm:
     execute: false
     source_dataset_name: yourbench_y1_single_shot_questions_v2
