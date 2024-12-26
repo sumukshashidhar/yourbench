@@ -52,6 +52,11 @@ def handle_dataset_push(config: dict, dataset_name: str, dataset: Dataset) -> No
                 f"Concatenating existing dataset with new dataset: {dataset_name}"
             )
             dataset = concatenate_datasets([existing_dataset, dataset])
+            dataset.push_to_hub(dataset_name, private=privacy)
+            logger.success(
+                f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}"
+            )
+            return
         else:
             # we just push the new dataset
             dataset.push_to_hub(dataset_name, private=privacy)
