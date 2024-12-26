@@ -18,8 +18,6 @@ def _restructure_multihop(multihop_questions: Dataset) -> Dataset:
 
     # remove the chunks column
     multihop_questions = multihop_questions.remove_columns("chunks")
-    # remove the chunk_ids column
-    multihop_questions = multihop_questions.remove_columns("chunk_ids")
 
     return multihop_questions
 

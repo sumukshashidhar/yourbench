@@ -1,10 +1,9 @@
-import json
 import math
 from typing import Any, Dict, List
 
 import faiss
 import numpy as np
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets
 from loguru import logger
 from sentence_transformers import SentenceTransformer
 
@@ -138,9 +137,7 @@ def _compute_weights_and_reps(
 
     for c_id, indices in clusters.items():
         size = len(indices)
-        weight = 0.0
-        if size > 0:
-            weight = min(lambda_val * math.log(size), w_max)
+        weight = min(lambda_val * math.sqrt(size), w_max)
 
         # Compute centroid
         cluster_embs = embeddings[indices]
@@ -247,27 +244,43 @@ def cluster_and_dedupe(dataset, config):
     lambda_val = cluster_config["lambda_val"]
     w_max = cluster_config["w_max"]
 
-    # embed the dataset
-    dataset = _embed_dataset(dataset, model_name, alpha, batch_size)
-    embeddings = np.vstack(dataset["combined_emb"]).astype("float32")
+    # Get all unique complexities
+    all_complexities = list(set(dataset["question_complexity"]))
 
-    clusters = _cluster_via_faiss_threshold(
-        embeddings=embeddings,
-        distance_threshold=distance_threshold,
-        top_k=top_k,
-        use_gpu=True,
-    )
+    # We'll collect the final representative datasets here
+    rep_subsets = []
 
-    cluster_info = _compute_weights_and_reps(
-        clusters=clusters, embeddings=embeddings, lambda_val=lambda_val, w_max=w_max
-    )
+    for complexity_val in all_complexities:
+        # Filter only rows of this complexity
+        subset = dataset.filter(
+            lambda row: row["question_complexity"] == complexity_val
+        )
 
-    combined_ds_with_clusters = _assign_cluster_columns(dataset, cluster_info)
-    rep_dataset = _select_representatives(combined_ds_with_clusters, cluster_info)
-    rep_dataset = rep_dataset.remove_columns(["combined_emb", "cluster_id"])
+        # === 1) Embed subset ===
+        subset = _embed_dataset(subset, model_name, alpha, batch_size)
+        embeddings = np.vstack(subset["combined_emb"]).astype("float32")
 
-    cluster_sizes = [info["size"] for info in cluster_info.values()]
-    avg_size = np.mean(cluster_sizes) if cluster_sizes else 0
-    logger.info(f"Average cluster size: {avg_size}")
+        # === 2) Cluster subset ===
+        clusters = _cluster_via_faiss_threshold(
+            embeddings=embeddings,
+            distance_threshold=distance_threshold,
+            top_k=top_k,
+            use_gpu=True,
+        )
 
-    return rep_dataset
+        # === 3) Compute rep/weights ===
+        cluster_info = _compute_weights_and_reps(
+            clusters=clusters, embeddings=embeddings, lambda_val=lambda_val, w_max=w_max
+        )
+
+        # === 4) Assign columns & select reps ===
+        combined_ds_with_clusters = _assign_cluster_columns(subset, cluster_info)
+        rep_dataset = _select_representatives(combined_ds_with_clusters, cluster_info)
+        # Remove embedding columns, cluster_id
+        rep_dataset = rep_dataset.remove_columns(["combined_emb", "cluster_id"])
+
+        rep_subsets.append(rep_dataset)
+
+    # Now concatenate all representative subsets from each complexity
+    final_rep_dataset = concatenate_datasets(rep_subsets)
+    return final_rep_dataset

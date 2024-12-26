@@ -8,7 +8,7 @@ configurations:
     push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
     hf_organization: sumuks # this is the organization to push the dataset to, if push_to_huggingface is true
     set_hf_repo_visibility: private # this determines the visibility of the huggingface repo.
-    concat_if_exists: true # this determines whether to concatenate the dataset if it already exists.
+    concat_if_exists: false # this determines whether to concatenate the dataset if it already exists.
 
   # model specific configurations
   # base urls and api keys will be loaded from the environment variables
@@ -88,7 +88,7 @@ pipeline:
 
       # these are for picking representative questions and answers
       lambda_val: 1.0
-      w_max: 1.0
+      w_max: 5.0
 
 
 
