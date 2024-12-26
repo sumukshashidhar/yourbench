@@ -135,7 +135,7 @@ def process_pipeline(config: dict) -> None:
         ("create_chunks", process_create_chunks),
         ("make_chunk_pairings", process_make_multihop_chunks),
         ("create_single_hop_questions", process_create_single_shot_questions),
-        ("create_multihop_questions", process_create_multihop_questions),
+        ("create_multi_hop_questions", process_create_multihop_questions),
         (
             "reweight_and_deduplicate_questions",
             process_reweight_and_deduplicate_questions,

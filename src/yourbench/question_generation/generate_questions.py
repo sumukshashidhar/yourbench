@@ -1,6 +1,6 @@
 import ast
 import uuid
-from typing import Dict, List
+from typing import List
 
 from datasets import Dataset, load_dataset
 
@@ -12,13 +12,6 @@ from yourbench.utils.dataset_engine import handle_dataset_push, make_dataset_nam
 from yourbench.utils.inference_engine import run_parallel_inference
 from yourbench.utils.load_prompt import load_prompt
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-
-
-def get_full_dataset_name_for_multihop_questions(config: Dict) -> str:
-    source_dataset_name = config["selected_choices"]["create_multihop_questions"][
-        "source_dataset_name"
-    ]
-    return config["configurations"]["hf_organization"] + "/" + source_dataset_name
 
 
 def _clean_questions(text: str):
@@ -59,22 +52,38 @@ def _validate_questions(questions: List[QuestionAnswerPair]):
 
 
 def generate_multihop_questions(config: dict):
-    multihop_pairings = load_dataset(
-        get_full_dataset_name_for_multihop_questions(config), split="train"
+
+    # load the multi-hop pairings dataset
+    multi_hop_chunks_dataset_name = config["pipeline"]["create_multi_hop_questions"][
+        "source_dataset_name"
+    ]
+    multi_hop_questions_dataset_name = config["pipeline"]["create_multi_hop_questions"][
+        "target_dataset_name"
+    ]
+
+    test_audience = config["pipeline"]["create_multi_hop_questions"]["test_audience"]
+
+    # load the dataset
+    multi_hop_chunks_dataset = load_dataset(
+        make_dataset_name(config, multi_hop_chunks_dataset_name), split="train"
     )
-    # load the prompt
+
+    # load the prompts
     system_prompt = load_prompt(
-        f'{config["pipeline"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_system'
+        f'{config["pipeline"]["create_multi_hop_questions"]["prompt_prefix"]}.fast_multi_hop_system'
     )
     user_prompt = load_prompt(
-        f'{config["pipeline"]["create_multihop_questions"]["prompt_prefix"]}.fast_multi_hop_user'
+        f'{config["pipeline"]["create_multi_hop_questions"]["prompt_prefix"]}.fast_multi_hop_user'
     )
+
     # create the prompts to batch with
     prompts = []
-    for multihop_pairing in multihop_pairings:
-        title = multihop_pairing["title"]
-        document_summary = multihop_pairing["summary"]
-        test_audience = config["pipeline"]["create_multihop_questions"]["test_audience"]
+    for multihop_pairing in multi_hop_chunks_dataset:
+        multihop_pairing["document_id"]
+        document_name = multihop_pairing["document_name"]
+        document_summary = multihop_pairing["document_summary"]
+        chunk_ids = multihop_pairing["chunk_ids"]
+        len(chunk_ids)
         text_chunks = multihop_pairing["chunks"]
 
         # format the chunks properly
@@ -83,7 +92,7 @@ def generate_multihop_questions(config: dict):
             chunks += f"<text_chunk_{i}>\n{chunk}\n</text_chunk_{i}>\n"
 
         prompt = user_prompt.format(
-            title=title,
+            title=document_name,
             document_summary=document_summary,
             chunks=chunks,
             test_audience=test_audience,
@@ -93,6 +102,7 @@ def generate_multihop_questions(config: dict):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ]
+
         prompts.append(message)
 
     # do inference on the messages.
@@ -106,24 +116,22 @@ def generate_multihop_questions(config: dict):
         extract_content_from_xml_tags(response, "output_json") for response in responses
     ]
 
-    # make a new huggingface dataset
     new_dataset_rows = []
-    for i in range(len(multihop_pairings)):
+    for i in range(len(multi_hop_chunks_dataset)):
         new_dataset_rows.append(
             {
-                "title": multihop_pairings[i]["title"],
-                "summary": multihop_pairings[i]["summary"],
-                "chunk_ids": multihop_pairings[i]["chunk_ids"],
-                "chunks": multihop_pairings[i]["chunks"],
+                # from multihop chunks dataset
+                "document_id": multi_hop_chunks_dataset[i]["document_id"],
+                "document_name": multi_hop_chunks_dataset[i]["document_name"],
+                "document_summary": multi_hop_chunks_dataset[i]["document_summary"],
+                "chunk_ids": multi_hop_chunks_dataset[i]["chunk_ids"],
+                "chunks": multi_hop_chunks_dataset[i]["chunks"],
+                # from inference
                 "document_analysis": document_analysis[i],
-                "test_audience": config["selected_choices"][
-                    "create_multihop_questions"
-                ]["test_audience"],
+                "test_audience": test_audience,
                 "questions": questions[i],
             }
         )
-
-    # okay, now, we need to expand each of the questions and parse the list
     new_dataset_rows_expanded = []
     for i in range(len(new_dataset_rows)):
         cleaned_questions = _clean_questions(new_dataset_rows[i]["questions"])
@@ -131,11 +139,14 @@ def generate_multihop_questions(config: dict):
         for question in validated_questions:
             new_dataset_rows_expanded.append(
                 {
-                    "question_id": str(uuid.uuid4()),
-                    "title": new_dataset_rows[i]["title"],
-                    "summary": new_dataset_rows[i]["summary"],
+                    # document specific info
+                    "document_id": new_dataset_rows[i]["document_id"],
+                    "document_name": new_dataset_rows[i]["document_name"],
+                    "document_summary": new_dataset_rows[i]["document_summary"],
                     "chunk_ids": new_dataset_rows[i]["chunk_ids"],
                     "chunks": new_dataset_rows[i]["chunks"],
+                    # question specific info
+                    "question_id": str(uuid.uuid4()),
                     "test_audience": new_dataset_rows[i]["test_audience"],
                     "document_analysis": new_dataset_rows[i]["document_analysis"],
                     "question_type": question["question_type"],
@@ -147,14 +158,11 @@ def generate_multihop_questions(config: dict):
                     "generating_model": config["configurations"]["model"]["model_name"],
                 }
             )
-
     new_dataset = Dataset.from_list(new_dataset_rows_expanded)
     handle_dataset_push(
-        new_dataset,
-        config["selected_choices"]["create_multihop_questions"][
-            "multihop_questions_dataset_name"
-        ],
         config,
+        multi_hop_questions_dataset_name,
+        new_dataset,
     )
 
 
