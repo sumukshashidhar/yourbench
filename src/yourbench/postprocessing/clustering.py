@@ -16,9 +16,14 @@ def _embed_dataset(
     and return the updated dataset. We do a linear combination of question/answer embeddings
     with parameter alpha.
     """
+    logger.info(f"Embedding dataset with model {model_name} (alpha={alpha})")
+    logger.debug(
+        f"Dataset size: {len(dataset)}, batch_size: {batch_size}, device: {device}"
+    )
     model = SentenceTransformer(model_name, device=device)
 
     def _compute_embeddings(batch):
+        logger.debug(f"Processing batch of size {len(batch['question'])}")
         q_emb = model.encode(
             batch["question"],
             batch_size=batch_size,
@@ -31,11 +36,8 @@ def _embed_dataset(
             show_progress_bar=False,
             convert_to_numpy=True,
         )
-        combined = alpha * q_emb + (1 - alpha) * a_emb
-
-        # (Optional) L2-normalize each embedding to avoid scale issues
-        # combined = combined / np.linalg.norm(combined, axis=1, keepdims=True)
-        return {"combined_emb": combined}
+        logger.debug(f"Computed embeddings shapes: Q={q_emb.shape}, A={a_emb.shape}")
+        return {"combined_emb": alpha * q_emb + (1 - alpha) * a_emb}
 
     # Use .map(...) in batched mode
     dataset = dataset.map(
@@ -75,10 +77,16 @@ def _cluster_via_faiss_threshold(
     This is a naive approach that can work for moderate-scale data. For 100k data,
     top_k=50 might be enough. Adjust if you have more or less repetition.
     """
-    # Build index
-    index = _build_faiss_index(embeddings, use_gpu=use_gpu)
+    logger.info(
+        f"Starting clustering with threshold={distance_threshold}, top_k={top_k}"
+    )
+    logger.debug(f"Input embeddings shape: {embeddings.shape}")
 
-    distances, neighbors = index.search(embeddings, top_k)  # shape = (n, top_k)
+    index = _build_faiss_index(embeddings, use_gpu=use_gpu)
+    logger.debug("FAISS index built successfully")
+
+    distances, neighbors = index.search(embeddings, top_k)
+    logger.debug("Nearest neighbor search completed")
 
     # We'll keep track of which cluster each point belongs to
     # -1 means unassigned so far
@@ -88,6 +96,9 @@ def _cluster_via_faiss_threshold(
     clusters = {}  # cluster_id -> list of indices
 
     for i in range(len(embeddings)):
+        if i % 1000 == 0:  # Log progress periodically
+            logger.debug(f"Processing vector {i}/{len(embeddings)}")
+
         if cluster_assignment[i] != -1:
             # Already assigned to a cluster
             continue
@@ -108,8 +119,15 @@ def _cluster_via_faiss_threshold(
                     cluster_assignment[nb] = current_cluster_id
                     clusters[current_cluster_id].append(nb)
 
+        current_size = len(clusters[current_cluster_id])
+        if current_size > 1:
+            logger.debug(
+                f"Cluster {current_cluster_id} formed with {current_size} elements"
+            )
+
         current_cluster_id += 1
 
+    logger.info(f"Clustering complete. Found {len(clusters)} clusters")
     return clusters
 
 
@@ -133,11 +151,19 @@ def _compute_weights_and_reps(
         'rep_idx': int
       }
     """
+    logger.info("Computing cluster weights and representatives")
+    logger.debug(
+        f"Processing {len(clusters)} clusters with λ={lambda_val}, w_max={w_max}"
+    )
+
     cluster_info = {}
 
     for c_id, indices in clusters.items():
         size = len(indices)
         weight = min(lambda_val * math.sqrt(size), w_max)
+
+        if size > 1:
+            logger.debug(f"Cluster {c_id}: size={size}, weight={weight:.3f}")
 
         # Compute centroid
         cluster_embs = embeddings[indices]
@@ -154,6 +180,7 @@ def _compute_weights_and_reps(
             "indices": indices,
             "rep_idx": rep_idx,
         }
+    logger.info("Finished computing cluster weights and representatives")
     return cluster_info
 
 
@@ -227,6 +254,11 @@ def _select_representatives(
 
 
 def cluster_and_dedupe(dataset, config):
+    logger.info("Starting clustering and deduplication process")
+    logger.debug(
+        f"Configuration: {config['pipeline']['reweight_and_deduplicate_questions']['cluster_configuration']}"
+    )
+
     # Create logs directory if it doesn't exist
     import os
 
@@ -246,15 +278,17 @@ def cluster_and_dedupe(dataset, config):
 
     # Get all unique complexities
     all_complexities = list(set(dataset["question_complexity"]))
+    logger.info(f"Found {len(all_complexities)} unique complexity levels")
 
     # We'll collect the final representative datasets here
     rep_subsets = []
 
     for complexity_val in all_complexities:
-        # Filter only rows of this complexity
+        logger.info(f"Processing complexity level: {complexity_val}")
         subset = dataset.filter(
             lambda row: row["question_complexity"] == complexity_val
         )
+        logger.debug(f"Subset size for complexity {complexity_val}: {len(subset)}")
 
         # === 1) Embed subset ===
         subset = _embed_dataset(subset, model_name, alpha, batch_size)
@@ -279,8 +313,12 @@ def cluster_and_dedupe(dataset, config):
         # Remove embedding columns, cluster_id
         rep_dataset = rep_dataset.remove_columns(["combined_emb", "cluster_id"])
 
+        logger.debug(f"Found {len(clusters)} clusters for complexity {complexity_val}")
+        logger.debug(f"Selected {len(rep_dataset)} representatives")
+
         rep_subsets.append(rep_dataset)
 
     # Now concatenate all representative subsets from each complexity
     final_rep_dataset = concatenate_datasets(rep_subsets)
+    logger.info(f"Clustering complete. Final dataset size: {len(final_rep_dataset)}")
     return final_rep_dataset
