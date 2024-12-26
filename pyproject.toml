@@ -1,33 +1,47 @@
 [project]
 name = "yourbench"
 version = "0.1.0"
-description = "A dynamic evaluation set generation tool for LLMs"
+description = "Dynamic Evaluation Set Generation with LLMs"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    
+    "async-timeout>=5.0.1",
+    "asyncio>=3.4.3",
+    "datasets>=3.2.0",
+    "faiss-cpu>=1.9.0.post1",
+    "hf-transfer>=0.1.8",
+    "langfuse>=2.57.1",
+    "litellm>=1.55.12",
+    "loguru>=0.7.3",
+    "nltk>=3.9.1",
+    "ruff>=0.8.4",
+    "scikit-learn>=1.6.0",
+    "sentence-transformers>=3.3.1",
+    "torch>=2.5.1",
+    "transformers>=4.47.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.8.1",
-    "pytest>=7.0.0"
+    "ruff>=0.8.4",
 ]
+
+[project.scripts]
+yourbench = "yourbench.main:main"
 
 # Code style
 [tool.ruff]
 line-length = 119
 
-[tool.ruff.lint]
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-# Never enforce `E501` (line length violations).
-ignore = ["E501"]
-select = ["C", "E", "F", "I", "W"]
-fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+# Move these settings directly under [tool.ruff]
+lint.ignore = ["E501"]
+lint.select = ["C", "E", "F", "I", "W"]
+lint.fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
 preview = true
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
-known-first-party = ["lighteval"]
+known-first-party = ["yourbench"]
 
 [tool.ruff.format]
 quote-style = "double" # Like Black, use double quotes for strings.
