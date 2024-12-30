@@ -1,105 +1,97 @@
-task_name: yourbench_y1 # this is the name of your task, and will be used to identify the task in the logs and output files.
-configurations:
-  push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
-  set_hf_repo_visibility: public # this determines the visibility of the huggingface repo.
-  # hf_organization: sumukshashidhar-testing # this is the organization to push the dataset to, if push_to_huggingface is true
-  hf_organization: sumuks # this is the organization to push the dataset to, if push_to_huggingface is true
-  model:
-    # here's an example of how to use azure openai,
-    # model_name: gpt-4o-mini
-    # model_type: azure
-    # model_name: deepseek-chat
-    # model_name: meta-llama/Llama-3.3-70B-Instruct
-    # model_name: mistralai/Mistral-Large-Instruct-2411
-    model_name: Qwen/Qwen2.5-72B-Instruct
-    max_concurrent_requests: 8
-    model_type: openai
-    # model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
-    # model_name: tiiuae/Falcon3-10B-Instruct
-    # model_name: meta-llama/llama-3.1-8b-instruct
-    # model_type: openai
-    # max_concurrent_requests: 1024
-    # max_concurrent_requests: 1
+# the task name is to be used to identify the task in the logs and output files. you must use a unique name for each task, and pass it as an argument to the yourbench command.
+task_name: yourbench_y1
 
-selected_choices: # this is a list of the pipeline parts to be executed.
+# these are special, pipeline wide configurations you can make
+configurations:
+  # huggingface specific configurations
+  huggingface:
+    push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
+    hf_organization: sumuks # this is the organization to push the dataset to, if push_to_huggingface is true
+    set_hf_repo_visibility: private # this determines the visibility of the huggingface repo.
+    concat_if_exists: true # this determines whether to concatenate the dataset if it already exists.
+
+  # model specific configurations
+  # base urls and api keys will be loaded from the environment variables
+  model:
+    # here is an example of how to use azure openai's gpt-4o-mini model
+    model_name: gpt-4o # your model identifier.
+    model_type: azure # this is the type of model you are using. refer to https://docs.litellm.ai/docs/providers for more information.
+    max_concurrent_requests: 32 # this is the maximum number of concurrent requests to the model.
+    # model_name: deepseek-chat
+    # model_type: openai
+    # max_concurrent_requests: 1
+  
+# these are where you decide which parts of the pipeline to activate and execute
+# to execute each pipeline part, you must set execute to true explicitly
+pipeline:
+  # this is where we transform source documents into a huggingface dataset
   generate_dataset:
     execute: false
-    files_directory: examples/yourbench_y1 # this is the directory containing the source documents.
-    dataset_name: yourbench_y1 # this is the name of the dataset to be created.
+    # this is where the source documents are located
+    files_directory: examples/yourbench_y1/
+    dataset_name: yourbench_y1
+  
+  # this is where we generate summaries of the documents
   generate_summaries:
     execute: false
-    document_dataset_name: yourbench_y1
-    summary_dataset_name: yourbench_y1
+    source_dataset_name: yourbench_y1
+    target_dataset_name: yourbench_y1
+  
+  # this is where we create chunks of the documents, to be used for question generation.
   create_chunks:
     execute: false
     source_dataset_name: yourbench_y1
-    chunked_documents_dataset_name: yourbench_y1_semantically_chunked
+    target_dataset_name: yourbench_y1_segmented_single_hop
     chunking_configuration:
       model_name: sentence-transformers/all-MiniLM-L6-v2
       min_tokens: 256 # tokens
       target_chunk_size: 512 # tokens
       max_tokens: 1024 # tokens
       similarity_threshold: 0.3
-      device: cuda # if you have a GPU, you can use it here or set to cpu
-  make_multihop_chunks:
+      device: cpu # if you have a GPU, you can use it here or set to cpu
+  
+  # this is where we craft these into chunk pairings for multihop question generation
+  make_chunk_pairings:
     execute: false
-    source_dataset_name: yourbench_y1_semantically_chunked
-    multihop_pairings_dataset_name: yourbench_y1_multihop_pairings
-  create_single_shot_questions:
-    execute: false
-    source_dataset_name: yourbench_y1_semantically_chunked
-    single_shot_questions_dataset_name: yourbench_y1_single_hop_questions
-    prompt_prefix: simple_qg
-    test_audience: "an expert in the field"
-  create_multihop_questions:
-    execute: false
-    source_dataset_name: yourbench_y1_multihop_pairings
-    multihop_questions_dataset_name: yourbench_y1_multi_hop_questions
-    prompt_prefix: simple_qg
-    test_audience: "an expert in the field"
-  reweight_and_deduplicate_questions:
+    source_dataset_name: yourbench_y1_segmented_single_hop
+    target_dataset_name: yourbench_y1_segmented_multi_hop
+    pairing_configuration:
+      min_num_chunks: 2
+      max_num_chunks: 5
+  
+  # this is the question generation step for single hop questions
+  create_single_hop_questions:
     execute: true
-    source_single_shot_questions_dataset_name: yourbench_y1_single_hop_questions
-    source_multihop_questions_dataset_name: yourbench_y1_multi_hop_questions
-    target_dataset_name: yourbench_y1_questions
-    large_question_dataset_name: yourbench_y1_complete_questions
-  answer_questions_with_llm:
-    execute: false
-    source_dataset_name: yourbench_y1_single_shot_questions_v2
+    source_dataset_name: yourbench_y1_segmented_single_hop
+    target_dataset_name: yourbench_y1_single_hop_questions
     prompt_prefix: simple_qg
-    answer_scenarios:
-      zero_shot:
-        execute: true
-        answer_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
-      zero_shot_with_cot:
-        execute: false
-        answer_dataset_name: yourbench_y1_single_shot_questions_v2.1_answers
-      answer_with_document_summary:
-        execute: false
-        answer_dataset_name: yourbench_y1_single_shot_questions_v2.1_answers
-      answer_with_relevant_chunks:
-        execute: false
-        answer_dataset_name: yourbench_y1_single_shot_questions_v2.1_answers
-      gold_standard:
-        execute: true
-        answer_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
-  reformat_for_judging:
+    test_audience: "an expert in the field"
+  
+  # this is the question generation step for multihop questions
+  create_multi_hop_questions:
+    execute: true
+    source_dataset_name: yourbench_y1_segmented_multi_hop
+    target_dataset_name: yourbench_y1_multi_hop_questions
+    prompt_prefix: simple_qg
+    test_audience: "an expert in the field"
+  
+  # perform re-weighting and deduplication of questions here
+  reweight_and_deduplicate_questions:
     execute: false
-    source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers
-    target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted_2
-    a:
-      model: meta-llama/Meta-Llama-3.1-8B-Instruct
-      answer_scenario: zero_shot
-    b:
-      model: meta-llama/Meta-Llama-3.1-8B-Instruct
-      answer_scenario: gold_standard
-  judge:
-    execute: false
-    prompt_prefix: simple_judge
-    judge_prompt_name: cot_judge
-    source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_reformatted
-    target_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
-  visualize_results:
-    execute: false
-    source_dataset_name: yourbench_y1_single_shot_questions_v2x_answers_judged
-    plots_directory: results/yourbench_y1/plots
+    source_single_hop_questions_dataset_name: yourbench_y1_preview_single_hop_questions
+    source_multi_hop_questions_dataset_name: yourbench_y1_preview_multi_hop_questions
+    large_question_dataset_name: yourbench_y1_preview_complete_questions
+    target_dataset_name: yourbench_y1_preview_questions
+    cluster_configuration:
+      model_name: sentence-transformers/all-MiniLM-L6-v2
+      alpha: 0.7
+      batch_size: 128
+      distance_threshold: 0.7 # this is the distance threshold for clustering. it needs to be tuned well.
+      top_k: 10 # number of neighbors to search for each vector
+
+      # these are for picking representative questions and answers
+      lambda_val: 1.0
+      w_max: 5.0
+
+
+

@@ -25,8 +25,9 @@ def generate_multihop_pairings(
             {
                 "chunk": example["chunk"],
                 "chunk_location_id": example["chunk_location_id"],
-                "title": example["document_name"],
-                "summary": example["document_summary"],
+                "document_name": example["document_name"],
+                "document_summary": example["document_summary"],
+                "document_category": example["document_category"],
             }
         )
     logger.info(f"Grouped {len(doc_groups)} unique documents for pairing generation")
@@ -73,8 +74,9 @@ def generate_multihop_pairings(
             # Create new example
             new_example = {
                 "document_id": doc_id,
-                "document_name": selected_chunks[0]["title"],
-                "document_summary": selected_chunks[0]["summary"],
+                "document_name": selected_chunks[0]["document_name"],
+                "document_summary": selected_chunks[0]["document_summary"],
+                "document_category": selected_chunks[0]["document_category"],
                 "chunk_ids": [chunk["chunk_location_id"] for chunk in selected_chunks],
                 "num_chunks": num_chunks,
                 "chunks": [chunk["chunk"] for chunk in selected_chunks],
@@ -91,6 +93,7 @@ def generate_multihop_pairings(
             "document_id": [p["document_id"] for p in pairings],
             "document_name": [p["document_name"] for p in pairings],
             "document_summary": [p["document_summary"] for p in pairings],
+            "document_category": [p["document_category"] for p in pairings],
             "chunk_ids": [p["chunk_ids"] for p in pairings],
             "num_chunks": [p["num_chunks"] for p in pairings],
             "chunks": [p["chunks"] for p in pairings],

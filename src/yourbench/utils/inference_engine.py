@@ -16,6 +16,7 @@ load_dotenv()
 
 litellm.success_callback = ["langfuse"]
 litellm.failure_callback = ["langfuse"]
+litellm.set_verbose = True
 
 
 def get_batch_completion(

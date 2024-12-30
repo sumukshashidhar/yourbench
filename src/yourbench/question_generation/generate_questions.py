@@ -124,6 +124,7 @@ def generate_multihop_questions(config: dict):
                 "document_id": multi_hop_chunks_dataset[i]["document_id"],
                 "document_name": multi_hop_chunks_dataset[i]["document_name"],
                 "document_summary": multi_hop_chunks_dataset[i]["document_summary"],
+                "document_category": multi_hop_chunks_dataset[i]["document_category"],
                 "chunk_ids": multi_hop_chunks_dataset[i]["chunk_ids"],
                 "chunks": multi_hop_chunks_dataset[i]["chunks"],
                 # from inference
@@ -143,6 +144,7 @@ def generate_multihop_questions(config: dict):
                     "document_id": new_dataset_rows[i]["document_id"],
                     "document_name": new_dataset_rows[i]["document_name"],
                     "document_summary": new_dataset_rows[i]["document_summary"],
+                    "document_category": new_dataset_rows[i]["document_category"],
                     "chunk_ids": new_dataset_rows[i]["chunk_ids"],
                     "chunks": new_dataset_rows[i]["chunks"],
                     # question specific info
@@ -224,6 +226,7 @@ def generate_single_shot_questions(config: dict):
                 "document_id": chunk_dataset[i]["document_id"],
                 "document_name": chunk_dataset[i]["document_name"],
                 "document_summary": chunk_dataset[i]["document_summary"],
+                "document_category": chunk_dataset[i]["document_category"],
                 "chunk_location_id": chunk_dataset[i]["chunk_location_id"],
                 "chunk": chunk_dataset[i]["chunk"],
                 "test_audience": config["pipeline"]["create_single_hop_questions"][
@@ -245,6 +248,7 @@ def generate_single_shot_questions(config: dict):
                     "question_id": str(uuid.uuid4()),
                     "document_id": new_dataset_rows[i]["document_id"],
                     "document_name": new_dataset_rows[i]["document_name"],
+                    "document_category": new_dataset_rows[i]["document_category"],
                     "document_summary": new_dataset_rows[i]["document_summary"],
                     "chunk_location_id": new_dataset_rows[i]["chunk_location_id"],
                     "chunk": new_dataset_rows[i]["chunk"],

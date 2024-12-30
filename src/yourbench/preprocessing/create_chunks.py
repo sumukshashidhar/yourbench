@@ -214,6 +214,7 @@ def create_chunks_for_documents(config: Dict):
                 "document_id": document["document_id"],
                 "document_name": document["document_name"],
                 "document_summary": document["document_summary"],
+                "document_category": document["document_category"],
                 "chunk_location_id": i,
                 "chunk": chunk,
                 "chunk_length_tokens": len(gpt2_tokenizer.encode(chunk)),
