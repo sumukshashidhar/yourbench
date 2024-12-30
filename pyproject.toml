@@ -12,6 +12,7 @@ dependencies = [
     "hf-transfer>=0.1.8",
     "ipykernel>=6.29.5",
     "jupyter>=1.1.1",
+    "kneed>=0.8.5",
     "langfuse>=2.57.1",
     "litellm>=1.55.12",
     "loguru>=0.7.3",
@@ -20,8 +21,10 @@ dependencies = [
     "pandas>=2.2.3",
     "ruff>=0.8.4",
     "scikit-learn>=1.6.0",
+    "seaborn>=0.13.2",
     "sentence-transformers>=3.3.1",
     "torch>=2.5.1",
+    "tqdm>=4.67.1",
     "transformers>=4.47.1",
 ]
 

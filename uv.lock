@@ -1419,6 +1419,19 @@ wheels = [
 ]
 
 [[package]]
+name = "kneed"
+version = "0.8.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/0f/958e27a378042e0366dfea8baab4a53121cb37c114117666051390cd7bb8/kneed-0.8.5.tar.gz", hash = "sha256:a4847ac4f1d04852fea278d5de7aa8bfdc3beb7fbca4a182fec0f0efee43f4b1", size = 12783 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/1b/7e726d8616e813007874468c61790099ba21493e0ea07561b7d9fc53151c/kneed-0.8.5-py3-none-any.whl", hash = "sha256:2f3fbd4e9bd808e65052841448702c41ea64d5fc78735cbfc97ab25f08bd9815", size = 10290 },
+]
+
+[[package]]
 name = "langfuse"
 version = "2.57.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3035,6 +3048,20 @@ wheels = [
 ]
 
 [[package]]
+name = "seaborn"
+version = "0.13.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/59/a451d7420a77ab0b98f7affa3a1d78a313d2f7281a57afb1a34bae8ab412/seaborn-0.13.2.tar.gz", hash = "sha256:93e60a40988f4d65e9f4885df477e2fdaff6b73a9ded434c1ab356dd57eefff7", size = 1457696 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl", hash = "sha256:636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987", size = 294914 },
+]
+
+[[package]]
 name = "send2trash"
 version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3689,6 +3716,7 @@ dependencies = [
     { name = "hf-transfer" },
     { name = "ipykernel" },
     { name = "jupyter" },
+    { name = "kneed" },
     { name = "langfuse" },
     { name = "litellm" },
     { name = "loguru" },
@@ -3697,8 +3725,10 @@ dependencies = [
     { name = "pandas" },
     { name = "ruff" },
     { name = "scikit-learn" },
+    { name = "seaborn" },
     { name = "sentence-transformers" },
     { name = "torch" },
+    { name = "tqdm" },
     { name = "transformers" },
 ]
 
@@ -3716,6 +3746,7 @@ requires-dist = [
     { name = "hf-transfer", specifier = ">=0.1.8" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "kneed", specifier = ">=0.8.5" },
     { name = "langfuse", specifier = ">=2.57.1" },
     { name = "litellm", specifier = ">=1.55.12" },
     { name = "loguru", specifier = ">=0.7.3" },
@@ -3725,8 +3756,10 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.8.4" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.4" },
     { name = "scikit-learn", specifier = ">=1.6.0" },
+    { name = "seaborn", specifier = ">=0.13.2" },
     { name = "sentence-transformers", specifier = ">=3.3.1" },
     { name = "torch", specifier = ">=2.5.1" },
+    { name = "tqdm", specifier = ">=4.67.1" },
     { name = "transformers", specifier = ">=4.47.1" },
 ]
 
