@@ -5,6 +5,8 @@ __pycache__/
 logs/
 log_backups/
 plots/
+files/
+.gradio/
 
 # C extensions
 *.so

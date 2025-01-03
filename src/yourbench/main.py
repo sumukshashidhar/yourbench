@@ -166,9 +166,21 @@ def main() -> None:
     parser.add_argument(
         "--task-name", dest="task_name_opt", help="Name of the task to process"
     )
+    # Add new argument for launching the frontend
+    parser.add_argument(
+        "--frontend", action="store_true", help="Launch the Gradio frontend interface"
+    )
     args = parser.parse_args()
 
-    # Use either the positional or optional argument
+    # Check if frontend should be launched
+    if args.frontend:
+        from yourbench.interface.frontend import launch_frontend
+
+        logger.info("Launching frontend interface...")
+        launch_frontend()
+        return
+
+    # Rest of the existing main function code...
     task_name = args.task_name or args.task_name_opt
     if not task_name:
         parser.error(
