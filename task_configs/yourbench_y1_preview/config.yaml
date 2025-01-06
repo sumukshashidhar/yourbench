@@ -89,6 +89,3 @@ pipeline:
       # these are for picking representative questions and answers
       lambda_val: 1.0
       w_max: 5.0
-
-
-
