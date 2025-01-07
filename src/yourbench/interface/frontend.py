@@ -3,7 +3,7 @@ import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
 import gradio as gr
 from loguru import logger

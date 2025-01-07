@@ -74,5 +74,3 @@ def reweight_and_deduplicate_questions(config: dict) -> None:
         config["pipeline"]["reweight_and_deduplicate_questions"]["target_dataset_name"],
         deduplicated_dataset,
     )
-
-    pass

@@ -61,7 +61,7 @@ pipeline:
   
   # this is the question generation step for single hop questions
   create_single_hop_questions:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_segmented_single_hop
     target_dataset_name: yourbench_y1_single_hop_questions
     prompt_prefix: simple_qg
@@ -69,7 +69,7 @@ pipeline:
   
   # this is the question generation step for multihop questions
   create_multi_hop_questions:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_segmented_multi_hop
     target_dataset_name: yourbench_y1_multi_hop_questions
     prompt_prefix: simple_qg
@@ -77,18 +77,20 @@ pipeline:
   
   # perform re-weighting and deduplication of questions here
   reweight_and_deduplicate_questions:
-    execute: false
-    source_single_hop_questions_dataset_name: yourbench_y1_preview_single_hop_questions
-    source_multi_hop_questions_dataset_name: yourbench_y1_preview_multi_hop_questions
-    large_question_dataset_name: yourbench_y1_preview_complete_questions
-    target_dataset_name: yourbench_y1_preview_questions
+    execute: true
+    source_single_hop_questions_dataset_name: yourbench_y1_single_hop_questions
+    source_multi_hop_questions_dataset_name: yourbench_y1_multi_hop_questions
+    large_question_dataset_name: yourbench_y1_questions_large
+    target_dataset_name: yourbench_y1_questions
     cluster_configuration:
       model_name: sentence-transformers/all-MiniLM-L6-v2
       alpha: 0.7
+      eps: 0.20
       batch_size: 128
       distance_threshold: 0.7 # this is the distance threshold for clustering. it needs to be tuned well.
       top_k: 10 # number of neighbors to search for each vector
-
+      min_samples: 1
+      output_file: ./logs/deduplication_results.txt
       # these are for picking representative questions and answers
       lambda_val: 1.0
       w_max: 5.0
