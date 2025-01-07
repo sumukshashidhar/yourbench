@@ -120,7 +120,7 @@ pipeline:
   
   # this is where we reformat the dataset for the judge
   reformat_for_judging:
-    execute: true
+    execute: false
     source_dataset_name: yourbench_y1_questions_with_answers
     target_dataset_name: yourbench_y1_questions_with_answers_for_judge
     a:
@@ -129,3 +129,18 @@ pipeline:
     b:
       model: gpt-4o-mini
       answer_scenario: gold_standard
+  
+  # this is where we judge the answers
+  judge:
+    execute: false
+    source_dataset_name: yourbench_y1_questions_with_answers_for_judge
+    target_dataset_name: yourbench_y1_questions_with_answers_for_judge_judged
+    prompt_prefix: simple_judge
+    judge_prompt_name: cot_judge
+  
+  # this is where we visualize the judge results
+  visualize_results:
+    execute: true
+    source_dataset_name: yourbench_y1_questions_with_answers_for_judge_judged
+    plots_directory: ./logs/plots/
+
