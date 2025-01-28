@@ -1,3 +1,4 @@
+import os
 import math
 from typing import Dict, List, Tuple
 
@@ -43,6 +44,9 @@ def deduplicate_question_type(
     output_file: str,
 ) -> Tuple[pd.DataFrame, Dict]:
     """Deduplicate a single question type using DBSCAN, and compute sublinear weights."""
+    # Ensure the directory for output_file exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
     logger.info(f"Processing question type: {question_type}")
     logger.debug(f"Initial size: {len(df)} questions")
 

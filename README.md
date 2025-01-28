@@ -65,7 +65,7 @@ export AZURE_API_KEY=your_azure_key
 
 3. Run the example task (after setting your 🤗 username / organization in the config!):
 ```bash
-python src/yourbench/run_task.py --task-name yourbench_y1
+python yourbench/main.py --task-name yourbench_y1
 ```
 
 ## 📚 Documentation
