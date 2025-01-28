@@ -29,7 +29,7 @@ Yourbench is a powerful framework for dynamically generating evaluation sets fro
 
 ## 🛠️ Requirements
 
-- Python 3.10+
+- Python 3.12+
 - [LiteLLM](https://github.com/BerriAI/litellm) for model inference
 - [Sentence Transformers](https://www.sbert.net/) for semantic chunking
 - [Hugging Face Datasets](https://huggingface.co/docs/datasets) for dataset management
