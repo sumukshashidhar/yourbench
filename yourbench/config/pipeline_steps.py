@@ -11,10 +11,7 @@ from question_generation.generate_questions import (
 
 
 PIPELINE_STEPS = {
-    "generate_dataset": {
-        "func": generate_dataset,
-        "description": "Generate dataset"
-    },
+    "generate_dataset": {"func": generate_dataset, "description": "Generate dataset"},
     "generate_summaries": {
         "func": generate_summaries_for_documents,
         "description": "Generate summaries for documents",
@@ -23,10 +20,7 @@ PIPELINE_STEPS = {
         "func": create_chunks_for_documents,
         "description": "Create chunks for documents",
     },
-    "make_chunk_pairings": {
-        "func": create_multihop_chunks,
-        "description": "Create multi-hop chunks"
-    },
+    "make_chunk_pairings": {"func": create_multihop_chunks, "description": "Create multi-hop chunks"},
     "create_single_hop_questions": {
         "func": generate_single_shot_questions,
         "description": "Generate single-shot questions",
@@ -39,10 +33,7 @@ PIPELINE_STEPS = {
         "func": reweight_and_deduplicate_questions,
         "description": "Reweight and deduplicate questions",
     },
-    "answer_questions_with_llm": {
-        "func": answer_questions_with_llm,
-        "description": "Answer questions with LLM"
-    },
+    "answer_questions_with_llm": {"func": answer_questions_with_llm, "description": "Answer questions with LLM"},
     # # TODO: COMMENTED OUT FOR CURRENT IMPLEMENTATION
     # "reformat_for_judging": {
     #     "func": reformat_for_judging,

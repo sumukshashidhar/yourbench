@@ -12,9 +12,7 @@ def judge_answers(config: dict):
     """
     try:
         # Load dataset
-        dataset_name = make_dataset_name(
-            config, config["pipeline"]["judge"]["source_dataset_name"]
-        )
+        dataset_name = make_dataset_name(config, config["pipeline"]["judge"]["source_dataset_name"])
         dataset = load_dataset(dataset_name, split="train")
 
         # Validate required columns
@@ -26,9 +24,7 @@ def judge_answers(config: dict):
             "answer_a",
             "answer_b",
         ]
-        missing_columns = [
-            col for col in required_columns if col not in dataset.column_names
-        ]
+        missing_columns = [col for col in required_columns if col not in dataset.column_names]
         if missing_columns:
             raise ValueError(f"Missing required columns in dataset: {missing_columns}")
 
@@ -63,16 +59,12 @@ def judge_answers(config: dict):
             prompts.append(prompt)
         messages = []
         for prompt in prompts:
-            messages.append(
-                [
-                    {"role": "system", "content": prompt_system},
-                    {"role": "user", "content": prompt},
-                ]
-            )
+            messages.append([
+                {"role": "system", "content": prompt_system},
+                {"role": "user", "content": prompt},
+            ])
         results = run_parallel_inference(messages, config)
-        final_answers = [
-            extract_content_from_xml_tags(result, "final_answer") for result in results
-        ]
+        final_answers = [extract_content_from_xml_tags(result, "final_answer") for result in results]
         # now, we need to save the results
         # add new columns to the dataset
         dataset = dataset.add_column("judge_full_result", results)
@@ -84,9 +76,7 @@ def judge_answers(config: dict):
         # now, we need to save the dataset
         handle_dataset_push(
             config,
-            make_dataset_name(
-                config, config["pipeline"]["judge"]["target_dataset_name"]
-            ),
+            make_dataset_name(config, config["pipeline"]["judge"]["target_dataset_name"]),
             dataset,
         )
     except Exception as e:

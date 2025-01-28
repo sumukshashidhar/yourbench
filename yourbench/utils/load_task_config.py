@@ -46,8 +46,4 @@ def load_task_config(task_name: str) -> Dict[str, Any]:
 def get_available_tasks() -> list[str]:
     """Returns a list of all available task names"""
     dataset_path = get_project_root() / "task_configs"
-    return [
-        d.name
-        for d in dataset_path.iterdir()
-        if d.is_dir() and (d / "config.yaml").exists()
-    ]
+    return [d.name for d in dataset_path.iterdir() if d.is_dir() and (d / "config.yaml").exists()]

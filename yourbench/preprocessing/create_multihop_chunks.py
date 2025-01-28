@@ -7,9 +7,7 @@ from loguru import logger
 from utils.dataset_engine import handle_dataset_push, make_dataset_name
 
 
-def generate_multihop_pairings(
-    dataset: DatasetDict, pairing_configuration: dict
-) -> Dataset:
+def generate_multihop_pairings(dataset: DatasetDict, pairing_configuration: dict) -> Dataset:
     logger.info("Starting multihop pairings generation process")
 
     # Set random seed for reproducibility
@@ -20,15 +18,13 @@ def generate_multihop_pairings(
     # Group by unique_document_id
     doc_groups = defaultdict(list)
     for idx, example in enumerate(dataset):
-        doc_groups[example["document_id"]].append(
-            {
-                "chunk": example["chunk"],
-                "chunk_location_id": example["chunk_location_id"],
-                "document_name": example["document_name"],
-                "document_summary": example["document_summary"],
-                "document_category": example["document_category"],
-            }
-        )
+        doc_groups[example["document_id"]].append({
+            "chunk": example["chunk"],
+            "chunk_location_id": example["chunk_location_id"],
+            "document_name": example["document_name"],
+            "document_summary": example["document_summary"],
+            "document_category": example["document_category"],
+        })
     logger.info(f"Grouped {len(doc_groups)} unique documents for pairing generation")
 
     # Generate pairings
@@ -37,21 +33,15 @@ def generate_multihop_pairings(
 
     for doc_id, chunks in doc_groups.items():
         if len(chunks) < pairing_configuration["min_num_chunks"]:
-            logger.debug(
-                f"Skipping document {doc_id} - insufficient chunks ({len(chunks)})"
-            )
+            logger.debug(f"Skipping document {doc_id} - insufficient chunks ({len(chunks)})")
             continue
 
         n_chunks = len(chunks)
         n_combinations = max(1, int(np.sqrt(n_chunks)))
-        logger.debug(
-            f"Generating {n_combinations} combinations for document {doc_id} with {n_chunks} chunks"
-        )
+        logger.debug(f"Generating {n_combinations} combinations for document {doc_id} with {n_chunks} chunks")
 
         # Calculate number of combinations to generate based on number of chunks
-        n_combinations = max(
-            1, int(np.sqrt(n_chunks))
-        )  # Using square root as a heuristic
+        n_combinations = max(1, int(np.sqrt(n_chunks)))  # Using square root as a heuristic
 
         # Generate combinations for different numbers of chunks (2-5)
         for _ in range(n_combinations):
@@ -87,20 +77,16 @@ def generate_multihop_pairings(
 
     # Create new dataset
     logger.debug("Converting pairings to Hugging Face Dataset format")
-    new_dataset = Dataset.from_dict(
-        {
-            "document_id": [p["document_id"] for p in pairings],
-            "document_name": [p["document_name"] for p in pairings],
-            "document_summary": [p["document_summary"] for p in pairings],
-            "document_category": [p["document_category"] for p in pairings],
-            "chunk_ids": [p["chunk_ids"] for p in pairings],
-            "num_chunks": [p["num_chunks"] for p in pairings],
-            "chunks": [p["chunks"] for p in pairings],
-        }
-    )
-    logger.success(
-        f"Successfully created dataset with {len(new_dataset)} multihop entries"
-    )
+    new_dataset = Dataset.from_dict({
+        "document_id": [p["document_id"] for p in pairings],
+        "document_name": [p["document_name"] for p in pairings],
+        "document_summary": [p["document_summary"] for p in pairings],
+        "document_category": [p["document_category"] for p in pairings],
+        "chunk_ids": [p["chunk_ids"] for p in pairings],
+        "num_chunks": [p["num_chunks"] for p in pairings],
+        "chunks": [p["chunks"] for p in pairings],
+    })
+    logger.success(f"Successfully created dataset with {len(new_dataset)} multihop entries")
 
     return new_dataset
 
@@ -109,15 +95,9 @@ def create_multihop_chunks(config: dict):
     logger.info("Starting multihop chunks creation process")
 
     # load the dataset
-    source_dataset_name_key = config["pipeline"]["make_chunk_pairings"][
-        "source_dataset_name"
-    ]
-    target_dataset_name_key = config["pipeline"]["make_chunk_pairings"][
-        "target_dataset_name"
-    ]
-    pairing_configuration = config["pipeline"]["make_chunk_pairings"][
-        "pairing_configuration"
-    ]
+    source_dataset_name_key = config["pipeline"]["make_chunk_pairings"]["source_dataset_name"]
+    target_dataset_name_key = config["pipeline"]["make_chunk_pairings"]["target_dataset_name"]
+    pairing_configuration = config["pipeline"]["make_chunk_pairings"]["pairing_configuration"]
     source_dataset_name = make_dataset_name(config, source_dataset_name_key)
     logger.debug(f"Loading source dataset: {source_dataset_name}")
     dataset = load_dataset(source_dataset_name, split="train")
@@ -127,9 +107,7 @@ def create_multihop_chunks(config: dict):
     logger.debug("Starting multihop pairings generation")
     multihop_pairings = generate_multihop_pairings(dataset, pairing_configuration)
 
-    logger.debug(
-        f"Preparing to save multihop pairings dataset: {target_dataset_name_key}"
-    )
+    logger.debug(f"Preparing to save multihop pairings dataset: {target_dataset_name_key}")
     handle_dataset_push(config, target_dataset_name_key, multihop_pairings)
 
     logger.success("Multihop chunks creation completed successfully")

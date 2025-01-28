@@ -88,16 +88,8 @@ async def perform_parallel_inference(prompts: List[dict], config: dict):
     selected_model = config["configurations"]["model"]
     model_name = selected_model["model_name"]
     model_type = selected_model["model_type"]
-    model_base_url = (
-        os.getenv("MODEL_BASE_URL")
-        if model_type == "openai"
-        else os.getenv("AZURE_BASE_URL")
-    )
-    model_api_key = (
-        os.getenv("MODEL_API_KEY")
-        if model_type == "openai"
-        else os.getenv("AZURE_API_KEY")
-    )
+    model_base_url = os.getenv("MODEL_BASE_URL") if model_type == "openai" else os.getenv("AZURE_BASE_URL")
+    model_api_key = os.getenv("MODEL_API_KEY") if model_type == "openai" else os.getenv("AZURE_API_KEY")
     # Control concurrency with a semaphore (adjust based on API limits)
     max_concurrent = selected_model["max_concurrent_requests"]
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -117,9 +109,7 @@ async def perform_parallel_inference(prompts: List[dict], config: dict):
         ]
 
         # Use tqdm_asyncio to show progress while maintaining order
-        results = await tqdm_asyncio.gather(
-            *tasks, desc="Processing prompts", total=len(prompts)
-        )
+        results = await tqdm_asyncio.gather(*tasks, desc="Processing prompts", total=len(prompts))
 
     return results
 

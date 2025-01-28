@@ -31,15 +31,11 @@ def _collect_scenario_wins(dataset):
     return scenario_category_wins
 
 
-def _compute_normalized_wins(
-    scenario_category_wins, total_questions_per_category, total_questions_in_dataset
-):
+def _compute_normalized_wins(scenario_category_wins, total_questions_per_category, total_questions_in_dataset):
     total_wins_per_category = {}
     for scenario, cat_dict in scenario_category_wins.items():
         for cat, wins_count in cat_dict.items():
-            total_wins_per_category[cat] = (
-                total_wins_per_category.get(cat, 0) + wins_count
-            )
+            total_wins_per_category[cat] = total_wins_per_category.get(cat, 0) + wins_count
 
     scenario_category_wins_normalized = {}
     for scenario, cat_dict in scenario_category_wins.items():
@@ -50,9 +46,7 @@ def _compute_normalized_wins(
                 fraction = 0
             else:
                 fraction_s_share = scenario_wins_in_cat / total_wins_in_cat
-                fraction_cat_weight = (
-                    total_questions_per_category[cat] / total_questions_in_dataset
-                )
+                fraction_cat_weight = total_questions_per_category[cat] / total_questions_in_dataset
                 fraction = fraction_s_share * fraction_cat_weight
             scenario_category_wins_normalized[scenario][cat] = fraction
     return scenario_category_wins_normalized
@@ -88,9 +82,7 @@ def _prepare_sunburst_data(scenario_category_wins_normalized):
             parents.append("")
             values.append(total_fraction)
 
-            for category, fraction_value in scenario_category_wins_normalized[
-                scenario
-            ].items():
+            for category, fraction_value in scenario_category_wins_normalized[scenario].items():
                 category_id = f"{scenario_id}::{category}"
                 labels.append(category)
                 ids.append(category_id)
@@ -102,9 +94,7 @@ def _prepare_sunburst_data(scenario_category_wins_normalized):
 
 def visualize_judge_results(config: dict):
     source_dataset_name = config["pipeline"]["visualize_results"]["source_dataset_name"]
-    dataset = load_dataset(
-        make_dataset_name(config, source_dataset_name), split="train"
-    )
+    dataset = load_dataset(make_dataset_name(config, source_dataset_name), split="train")
 
     # Ensure the plots directory exists
     plots_dir = config["pipeline"]["visualize_results"]["plots_directory"]
@@ -119,9 +109,7 @@ def visualize_judge_results(config: dict):
         scenario_category_wins, total_questions_per_category, total_questions_in_dataset
     )
 
-    labels, ids, parents, values, chart_title = _prepare_sunburst_data(
-        scenario_category_wins_normalized
-    )
+    labels, ids, parents, values, chart_title = _prepare_sunburst_data(scenario_category_wins_normalized)
 
     fig = go.Figure(
         go.Sunburst(
@@ -137,6 +125,4 @@ def visualize_judge_results(config: dict):
 
     # Write HTML and PNG files
     fig.write_html(f"{plots_dir}/judge_results_sunburst.html")
-    fig.write_image(
-        f"{plots_dir}/judge_results_sunburst.png", scale=2, width=800, height=800
-    )
+    fig.write_image(f"{plots_dir}/judge_results_sunburst.png", scale=2, width=800, height=800)

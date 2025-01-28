@@ -19,9 +19,7 @@ class DatasetConstants:
     MIN_SUMMARY_LENGTH = 10
 
 
-def prepare_summary_prompts(
-    dataset: Dataset, prompt_template: str
-) -> List[List[Dict[str, str]]]:
+def prepare_summary_prompts(dataset: Dataset, prompt_template: str) -> List[List[Dict[str, str]]]:
     """Prepares prompts for document summarization.
 
     Args:
@@ -66,9 +64,7 @@ def validate_and_clean_summaries(summaries: List[str]) -> List[str]:
             cleaned_summaries.append(summary)
 
     if validation_failures > 0:
-        logger.warning(
-            f"Found {validation_failures} failed summaries out of {len(summaries)} total documents"
-        )
+        logger.warning(f"Found {validation_failures} failed summaries out of {len(summaries)} total documents")
 
     return cleaned_summaries
 
@@ -84,9 +80,7 @@ def generate_summaries_for_documents(config: Dict[str, Any]) -> None:
     """
     logger.info("Starting summary generation process")
     dataset_name_key = config["pipeline"]["generate_summaries"]["source_dataset_name"]
-    target_dataset_name_key = config["pipeline"]["generate_summaries"][
-        "target_dataset_name"
-    ]
+    target_dataset_name_key = config["pipeline"]["generate_summaries"]["target_dataset_name"]
     # Load dataset and prompt
     dataset = load_dataset(make_dataset_name(config, dataset_name_key), split="train")
     prompt_template = load_prompt(DatasetConstants.SUMMARY_PROMPT_KEY)
@@ -99,10 +93,7 @@ def generate_summaries_for_documents(config: Dict[str, Any]) -> None:
 
     # Process responses
     logger.info("Extracting summaries from model responses")
-    parsed_summaries = [
-        extract_content_from_xml_tags(response, "final_summary")
-        for response in responses
-    ]
+    parsed_summaries = [extract_content_from_xml_tags(response, "final_summary") for response in responses]
 
     # Validate and clean summaries
     cleaned_summaries = validate_and_clean_summaries(parsed_summaries)

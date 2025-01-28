@@ -8,16 +8,10 @@ def make_dataset_name(config: dict, dataset_name: str) -> str:
     """
     # check if the dataset name is already in the format of hf_organization/dataset_name, to avoid double slashes
     if "/" in dataset_name:
-        logger.warning(
-            "Dataset name already contains a slash. Returning original dataset name."
-        )
+        logger.warning("Dataset name already contains a slash. Returning original dataset name.")
         return dataset_name
-    logger.debug(
-        "Dataset name does not contain a slash. Returning formatted dataset name."
-    )
-    return (
-        config["configurations"]["huggingface"]["hf_organization"] + "/" + dataset_name
-    )
+    logger.debug("Dataset name does not contain a slash. Returning formatted dataset name.")
+    return config["configurations"]["huggingface"]["hf_organization"] + "/" + dataset_name
 
 
 def handle_dataset_push(config: dict, dataset_name: str, dataset: Dataset) -> None:
@@ -40,34 +34,24 @@ def handle_dataset_push(config: dict, dataset_name: str, dataset: Dataset) -> No
     else:
         privacy = True
 
-    logger.info(
-        f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})"
-    )
+    logger.info(f"Pushing dataset '{dataset_name}' to Hugging Face Hub (privacy={privacy})")
     # let us try to load the dataset if it already exists
     try:
         existing_dataset = load_dataset(dataset_name, split="train")
         # this means we found the dataset
         if concat_if_exists:
-            logger.info(
-                f"Concatenating existing dataset with new dataset: {dataset_name}"
-            )
+            logger.info(f"Concatenating existing dataset with new dataset: {dataset_name}")
             dataset = concatenate_datasets([existing_dataset, dataset])
             dataset.push_to_hub(dataset_name, private=privacy)
-            logger.success(
-                f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}"
-            )
+            logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
             return
         else:
             # we just push the new dataset
             dataset.push_to_hub(dataset_name, private=privacy)
-            logger.success(
-                f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}"
-            )
+            logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")
             return
     except Exception:
         # this means the dataset does not exist
         logger.info(f"Dataset does not exist. Pushing new dataset: {dataset_name}")
         dataset.push_to_hub(dataset_name, private=privacy)
-        logger.success(
-            f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}"
-        )
+        logger.success(f"Successfully pushed dataset to Hugging Face Hub: {dataset_name}")

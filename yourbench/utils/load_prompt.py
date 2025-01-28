@@ -5,9 +5,7 @@ from typing import Dict, Union
 import yaml
 
 
-def load_all_prompts(
-    prompts_dir: Union[str, Path] = "yourbench/prompts"
-) -> Dict[str, str]:
+def load_all_prompts(prompts_dir: Union[str, Path] = "yourbench/prompts") -> Dict[str, str]:
     """
     Recursively load all prompt files from the prompts directory and its subdirectories.
     Returns a dictionary mapping prompt names to their contents.

@@ -76,13 +76,9 @@ def main() -> None:
     # Positional argument for task name
     parser.add_argument("task_name", nargs="?", help="Name of the task to process")
     # Optional argument for task name (alternative to positional)
-    parser.add_argument(
-        "--task-name", dest="task_name_opt", help="Name of the task to process"
-    )
+    parser.add_argument("--task-name", dest="task_name_opt", help="Name of the task to process")
     # Flag to launch the frontend interface
-    parser.add_argument(
-        "--frontend", action="store_true", help="Launch the Gradio frontend interface"
-    )
+    parser.add_argument("--frontend", action="store_true", help="Launch the Gradio frontend interface")
     args = parser.parse_args()
 
     # Check if frontend should be launched
@@ -94,9 +90,7 @@ def main() -> None:
     task_name = args.task_name or args.task_name_opt
     if not task_name:
         # Raise an error if no task name is provided
-        parser.error(
-            "Task name must be provided either as a positional argument or with --task-name"
-        )
+        parser.error("Task name must be provided either as a positional argument or with --task-name")
 
     available_tasks = get_available_tasks()
     if task_name not in available_tasks:

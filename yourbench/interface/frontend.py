@@ -43,9 +43,7 @@ class FileManager:
     def file_exists(self, file_hash: str) -> bool:
         """Check if a file with given hash exists in database."""
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute(
-                "SELECT file_path FROM files WHERE hash = ?", (file_hash,)
-            )
+            cursor = conn.execute("SELECT file_path FROM files WHERE hash = ?", (file_hash,))
             result = cursor.fetchone()
             if result:
                 return os.path.exists(result[0])

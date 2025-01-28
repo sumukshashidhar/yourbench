@@ -13,9 +13,7 @@ def reformat_for_judging(config: dict):
     """
     # 1) Load the dataset
     dataset = load_dataset(
-        make_dataset_name(
-            config, config["pipeline"]["reformat_for_judging"]["source_dataset_name"]
-        ),
+        make_dataset_name(config, config["pipeline"]["reformat_for_judging"]["source_dataset_name"]),
         split="train",
     )
 
@@ -36,14 +34,8 @@ def reformat_for_judging(config: dict):
     reformatted_rows = []
     for question_id, group in df.groupby("question_id"):
         # Get the answers for both candidates
-        answer_a = group[
-            (group["generating_model"] == candidate_a[0])
-            & (group["scenario"] == candidate_a[1])
-        ]
-        answer_b = group[
-            (group["generating_model"] == candidate_b[0])
-            & (group["scenario"] == candidate_b[1])
-        ]
+        answer_a = group[(group["generating_model"] == candidate_a[0]) & (group["scenario"] == candidate_a[1])]
+        answer_b = group[(group["generating_model"] == candidate_b[0]) & (group["scenario"] == candidate_b[1])]
 
         if not answer_a.empty and not answer_b.empty:
             # Create a new row with all columns from answer_a (just pick the first row)
@@ -98,16 +90,11 @@ def reformat_for_judging(config: dict):
     # 8) Push or save locally
     handle_dataset_push(
         config,
-        make_dataset_name(
-            config, config["pipeline"]["reformat_for_judging"]["target_dataset_name"]
-        ),
+        make_dataset_name(config, config["pipeline"]["reformat_for_judging"]["target_dataset_name"]),
         reformatted_dataset,
     )
 
     # --- Small Test / Logging ---
     # Let’s log the percentage that was inverted.
     inverted_percentage = (len(invert_indices) / n_rows) * 100 if n_rows > 0 else 0
-    logger.info(
-        f"Randomly inverted {inverted_percentage:.2f}% of the dataset ("
-        f"{len(invert_indices)}/{n_rows} rows)."
-    )
+    logger.info(f"Randomly inverted {inverted_percentage:.2f}% of the dataset ({len(invert_indices)}/{n_rows} rows).")

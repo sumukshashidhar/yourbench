@@ -92,9 +92,7 @@ def _get_zeroshot_answers(config: dict) -> None:
     def resolve_zeroshot_name(cfg):
         return make_dataset_name(
             cfg,
-            cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"][
-                "zero_shot"
-            ]["answer_dataset_name"],
+            cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"]["zero_shot"]["answer_dataset_name"],
         )
 
     def build_prompt(dataset, i, prompt_template):
@@ -127,7 +125,7 @@ def _get_zeroshot_answers(config: dict) -> None:
         config,
         load_dataset_func=load_zeroshot_dataset,
         resolve_dataset_name_func=resolve_zeroshot_name,
-        prompt_path=f'{config["pipeline"]["answer_questions_with_llm"]["prompt_prefix"]}.fast_answer_q_zeroshot_user',
+        prompt_path=f"{config['pipeline']['answer_questions_with_llm']['prompt_prefix']}.fast_answer_q_zeroshot_user",
         prompt_builder=build_prompt,
         scenario_label="zero_shot",
         row_builder=build_row,
@@ -149,9 +147,9 @@ def _get_zeroshot_cot_answers(config: dict) -> None:
 
     def resolve_dataset_name(cfg):
         # from the code: scenario is "zero_shot_with_cot"
-        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"][
-            "zero_shot_with_cot"
-        ]["answer_dataset_name"]
+        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"]["zero_shot_with_cot"][
+            "answer_dataset_name"
+        ]
 
     def build_prompt(dataset, i, prompt_template):
         question = dataset["question"][i]
@@ -184,7 +182,7 @@ def _get_zeroshot_cot_answers(config: dict) -> None:
         config,
         load_dataset_func=load_dataset_func,
         resolve_dataset_name_func=resolve_dataset_name,
-        prompt_path=f'{config["pipeline"]["answer_questions_with_llm"]["prompt_prefix"]}.fast_answer_q_cot_user',
+        prompt_path=f"{config['pipeline']['answer_questions_with_llm']['prompt_prefix']}.fast_answer_q_cot_user",
         prompt_builder=build_prompt,
         scenario_label="zero_shot_with_cot",
         row_builder=build_row,
@@ -204,9 +202,9 @@ def _get_document_summary_answers(config: dict) -> None:
         return load_dataset(ds_name)["train"]
 
     def resolve_dataset_name(cfg):
-        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"][
-            "answer_with_document_summary"
-        ]["answer_dataset_name"]
+        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"]["answer_with_document_summary"][
+            "answer_dataset_name"
+        ]
 
     def build_prompt(dataset, i, prompt_template):
         question = dataset["question"][i]
@@ -239,7 +237,7 @@ def _get_document_summary_answers(config: dict) -> None:
         config,
         load_dataset_func=load_dataset_func,
         resolve_dataset_name_func=resolve_dataset_name,
-        prompt_path=f'{config["pipeline"]["answer_questions_with_llm"]["prompt_prefix"]}.fast_answer_q_docsummary_user',
+        prompt_path=f"{config['pipeline']['answer_questions_with_llm']['prompt_prefix']}.fast_answer_q_docsummary_user",
         prompt_builder=build_prompt,
         scenario_label="answer_with_document_summary",
         row_builder=build_row,
@@ -259,9 +257,9 @@ def _get_relevant_chunk_answers(config: dict) -> None:
         return load_dataset(ds_name)["train"]
 
     def resolve_dataset_name(cfg):
-        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"][
-            "answer_with_relevant_chunks"
-        ]["answer_dataset_name"]
+        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"]["answer_with_relevant_chunks"][
+            "answer_dataset_name"
+        ]
 
     def build_prompt(dataset, i, prompt_template):
         question = dataset["question"][i]
@@ -294,7 +292,7 @@ def _get_relevant_chunk_answers(config: dict) -> None:
         config,
         load_dataset_func=load_dataset_func,
         resolve_dataset_name_func=resolve_dataset_name,
-        prompt_path=f'{config["pipeline"]["answer_questions_with_llm"]["prompt_prefix"]}.fast_answer_q_relevant_chunk_user',
+        prompt_path=f"{config['pipeline']['answer_questions_with_llm']['prompt_prefix']}.fast_answer_q_relevant_chunk_user",
         prompt_builder=build_prompt,
         scenario_label="answer_with_relevant_chunks",
         row_builder=build_row,
@@ -314,17 +312,13 @@ def _get_gold_answers(config: dict) -> None:
         return load_dataset(ds_name)["train"]
 
     def resolve_dataset_name(cfg):
-        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"][
-            "gold_standard"
-        ]["answer_dataset_name"]
+        return cfg["pipeline"]["answer_questions_with_llm"]["answer_scenarios"]["gold_standard"]["answer_dataset_name"]
 
     def build_prompt(dataset, i, prompt_template):
         question = dataset["question"][i]
         chunk = dataset["chunk"][i]
         summary = dataset["document_summary"][i]
-        return prompt_template.format(
-            question=question, document=chunk, summary=summary
-        )
+        return prompt_template.format(question=question, document=chunk, summary=summary)
 
     def build_row(dataset, i, full_response, answer, scenario_label, cfg):
         # match original `_get_gold_answers` row structure
@@ -352,7 +346,7 @@ def _get_gold_answers(config: dict) -> None:
         config,
         load_dataset_func=load_dataset_func,
         resolve_dataset_name_func=resolve_dataset_name,
-        prompt_path=f'{config["pipeline"]["answer_questions_with_llm"]["prompt_prefix"]}.fast_answer_q_gold_user',
+        prompt_path=f"{config['pipeline']['answer_questions_with_llm']['prompt_prefix']}.fast_answer_q_gold_user",
         prompt_builder=build_prompt,
         scenario_label="gold_standard",
         row_builder=build_row,
@@ -365,9 +359,7 @@ def answer_questions_with_llm(config: dict):
     we only call the scenario subroutines. Each subroutine is now
     much thinner, deferring the repeated logic to _generate_scenario_answers.
     """
-    answer_scenarios = config["pipeline"]["answer_questions_with_llm"][
-        "answer_scenarios"
-    ]
+    answer_scenarios = config["pipeline"]["answer_questions_with_llm"]["answer_scenarios"]
 
     if answer_scenarios["zero_shot"]["execute"]:
         _get_zeroshot_answers(config)
