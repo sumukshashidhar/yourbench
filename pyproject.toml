@@ -3,16 +3,13 @@ name = "yourbench"
 version = "0.1.0"
 description = "Dynamic Evaluation Set Generation with LLMs"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "async-timeout>=5.0.1",
     "asyncio>=3.4.3",
     "datasets>=3.2.0",
     "faiss-cpu>=1.9.0.post1",
-    "gradio>=5.9.1",
     "hf-transfer>=0.1.8",
-    "ipykernel>=6.29.5",
-    "jupyter>=1.1.1",
     "kneed>=0.8.5",
     "langfuse>=2.57.1",
     "litellm>=1.55.12",
@@ -25,15 +22,32 @@ dependencies = [
     "scikit-learn>=1.6.0",
     "seaborn>=0.13.2",
     "sentence-transformers>=3.3.1",
-    "torch>=2.5.1",
     "tqdm>=4.67.1",
-    "transformers>=4.47.1",
+    "transformers>=4.48.1",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.8.4",
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "platform_system != 'Linux'" },
+  { index = "pytorch-cu124", marker = "platform_system == 'Linux'" },
 ]
+torchvision = [
+  { index = "pytorch-cpu", marker = "platform_system != 'Linux'" },
+  { index = "pytorch-cu124", marker = "platform_system == 'Linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv]
+package = true
 
 [project.scripts]
 yourbench = "yourbench.main:main"
