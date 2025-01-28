@@ -1,3 +1,4 @@
+import os
 import plotly.graph_objects as go
 from datasets import load_dataset
 from yourbench.utils.dataset_engine import make_dataset_name
@@ -59,6 +60,9 @@ def _compute_normalized_wins(
 def _prepare_sunburst_data(scenario_category_wins_normalized):
     labels, ids, parents, values = [], [], [], []
     scenarios = list(scenario_category_wins_normalized.keys())
+    
+    # Set a default value for chart_title
+    chart_title = "Win Distribution"
 
     if len(scenarios) == 2:
         model1, setting1 = scenarios[0]
@@ -101,6 +105,11 @@ def visualize_judge_results(config: dict):
         make_dataset_name(config, source_dataset_name), split="train"
     )
 
+    # Ensure the plots directory exists
+    plots_dir = config["pipeline"]["visualize_results"]["plots_directory"]
+    os.makedirs(plots_dir, exist_ok=True)
+
+    # Continue with existing logic
     total_questions_per_category = _count_questions_per_category(dataset)
     total_questions_in_dataset = sum(total_questions_per_category.values())
 
@@ -125,7 +134,7 @@ def visualize_judge_results(config: dict):
 
     fig.update_layout(title=chart_title, width=800, height=800, font={"size": 20})
 
-    plots_dir = config["pipeline"]["visualize_results"]["plots_directory"]
+    # Write HTML and PNG files
     fig.write_html(f"{plots_dir}/judge_results_sunburst.html")
     fig.write_image(
         f"{plots_dir}/judge_results_sunburst.png", scale=2, width=800, height=800

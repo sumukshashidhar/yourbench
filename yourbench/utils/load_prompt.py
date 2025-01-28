@@ -6,7 +6,7 @@ import yaml
 
 
 def load_all_prompts(
-    prompts_dir: Union[str, Path] = "src/yourbench/prompts"
+    prompts_dir: Union[str, Path] = "yourbench/prompts"
 ) -> Dict[str, str]:
     """
     Recursively load all prompt files from the prompts directory and its subdirectories.
