@@ -1,18 +1,18 @@
-from preprocessing.dataset_generation import generate_dataset
-from preprocessing.generate_summaries import generate_summaries_for_documents
+from postprocessing.reweight_and_deduplication import reweight_and_deduplicate_questions
 from preprocessing.create_chunks import create_chunks_for_documents
 from preprocessing.create_multihop_chunks import create_multihop_chunks
-from question_generation.generate_questions import (
-    generate_single_shot_questions,
-    generate_multihop_questions,
-)
-from postprocessing.reweight_and_deduplication import reweight_and_deduplicate_questions
+from preprocessing.dataset_generation import generate_dataset
+from preprocessing.generate_summaries import generate_summaries_for_documents
 from question_answering.answer_questions import answer_questions_with_llm
+from question_generation.generate_questions import (
+    generate_multihop_questions,
+    generate_single_shot_questions,
+)
 
 
 PIPELINE_STEPS = {
     "generate_dataset": {
-        "func": generate_dataset, 
+        "func": generate_dataset,
         "description": "Generate dataset"
     },
     "generate_summaries": {
@@ -24,7 +24,7 @@ PIPELINE_STEPS = {
         "description": "Create chunks for documents",
     },
     "make_chunk_pairings": {
-        "func": create_multihop_chunks, 
+        "func": create_multihop_chunks,
         "description": "Create multi-hop chunks"
     },
     "create_single_hop_questions": {
@@ -45,15 +45,15 @@ PIPELINE_STEPS = {
     },
     # # TODO: COMMENTED OUT FOR CURRENT IMPLEMENTATION
     # "reformat_for_judging": {
-    #     "func": reformat_for_judging, 
+    #     "func": reformat_for_judging,
     #     "description": "Reformat answers for judging"
     # },
     # "judge": {
-    #     "func": judge_answers, 
+    #     "func": judge_answers,
     #     "description": "Judge answers"
     # },
     # "visualize_results": {
-    #     "func": visualize_judge_results, 
+    #     "func": visualize_judge_results,
     #     "description": "Visualize judge results"
     # },
 }

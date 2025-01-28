@@ -1,10 +1,8 @@
 from datasets import Dataset, load_dataset
-from loguru import logger
-
+from utils.dataset_engine import handle_dataset_push, make_dataset_name
 from utils.inference_engine import run_parallel_inference
 from utils.load_prompt import load_prompt
 from utils.parsing_engine import extract_content_from_xml_tags
-from utils.dataset_engine import handle_dataset_push, make_dataset_name
 
 
 def _generate_scenario_answers(

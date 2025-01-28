@@ -1,10 +1,11 @@
 import argparse
 import sys
-from loguru import logger
 
 from config.pipeline_steps import PIPELINE_STEPS
-from utils.load_task_config import get_available_tasks, load_task_config
 from interface.frontend import launch_frontend
+from loguru import logger
+from utils.load_task_config import get_available_tasks, load_task_config
+
 
 # Configure Loguru for logging and error handling
 logger.remove()  # Remove any default handlers
@@ -17,6 +18,7 @@ logger.add(
     "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
     "<level>{message}</level>",
 )
+
 
 def process_pipeline_step(config: dict, step_name: str) -> None:
     """
@@ -31,6 +33,7 @@ def process_pipeline_step(config: dict, step_name: str) -> None:
         logger.info(f"Completed {PIPELINE_STEPS[step_name]['description']}.")
     except Exception as e:
         logger.exception(f"Error in {PIPELINE_STEPS[step_name]['description']}: {e}")
+
 
 def process_pipeline(config: dict) -> None:
     """
@@ -61,6 +64,7 @@ def process_pipeline(config: dict) -> None:
     logger.info("Pipeline processing completed.")
     logger.info("Executed steps: {}", ", ".join(executed_steps) if executed_steps else "None")
     logger.info("Skipped steps: {}", ", ".join(skipped_steps) if skipped_steps else "None")
+
 
 def main() -> None:
     """

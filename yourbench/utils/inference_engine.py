@@ -8,10 +8,10 @@ import aiohttp
 import litellm
 from async_timeout import timeout
 from dotenv import load_dotenv
+from loguru import logger
 from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio
 
-from loguru import logger
 
 load_dotenv()
 

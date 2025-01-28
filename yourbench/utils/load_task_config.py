@@ -1,11 +1,13 @@
 from pathlib import Path
 from typing import Any, Dict
+
 import yaml
 
 
 # TODO: either remove or decide how to use it
 def _get_full_dataset_name_for_questions(config: dict, actual_dataset_name: str) -> str:
     return config["configurations"]["hf_organization"] + "/" + actual_dataset_name
+
 
 def get_project_root() -> Path:
     """Get the project root directory (where pyproject.toml is located)"""
@@ -16,10 +18,12 @@ def get_project_root() -> Path:
         current = current.parent
     raise FileNotFoundError("Could not find project root (no pyproject.toml found)")
 
+
 # TODO: implement pydantic validation
 def _validate_task_config(config: dict) -> dict:
     # check parts of the pipeline are present, else add a false for them
     return config
+
 
 def load_task_config(task_name: str) -> Dict[str, Any]:
     """
@@ -37,6 +41,7 @@ def load_task_config(task_name: str) -> Dict[str, Any]:
             raise yaml.YAMLError(f"Failed to parse config file: {e}")
 
     return _validate_task_config(config)
+
 
 def get_available_tasks() -> list[str]:
     """Returns a list of all available task names"""

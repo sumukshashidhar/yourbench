@@ -1,4 +1,5 @@
 import os
+
 import plotly.graph_objects as go
 from datasets import load_dataset
 from utils.dataset_engine import make_dataset_name
@@ -60,7 +61,7 @@ def _compute_normalized_wins(
 def _prepare_sunburst_data(scenario_category_wins_normalized):
     labels, ids, parents, values = [], [], [], []
     scenarios = list(scenario_category_wins_normalized.keys())
-    
+
     # Set a default value for chart_title
     chart_title = "Win Distribution"
 
