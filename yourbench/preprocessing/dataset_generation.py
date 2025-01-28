@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 from datasets import Dataset
 from loguru import logger
 
-from yourbench.utils.dataset_engine import handle_dataset_push
+from utils.dataset_engine import handle_dataset_push
 
 
 def get_directory_name(config: Dict[str, Any]) -> str:

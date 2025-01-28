@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer, GPT2Tokenizer
 
-from yourbench.utils.dataset_engine import handle_dataset_push, make_dataset_name
+from utils.dataset_engine import handle_dataset_push, make_dataset_name
 
 
 # Download NLTK data

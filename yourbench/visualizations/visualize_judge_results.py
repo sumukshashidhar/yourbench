@@ -1,7 +1,7 @@
 import os
 import plotly.graph_objects as go
 from datasets import load_dataset
-from yourbench.utils.dataset_engine import make_dataset_name
+from utils.dataset_engine import make_dataset_name
 
 
 def _count_questions_per_category(dataset):

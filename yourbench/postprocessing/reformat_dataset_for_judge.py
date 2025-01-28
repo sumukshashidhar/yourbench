@@ -3,7 +3,7 @@ import random
 import pandas as pd
 from datasets import Dataset, concatenate_datasets, load_dataset
 from loguru import logger
-from yourbench.utils.dataset_engine import make_dataset_name, handle_dataset_push
+from utils.dataset_engine import make_dataset_name, handle_dataset_push
 
 
 def reformat_for_judging(config: dict):

@@ -19,7 +19,7 @@ logger.add(
 
 def process_generate_dataset(config: dict) -> None:
     """Generate dataset based on the provided config."""
-    from yourbench.preprocessing.dataset_generation import generate_dataset
+    from preprocessing.dataset_generation import generate_dataset
 
     logger.info("Starting dataset generation...", step="generate_dataset")
     generate_dataset(config=config)
@@ -27,7 +27,7 @@ def process_generate_dataset(config: dict) -> None:
 
 def process_generate_summaries(config: dict) -> None:
     """Generate summaries for documents based on the provided config."""
-    from yourbench.preprocessing.generate_summaries import (
+    from preprocessing.generate_summaries import (
         generate_summaries_for_documents,
     )
 
@@ -37,7 +37,7 @@ def process_generate_summaries(config: dict) -> None:
 
 def process_create_chunks(config: dict) -> None:
     """Create chunks for documents based on the provided config."""
-    from yourbench.preprocessing.create_chunks import create_chunks_for_documents
+    from preprocessing.create_chunks import create_chunks_for_documents
 
     logger.info("Starting chunk creation...", step="create_chunks")
     create_chunks_for_documents(config=config)
@@ -45,7 +45,7 @@ def process_create_chunks(config: dict) -> None:
 
 def process_make_multihop_chunks(config: dict) -> None:
     """Create multi-hop chunks for documents based on the provided config."""
-    from yourbench.preprocessing.create_multihop_chunks import create_multihop_chunks
+    from preprocessing.create_multihop_chunks import create_multihop_chunks
 
     logger.info("Starting multi-hop chunk creation...", step="make_multihop_chunks")
     create_multihop_chunks(config=config)
@@ -53,7 +53,7 @@ def process_make_multihop_chunks(config: dict) -> None:
 
 def process_create_single_shot_questions(config: dict) -> None:
     """Generate single-shot questions based on the provided config."""
-    from yourbench.question_generation.generate_questions import (
+    from question_generation.generate_questions import (
         generate_single_shot_questions,
     )
 
@@ -66,7 +66,7 @@ def process_create_single_shot_questions(config: dict) -> None:
 
 def process_create_multihop_questions(config: dict) -> None:
     """Generate multi-hop questions based on the provided config."""
-    from yourbench.question_generation.generate_questions import (
+    from question_generation.generate_questions import (
         generate_multihop_questions,
     )
 
@@ -78,7 +78,7 @@ def process_create_multihop_questions(config: dict) -> None:
 
 def process_reweight_and_deduplicate_questions(config: dict) -> None:
     """Reweight and deduplicate questions based on the provided config."""
-    from yourbench.postprocessing.reweight_and_deduplication import (
+    from postprocessing.reweight_and_deduplication import (
         reweight_and_deduplicate_questions,
     )
 
@@ -91,7 +91,7 @@ def process_reweight_and_deduplicate_questions(config: dict) -> None:
 
 def process_answer_questions_with_llm(config: dict) -> None:
     """Use an LLM to answer questions based on the provided config."""
-    from yourbench.question_answering.answer_questions import answer_questions_with_llm
+    from question_answering.answer_questions import answer_questions_with_llm
 
     logger.info(
         "Starting question answering with LLM...", step="answer_questions_with_llm"
@@ -101,7 +101,7 @@ def process_answer_questions_with_llm(config: dict) -> None:
 
 def process_reformat_for_judging(config: dict) -> None:
     """Reformat answers for the judge."""
-    from yourbench.postprocessing.reformat_dataset_for_judge import reformat_for_judging
+    from postprocessing.reformat_dataset_for_judge import reformat_for_judging
 
     logger.info("Starting dataset reformat for judging...", step="reformat_for_judging")
     reformat_for_judging(config=config)
@@ -109,7 +109,7 @@ def process_reformat_for_judging(config: dict) -> None:
 
 def process_judge_answers(config: dict) -> None:
     """Judge answers using the provided config."""
-    from yourbench.judge.judge_answers import judge_answers
+    from judge.judge_answers import judge_answers
 
     logger.info("Starting answer judging...", step="judge")
     judge_answers(config=config)
@@ -117,7 +117,7 @@ def process_judge_answers(config: dict) -> None:
 
 def process_visualize_results(config: dict) -> None:
     """Visualize judge results."""
-    from yourbench.visualizations.visualize_judge_results import visualize_judge_results
+    from visualizations.visualize_judge_results import visualize_judge_results
 
     logger.info("Starting results visualization...", step="visualize_results")
     visualize_judge_results(config=config)
@@ -141,9 +141,10 @@ def process_pipeline(config: dict) -> None:
             process_reweight_and_deduplicate_questions,
         ),
         ("answer_questions_with_llm", process_answer_questions_with_llm),
-        ("reformat_for_judging", process_reformat_for_judging),
-        ("judge", process_judge_answers),
-        ("visualize_results", process_visualize_results),
+        ## TODO: COMMENTED OUT FOR CURRENT IMPLEMENTATION
+        # ("reformat_for_judging", process_reformat_for_judging),
+        # ("judge", process_judge_answers),
+        # ("visualize_results", process_visualize_results),
     ]
 
     for step_name, step_func in pipeline_steps:
@@ -174,7 +175,7 @@ def main() -> None:
 
     # Check if frontend should be launched
     if args.frontend:
-        from yourbench.interface.frontend import launch_frontend
+        from interface.frontend import launch_frontend
 
         logger.info("Launching frontend interface...")
         launch_frontend()
@@ -188,7 +189,7 @@ def main() -> None:
         )
 
     # Import these functions only when needed at runtime
-    from yourbench.utils.load_task_config import get_available_tasks, load_task_config
+    from utils.load_task_config import get_available_tasks, load_task_config
 
     available_tasks = get_available_tasks()
     if task_name not in available_tasks:
