@@ -11,12 +11,13 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio
 
+from loguru import logger
 
 load_dotenv()
 
 litellm.success_callback = ["langfuse"]
 litellm.failure_callback = ["langfuse"]
-litellm.set_verbose = True
+litellm.set_verbose = False
 
 
 def get_batch_completion(
@@ -47,7 +48,7 @@ def get_batch_completion(
         try:
             final_responses.append(response.choices[0].message.content)
         except Exception as e:
-            print(f"Error processing response: {e}")
+            logger.error(f"Error processing response: {e}")
             final_responses.append("")
     return final_responses
 
@@ -77,7 +78,7 @@ async def _process_single_prompt(
                     return response.choices[0].message.content
             except Exception as e:
                 if attempt == retry_attempts - 1:
-                    print(f"Failed after {retry_attempts} attempts: {e}")
+                    logger.error(f"Failed after {retry_attempts} attempts: {e}")
                     return ""
                 await asyncio.sleep(2**attempt)  # Exponential backoff
 

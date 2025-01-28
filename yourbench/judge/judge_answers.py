@@ -18,8 +18,6 @@ def judge_answers(config: dict):
         )
         dataset = load_dataset(dataset_name, split="train")
 
-        print(dataset.column_names)
-
         # Validate required columns
         required_columns = [
             "question",

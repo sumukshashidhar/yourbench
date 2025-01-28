@@ -1,5 +1,7 @@
 import re
 
+from loguru import logger
+
 
 def extract_content_from_xml_tags(full_content, xml_tag):
     # This function extracts the content between the XML tags
@@ -28,5 +30,5 @@ def extract_content_from_xml_tags(full_content, xml_tag):
         return ""
 
     except Exception as extraction_error:
-        print(f"Error extracting content from XML tags: {extraction_error}")
+        logger.error(f"Error extracting content from XML tags: {extraction_error}")
         return ""
