@@ -4,10 +4,22 @@ from typing import Any, Dict
 import yaml
 
 
+# TODO: either remove or decide how to use it
 def _get_full_dataset_name_for_questions(config: dict, actual_dataset_name: str) -> str:
     return config["configurations"]["hf_organization"] + "/" + actual_dataset_name
 
 
+def get_project_root() -> Path:
+    """Get the project root directory (where pyproject.toml is located)"""
+    current = Path(__file__).resolve()
+    while current != current.parent:
+        if (current / "pyproject.toml").exists():
+            return current
+        current = current.parent
+    raise FileNotFoundError("Could not find project root (no pyproject.toml found)")
+
+
+# TODO: implement pydantic validation
 def _validate_task_config(config: dict) -> dict:
     # check parts of the pipeline are present, else add a false for them
     return config
@@ -15,24 +27,9 @@ def _validate_task_config(config: dict) -> dict:
 
 def load_task_config(task_name: str) -> Dict[str, Any]:
     """
-    Loads task configuration from test_simple_dataset for a given task name.
-
-    Args:
-        task_name: Name of the task to load configuration for
-
-    Returns:
-        Dictionary containing task configuration
-
-    Raises:
-        FileNotFoundError: If task config file doesn't exist
-        yaml.YAMLError: If config file is malformed
+    Loads task configuration for a given task name.
     """
-    config_path = (
-        Path(__file__).parent.parent.parent.parent
-        / "task_configs"
-        / task_name
-        / "config.yaml"
-    )
+    config_path = get_project_root() / "task_configs" / task_name / "config.yaml"
 
     if not config_path.exists():
         raise FileNotFoundError(f"Task config not found at: {config_path}")
@@ -43,16 +40,10 @@ def load_task_config(task_name: str) -> Dict[str, Any]:
         except yaml.YAMLError as e:
             raise yaml.YAMLError(f"Failed to parse config file: {e}")
 
-    # validate the config
-    config = _validate_task_config(config)
-    return config
+    return _validate_task_config(config)
 
 
 def get_available_tasks() -> list[str]:
-    """Returns a list of all available task names in test_simple_dataset"""
-    dataset_path = Path(__file__).parent.parent.parent.parent / "task_configs"
-    return [
-        d.name
-        for d in dataset_path.iterdir()
-        if d.is_dir() and (d / "config.yaml").exists()
-    ]
+    """Returns a list of all available task names"""
+    dataset_path = get_project_root() / "task_configs"
+    return [d.name for d in dataset_path.iterdir() if d.is_dir() and (d / "config.yaml").exists()]

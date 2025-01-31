@@ -2,7 +2,7 @@
 
 **Dynamic Evaluation Set Generation for LLM Benchmarking [NAACL '25*]*
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![🤗 Hugging Face](https://img.shields.io/badge/huggingface-datasets-yellow)](https://huggingface.co/docs/datasets)
@@ -29,7 +29,7 @@ Yourbench is a powerful framework for dynamically generating evaluation sets fro
 
 ## 🛠️ Requirements
 
-- Python 3.10+
+- Python 3.12+
 - [LiteLLM](https://github.com/BerriAI/litellm) for model inference
 - [Sentence Transformers](https://www.sbert.net/) for semantic chunking
 - [Hugging Face Datasets](https://huggingface.co/docs/datasets) for dataset management

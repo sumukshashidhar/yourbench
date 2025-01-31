@@ -1,20 +1,15 @@
 from datasets import Dataset, concatenate_datasets, load_dataset
-
-from yourbench.postprocessing.clustering import cluster_and_dedupe
-from yourbench.utils.dataset_engine import handle_dataset_push, make_dataset_name
+from postprocessing.clustering import cluster_and_dedupe
+from utils.dataset_engine import handle_dataset_push, make_dataset_name
 
 
 def _restructure_multihop(multihop_questions: Dataset) -> Dataset:
     """Restructure the multihop questions to match the single shot questions."""
     # make a new column, called "chunk", which is a string combination of the chunks list
-    multihop_questions = multihop_questions.map(
-        lambda x: {"chunk": "\n".join(x["chunks"])}
-    )
+    multihop_questions = multihop_questions.map(lambda x: {"chunk": "\n".join(x["chunks"])})
 
     # Create question_complexity column with chunk_ids length before removing the column
-    multihop_questions = multihop_questions.map(
-        lambda x: {"question_complexity": f"multi_hop_{len(x['chunk_ids'])}"}
-    )
+    multihop_questions = multihop_questions.map(lambda x: {"question_complexity": f"multi_hop_{len(x['chunk_ids'])}"})
 
     # remove the chunks column
     multihop_questions = multihop_questions.remove_columns("chunks")
@@ -28,18 +23,14 @@ def reweight_and_deduplicate_questions(config: dict) -> None:
     single_hop_questions_dataset = load_dataset(
         make_dataset_name(
             config,
-            config["pipeline"]["reweight_and_deduplicate_questions"][
-                "source_single_hop_questions_dataset_name"
-            ],
+            config["pipeline"]["reweight_and_deduplicate_questions"]["source_single_hop_questions_dataset_name"],
         ),
         split="train",
     )
     multi_hop_questions_dataset = load_dataset(
         make_dataset_name(
             config,
-            config["pipeline"]["reweight_and_deduplicate_questions"][
-                "source_multi_hop_questions_dataset_name"
-            ],
+            config["pipeline"]["reweight_and_deduplicate_questions"]["source_multi_hop_questions_dataset_name"],
         ),
         split="train",
     )
@@ -52,16 +43,12 @@ def reweight_and_deduplicate_questions(config: dict) -> None:
     )
 
     # combine the two datasets
-    large_q_dataset = concatenate_datasets(
-        [single_shot_questions_dataset, multihop_questions_dataset]
-    )
+    large_q_dataset = concatenate_datasets([single_shot_questions_dataset, multihop_questions_dataset])
 
     # when we have a large dataset, we can push it to the hub
     handle_dataset_push(
         config,
-        config["pipeline"]["reweight_and_deduplicate_questions"][
-            "large_question_dataset_name"
-        ],
+        config["pipeline"]["reweight_and_deduplicate_questions"]["large_question_dataset_name"],
         large_q_dataset,
     )
 

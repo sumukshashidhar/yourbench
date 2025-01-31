@@ -11,11 +11,7 @@ def setup_logger(debug: bool = False):
     logger.remove()  # Remove default handler
 
     # Define log format
-    log_format = (
-        "<dim>{time:HH:mm:ss}</dim> | "
-        "<level>{level: <8}</level> | "
-        "<level>{message}</level>"
-    )
+    log_format = "<dim>{time:HH:mm:ss}</dim> | <level>{level: <8}</level> | <level>{message}</level>"
 
     # Set appropriate level based on debug flag
     level = "DEBUG" if debug else "INFO"

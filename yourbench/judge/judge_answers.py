@@ -1,10 +1,9 @@
-from datasets import Dataset, concatenate_datasets, load_dataset
+from datasets import load_dataset
 from loguru import logger
-
-from yourbench.utils.inference_engine import run_parallel_inference
-from yourbench.utils.load_prompt import load_prompt
-from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from yourbench.utils.dataset_engine import make_dataset_name, handle_dataset_push
+from utils.dataset_engine import handle_dataset_push, make_dataset_name
+from utils.inference_engine import run_parallel_inference
+from utils.load_prompt import load_prompt
+from utils.parsing_engine import extract_content_from_xml_tags
 
 
 def judge_answers(config: dict):
@@ -13,12 +12,8 @@ def judge_answers(config: dict):
     """
     try:
         # Load dataset
-        dataset_name = make_dataset_name(
-            config, config["pipeline"]["judge"]["source_dataset_name"]
-        )
+        dataset_name = make_dataset_name(config, config["pipeline"]["judge"]["source_dataset_name"])
         dataset = load_dataset(dataset_name, split="train")
-
-        print(dataset.column_names)
 
         # Validate required columns
         required_columns = [
@@ -29,9 +24,7 @@ def judge_answers(config: dict):
             "answer_a",
             "answer_b",
         ]
-        missing_columns = [
-            col for col in required_columns if col not in dataset.column_names
-        ]
+        missing_columns = [col for col in required_columns if col not in dataset.column_names]
         if missing_columns:
             raise ValueError(f"Missing required columns in dataset: {missing_columns}")
 
@@ -66,16 +59,12 @@ def judge_answers(config: dict):
             prompts.append(prompt)
         messages = []
         for prompt in prompts:
-            messages.append(
-                [
-                    {"role": "system", "content": prompt_system},
-                    {"role": "user", "content": prompt},
-                ]
-            )
+            messages.append([
+                {"role": "system", "content": prompt_system},
+                {"role": "user", "content": prompt},
+            ])
         results = run_parallel_inference(messages, config)
-        final_answers = [
-            extract_content_from_xml_tags(result, "final_answer") for result in results
-        ]
+        final_answers = [extract_content_from_xml_tags(result, "final_answer") for result in results]
         # now, we need to save the results
         # add new columns to the dataset
         dataset = dataset.add_column("judge_full_result", results)
@@ -87,9 +76,7 @@ def judge_answers(config: dict):
         # now, we need to save the dataset
         handle_dataset_push(
             config,
-            make_dataset_name(
-                config, config["pipeline"]["judge"]["target_dataset_name"]
-            ),
+            make_dataset_name(config, config["pipeline"]["judge"]["target_dataset_name"]),
             dataset,
         )
     except Exception as e:

@@ -1,5 +1,5 @@
-import os
 import math
+import os
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -18,9 +18,7 @@ def create_qa_representation(row: pd.Series, separator: str = " [SEP] ") -> str:
     return f"{row['question']}{separator}{row['answer']}"
 
 
-def compute_embeddings(
-    texts: List[str], model_name: str = "all-MiniLM-L6-v2", batch_size: int = 32
-) -> np.ndarray:
+def compute_embeddings(texts: List[str], model_name: str = "all-MiniLM-L6-v2", batch_size: int = 32) -> np.ndarray:
     """Compute embeddings using the specified model."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.debug(f"Using device: {device}")
@@ -133,9 +131,7 @@ def deduplicate_question_type(
     # Log summary statistics
     shrinkage = (len(df) - len(deduplicated_df)) / len(df) * 100
     logger.info(f"Deduplication results for {question_type}:")
-    logger.info(
-        f"Original: {len(df)} → Deduplicated: {len(deduplicated_df)} (Shrinkage: {shrinkage:.2f}%)"
-    )
+    logger.info(f"Original: {len(df)} → Deduplicated: {len(deduplicated_df)} (Shrinkage: {shrinkage:.2f}%)")
     logger.debug(f"Number of clusters (excluding noise): {len(cluster_info)}")
 
     return deduplicated_df, cluster_info
@@ -154,9 +150,7 @@ def cluster_and_dedupe(dataset: Dataset, config: dict) -> Dataset:
         Deduplicated dataset
     """
     # Extract config values
-    config_values = config["pipeline"]["reweight_and_deduplicate_questions"][
-        "cluster_configuration"
-    ]
+    config_values = config["pipeline"]["reweight_and_deduplicate_questions"]["cluster_configuration"]
     embedding_model_name = config_values["model_name"]
     eps = config_values["eps"]
     min_samples = config_values["min_samples"]
@@ -178,9 +172,7 @@ def cluster_and_dedupe(dataset: Dataset, config: dict) -> Dataset:
         group_df["qa_combined"] = group_df.apply(create_qa_representation, axis=1)
 
         # Compute embeddings
-        embeddings = compute_embeddings(
-            group_df["qa_combined"].tolist(), model_name=embedding_model_name
-        )
+        embeddings = compute_embeddings(group_df["qa_combined"].tolist(), model_name=embedding_model_name)
 
         # Deduplicate
         dedup_df, _ = deduplicate_question_type(
