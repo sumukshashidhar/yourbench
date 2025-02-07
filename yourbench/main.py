@@ -1,5 +1,6 @@
 import argparse
 import sys
+import time
 
 from config.pipeline_steps import PIPELINE_STEPS
 from interface.frontend import launch_frontend
@@ -22,27 +23,35 @@ logger.add(
 
 def process_pipeline_step(config: dict, step_name: str) -> None:
     """
-    Execute a single pipeline step based on the provided configuration.
+    Execute a single pipeline step and measure execution time.
 
     :param config: Task configuration dictionary
     :param step_name: Name of the pipeline step to execute
     """
     try:
         logger.info(f"Starting {PIPELINE_STEPS[step_name]['description']}...")
+        start_time = time.time()
+
         PIPELINE_STEPS[step_name]["func"](config)
-        logger.info(f"Completed {PIPELINE_STEPS[step_name]['description']}.")
+
+        end_time = time.time()
+        duration = end_time - start_time
+        logger.info(f"Completed {PIPELINE_STEPS[step_name]['description']} in {duration:.2f} seconds.")
     except Exception as e:
         logger.exception(f"Error in {PIPELINE_STEPS[step_name]['description']}: {e}")
 
 
 def process_pipeline(config: dict) -> None:
     """
-    Execute the pipeline steps specified in the task configuration.
+    Execute the pipeline steps specified in the task configuration and log execution time.
 
     :param config: Task configuration dictionary
     """
     executed_steps = []
     skipped_steps = []
+    step_times = {}
+
+    pipeline_start = time.time()
 
     for step_name, step_config in config["pipeline"].items():
         if step_name not in PIPELINE_STEPS:
@@ -53,15 +62,28 @@ def process_pipeline(config: dict) -> None:
         if step_config.get("execute", False):
             logger.debug(f"Executing step: {step_name}")
             executed_steps.append(step_name)
+
+            step_start = time.time()
             process_pipeline_step(config, step_name)
+            step_end = time.time()
+
+            step_times[step_name] = step_end - step_start
         else:
             skipped_steps.append(step_name)
             logger.debug(
                 f"Skipping step: {PIPELINE_STEPS[step_name]['description']} (not specified in the task config)"
             )
 
+    pipeline_end = time.time()
+    total_duration = pipeline_end - pipeline_start
+
+    # Log step-wise execution time
+    for step, duration in step_times.items():
+        logger.info(f"Step '{step}' execution time: {duration:.2f} seconds")
+
     # Log pipeline execution summary
     logger.info("Pipeline processing completed.")
+    logger.info("Total execution time: {:.2f} seconds".format(total_duration))
     logger.info("Executed steps: {}", ", ".join(executed_steps) if executed_steps else "None")
     logger.info("Skipped steps: {}", ", ".join(skipped_steps) if skipped_steps else "None")
 
@@ -79,6 +101,9 @@ def main() -> None:
     parser.add_argument("--task-name", dest="task_name_opt", help="Name of the task to process")
     # Flag to launch the frontend interface
     parser.add_argument("--frontend", action="store_true", help="Launch the Gradio frontend interface")
+    # Flag to concatenate datasets if they exist
+    parser.add_argument("--concat", action="store_true", help="Concatenate existing dataset with new data")
+
     args = parser.parse_args()
 
     # Check if frontend should be launched
@@ -105,6 +130,10 @@ def main() -> None:
     logger.info("Loading configuration for task: {}", task_name)
     config = load_task_config(task_name)
     logger.debug(f"Loaded task configuration: {config}")
+
+    # Retrieve `concat_if_exists` from config
+    concat_if_exists = config.get("configurations", {}).get("huggingface", {}).get("concat_if_exists", False)
+    config["concat_datasets"] = concat_if_exists
 
     # Start pipeline processing
     logger.info("Beginning pipeline processing...", task=task_name)
