@@ -1,4 +1,5 @@
 from datasets import Dataset, load_dataset
+from loguru import logger
 from utils.dataset_engine import handle_dataset_push, make_dataset_name
 from utils.inference_engine import run_parallel_inference
 from utils.load_prompt import load_prompt
@@ -32,8 +33,10 @@ def _generate_scenario_answers(
     """
     # 1) load dataset
     dataset = load_dataset_func()
-    # temp, only keep 2 rows
-    dataset = dataset.select(range(2))
+    # TODO: verify it works corectly
+    logger.info(f"Dataset loaded with {len(dataset)} rows before filtering.")
+    dataset = dataset.select(range(min(2, len(dataset))))
+    logger.info(f"Dataset size after selection: {len(dataset)} rows.")
     if isinstance(dataset, dict):
         # If load_dataset returned a dict with split keys, use `train`
         dataset = dataset["train"]
