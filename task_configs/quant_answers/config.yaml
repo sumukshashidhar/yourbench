@@ -1,0 +1,54 @@
+task_name: quant_answers
+
+# Special configurations
+configurations:
+  huggingface:
+    push_to_huggingface: true
+    hf_organization: alozowski
+    set_hf_repo_visibility: private
+    concat_if_exists: false
+
+  model:
+    model_name: lm_studio/llama-3.3-70b-instruct
+    api_base_url: http://localhost:1234/v1
+    max_concurrent_requests: 8
+
+# Only executing answer generation step
+pipeline:
+  generate_dataset:
+    execute: false
+  generate_summaries:
+    execute: false
+  create_chunks:
+    execute: false
+  make_chunk_pairings:
+    execute: false
+  create_single_hop_questions:
+    execute: false
+  create_multi_hop_questions:
+    execute: false
+  reweight_and_deduplicate_questions:
+    execute: false
+
+  # The only step to run to get the answers
+  answer_questions_with_llm:
+    execute: true
+    source_dataset_name: r1_test_questions
+    target_dataset_name: quant_questions_with_answers
+    prompt_prefix: simple_qg
+    answer_scenarios:
+      zero_shot:
+        execute: true
+        answer_dataset_name: quant_questions_with_answers
+      zero_shot_with_cot:
+        execute: true
+        answer_dataset_name: quant_questions_with_answers
+      answer_with_document_summary:
+        execute: true
+        answer_dataset_name: quant_questions_with_answers
+      answer_with_relevant_chunks:
+        execute: true
+        answer_dataset_name: quant_questions_with_answers
+      gold_standard:
+        execute: true
+        answer_dataset_name: quant_questions_with_answers
