@@ -25,22 +25,17 @@ def load_logo_banner(
     light_logo_path: str,
     dark_logo_path: str,
     alt_text: str = "Yourbench Logo",
-    image_width: int = 200,
-    max_width: int = 300
+    max_width: int = 800  # Increased max container width
 ) -> str:
     """
     Generate an HTML snippet that displays a responsive banner with dark and light mode support.
-    This version inlines SVG content as data URLs, which avoids broken references to local files.
+    This version uses relative units for better responsiveness across different screen sizes.
 
     Args:
         light_logo_path: Path to the light mode logo SVG file
         dark_logo_path: Path to the dark mode logo SVG file
         alt_text: Alternative text for the image
-        image_width: Width of the image in pixels
         max_width: Maximum width of the container in pixels
-
-    Returns:
-        str: HTML snippet containing the responsive banner
     """
     # If the light logo doesn't exist, we can't do anything
     if not os.path.exists(light_logo_path):
@@ -61,18 +56,16 @@ def load_logo_banner(
     if not dark_logo_url:
         dark_logo_url = light_logo_url
 
-    # Return an HTML snippet using <picture> so that dark mode is detected automatically
+    # Updated HTML snippet with responsive sizing
     html_snippet = f"""
-    <div style="max-width:{max_width}px; margin:auto;" align="center">
+    <div style="max-width:{max_width}px; margin:auto; padding: 1rem;" align="center">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="{dark_logo_url}">
         <source media="(prefers-color-scheme: light)" srcset="{light_logo_url}">
-        <!-- Fallback to the light version if color-scheme media query isn't supported -->
         <img 
            alt="{html.escape(alt_text)}" 
            src="{light_logo_url}" 
-           width="{image_width}" 
-           style="max-width:100%; height:auto;"
+           style="width: 100%; max-width: 400px; height: auto;"
         />
       </picture>
     </div>
