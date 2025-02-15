@@ -1,116 +1,73 @@
+"""
+Universal main.py script for ui and cli
+
+Usage:
+    python main.py --gui # launches the gradio ui
+    python main.py       # runs in cli mode
+"""
 import argparse
-import sys
+import os
+import gradio as gr
 
-from config.pipeline_steps import PIPELINE_STEPS
-from interface.frontend import launch_frontend
-from loguru import logger
-from utils.load_task_config import get_available_tasks, load_task_config
-
-
-# Configure Loguru for logging and error handling
-logger.remove()  # Remove any default handlers
-logger.add(
-    sys.stderr,
-    level="INFO",
-    colorize=True,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-    "<level>{level: <8}</level> | "
-    "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-    "<level>{message}</level>",
-)
-
-
-def process_pipeline_step(config: dict, step_name: str) -> None:
+def load_logo(logo_path: str, max_width: int = 300) -> str:
     """
-    Execute a single pipeline step based on the provided configuration.
-
-    :param config: Task configuration dictionary
-    :param step_name: Name of the pipeline step to execute
+    Load a logo file (SVG or other image format) and return an HTML snippet 
+    that displays it resized as a banner.
     """
-    try:
-        logger.info(f"Starting {PIPELINE_STEPS[step_name]['description']}...")
-        PIPELINE_STEPS[step_name]["func"](config)
-        logger.info(f"Completed {PIPELINE_STEPS[step_name]['description']}.")
-    except Exception as e:
-        logger.exception(f"Error in {PIPELINE_STEPS[step_name]['description']}: {e}")
-
-
-def process_pipeline(config: dict) -> None:
-    """
-    Execute the pipeline steps specified in the task configuration.
-
-    :param config: Task configuration dictionary
-    """
-    executed_steps = []
-    skipped_steps = []
-
-    for step_name, step_config in config["pipeline"].items():
-        if step_name not in PIPELINE_STEPS:
-            logger.warning(f"Unknown step: {step_name}. Skipping...")
-            skipped_steps.append(step_name)
-            continue
-
-        if step_config.get("execute", False):
-            logger.debug(f"Executing step: {step_name}")
-            executed_steps.append(step_name)
-            process_pipeline_step(config, step_name)
+    ext = os.path.splitext(logo_path)[1].lower()
+    if ext == ".svg":
+        try:
+            with open(logo_path, "r", encoding="utf-8") as f:
+                logo_content = f.read()
+            # For SVGs, insert a style block to override intrinsic sizing.
+            logo_html = f'''
+            <div style="max-width:{max_width}px; margin:auto;">
+                <style>
+                    svg {{ width: 100% !important; height: auto !important; }}
+                </style>
+                {logo_content}
+            </div>
+            '''
+        except FileNotFoundError:
+            logo_html = "<p>SVG file not found.</p>"
+    else:
+        # For raster images, simply use an <img> tag.
+        if os.path.exists(logo_path):
+            logo_html = f'''
+            <div style="max-width:{max_width}px; margin:auto;">
+                <img src="{logo_path}" style="width:100%; height:auto;" alt="Logo">
+            </div>
+            '''
         else:
-            skipped_steps.append(step_name)
-            logger.debug(
-                f"Skipping step: {PIPELINE_STEPS[step_name]['description']} (not specified in the task config)"
-            )
+            logo_html = "<p>Logo file not found.</p>"
+    return logo_html
 
-    # Log pipeline execution summary
-    logger.info("Pipeline processing completed.")
-    logger.info("Executed steps: {}", ", ".join(executed_steps) if executed_steps else "None")
-    logger.info("Skipped steps: {}", ", ".join(skipped_steps) if skipped_steps else "None")
-
-
-def main() -> None:
+def launch_ui() -> None:
     """
-    Main entry point for the script.
-
-    Parse command-line arguments and execute the pipeline or launch the frontend.
+    Launch a minimal Gradio UI that displays a logo.
+    
+    The logo is loaded from docs/assets/banner_logo.svg (or another supported format)
+    and wrapped in a container that limits its maximum width for consistent display.
     """
-    parser = argparse.ArgumentParser(description="Process a specific YourBench task.")
-    # Positional argument for task name
-    parser.add_argument("task_name", nargs="?", help="Name of the task to process")
-    # Optional argument for task name (alternative to positional)
-    parser.add_argument("--task-name", dest="task_name_opt", help="Name of the task to process")
-    # Flag to launch the frontend interface
-    parser.add_argument("--frontend", action="store_true", help="Launch the Gradio frontend interface")
-    args = parser.parse_args()
-
-    # Check if frontend should be launched
-    if args.frontend:
-        logger.info("Launching frontend interface...")
-        launch_frontend()
-        return
-
-    task_name = args.task_name or args.task_name_opt
-    if not task_name:
-        # Raise an error if no task name is provided
-        parser.error("Task name must be provided either as a positional argument or with --task-name")
-
-    available_tasks = get_available_tasks()
-    if task_name not in available_tasks:
-        # Log and exit on invalid task
-        logger.error(
-            "Invalid task: {}. Available tasks: {}",
-            task_name,
-            ", ".join(available_tasks),
-        )
-        sys.exit(1)
-
-    logger.info("Loading configuration for task: {}", task_name)
-    config = load_task_config(task_name)
-    logger.debug(f"Loaded task configuration: {config}")
-
-    # Start pipeline processing
-    logger.info("Beginning pipeline processing...", task=task_name)
-    process_pipeline(config)
-    logger.success("Pipeline processing completed for task: {}", task_name)
-
+    logo_path = "docs/assets/banner_logo.svg"
+    logo_html = load_logo(logo_path)
+    
+    # Create Gradio Blocks UI with a single HTML component showing the logo
+    with gr.Blocks() as demo:
+        gr.HTML(value=logo_html)
+    
+    # Launch the UI on all network interfaces
+    demo.launch(server_name="0.0.0.0")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Dynamic Evaluation Set Generation with Large Language Models"
+    )
+    parser.add_argument("--gui", action="store_true", help="Launch the gradio UI")
+    args = parser.parse_args()
+
+    if args.gui:
+        launch_ui()
+    else:
+        # CLI mode logic can be added here
+        print("Running in CLI mode. No GUI is launched.")

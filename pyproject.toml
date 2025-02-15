@@ -1,77 +1,13 @@
 [project]
 name = "yourbench"
-version = "0.1.0"
-description = "Dynamic Evaluation Set Generation with LLMs"
+version = "0.2.0"
+description = "Dynamic Evaluation Set Generation with Large Language Models"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12, <3.13"
 dependencies = [
-    "async-timeout>=5.0.1",
-    "asyncio>=3.4.3",
-    "datasets>=3.2.0",
-    "faiss-cpu>=1.9.0.post1",
-    "hf-transfer>=0.1.8",
-    "kneed>=0.8.5",
-    "langfuse>=2.57.1",
-    "litellm>=1.55.12",
-    "loguru>=0.7.3",
-    "matplotlib>=3.10.0",
-    "nltk>=3.9.1",
-    "pandas>=2.2.3",
-    "plotly>=5.24.1",
-    "ruff>=0.8.4",
-    "scikit-learn>=1.6.0",
-    "seaborn>=0.13.2",
-    "sentence-transformers>=3.3.1",
-    "tqdm>=4.67.1",
-    "transformers>=4.48.1",
-    "gradio>=5.13.1",
+    "gradio>=5.16.0",
 ]
 
-[tool.uv.sources]
-torch = [
-  { index = "pytorch-cpu", marker = "platform_system != 'Linux'" },
-  { index = "pytorch-cu124", marker = "platform_system == 'Linux'" },
-]
-torchvision = [
-  { index = "pytorch-cpu", marker = "platform_system != 'Linux'" },
-  { index = "pytorch-cu124", marker = "platform_system == 'Linux'" },
-]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
-explicit = true
-
-[tool.uv]
-package = true
-
-[project.scripts]
-yourbench = "yourbench.main:main"
-
-[tool.ruff]
-line-length = 119
-exclude = ["**/*.ipynb"]
-
-lint.ignore = ["E501", "C901", "F841"]
-lint.select = ["C", "E", "F", "I", "W"]
-lint.fixable = ["A", "B", "C", "D", "E", "F", "I", "W"]
-preview = true
-
-[tool.ruff.lint.isort]
-lines-after-imports = 2
-known-first-party = ["yourbench"]
-split-on-trailing-comma = true
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
 
 [tool.setuptools.packages.find]
 where = ["yourbench"]
