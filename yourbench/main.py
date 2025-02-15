@@ -129,7 +129,10 @@ def launch_ui() -> None:
     # Launch the UI on all network interfaces
     demo.launch(server_name="0.0.0.0")
 
-if __name__ == "__main__":
+def main():
+    """
+    Main entry point for the CLI application.
+    """
     parser = argparse.ArgumentParser(
         description="Dynamic Evaluation Set Generation with Large Language Models"
     )
@@ -141,3 +144,6 @@ if __name__ == "__main__":
     else:
         # CLI mode logic can be added here
         print("Running in CLI mode. No GUI is launched.")
+
+if __name__ == "__main__":
+    main()
