@@ -1,0 +1,23 @@
+###
+# this is a test config file for yourbench, which will help you understand how the yb architecture works.
+# you will need a simple openrouter (https://openrouter.ai/) api key, with gemini access to test this.
+# this is free!
+###
+model_list:
+  - model_name: google/gemini-2.0-flash-lite-preview-02-05:free
+    provider: openrouter
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+  
+model_roles:
+  ingestion:
+    - google/gemini-2.0-flash-lite-preview-02-05:free
+
+# this is the pipeline for yourbench. you can run the stages of the pipeline you wish to.
+# the design principle dictates that each stage is self contained, and does not require any existing state from the previous stages
+pipeline:
+  # ingestion
+  ingestion:
+    source_documents_dir: data/example/raw
+    output_dir: data/example/ingested
+    run: true # set to true to run the stage

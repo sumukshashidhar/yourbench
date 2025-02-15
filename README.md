@@ -7,3 +7,12 @@
 </p>
 
 <h3 align="center">Yourbench: Dynamic Evaluation Set Generation with LLMs</h3>
+
+
+# Limitations
+
+We plan to only support OpenAI style APIs for now. Please use a router like OpenRouter (https://openrouter.ai/) to route to different LLM providers via an OpenAI style API.
+
+# Contributing
+
+We welcome contributions! Please see the [CONTRIBUTING.md](docs/CONTRIBUTING.md) file for details.
