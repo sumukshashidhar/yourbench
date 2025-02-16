@@ -1,0 +1,26 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "document_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_filename": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_metadata": {
+      "file_size": {
+        "dtype": "int64",
+        "_type": "Value"
+      }
+    }
+  },
+  "homepage": "",
+  "license": ""
+}
