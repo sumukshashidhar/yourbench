@@ -4,7 +4,6 @@ Inference Engine For Yourbench
 import litellm
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
-import os
 from loguru import logger
 from typing import Dict, Any, List
 import sys
