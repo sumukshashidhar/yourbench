@@ -21,7 +21,6 @@ Usage:
 
 import os
 import glob
-import shutil
 from typing import Dict, Any, Optional
 
 from loguru import logger
