@@ -64,3 +64,32 @@ echo "OPENROUTER_API_KEY=<your_openrouter_api_key>" >> .env
 # 4. Run the pipeline with an example config
 yourbench --config configs/example.yaml
 ```
+
+You can also launch a minimal Gradio UI by including `--gui`. 
+It will let you interactively explore your pipeline stages.
+
+**Note**: The above instructions are a work-in-progress, and more comprehensive usage info will be provided soon.
+
+---
+
+## Repository Structure (Overview)
+
+```
+.
+├── yourbench/                   # Core framework modules
+│   ├── pipeline/                # Stages: ingestion, summarization, question generation, etc.
+│   ├── utils/                   # Utility modules (loading, prompts, inference, etc.)
+│   └── main.py                  # CLI and UI entry point
+├── configs/                     # Example YAML configs
+├── docs/                        # Documentation, assets
+├── data/                        # Example data (raw, ingested, HF dataset)
+├── pyproject.toml               # Project metadata
+└── README.md                    # (This File)
+```
+
+---
+
+<!-- Placeholder for more details! We will add deeper explanations, usage examples, 
+     code references, advanced configuration notes, performance analyses, 
+     and best practices in the next sections. Stay tuned. -->
+```

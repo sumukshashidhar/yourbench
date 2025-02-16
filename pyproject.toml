@@ -13,9 +13,12 @@ dependencies = [
     "litellm>=1.61.5",
     "loguru>=0.7.3",
     "markitdown>=0.0.1a4",
+    "matplotlib>=3.10.0",
     "openai>=1.63.0",
     "python-dotenv>=1.0.1",
+    "torch>=2.6.0",
     "tqdm>=4.67.1",
+    "transformers>=4.48.3",
 ]
 
 [project.scripts]

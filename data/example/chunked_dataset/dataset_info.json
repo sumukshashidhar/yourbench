@@ -1,0 +1,82 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "yb_demo_ingested_documents_with_summaries",
+  "dataset_size": 9246,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/sumuks/yb_demo_ingested_documents_with_summaries@c0c393e9555a00f8acb752006a2e0c3396576e4a/data/train-00000-of-00001.parquet": {
+      "num_bytes": 18871,
+      "checksum": null
+    }
+  },
+  "download_size": 18871,
+  "features": {
+    "document_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_filename": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_metadata": {
+      "file_size": {
+        "dtype": "int64",
+        "_type": "Value"
+      }
+    },
+    "document_summary_raw": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "summarization_model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "chunks": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "multihop_chunks": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "chunking_model": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 28117,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 9246,
+      "num_examples": 1,
+      "dataset_name": "yb_demo_ingested_documents_with_summaries"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

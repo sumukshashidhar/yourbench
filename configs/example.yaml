@@ -51,4 +51,18 @@ pipeline:
     output_documents_dataset_name: yb_demo_ingested_documents_with_summaries
     local_dataset_path: data/example/ingested_dataset_with_summaries
     concat_existing_dataset: false
+    run: false
+
+  # chunking to convert document to chunks
+  chunking:
+    source_documents_dataset_name: yb_demo_ingested_documents_with_summaries
+    output_documents_dataset_name: yb_demo_chunked_documents
+    local_dataset_path: data/example/chunked_dataset
+    concat_existing_dataset: false
+    chunking_configuration:
+      l_min_tokens: 64
+      l_max_tokens: 128
+      tau_threshold: 0.3
+      h_min: 2
+      h_max: 4
     run: true
