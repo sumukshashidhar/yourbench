@@ -3,21 +3,52 @@
 # you will need a simple openrouter (https://openrouter.ai/) api key, with gemini access to test this.
 # this is free!
 ###
+hf_configuration:
+  token: $HF_TOKEN
+  private: true # true by default, set to false to make the dataset public
+  hf_organization: $HF_ORGANIZATION
+
 model_list:
   - model_name: google/gemini-2.0-flash-lite-preview-02-05:free
     provider: openrouter
     base_url: https://openrouter.ai/api/v1
     api_key: $OPENROUTER_API_KEY
-  
+    max_concurrent_requests: 1
+  - model_name: qwen/qwen-vl-plus:free
+    provider: openrouter
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+    max_concurrent_requests: 1
+
 model_roles:
   ingestion:
     - google/gemini-2.0-flash-lite-preview-02-05:free
+  summarization:
+    - google/gemini-2.0-flash-lite-preview-02-05:free
+
+inference_config:
+  max_concurrent_requests: 16
 
 # this is the pipeline for yourbench. you can run the stages of the pipeline you wish to.
 # the design principle dictates that each stage is self contained, and does not require any existing state from the previous stages
 pipeline:
-  # ingestion
+  # ingestion to convert documents to markdown
   ingestion:
     source_documents_dir: data/example/raw
     output_dir: data/example/ingested
-    run: true # set to true to run the stage
+    run: false # set to true to run the stage
+  
+  # upload documents to a simple HF hub repo
+  upload_ingest_to_hub:
+    source_documents_dir: data/example/ingested
+    hub_dataset_name: yb_demo_ingested_documents
+    local_dataset_path: data/example/ingested_dataset
+    run: false
+  
+  # summarization to convert markdown to a summary
+  summarization:
+    source_documents_dataset_name: yb_demo_ingested_documents
+    output_documents_dataset_name: yb_demo_ingested_documents_with_summaries
+    local_dataset_path: data/example/ingested_dataset_with_summaries
+    concat_existing_dataset: false
+    run: true
