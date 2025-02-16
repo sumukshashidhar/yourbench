@@ -7,7 +7,8 @@ log_backups/
 plots/
 files/
 .gradio/
-
+fr.sh
+repo_contents.txt
 # C extensions
 *.so
 
