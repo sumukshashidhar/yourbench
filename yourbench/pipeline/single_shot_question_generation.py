@@ -32,7 +32,7 @@ def run(config: Dict[str, Any]) -> None:
     all the calls first so that the inference engine can process them in parallel.
 
     Steps:
-      1. Load the chunked dataset using 'source_chunked_dataset_name'.
+      1. Load the chunked dataset using 'source_dataset_name'.
       2. Accumulate all (row, chunk) calls as a list of InferenceCall objects.
       3. Use run_inference() once for the entire list of InferenceCall objects.
       4. Parse all the returned responses, grouping them back by row.
@@ -46,8 +46,8 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Read config fields
-    source_dataset_name = stage_cfg["source_chunked_dataset_name"]
-    output_dataset_name = stage_cfg["output_question_dataset_name"]
+    source_dataset_name = stage_cfg["source_dataset_name"]
+    output_dataset_name = stage_cfg["output_dataset_name"]
     test_audience = stage_cfg.get("test_audience", "undergraduate")
     use_multihop = stage_cfg.get("use_multihop", False)
 

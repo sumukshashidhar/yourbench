@@ -13,7 +13,7 @@ def run(config: Dict[str, Any]) -> None:
     """
     logger.info("Running summarization stage")
     # read the huggingface dataset of documents
-    dataset = smart_load_dataset(config["pipeline"]["summarization"]["source_documents_dataset_name"], config)
+    dataset = smart_load_dataset(config["pipeline"]["summarization"]["source_dataset_name"], config)
     print(dataset)
     # for each document, make an infernece call
     documents: list[str] = dataset["document_text"]
@@ -39,5 +39,5 @@ def run(config: Dict[str, Any]) -> None:
     # add the generating model to the dataset
     dataset = dataset.add_column("summarization_model", [config["model_roles"]["summarization"][0]] * len(dataset))
     # save the dataset
-    save_dataset(dataset, "summarization", config, config["pipeline"]["summarization"]["output_documents_dataset_name"])
+    save_dataset(dataset, "summarization", config, config["pipeline"]["summarization"]["output_dataset_name"])
     return 

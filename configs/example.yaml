@@ -55,16 +55,16 @@ pipeline:
   
   # summarization to convert markdown to a summary
   summarization:
-    source_documents_dataset_name: yb_demo_ingested_documents
-    output_documents_dataset_name: yb_demo_ingested_documents_with_summaries
+    source_dataset_name: yb_demo_ingested_documents
+    output_dataset_name: yb_demo_ingested_documents_with_summaries
     local_dataset_path: data/example/ingested_dataset_with_summaries
     concat_existing_dataset: false
     run: false
 
   # chunking to convert document to chunks
   chunking:
-    source_documents_dataset_name: yb_demo_ingested_documents_with_summaries
-    output_documents_dataset_name: yb_demo_chunked_documents
+    source_dataset_name: yb_demo_ingested_documents_with_summaries
+    output_dataset_name: yb_demo_chunked_documents
     local_dataset_path: data/example/chunked_dataset
     concat_existing_dataset: false
     chunking_configuration:
@@ -76,16 +76,16 @@ pipeline:
     run: false
   
   single_shot_question_generation:
-    source_chunked_dataset_name: yb_demo_chunked_documents
-    output_question_dataset_name: yb_demo_single_shot_questions
+    source_dataset_name: yb_demo_chunked_documents
+    output_dataset_name: yb_demo_single_shot_questions
     local_dataset_path: data/example/single_shot_questions
     diversification_seed: "24 year old adult"
     concat_existing_dataset: false
     run: true
   
   multi_hop_question_generation:
-    source_chunked_dataset_name: yb_demo_chunked_documents
-    output_question_dataset_name: yb_demo_multi_hop_questions
+    source_dataset_name: yb_demo_chunked_documents
+    output_dataset_name: yb_demo_multi_hop_questions
     local_dataset_path: data/example/multi_hop_questions
     concat_existing_dataset: false
     run: true

@@ -51,8 +51,8 @@ def run(config: Dict[str, Any]) -> None:
     Configuration Example:
         pipeline:
           chunking:
-            source_documents_dataset_name: yb_demo_ingested_documents_with_summaries
-            output_documents_dataset_name: yb_demo_chunked_documents
+            source_dataset_name: yb_demo_ingested_documents_with_summaries
+            output_dataset_name: yb_demo_chunked_documents
             chunking_configuration:
               l_min_tokens: 256
               l_max_tokens: 1024
@@ -72,8 +72,8 @@ def run(config: Dict[str, Any]) -> None:
     logger.info("Running chunking stage with E5 embeddings...")
 
     # === Step 1: Load dataset ===
-    source_dataset_name = chunking_cfg["source_documents_dataset_name"]
-    output_dataset_name = chunking_cfg["output_documents_dataset_name"]
+    source_dataset_name = chunking_cfg["source_dataset_name"]
+    output_dataset_name = chunking_cfg["output_dataset_name"]
     dataset = smart_load_dataset(source_dataset_name, config)
     logger.debug("Loaded dataset '{}' with {} rows.", source_dataset_name, len(dataset))
 
