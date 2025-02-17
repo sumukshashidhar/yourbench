@@ -1,0 +1,118 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "yb_demo_chunked_documents",
+  "dataset_size": 17895,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/sumuks/yb_demo_chunked_documents@b8fc929b9aca989ee43d3c02d75da32ba55213b6/data/train-00000-of-00001.parquet": {
+      "num_bytes": 36673,
+      "checksum": null
+    }
+  },
+  "download_size": 36673,
+  "features": {
+    "document_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_filename": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_metadata": {
+      "file_size": {
+        "dtype": "int64",
+        "_type": "Value"
+      }
+    },
+    "document_summary_raw": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "summarization_model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "chunks": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "multihop_chunks": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "chunking_model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "single_shot_questions": [
+      {
+        "answer": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "chunk_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "document_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "question": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "self_answer": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "self_assessed_question_type": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "self_estimated_difficulty_rating": {
+          "dtype": "int64",
+          "_type": "Value"
+        }
+      }
+    ],
+    "generating_model": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 54568,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 17895,
+      "num_examples": 1,
+      "dataset_name": "yb_demo_chunked_documents"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
