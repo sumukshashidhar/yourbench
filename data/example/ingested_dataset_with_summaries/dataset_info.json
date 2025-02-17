@@ -6,7 +6,7 @@
   "dataset_size": 6942,
   "description": "",
   "download_checksums": {
-    "hf://datasets/sumuks/yb_demo_ingested_documents@cb7c67c85ed22faaabf168965170eb76cf6f2e02/data/train-00000-of-00001.parquet": {
+    "hf://datasets/sumuks/yb_demo_ingested_documents@b50978991ad502c48bec4aaa09c2f0b73528ad19/data/train-00000-of-00001.parquet": {
       "num_bytes": 6758,
       "checksum": null
     }
@@ -31,7 +31,7 @@
         "_type": "Value"
       }
     },
-    "document_summary_raw": {
+    "raw_document_summary": {
       "dtype": "string",
       "_type": "Value"
     },

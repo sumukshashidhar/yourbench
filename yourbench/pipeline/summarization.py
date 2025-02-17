@@ -26,7 +26,7 @@ def run(config: Dict[str, Any]) -> None:
 
     logger.info("Running summarization stage.")
     # 1. Load the dataset
-    dataset = smart_load_dataset(summary_cfg["source_documents_dataset_name"], config)
+    dataset = smart_load_dataset(summary_cfg["source_dataset_name"], config)
     logger.info("Loaded dataset with {} documents.", len(dataset))
 
     # 2. Build the inference calls
@@ -67,6 +67,6 @@ def run(config: Dict[str, Any]) -> None:
         dataset,
         "summarization",
         config,
-        summary_cfg["output_documents_dataset_name"]
+        summary_cfg["output_dataset_name"]
     )
     logger.success("Summarization stage completed successfully.")

@@ -24,14 +24,25 @@ model_list:
     base_url: $LOCALHOST_BASE_URL
     api_key: $OPENROUTER_API_KEY
     max_concurrent_requests: 1
+  - model_name: mistralai/Mistral-Small-24B-Instruct-2501
+    provider: openai
+    base_url: $LOCALHOST_BASE_URL_2
+    api_key: $OPENROUTER_API_KEY
+    max_concurrent_requests: 1
 
 model_roles:
   ingestion:
-    - google/gemini-2.0-flash-lite-preview-02-05:free
+    # - google/gemini-2.0-flash-lite-preview-02-05:free
+    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
   summarization:
-    - google/gemini-2.0-flash-lite-preview-02-05:free
+    # - google/gemini-2.0-flash-lite-preview-02-05:free
+    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
   single_shot_question_generation:
     - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+    - mistralai/Mistral-Small-24B-Instruct-2501
+  multi_hop_question_generation:
+    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+    - mistralai/Mistral-Small-24B-Instruct-2501
     # - qwen/qwen-vl-plus:free
 
 inference_config:
@@ -81,7 +92,7 @@ pipeline:
     local_dataset_path: data/example/single_shot_questions
     diversification_seed: "24 year old adult"
     concat_existing_dataset: false
-    run: true
+    run: false
   
   multi_hop_question_generation:
     source_dataset_name: yb_demo_chunked_documents
