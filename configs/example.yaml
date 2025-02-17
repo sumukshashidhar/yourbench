@@ -19,12 +19,20 @@ model_list:
     base_url: https://openrouter.ai/api/v1
     api_key: $OPENROUTER_API_KEY
     max_concurrent_requests: 1
+  - model_name: cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+    provider: openai
+    base_url: $LOCALHOST_BASE_URL
+    api_key: $OPENROUTER_API_KEY
+    max_concurrent_requests: 1
 
 model_roles:
   ingestion:
     - google/gemini-2.0-flash-lite-preview-02-05:free
   summarization:
     - google/gemini-2.0-flash-lite-preview-02-05:free
+  single_shot_question_generation:
+    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+    # - qwen/qwen-vl-plus:free
 
 inference_config:
   max_concurrent_requests: 16
@@ -65,4 +73,19 @@ pipeline:
       tau_threshold: 0.3
       h_min: 2
       h_max: 4
+    run: false
+  
+  single_shot_question_generation:
+    source_chunked_dataset_name: yb_demo_chunked_documents
+    output_question_dataset_name: yb_demo_single_shot_questions
+    local_dataset_path: data/example/single_shot_questions
+    diversification_seed: "24 year old adult"
+    concat_existing_dataset: false
+    run: true
+  
+  multi_hop_question_generation:
+    source_chunked_dataset_name: yb_demo_chunked_documents
+    output_question_dataset_name: yb_demo_multi_hop_questions
+    local_dataset_path: data/example/multi_hop_questions
+    concat_existing_dataset: false
     run: true
