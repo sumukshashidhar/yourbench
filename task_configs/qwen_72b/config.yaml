@@ -1,0 +1,109 @@
+task_name: qwen_72b
+
+configurations:
+  huggingface:
+    push_to_huggingface: true
+    hf_organization: alozowski
+    set_hf_repo_visibility: private
+    # concat_if_exists: false
+
+  model:
+    # Refer to https://docs.litellm.ai/docs/providers for more information.
+    model_name: openrouter/qwen/qwen-2.5-72b-instruct
+    api_base_url: https://openrouter.ai/api/v1
+    max_concurrent_requests: 32
+
+pipeline:
+  # this is where we transform source documents into a huggingface dataset
+  generate_dataset:
+    execute: true
+    # this is where the source documents are located
+    files_directory: examples/yourbench_y1_preview/
+    dataset_name: qwen_72b
+  
+  # this is where we generate summaries of the documents
+  generate_summaries:
+    execute: true
+    source_dataset_name: qwen_72b
+    target_dataset_name: qwen_72b
+  
+  # this is where we create chunks of the documents, to be used for question generation.
+  create_chunks:
+    execute: true
+    source_dataset_name: qwen_72b
+    target_dataset_name: qwen_72b_segmented_single_hop
+    chunking_configuration:
+      model_name: sentence-transformers/all-MiniLM-L6-v2
+      min_tokens: 256 # tokens
+      target_chunk_size: 512 # tokens
+      max_tokens: 1024 # tokens
+      similarity_threshold: 0.3
+      device: cpu # if you have a GPU, you can use it here or set to cpu
+  
+  # this is where we craft these into chunk pairings for multihop question generation
+  make_chunk_pairings:
+    execute: true
+    source_dataset_name: qwen_72b_segmented_single_hop
+    target_dataset_name: qwen_72b_segmented_multi_hop
+    pairing_configuration:
+      min_num_chunks: 2
+      max_num_chunks: 5
+  
+  # this is the question generation step for single hop questions
+  create_single_hop_questions:
+    execute: true
+    source_dataset_name: qwen_72b_segmented_single_hop
+    target_dataset_name: qwen_72b_single_hop_questions
+    prompt_prefix: simple_qg
+    test_audience: "an expert in the field"
+  
+  # this is the question generation step for multihop questions
+  create_multi_hop_questions:
+    execute: true
+    source_dataset_name: qwen_72b_segmented_multi_hop
+    target_dataset_name: qwen_72b_multi_hop_questions
+    prompt_prefix: simple_qg
+    test_audience: "an expert in the field"
+  
+  # perform re-weighting and deduplication of questions here
+  reweight_and_deduplicate_questions:
+    execute: true
+    source_single_hop_questions_dataset_name: qwen_72b_single_hop_questions
+    source_multi_hop_questions_dataset_name: qwen_72b_multi_hop_questions
+    large_question_dataset_name: qwen_72b_questions_large
+    target_dataset_name: qwen_72b_questions
+    cluster_configuration:
+      model_name: sentence-transformers/all-MiniLM-L6-v2
+      alpha: 0.7
+      eps: 0.20
+      batch_size: 128
+      distance_threshold: 0.7 # this is the distance threshold for clustering. it needs to be tuned well.
+      top_k: 10 # number of neighbors to search for each vector
+      min_samples: 1
+      output_file: ./logs/deduplication_results.txt
+      # these are for picking representative questions and answers
+      lambda_val: 1.0
+      w_max: 5.0
+  
+  # this is where we answer questions with llm
+  answer_questions_with_llm:
+    execute: true
+    source_dataset_name: qwen_72b_questions
+    target_dataset_name: qwen_72b_questions_with_answers
+    prompt_prefix: simple_qg
+    answer_scenarios:
+      zero_shot:
+        execute: true
+        answer_dataset_name: qwen_72b_questions_with_answers
+      zero_shot_with_cot:
+        execute: true
+        answer_dataset_name: qwen_72b_questions_with_answers
+      answer_with_document_summary:
+        execute: true
+        answer_dataset_name: qwen_72b_questions_with_answers
+      answer_with_relevant_chunks:
+        execute: true
+        answer_dataset_name: qwen_72b_questions_with_answers
+      gold_standard:
+        execute: true
+        answer_dataset_name: qwen_72b_questions_with_answers
