@@ -9,35 +9,64 @@ from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
 def run(config: Dict[str, Any]) -> None:
     """
-    Run the summarization stage of the pipeline.
+    Run the summarization stage of the pipeline in parallel.
+
+    Steps:
+      1. Load the dataset specified by 'source_documents_dataset_name'.
+      2. Create an InferenceCall for each document text.
+      3. Pass all InferenceCall objects at once to 'run_inference' to allow parallel processing.
+      4. Parse the raw model responses, extract <final_summary> content, and store them in the dataset.
+      5. Save the updated dataset to local disk and optionally push to a Hugging Face Hub dataset.
     """
-    logger.info("Running summarization stage")
-    # read the huggingface dataset of documents
-    dataset = smart_load_dataset(config["pipeline"]["summarization"]["source_dataset_name"], config)
-    print(dataset)
-    # for each document, make an infernece call
-    documents: list[str] = dataset["document_text"]
-    dataset["document_id"]
-    # create the inference calls
+    # Check if the pipeline stage is active
+    summary_cfg = config["pipeline"]["summarization"]
+    if not summary_cfg.get("run", False):
+        logger.info("Summarization stage disabled in config. Skipping.")
+        return
+
+    logger.info("Running summarization stage.")
+    # 1. Load the dataset
+    dataset = smart_load_dataset(summary_cfg["source_documents_dataset_name"], config)
+    logger.info("Loaded dataset with {} documents.", len(dataset))
+
+    # 2. Build the inference calls
+    documents: List[str] = dataset["document_text"]
     inference_calls = [
         InferenceCall(
             messages=[
-                {"role": "user", "content": SUMMARIZATION_USER_PROMPT.format(document=document)}
+                {
+                    "role": "user",
+                    "content": SUMMARIZATION_USER_PROMPT.format(document=document)
+                }
             ]
         )
         for document in documents
     ]
-    # run the inference calls
-    logger.info("Running inference for summarization")
-    responses: Dict[str, List[str]] = run_inference(config, "summarization", inference_calls)
-    # parse the responses
-    parsed_responses: list[str] = [extract_content_from_xml_tags(response, "final_summary") for response in responses[config["model_roles"]["summarization"][0]]]
-    logger.debug("Summarization responses: {}", responses)
-    # add a new column to the dataset with the summarization, with the summarization model
-    dataset = dataset.add_column("raw_document_summary", responses[config["model_roles"]["summarization"][0]])
-    dataset = dataset.add_column("document_summary", parsed_responses)
-    # add the generating model to the dataset
-    dataset = dataset.add_column("summarization_model", [config["model_roles"]["summarization"][0]] * len(dataset))
-    # save the dataset
-    save_dataset(dataset, "summarization", config, config["pipeline"]["summarization"]["output_dataset_name"])
-    return 
+
+    # 3. Run inference in parallel
+    logger.info("Sending {} summarization calls to inference engine.", len(inference_calls))
+    responses_dict = run_inference(config, "summarization", inference_calls)
+
+    # We assume a single summarization model in model_roles["summarization"][0]
+    summ_model = config["model_roles"]["summarization"][0]
+    raw_summaries = responses_dict[summ_model]
+
+    # 4. Parse out <final_summary> from each raw model response
+    final_summaries = [
+        extract_content_from_xml_tags(r, "final_summary") if r else ""
+        for r in raw_summaries
+    ]
+
+    # Attach columns to the dataset
+    dataset = dataset.add_column("raw_document_summary", raw_summaries)
+    dataset = dataset.add_column("document_summary", final_summaries)
+    dataset = dataset.add_column("summarization_model", [summ_model] * len(dataset))
+
+    # 5. Save the updated dataset
+    save_dataset(
+        dataset,
+        "summarization",
+        config,
+        summary_cfg["output_documents_dataset_name"]
+    )
+    logger.success("Summarization stage completed successfully.")
