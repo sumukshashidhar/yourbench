@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, Union
-
+from loguru import logger
 import yaml
 
 
@@ -54,9 +54,11 @@ def load_all_prompts(prompts_dir: Union[str, Path] = "yourbench/prompts") -> Dic
 def load_prompt(prompt_name: str) -> str:
     """Load a single prompt by name"""
     prompts = load_all_prompts()
+    logger.debug("Available prompts:", prompts.keys())
     if prompt_name not in prompts:
         raise ValueError(f"Prompt {prompt_name} not found")
     return prompts[prompt_name]
+
 
 
 if __name__ == "__main__":

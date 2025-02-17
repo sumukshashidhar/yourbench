@@ -8,7 +8,7 @@ configurations:
     push_to_huggingface: true # this determines whether the dataset is pushed to huggingface after generation
     hf_organization: alozowski # this is the organization to push the dataset to, if push_to_huggingface is true
     set_hf_repo_visibility: private # this determines the visibility of the huggingface repo.
-    concat_if_exists: true # this determines whether to concatenate the dataset if it already exists.
+    concat_if_exists: false # this determines whether to concatenate the dataset if it already exists.
 
   # model specific configurations
   # base urls and api keys will be loaded from the environment variables
@@ -36,7 +36,7 @@ pipeline:
   
   # this is where we create chunks of the documents, to be used for question generation.
   create_chunks:
-    execute: true
+    execute: false
     source_dataset_name: gpt4_test
     target_dataset_name: gpt4_test_segmented_single_hop
     chunking_configuration:
@@ -49,7 +49,7 @@ pipeline:
   
   # this is where we craft these into chunk pairings for multihop question generation
   make_chunk_pairings:
-    execute: true
+    execute: false
     source_dataset_name: gpt4_test_segmented_single_hop
     target_dataset_name: gpt4_test_segmented_multi_hop
     pairing_configuration:
@@ -58,7 +58,7 @@ pipeline:
   
   # this is the question generation step for single hop questions
   create_single_hop_questions:
-    execute: true
+    execute: false
     source_dataset_name: gpt4_test_segmented_single_hop
     target_dataset_name: gpt4_test_single_hop_questions
     prompt_prefix: simple_qg
@@ -66,7 +66,7 @@ pipeline:
   
   # this is the question generation step for multihop questions
   create_multi_hop_questions:
-    execute: true
+    execute: false
     source_dataset_name: gpt4_test_segmented_multi_hop
     target_dataset_name: gpt4_test_multi_hop_questions
     prompt_prefix: simple_qg
@@ -74,7 +74,7 @@ pipeline:
   
   # perform re-weighting and deduplication of questions here
   reweight_and_deduplicate_questions:
-    execute: true
+    execute: false
     source_single_hop_questions_dataset_name: gpt4_test_single_hop_questions
     source_multi_hop_questions_dataset_name: gpt4_test_multi_hop_questions
     large_question_dataset_name: gpt4_test_questions_large
@@ -94,50 +94,24 @@ pipeline:
   
   # this is where we answer questions with llm
   answer_questions_with_llm:
-    execute: true
+    execute: false
     source_dataset_name: gpt4_test_questions
     target_dataset_name: gpt4_test_questions_with_answers
     prompt_prefix: simple_qg
     answer_scenarios:
       zero_shot:
-        execute: true
+        execute: false
         answer_dataset_name: gpt4_test_questions_with_answers
       zero_shot_with_cot:
-        execute: true
+        execute: false
         answer_dataset_name: gpt4_test_questions_with_answers
       answer_with_document_summary:
-        execute: true
+        execute: false
         answer_dataset_name: gpt4_test_questions_with_answers
       answer_with_relevant_chunks:
-        execute: true
+        execute: false
         answer_dataset_name: gpt4_test_questions_with_answers
       gold_standard:
-        execute: true
+        execute: false
         answer_dataset_name: gpt4_test_questions_with_answers
   
-  # this is where we reformat the dataset for the judge
-  reformat_for_judging:
-    execute: true
-    source_dataset_name: gpt4_test_questions_with_answers
-    target_dataset_name: gpt4_test_questions_with_answers_for_judge
-    a:
-      model: gpt-4o-mini
-      answer_scenario: zero_shot
-    b:
-      model: gpt-4o-mini
-      answer_scenario: gold_standard
-  
-  # this is where we judge the answers
-  judge:
-    execute: true
-    source_dataset_name: gpt4_test_questions_with_answers_for_judge
-    target_dataset_name: gpt4_test_questions_with_answers_for_judge_judged
-    prompt_prefix: simple_judge
-    judge_prompt_name: cot_judge
-  
-  # this is where we visualize the judge results
-  visualize_results:
-    execute: true
-    source_dataset_name: gpt4_test_questions_with_answers_for_judge_judged
-    plots_directory: ./logs/plots/
-

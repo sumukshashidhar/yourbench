@@ -9,16 +9,22 @@ configurations:
     concat_if_exists: false
 
   model:
-    model_name: lm_studio/llama-3.3-70b-instruct
+    model_name: lm_studio/qwen2.5-72b-instruct
     api_base_url: http://localhost:1234/v1
     max_concurrent_requests: 8
 
 # Only executing answer generation step
 pipeline:
   generate_dataset:
-    execute: false
+    execute: true
+    files_directory: examples/yourbench_y1_preview/
+    dataset_name: quant_test
+
   generate_summaries:
-    execute: false
+    execute: true
+    source_dataset_name: quant_test
+    target_dataset_name: quant_test
+
   create_chunks:
     execute: false
   make_chunk_pairings:
@@ -32,8 +38,8 @@ pipeline:
 
   # The only step to run to get the answers
   answer_questions_with_llm:
-    execute: true
-    source_dataset_name: r1_test_questions
+    execute: false
+    source_dataset_name: yourbench_test_questions
     target_dataset_name: quant_questions_with_answers
     prompt_prefix: simple_qg
     answer_scenarios:
