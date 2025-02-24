@@ -55,6 +55,8 @@ git clone https://github.com/huggingface/yourbench.git
 cd yourbench
 
 # Use uv to install the dependencies
+uv venv
+source .venv/bin/activate
 uv sync
 
 # 3. Get a key from https://openrouter.ai/ and add it to the .env file (or make your own config with a different model!)
