@@ -62,6 +62,8 @@ class MultiHopQuestionRow:
     estimated_difficulty: int
     self_assessed_question_type: str
     generating_model: str
+    thought_process: str
+    citations: List[str]
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -190,11 +192,9 @@ def run(config: Dict[str, Any]) -> None:
                 # We'll try a fallback approach if there's leftover text that might be JSON
                 fallback_json_list = _best_effort_json_extract(raw_response)
                 if fallback_json_list:
-                    # Attempt to parse if any bracket-block is found
                     for candidate_json in fallback_json_list:
                         try:
                             question_answer_pairs = json.loads(candidate_json)
-                            # If successful, we proceed
                             _parse_and_append_rows(
                                 question_answer_pairs,
                                 row_idx,
@@ -204,16 +204,14 @@ def run(config: Dict[str, Any]) -> None:
                                 diversification_seed,
                                 question_dataset_rows
                             )
-                            # No need to parse further candidates if one is successful
+                            # If we parsed successfully, break out
                             break
                         except Exception:
-                            # Just continue to next candidate
                             pass
                 continue
 
             try:
                 question_answer_pairs = json.loads(parsed_json_str)
-                # If we parse successfully, proceed to build rows
                 _parse_and_append_rows(
                     question_answer_pairs,
                     row_idx,
@@ -228,7 +226,7 @@ def run(config: Dict[str, Any]) -> None:
                     "Failed to parse JSON for row {}, chunk {} (model={}): {}",
                     row_idx, c_idx, model_name, e
                 )
-                # As a fallback, we attempt best-effort extraction of bracketed JSON
+                # fallback approach with bracket extraction
                 fallback_json_list = _best_effort_json_extract(raw_response)
                 for candidate_json in fallback_json_list:
                     try:
@@ -242,7 +240,7 @@ def run(config: Dict[str, Any]) -> None:
                             diversification_seed,
                             question_dataset_rows
                         )
-                        break  # Only keep the first successful parse
+                        break
                     except Exception:
                         pass
 
@@ -267,12 +265,20 @@ def run(config: Dict[str, Any]) -> None:
     logger.success("Multi-hop question generation completed successfully.")
 
 
+# -------------------------------
+#  JSON PARSING HELPERS
+# -------------------------------
 def _extract_tag_content(text: str, tag: str) -> str:
     pattern = fr"<{tag}\s*>([\s\S]*?)</{tag}>"
     match = re.search(pattern, text)
-    return match.group(1).strip() if match else ""
+    if match:
+        logger.debug("Tag <{}> found. Extracted substring length = {}", tag, len(match.group(1)))
+        return match.group(1).strip()
+    else:
+        logger.debug("Tag <{}> not found in the response.", tag)
+        return ""
 
-### ADDED OR MODIFIED CODE HERE ###
+
 def _extract_output_json(raw_response: str) -> str:
     """
     Attempt to extract JSON from either <output_json>...</output_json> or
@@ -280,46 +286,66 @@ def _extract_output_json(raw_response: str) -> str:
 
     Returns the raw JSON string if found, otherwise empty string.
     """
-    # 1. Try <output_json> first
+    logger.debug("Attempting to extract JSON from model response. Length of response: {}", len(raw_response))
+
+    # 1. Try <output_json>
     extracted = _extract_tag_content(raw_response, "output_json")
     if extracted.strip():
-        return extracted
+        logger.debug("<output_json> block found. Substring length = {}", len(extracted))
+        # The fix: strip triple backticks if they're present at the start/end
+        sanitized = _maybe_strip_triple_backticks(extracted)
+        if sanitized.strip():
+            return sanitized
+
+    logger.debug("No <output_json> block found or was empty, trying triple-backtick fenced code with ```json ...```")
 
     # 2. If no <output_json>, look for ```json fenced content
     fence_pattern = r"```json\s*([\s\S]*?)\s*```"
     fence_match = re.search(fence_pattern, raw_response)
     if fence_match:
-        return fence_match.group(1).strip()
+        snippet = fence_match.group(1).strip()
+        logger.debug("Found fenced ```json block. Substring length = {}", len(snippet))
+        return snippet
 
-    # 3. Nothing found
+    logger.debug("No ```json fenced block found. Will try best-effort bracket extraction next.")
+    # 3. fallback
+    fallback_candidates = _best_effort_json_extract(raw_response)
+    if fallback_candidates:
+        logger.debug("best_effort_json_extract produced {} candidate(s).", len(fallback_candidates))
+        return fallback_candidates[0]
+
+    logger.debug("No parseable snippet found using fallback approach either.")
     return ""
 
 
-### ADDED OR MODIFIED CODE HERE ###
-def _best_effort_json_extract(full_text: str) -> List[str]:
+def _maybe_strip_triple_backticks(text_in: str) -> str:
     """
-    When the direct <output_json> or triple-backtick parse fails, we try a crude
-    fallback approach:
-      - Find all substrings that start with '[' or '{' and end with ']' or '}'
-      - Return them as candidate JSON blocks, letting the caller attempt json.loads(...)
-      - This approach picks up partial or extra text that might still yield valid JSON
+    If the <output_json> block itself has triple backticks around it or
+    starts with ``` (maybe with 'json'), strip them out so that json.loads
+    won't fail on leading backticks.
+    """
+    pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
+    match = re.match(pattern, text_in)
+    if match:
+        stripped = match.group(1)
+        logger.debug("Stripped triple backticks from <output_json> block. Final length = {}", len(stripped))
+        return stripped
+    return text_in
 
-    Returns a list of candidate JSON snippet strings (possibly empty).
-    """
+
+def _best_effort_json_extract(full_text: str) -> List[str]:
     candidates = []
-    # Simple pattern that tries to find bracketed sections in the text
-    # that might be valid JSON
     pattern = r"([\[{].*?[\]}])"
     matches = re.findall(pattern, full_text, flags=re.DOTALL)
     for m in matches:
         snippet = m.strip()
+        logger.debug("best_effort_json_extract candidate snippet (length={}): {}", len(snippet), snippet[:200])
         if (snippet.startswith("[") and snippet.endswith("]")) or \
            (snippet.startswith("{") and snippet.endswith("}")):
             candidates.append(snippet)
     return candidates
 
 
-### ADDED OR MODIFIED CODE HERE ###
 def _parse_and_append_rows(
     question_answer_pairs: Any,
     row_idx: int,
@@ -335,17 +361,18 @@ def _parse_and_append_rows(
     This is a helper to avoid repeated code.
     """
     if not isinstance(question_answer_pairs, list):
-        # We expect a list of objects
+        logger.debug("JSON structure is not a list; skipping.")
         return
     for qap in question_answer_pairs:
         question_text = qap.get("question", "")
-        self_answer_text = qap.get("thought_process", "")
+        thought_process_text = qap.get("thought_process", "")
+        self_answer_text = qap.get("self_answer", "")
         difficulty = qap.get("estimated_difficulty", 5)
         question_type = qap.get("question_type", "unknown")
-
+        citations = qap.get("citations", [])
         chunk_id = f"row_{row_idx}_multihop_{c_idx}"
 
-        question_row = MultiHopQuestionRow(
+        new_row = MultiHopQuestionRow(
             chunk_id=chunk_id,
             document_id=doc_id,
             chunk_location_id=c_idx,
@@ -355,6 +382,7 @@ def _parse_and_append_rows(
             estimated_difficulty=difficulty,
             self_assessed_question_type=question_type,
             generating_model=model_name,
+            thought_process=thought_process_text,
+            citations=citations
         )
-
-        question_dataset_rows.append(question_row.__dict__)
+        question_dataset_rows.append(new_row.__dict__)

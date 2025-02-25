@@ -37,6 +37,10 @@
     "generating_model": {
       "dtype": "string",
       "_type": "Value"
+    },
+    "thought_process": {
+      "dtype": "string",
+      "_type": "Value"
     }
   },
   "homepage": "",

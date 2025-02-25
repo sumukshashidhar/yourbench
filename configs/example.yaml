@@ -9,41 +9,46 @@ hf_configuration:
   hf_organization: $HF_ORGANIZATION
 
 model_list:
-  - model_name: google/gemini-2.0-flash-lite-preview-02-05:free
-    provider: openrouter
+  # - model_name: google/gemini-2.0-flash-lite-preview-02-05:free
+  #   provider: openrouter
+  #   base_url: https://openrouter.ai/api/v1
+  #   api_key: $OPENROUTER_API_KEY
+  #   max_concurrent_requests: 1
+  # - model_name: qwen/qwen-vl-plus:free
+  #   provider: openrouter
+  #   base_url: https://openrouter.ai/api/v1
+  #   api_key: $OPENROUTER_API_KEY
+  #   max_concurrent_requests: 1
+  # - model_name: cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+  #   provider: openai
+  #   base_url: $LOCALHOST_BASE_URL
+  #   api_key: $OPENROUTER_API_KEY
+  #   max_concurrent_requests: 1
+  # - model_name: mistralai/Mistral-Small-24B-Instruct-2501
+  #   provider: openai
+  #   base_url: $LOCALHOST_BASE_URL_2
+  #   api_key: $OPENROUTER_API_KEY
+  #   max_concurrent_requests: 1
+  # - model_name: deepseek-ai/DeepSeek-V3
+  #   provider: openai
+  #   base_url: https://router.huggingface.co/together
+  #   api_key: $HF_TOKEN
+  #   max_concurrent_requests: 8
+  - model_name: deepseek-ai/DeepSeek-V3
+    provider: openai
     base_url: https://openrouter.ai/api/v1
     api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 1
-  - model_name: qwen/qwen-vl-plus:free
-    provider: openrouter
-    base_url: https://openrouter.ai/api/v1
-    api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 1
-  - model_name: cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
-    provider: openai
-    base_url: $LOCALHOST_BASE_URL
-    api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 1
-  - model_name: mistralai/Mistral-Small-24B-Instruct-2501
-    provider: openai
-    base_url: $LOCALHOST_BASE_URL_2
-    api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 1
+    max_concurrent_requests: 8
 
 model_roles:
   ingestion:
-    # - google/gemini-2.0-flash-lite-preview-02-05:free
-    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+    - deepseek-ai/DeepSeek-V3
   summarization:
-    # - google/gemini-2.0-flash-lite-preview-02-05:free
-    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
+    - deepseek-ai/DeepSeek-V3
   single_shot_question_generation:
-    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
-    - mistralai/Mistral-Small-24B-Instruct-2501
+    - deepseek-ai/DeepSeek-V3
   multi_hop_question_generation:
-    - cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
-    - mistralai/Mistral-Small-24B-Instruct-2501
-    # - qwen/qwen-vl-plus:free
+    - deepseek-ai/DeepSeek-V3
 
 inference_config:
   max_concurrent_requests: 16
@@ -92,7 +97,7 @@ pipeline:
     local_dataset_path: data/example/single_shot_questions
     diversification_seed: "24 year old adult"
     concat_existing_dataset: false
-    run: false
+    run: true
   
   multi_hop_question_generation:
     source_dataset_name: yb_demo_chunked_documents

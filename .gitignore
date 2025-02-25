@@ -12,6 +12,7 @@ repo_contents.txt
 # C extensions
 *.so
 
+.cursor
 # Distribution / packaging
 .Python
 build/

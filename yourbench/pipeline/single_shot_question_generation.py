@@ -66,7 +66,7 @@ class SingleHopQuestionRow:
     estimated_difficulty: int
     self_assessed_question_type: str
     generating_model: str
-
+    thought_process: str
 
 def run(config: Dict[str, Any]) -> None:
     """
@@ -137,7 +137,7 @@ def run(config: Dict[str, Any]) -> None:
         logger.warning("No chunks found. Exiting single_shot_question_generation.")
         return
 
-    # === Step 2: Run inference on all calls with all models in config["model_roles"]["single_shot_question_generation"] ===
+    # === Step 2: Run inference on all calls with all models
     logger.info("Sending {} total calls to inference for single-hop QG.", len(all_inference_calls))
     responses_dict = run_inference(
         config=config,
@@ -146,8 +146,6 @@ def run(config: Dict[str, Any]) -> None:
     )
 
     # responses_dict is { "modelA": [resp_1, resp_2, ...], "modelB": [resp_1, resp_2, ...], ... }
-
-    # === Step 3: Parse the responses into question-level records ===
     question_dataset_rows: List[Dict[str, Any]] = []
 
     for model_name, model_responses in responses_dict.items():
@@ -167,7 +165,7 @@ def run(config: Dict[str, Any]) -> None:
             row_idx, c_idx = call_index_to_row_chunk[call_idx]
             doc_id = dataset[row_idx].get("document_id", f"doc_{row_idx}")
 
-            ### ADDED OR MODIFIED CODE HERE - parse JSON from either <output_json> or triple-backtick
+            # Attempt to parse JSON from the raw response
             parsed_json_str = _extract_output_json(raw_response)
             if not parsed_json_str.strip():
                 logger.warning(
@@ -177,6 +175,7 @@ def run(config: Dict[str, Any]) -> None:
                 continue
 
             try:
+                # Attempt to load as JSON
                 question_answer_pairs = json.loads(parsed_json_str)
             except Exception as e:
                 logger.warning(
@@ -188,7 +187,8 @@ def run(config: Dict[str, Any]) -> None:
             # Build question rows
             for qap in question_answer_pairs:
                 question_text = qap.get("question", "")
-                self_answer_text = qap.get("thought_process", "")
+                thought_process_text = qap.get("thought_process", "")
+                self_answer_text = qap.get("answer", "")
                 difficulty = qap.get("estimated_difficulty", 5)
                 question_type = qap.get("question_type", "unknown")
 
@@ -204,7 +204,8 @@ def run(config: Dict[str, Any]) -> None:
                     self_answer=self_answer_text,
                     estimated_difficulty=difficulty,
                     self_assessed_question_type=question_type,
-                    generating_model=model_name
+                    generating_model=model_name,
+                    thought_process=thought_process_text
                 )
 
                 question_dataset_rows.append(question_row.__dict__)
@@ -213,10 +214,12 @@ def run(config: Dict[str, Any]) -> None:
         logger.warning("No valid question rows produced. Exiting single_shot_question_generation.")
         return
 
-    # === Step 4: Convert question_dataset_rows -> HF Dataset, and save ===
+    # === Step 4: Convert question_dataset_rows -> HF Dataset, and save
     logger.info("Constructing question-level dataset with {} rows...", len(question_dataset_rows))
-    question_dataset = Dataset.from_dict({k: [d[k] for d in question_dataset_rows]
-                                          for k in question_dataset_rows[0].keys()})
+    question_dataset = Dataset.from_dict({
+        k: [d[k] for d in question_dataset_rows]
+        for k in question_dataset_rows[0].keys()
+    })
 
     logger.info("Saving question dataset to HF Hub under '{}'.", output_dataset_name)
     save_dataset(
@@ -235,9 +238,14 @@ def _extract_tag_content(text: str, tag: str) -> str:
     """
     pattern = fr"<{tag}\s*>([\s\S]*?)</{tag}>"
     match = re.search(pattern, text)
-    return match.group(1).strip() if match else ""
+    if match:
+        logger.debug("Tag <{}> found. Extracted substring length = {}", tag, len(match.group(1)))
+        return match.group(1).strip()
+    else:
+        logger.debug("Tag <{}> not found in the response.", tag)
+        return ""
 
-### ADDED OR MODIFIED CODE HERE:
+
 def _extract_output_json(raw_response: str) -> str:
     """
     Attempt to extract JSON from either <output_json>...</output_json> or
@@ -245,16 +253,83 @@ def _extract_output_json(raw_response: str) -> str:
 
     Returns the raw JSON string if found, otherwise empty string.
     """
-    # 1. Try <output_json> first
+    logger.debug("Attempting to extract JSON from model response. Length of response: {}", len(raw_response))
+
+    # 1. Try <output_json>
     extracted = _extract_tag_content(raw_response, "output_json")
     if extracted.strip():
-        return extracted
+        logger.debug("<output_json> block found. Substring length = {}", len(extracted))
+        # NEW: If it starts with triple backticks or includes them, remove them:
+        sanitized = _maybe_strip_triple_backticks(extracted)
+        if sanitized.strip():
+            return sanitized
+
+    logger.debug("No <output_json> block found or was empty, trying triple-backtick fenced code with ```json ...```")
 
     # 2. If no <output_json>, look for ```json fenced content
     fence_pattern = r"```json\s*([\s\S]*?)\s*```"
     fence_match = re.search(fence_pattern, raw_response)
     if fence_match:
-        return fence_match.group(1).strip()
+        snippet = fence_match.group(1).strip()
+        logger.debug("Found fenced ```json block. Substring length = {}", len(snippet))
+        return snippet
 
-    # 3. Nothing found
+    logger.debug("No ```json fenced block found. Will try best-effort bracket extraction next.")
+    # 3. fallback
+    fallback_candidates = _best_effort_json_extract(raw_response)
+    if fallback_candidates:
+        logger.debug("best_effort_json_extract produced {} candidate(s).", len(fallback_candidates))
+        return fallback_candidates[0]
+
+    logger.debug("No parseable snippet found using fallback approach either.")
     return ""
+
+
+def _maybe_strip_triple_backticks(text_in: str) -> str:
+    """
+    If the <output_json> block itself has triple backticks around it or
+    starts with ``` (maybe with 'json'), strip them out so that json.loads
+    won't fail on leading backticks.
+
+    Example:
+      ```json
+      [
+        ...
+      ]
+      ```
+    becomes
+      [
+        ...
+      ]
+    """
+    # a quick pattern to detect opening triple-backticks at start
+    # optionally with 'json' after the backticks
+    pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
+    match = re.match(pattern, text_in)
+    if match:
+        stripped = match.group(1)
+        logger.debug("Stripped triple backticks from <output_json> block. Final length = {}", len(stripped))
+        return stripped
+    return text_in
+
+
+def _best_effort_json_extract(full_text: str) -> List[str]:
+    """
+    When the direct <output_json> or triple-backtick parse fails, we try a crude
+    fallback approach:
+      - Find all substrings that start with '[' or '{' and end with ']' or '}'
+      - Return them as candidate JSON blocks, letting the caller attempt json.loads(...)
+      - This approach picks up partial or extra text that might still yield valid JSON
+
+    Returns a list of candidate JSON snippet strings (possibly empty).
+    """
+    candidates = []
+    pattern = r"([\[{].*?[\]}])"
+    matches = re.findall(pattern, full_text, flags=re.DOTALL)
+    for m in matches:
+        snippet = m.strip()
+        logger.debug("best_effort_json_extract candidate snippet (length={}): {}", len(snippet), snippet[:200])
+        if (snippet.startswith("[") and snippet.endswith("]")) or \
+           (snippet.startswith("{") and snippet.endswith("}")):
+            candidates.append(snippet)
+    return candidates
