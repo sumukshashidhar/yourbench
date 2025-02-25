@@ -34,11 +34,11 @@ model_list:
   #   base_url: https://router.huggingface.co/together
   #   api_key: $HF_TOKEN
   #   max_concurrent_requests: 8
-  - model_name: deepseek-ai/DeepSeek-V3
+  - model_name: deepseek-ai/DeepSeek-V3:nitro
     provider: openai
     base_url: https://openrouter.ai/api/v1
     api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 8
+    max_concurrent_requests: 64
 
 model_roles:
   ingestion:
@@ -52,7 +52,7 @@ model_roles:
   answer_generation:
     - deepseek-ai/DeepSeek-V3
   judge_answers:
-    - deepseek-ai/DeepSeek-V3
+    - deepseek-ai/DeepSeek-V3:nitro
 
 inference_config:
   max_concurrent_requests: 16

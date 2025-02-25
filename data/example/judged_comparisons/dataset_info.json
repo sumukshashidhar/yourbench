@@ -1,0 +1,100 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "row_id": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "question": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "gold_answer": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "chunk_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "strategyA": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "strategyB": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "answerA": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "answerB": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "was_inverted": {
+      "dtype": "bool",
+      "_type": "Value"
+    },
+    "judge_model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_raw_response": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_document_understanding": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_chunk_understanding": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_question_understanding": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_gold_understanding": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_answerA_understanding": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_answerB_understanding": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_similarity_comparison_A": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_similarity_comparison_B": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_final_similarity_analysis": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "judge_final_choice": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "winner_strategy": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}
