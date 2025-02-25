@@ -51,6 +51,8 @@ model_roles:
     - deepseek-ai/DeepSeek-V3
   answer_generation:
     - deepseek-ai/DeepSeek-V3
+  judge_answers:
+    - deepseek-ai/DeepSeek-V3
 
 inference_config:
   max_concurrent_requests: 16
@@ -109,7 +111,7 @@ pipeline:
     run: false
 
   answer_generation:
-    run: true
+    run: false
     question_dataset_name: yb_demo_single_shot_questions  # or yb_demo_multi_hop_questions
     output_dataset_name: yb_demo_answered_questions
     local_dataset_path: data/example/answered_questions
@@ -123,3 +125,13 @@ pipeline:
         prompt: "GOLD_QA_USER_PROMPT"
         model_name: "deepseek-ai/DeepSeek-V3"
 
+  judge_answers:
+    run: true
+    source_judge_dataset_name: yb_demo_answered_questions
+    output_judged_dataset_name: yb_demo_judged_comparisons
+    local_dataset_path: data/example/judged_comparisons
+    concat_existing_dataset: false
+    comparing_strategies:
+      - ["zeroshot", "gold"]
+    chunk_column_index: 0
+    random_seed: 42
