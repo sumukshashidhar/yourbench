@@ -384,3 +384,40 @@ MULTI_HOP_QUESTION_GENERATION_USER_PROMPT = """<title>
 <test_audience>
 {test_audience}
 </test_audience>"""
+
+
+ZEROSHOT_QA_USER_PROMPT = """Answer the following question:
+
+<question>
+{question}
+</question>
+
+Enclose your full answer in <answer> XML tags. For example:
+
+<answer>
+[your answer here]
+</answer>"""
+
+GOLD_QA_USER_PROMPT = """Answer the following question:
+
+<question>
+{question}
+</question>
+
+Here is a summary of the document the question is asked from which may be helpful:
+
+<document_summary>
+{summary}
+</document_summary>
+
+And here is a relevant chunk of the document which may prove useful
+
+<document>
+{document}
+</document>
+
+Enclose your full answer in <answer> XML tags. For example:
+
+<answer>
+[your answer here]
+</answer>"""
