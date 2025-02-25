@@ -49,6 +49,8 @@ model_roles:
     - deepseek-ai/DeepSeek-V3
   multi_hop_question_generation:
     - deepseek-ai/DeepSeek-V3
+  answer_generation:
+    - deepseek-ai/DeepSeek-V3
 
 inference_config:
   max_concurrent_requests: 16
@@ -97,11 +99,27 @@ pipeline:
     local_dataset_path: data/example/single_shot_questions
     diversification_seed: "24 year old adult"
     concat_existing_dataset: false
-    run: true
+    run: false
   
   multi_hop_question_generation:
     source_dataset_name: yb_demo_chunked_documents
     output_dataset_name: yb_demo_multi_hop_questions
     local_dataset_path: data/example/multi_hop_questions
     concat_existing_dataset: false
+    run: false
+
+  answer_generation:
     run: true
+    question_dataset_name: yb_demo_single_shot_questions  # or yb_demo_multi_hop_questions
+    output_dataset_name: yb_demo_answered_questions
+    local_dataset_path: data/example/answered_questions
+    concat_existing_dataset: false
+    strategies:
+      - name: "zeroshot"
+        prompt: "ZEROSHOT_QA_USER_PROMPT"
+        model_name: "deepseek-ai/DeepSeek-V3"
+
+      - name: "gold"
+        prompt: "GOLD_QA_USER_PROMPT"
+        model_name: "deepseek-ai/DeepSeek-V3"
+
