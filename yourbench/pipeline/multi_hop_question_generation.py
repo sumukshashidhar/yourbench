@@ -366,7 +366,7 @@ def _parse_and_append_rows(
     for qap in question_answer_pairs:
         question_text = qap.get("question", "")
         thought_process_text = qap.get("thought_process", "")
-        self_answer_text = qap.get("self_answer", "")
+        self_answer_text = qap.get("answer", "")
         difficulty = qap.get("estimated_difficulty", 5)
         question_type = qap.get("question_type", "unknown")
         citations = qap.get("citations", [])
