@@ -42,6 +42,32 @@
     "summarization_model": {
       "dtype": "string",
       "_type": "Value"
+    },
+    "quality_metrics": {
+      "bert_score_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "bleu": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "meteor": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rouge1_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rouge2_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rougeL_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      }
     }
   },
   "homepage": "",
