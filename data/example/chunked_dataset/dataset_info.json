@@ -3,15 +3,15 @@
   "citation": "",
   "config_name": "default",
   "dataset_name": "yb_demo_ingested_documents_with_summaries",
-  "dataset_size": 9169,
+  "dataset_size": 9220,
   "description": "",
   "download_checksums": {
-    "hf://datasets/sumuks/yb_demo_ingested_documents_with_summaries@3c0d1bc5ff1cba311c07c34f997ff2a46c2ac0d6/data/train-00000-of-00001.parquet": {
-      "num_bytes": 18361,
+    "hf://datasets/sumuks/yb_demo_ingested_documents_with_summaries@3086f4196f7dd4b5fac95418079cac6eb965301e/data/train-00000-of-00001.parquet": {
+      "num_bytes": 18763,
       "checksum": null
     }
   },
-  "download_size": 18361,
+  "download_size": 18763,
   "features": {
     "document_id": {
       "dtype": "string",
@@ -64,11 +64,11 @@
   },
   "homepage": "",
   "license": "",
-  "size_in_bytes": 27530,
+  "size_in_bytes": 27983,
   "splits": {
     "train": {
       "name": "train",
-      "num_bytes": 9169,
+      "num_bytes": 9220,
       "num_examples": 1,
       "dataset_name": "yb_demo_ingested_documents_with_summaries"
     }
