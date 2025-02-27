@@ -6,7 +6,7 @@ import litellm
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 from loguru import logger
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import sys
 import asyncio
 import time  # ### [CHANGED OR ADDED] ### for timing logs
@@ -23,9 +23,10 @@ load_dotenv()
 
 GLOBAL_TIMEOUT = 600
 
+# TODO: why do we need these lines
 # Optional: Customize success/failure callbacks
-litellm.success_callback = ['langfuse']
-litellm.failure_callback = ['langfuse']
+# litellm.success_callback = ['langfuse']
+# litellm.failure_callback = ['langfuse']
 
 
 @dataclass
@@ -42,6 +43,7 @@ class InferenceCall:
     messages: List[Dict[str, str]]
     tags: List[str] = field(default_factory=lambda: ['dev'])
     max_retries: int = 3
+    seed: Optional[int] = None
 
 
 @dataclass
@@ -68,25 +70,28 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
     Send one inference call to the model endpoint within a global timeout context.
     Logs start/end times for better concurrency tracing.
     """
-    start_time = time.time()  # ### [CHANGED OR ADDED] ###
+    start_time = time.time()
     logger.debug(
         "START _get_response: model='{}'  (timestamp={:.4f})",
         model.model_name, start_time
     )
+
+    # TODO: Do we need a timout context here? litellm.acompletion already supports timeouts 
     async with _timeout_context(GLOBAL_TIMEOUT):
         response = await litellm.acompletion(
             model=f"{model.provider}/{model.model_name}",
             base_url=model.base_url,
             api_key=model.api_key,
             messages=inference_call.messages,
-            metadata={"tags": inference_call.tags}
+            metadata={"tags": inference_call.tags},
+            seed=inference_call.seed
         )
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
         logger.warning("Empty response or missing .choices from model {}", model.model_name)
         return ""
 
-    finish_time = time.time()  # ### [CHANGED OR ADDED] ###
+    finish_time = time.time()
     logger.debug(
         "END _get_response: model='{}'  (timestamp={:.4f}, duration={:.2f}s)",
         model.model_name, finish_time, (finish_time - start_time)
@@ -147,19 +152,17 @@ async def _run_inference_async_helper(
     """
     logger.info("Starting asynchronous inference with per-model concurrency control.")
 
-    # ### [CHANGED OR ADDED] ###
     # Instead of a single global concurrency, create a semaphore per model based on model.max_concurrent_requests
     model_semaphores: Dict[str, asyncio.Semaphore] = {}
-    for m in models:
+    for model in models:
         # If not specified, default to something reasonable like 1
-        concurrency = max(m.max_concurrent_requests, 1)
-        sem = asyncio.Semaphore(concurrency)
-        model_semaphores[m.model_name] = sem
+        concurrency = max(model.max_concurrent_requests, 1)
+        semaphore = asyncio.Semaphore(concurrency)
+        model_semaphores[model.model_name] = semaphore
         logger.debug(
             "Created semaphore for model='{}' with concurrency={}",
-            m.model_name, concurrency
+            model.model_name, concurrency
         )
-    # ### [END CHANGE] ###
 
     tasks = []
     # We'll build tasks in an order that ensures each model gets a contiguous
@@ -189,10 +192,10 @@ async def _run_inference_async_helper(
         idx = slice_end
 
     # Optional debug: confirm each model's result count
-    for m in models:
+    for model in models:
         logger.debug(
             "Model '{}' produced {} responses.",
-            m.model_name, len(responses[m.model_name])
+            model.model_name, len(responses[model.model_name])
         )
 
     return responses
