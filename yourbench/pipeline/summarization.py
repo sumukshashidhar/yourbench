@@ -1,3 +1,6 @@
+from random import randrange
+from datasets import Dataset
+
 from typing import Dict, Any
 from yourbench.utils.inference_engine import run_inference, InferenceCall
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
@@ -6,6 +9,10 @@ from typing import List
 from yourbench.utils.saving_engine import save_dataset
 from yourbench.utils.dataset_engine import smart_load_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+
+def duplicate_rows(dataset, num_duplicates=10):
+    # Return the example as a list repeated num_duplicates times
+    return {k: [v] * num_duplicates for k, v in dataset.items()}
 
 def run(config: Dict[str, Any]) -> None:
     """
@@ -29,8 +36,20 @@ def run(config: Dict[str, Any]) -> None:
     dataset = smart_load_dataset(summary_cfg["source_dataset_name"], config)
     logger.info("Loaded dataset with {} documents.", len(dataset))
 
+    dataset = dataset.map(
+        duplicate_rows,
+        batched=False,
+        remove_columns=dataset.column_names
+    )
+
+    # Flatten the dataset
+    dataset = {k: sum(v, []) for k, v in dataset.to_dict().items()}
+    dataset = Dataset.from_dict(dataset)
+
+
     # 2. Build the inference calls
     documents: List[str] = dataset["document_text"]
+
     inference_calls = [
         InferenceCall(
             messages=[
@@ -38,7 +57,8 @@ def run(config: Dict[str, Any]) -> None:
                     "role": "user",
                     "content": SUMMARIZATION_USER_PROMPT.format(document=document)
                 }
-            ]
+            ],
+            seed=randrange(0, 65536)
         )
         for document in documents
     ]
