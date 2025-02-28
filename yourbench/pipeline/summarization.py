@@ -1,11 +1,15 @@
 # yourbench/pipeline/summarization.py
 
-from typing import Dict, Any, List
+"""
+Summarization Pipeline Stage
+"""
+
+from typing import Dict, Any, List, Optional
 from loguru import logger
 from datasets import Dataset
 import evaluate
 
-# Load the metrics
+# HF Evaluate metrics
 _rouge = evaluate.load("rouge")
 _bleu = evaluate.load("bleu")
 _meteor = evaluate.load("meteor")
@@ -17,167 +21,86 @@ from yourbench.utils.saving_engine import save_dataset
 from yourbench.utils.dataset_engine import smart_load_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
-def run(config: Dict[str, Any]) -> None:
-    """
-    Summarization pipeline stage that:
-      1. Loads a dataset of documents.
-      2. Generates summaries with a chosen model.
-      3. Computes 5+ standard metrics (ROUGE, BLEU, METEOR, BERTScore) 
-         comparing the summary vs. the original document text.
-      4. Saves the dataset with new columns:
-         "raw_document_summary", "document_summary", "summarization_model", and "quality_metrics".
-    """
 
-    summary_cfg = config["pipeline"]["summarization"]
-    if not summary_cfg.get("run", False):
-        logger.info("Summarization stage disabled. Skipping.")
-        return
+def _safe_compute_bleu(predictions: List[str], references: List[List[str]]) -> float:
+    """Safely compute BLEU score with error handling."""
+    try:
+        safe_preds = [p if p is not None else "" for p in predictions]
+        safe_refs = [[r if r is not None else "" for r in ref_list] for ref_list in references]
 
-    logger.info("Running summarization stage.")
-    dataset = smart_load_dataset(summary_cfg["source_dataset_name"], config)
-    logger.info("Loaded dataset with {} documents.", len(dataset))
+        if not safe_preds or not safe_refs or all(not p for p in safe_preds):
+            logger.warning("Skipping BLEU computation due to empty inputs.")
+            return 0.0
 
-    documents: List[str] = dataset["document_text"]
+        result = _bleu.compute(predictions=safe_preds, references=safe_refs)
+        return result.get("bleu", 0.0)
+    except Exception as e:
+        logger.error("Error computing BLEU score: {}", str(e))
+        return 0.0
 
-    # 1) Build the inference calls
-    inference_calls = []
-    for doc_text in documents:
-        # Insert doc_text into the user prompt
-        user_msg = {"role": "user", "content": SUMMARIZATION_USER_PROMPT.format(document=doc_text)}
-        inference_calls.append(InferenceCall(messages=[user_msg]))
 
-    logger.info("Sending {} summarization calls to inference engine.", len(inference_calls))
-    responses_dict = run_inference(config, "summarization", inference_calls)
+def _safe_compute_meteor(predictions: List[str], references: List[str]) -> float:
+    """Safely compute METEOR score with error handling."""
+    try:
+        safe_preds = [p if p is not None else "" for p in predictions]
+        safe_refs = [r if r is not None else "" for r in references]
 
-    # We assume a single model name under model_roles["summarization"][0]
-    summ_model = config["model_roles"]["summarization"][0]
-    raw_summaries = responses_dict.get(summ_model, [])
+        if not safe_preds or not safe_refs or all(not p for p in safe_preds):
+            logger.warning("Skipping METEOR computation due to empty inputs.")
+            return 0.0
 
-    # Fallback if fewer summaries returned than documents
-    if len(raw_summaries) != len(documents):
-        logger.warning(
-            "Model %r returned %d summaries, but we expected %d documents.",
-            summ_model, len(raw_summaries), len(documents)
+        result = _meteor.compute(predictions=safe_preds, references=safe_refs)
+        return result.get("meteor", 0.0)
+    except Exception as e:
+        logger.error("Error computing METEOR score: {}", str(e))
+        return 0.0
+
+
+def _safe_compute_rouge(predictions: List[str], references: List[str]) -> Dict[str, float]:
+    """Safely compute ROUGE scores with error handling."""
+    try:
+        safe_preds = [p if p is not None else "" for p in predictions]
+        safe_refs = [r if r is not None else "" for r in references]
+
+        if not safe_preds or not safe_refs or all(not p for p in safe_preds):
+            logger.warning("Skipping ROUGE computation due to empty inputs.")
+            return {"rouge1": 0.0, "rouge2": 0.0, "rougeL": 0.0}
+
+        result = _rouge.compute(predictions=safe_preds, references=safe_refs)
+        return {
+            "rouge1": result.get("rouge1", 0.0),
+            "rouge2": result.get("rouge2", 0.0),
+            "rougeL": result.get("rougeL", 0.0)
+        }
+    except Exception as e:
+        logger.error("Error computing ROUGE scores: {}", str(e))
+        return {"rouge1": 0.0, "rouge2": 0.0, "rougeL": 0.0}
+
+
+def _safe_compute_bertscore(predictions: List[str], references: List[str]) -> float:
+    """Safely compute BERTScore with error handling."""
+    try:
+        safe_preds = [p if p is not None else "" for p in predictions]
+        safe_refs = [r if r is not None else "" for r in references]
+
+        if not safe_preds or not safe_refs or all(not p for p in safe_preds):
+            logger.warning("Skipping BERTScore computation due to empty inputs.")
+            return 0.0
+
+        result = _bertscore.compute(
+            predictions=safe_preds,
+            references=safe_refs,
+            model_type="bert-base-uncased"
         )
 
-    # 2) Parse <final_summary> from raw model responses
-    final_summaries = []
-    for i in range(len(documents)):
-        raw = raw_summaries[i] if i < len(raw_summaries) else ""
-        parsed_summary = extract_content_from_xml_tags(raw, "final_summary")
-        final_summaries.append(parsed_summary)
+        f1_scores = result.get("f1", [])
+        if not f1_scores:
+            return 0.0
+        return sum(f1_scores) / len(f1_scores)
+    except Exception as e:
+        logger.error("Error computing BERTScore: {}", str(e))
+        return 0.0
 
-    # 3) Compute metrics for each doc individually
-    #    We'll gather predictions & references for BLEU in a single batch at the end.
-    #    But we also show how to do them one-by-one if desired (some metrics prefer bulk calls).
-    all_preds = []  # for BLEU's batch usage
-    all_refs = []   # each item = list of reference strings, i.e. [reference_text]
-    # We'll also store final metrics in a list of dicts
-    all_metrics = []
-
-    for i, doc_text in enumerate(documents):
-        pred_summary = final_summaries[i].strip()
-        ref_text = doc_text.strip()
-
-        if not pred_summary:
-            # If empty summary, store zeros
-            all_metrics.append({
-                "rouge1_f1": 0.0,
-                "rouge2_f1": 0.0,
-                "rougeL_f1": 0.0,
-                "bleu": 0.0,
-                "meteor": 0.0,
-                "bert_score_f1": 0.0,
-            })
-            all_preds.append("")
-            all_refs.append([""])
-            continue
-
-        # For BLEU's batch usage: keep the raw strings
-        all_preds.append(pred_summary)
-        all_refs.append([ref_text])
-
-    # Now compute BLEU in one go (for all docs)
-    # - all_preds is a list of single strings
-    # - all_refs is a list of list-of-strings
-    #   i.e. all_refs[i] is ["some reference text"] for doc i
-    bleu_result = _bleu.compute(predictions=all_preds, references=all_refs)
-
-    # Similarly we can compute METEOR, ROUGE, BERTScore in bulk. Let's do it doc by doc for clarity:
-
-    # =========== METEOR (doc by doc, or also all at once) ===========
-    meteor_result = _meteor.compute(predictions=all_preds, references=[r[0] for r in all_refs])
-
-    # =========== ROUGE (doc by doc) ===========
-    # The "summaries" vs "documents" approach. We can do it in one batch
-    rouge_result = _rouge.compute(predictions=all_preds, references=[r[0] for r in all_refs])
-
-    # =========== BERTScore (doc by doc) ===========
-    bert_result = _bertscore.compute(predictions=all_preds,
-                                     references=[r[0] for r in all_refs],
-                                     model_type="bert-base-uncased")
-
-    # Because we computed them *all at once*, each result.* is a single *average* across all docs,
-    # or a list. In the default usage, ROUGE returns aggregated F1 for the entire corpus
-    # If we want doc-level breakdown, we do doc by doc or set "use_stemmer=True" or "aggregate=False".
-    # For simplicity, let's show how to just store the *average corpus-level metrics* in each doc row:
-
-    # We'll keep the average BLEU, average METEOR, average BERT, and average ROUGE in each row for now.
-    # If you want doc-level ROUGE, see the HF docs about 'aggregate=False' or do them individually.
-    corpus_bleu = bleu_result["bleu"]            # float
-    corpus_meteor = meteor_result["meteor"]      # float
-    corpus_rouge1 = rouge_result["rouge1"]       # corpus-level f1
-    corpus_rouge2 = rouge_result["rouge2"]
-    corpus_rougeL = rouge_result["rougeL"]
-    corpus_bert_f1 = sum(bert_result["f1"]) / len(bert_result["f1"])  # average doc-level BERT f1
-
-    # So for each doc, we'll store the same corpus-level results. Or set them to 0 if we want doc-level metrics.
-    # (If you want doc-level metrics for each doc, you'd have to compute "aggregate=False" or do them one at a time.)
-    for i, metrics_dict in enumerate(all_metrics):
-        if metrics_dict["rouge1_f1"] == 0.0 and all_preds[i] == "":
-            # This doc was empty summary => we already stored zeros
-            continue
-        metrics_dict.update({
-            "rouge1_f1": corpus_rouge1,
-            "rouge2_f1": corpus_rouge2,
-            "rougeL_f1": corpus_rougeL,
-            "bleu": corpus_bleu,
-            "meteor": corpus_meteor,
-            "bert_score_f1": corpus_bert_f1,
-        })
-
-    # 4) Add new columns to the dataset
-    dataset = dataset.add_column("raw_document_summary", raw_summaries)
-    dataset = dataset.add_column("document_summary", final_summaries)
-    dataset = dataset.add_column("summarization_model", [summ_model]*len(dataset))
-    dataset = dataset.add_column("quality_metrics", all_metrics)
-
-    # 5) Save
-    save_dataset(
-        dataset=dataset,
-        step_name="summarization",
-        config=config,
-        output_dataset_name=summary_cfg["output_dataset_name"]
-    )
-    logger.success("Summarization stage completed with BLEU & other metrics stored in 'quality_metrics'.")
-# yourbench/pipeline/summarization.py
-
-from typing import Dict, Any, List
-from loguru import logger
-from datasets import Dataset
-import evaluate
-
-# Load HF evaluate metrics once
-_rouge = evaluate.load("rouge")
-_bleu = evaluate.load("bleu")
-_meteor = evaluate.load("meteor")
-_bertscore = evaluate.load("bertscore")
-
-from yourbench.utils.inference_engine import run_inference, InferenceCall
-from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
-from yourbench.utils.saving_engine import save_dataset
-from yourbench.utils.dataset_engine import smart_load_dataset
-from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 
 def run(config: Dict[str, Any]) -> None:
     """
@@ -187,94 +110,103 @@ def run(config: Dict[str, Any]) -> None:
       3) Computes corpus-level ROUGE, BLEU, METEOR, BERTScore.
       4) Stores them in 'quality_metrics' as a dictionary for each row.
 
-    We'll do:
-      - doc_texts: List[str] of original documents
-      - final_summaries: List[str] of predicted summaries
-      - Then pass these to the HF 'evaluate' library in batch mode (i.e., all at once),
-        to get one set of average/corpus-level metrics. We then insert those same
-        metric values for each row's "quality_metrics" dict.
-
-    If you need per-document metrics (rather than a single average), you can do "aggregate=False"
-    for the evaluate library or run each doc individually. But for demonstration, we do corpus-level.
-
-    This code solves the "Failed to concatenate on axis=1" error by ensuring 'quality_metrics'
-    has exactly the same length as the dataset rows. Each entry is a dict of metrics.
+    This version includes extra logging to investigate potential issues:
+      - We check if <final_summary> was actually found in the raw output
+      - We log raw output length, final summary length, and document length
+      - We keep an eye out for empty or trivially short final summaries
+      - We do not modify the actual summarization logic; just adding logs
     """
 
-    # 1) Basic config checks
     stage_cfg = config["pipeline"]["summarization"]
     if not stage_cfg.get("run", False):
         logger.info("Summarization stage is disabled. Skipping.")
         return
 
-    logger.info("Running summarization stage.")
+    logger.info("Running summarization stage with additional diagnostic logs.")
     dataset = smart_load_dataset(stage_cfg["source_dataset_name"], config)
-    logger.info("Loaded dataset with {} documents.", len(dataset))
+    logger.info("Loaded dataset with {} documents for summarization.", len(dataset))
 
-    # 2) Prepare inference calls
+    # Prepare inference calls
     documents: List[str] = dataset["document_text"]
     inference_calls = []
-    for doc_text in documents:
+    for idx, doc_text in enumerate(documents):
+        # Log the approximate length (to see if we might exceed model context)
+        doc_len_chars = len(doc_text)
+        logger.debug("Doc index {} => doc length ~{} chars", idx, doc_len_chars)
+
         user_msg = {"role": "user", "content": SUMMARIZATION_USER_PROMPT.format(document=doc_text)}
         inference_calls.append(InferenceCall(messages=[user_msg]))
 
-    logger.info("Sending {} summarization calls to inference engine.", len(inference_calls))
+    logger.info("Dispatching {} summarization calls to inference engine.", len(inference_calls))
     responses_dict = run_inference(config, "summarization", inference_calls)
 
-    # 3) Retrieve raw model outputs
-    summ_model = config["model_roles"]["summarization"][0]  # assume single
+    # For simplicity, assume one summarization model in model_roles
+    summ_model = config["model_roles"]["summarization"][0]
     raw_summaries = responses_dict.get(summ_model, [])
-
     if len(raw_summaries) != len(documents):
         logger.warning(
-            "Model '%s' returned %d summaries, but we have %d docs. Some mismatch occurred.",
+            "Model '{}' returned {} summaries, but we have {} documents. "
+            "Some mismatch or missing responses.",
             summ_model, len(raw_summaries), len(documents)
         )
+        # Pad if fewer or trim if more
+        while len(raw_summaries) < len(documents):
+            raw_summaries.append("")
+        if len(raw_summaries) > len(documents):
+            raw_summaries = raw_summaries[: len(documents)]
 
-    # 4) Parse <final_summary> for each doc
+    # Parse <final_summary> from each doc’s output
     final_summaries = []
     for i in range(len(documents)):
-        raw_resp = raw_summaries[i] if i < len(raw_summaries) else ""
-        parsed = extract_content_from_xml_tags(raw_resp, "final_summary").strip()
-        final_summaries.append(parsed)
+        raw_resp = raw_summaries[i]
+        # Additional logs to see raw length, check presence of <final_summary>
+        logger.debug(
+            "Summary response idx={}, raw length={} chars. Searching for <final_summary> tag.",
+            i, len(raw_resp)
+        )
+        parsed = extract_content_from_xml_tags(raw_resp, "final_summary")
 
-    # 5) We'll do a corpus-level metric calculation
-    #    So, gather all preds (the final_summaries) & all refs (the original doc_texts)
-    #    as raw strings (no tokenization). This is the simplest approach for evaluate.
+        if not parsed.strip():
+            logger.warning(
+                "No <final_summary> content found or empty for doc idx={}. Raw output might be malformed.",
+                i
+            )
+        final_summaries.append(parsed.strip())
 
+        # Log final summary length
+        logger.debug(
+            "Doc idx={} => final_summary length={} chars",
+            i, len(final_summaries[-1])
+        )
+
+    # Compute corpus-level metrics
     all_preds = [summary if summary else "" for summary in final_summaries]
-    all_refs = [[doc] for doc in documents]  # note the double bracket for references
+    # references for BLEU require list of lists
+    all_refs = [[doc if doc else ""] for doc in documents]
 
-    # a) BLEU
-    # passing raw strings is allowed, the HF BLEU metric will do internal tokenization
-    bleu_result = _bleu.compute(predictions=all_preds, references=all_refs)
-    corpus_bleu = bleu_result["bleu"]
+    corpus_bleu = _safe_compute_bleu(all_preds, all_refs)
+    corpus_meteor = _safe_compute_meteor(all_preds, [r[0] for r in all_refs])
+    rouge_results = _safe_compute_rouge(all_preds, [r[0] for r in all_refs])
+    corpus_bert_f1 = _safe_compute_bertscore(all_preds, [r[0] for r in all_refs])
 
-    # b) METEOR
-    meteor_result = _meteor.compute(predictions=all_preds, references=[r[0] for r in all_refs])
-    corpus_meteor = meteor_result["meteor"]
+    corpus_rouge1 = rouge_results["rouge1"]
+    corpus_rouge2 = rouge_results["rouge2"]
+    corpus_rougeL = rouge_results["rougeL"]
 
-    # c) ROUGE
-    # By default, "compute()" returns overall average across the entire corpus
-    # if "aggregate=True". So we'll get a single set of F1 scores. 
-    rouge_result = _rouge.compute(predictions=all_preds, references=[r[0] for r in all_refs])
-    corpus_rouge1 = rouge_result["rouge1"]
-    corpus_rouge2 = rouge_result["rouge2"]
-    corpus_rougeL = rouge_result["rougeL"]
-
-    # d) BERTScore
-    bert_res = _bertscore.compute(
-        predictions=all_preds,
-        references=[r[0] for r in all_refs],
-        model_type="bert-base-uncased"
+    logger.info(
+        "Corpus-level summarization metrics:\n"
+        "  BLEU:  {:.4f}\n"
+        "  METEOR: {:.4f}\n"
+        "  ROUGE1: {:.4f}, ROUGE2: {:.4f}, ROUGEL: {:.4f}\n"
+        "  BERTScore-F1: {:.4f}",
+        corpus_bleu,
+        corpus_meteor,
+        corpus_rouge1,
+        corpus_rouge2,
+        corpus_rougeL,
+        corpus_bert_f1
     )
-    # This returns a list for each doc. The default is to aggregate them by default, 
-    # but let's do the average:
-    corpus_bert_f1 = sum(bert_res["f1"]) / len(bert_res["f1"]) if bert_res["f1"] else 0.0
 
-    # 6) Build a "quality_metrics" column, length = len(dataset).
-    #    Each entry is a dict of the same corpus-level numbers.
-    #    (If you prefer doc-level metrics, you'd do "aggregate=False" or call each doc individually.)
     all_metrics = []
     for _ in range(len(documents)):
         all_metrics.append({
@@ -286,18 +218,20 @@ def run(config: Dict[str, Any]) -> None:
             "bert_score_f1": corpus_bert_f1,
         })
 
-    # 7) Add new columns
-    #    Make sure "final_summaries" also has length == len(dataset)
-    dataset = dataset.add_column("raw_document_summary", raw_summaries)
-    dataset = dataset.add_column("document_summary", final_summaries)
-    dataset = dataset.add_column("summarization_model", [summ_model] * len(dataset))
-    dataset = dataset.add_column("quality_metrics", all_metrics)
+    # Add new columns: raw_document_summary, document_summary, summarization_model, quality_metrics
+    try:
+        dataset = dataset.add_column("raw_document_summary", raw_summaries)
+        dataset = dataset.add_column("document_summary", final_summaries)
+        dataset = dataset.add_column("summarization_model", [summ_model] * len(dataset))
+        dataset = dataset.add_column("quality_metrics", all_metrics)
 
-    # 8) Save updated dataset
-    save_dataset(
-        dataset=dataset,
-        step_name="summarization",
-        config=config,
-        output_dataset_name=stage_cfg["output_dataset_name"]
-    )
-    logger.success("Summarization stage completed successfully with corpus-level metrics added.")
+        save_dataset(
+            dataset=dataset,
+            step_name="summarization",
+            config=config,
+            output_dataset_name=stage_cfg["output_dataset_name"]
+        )
+        logger.success("Summarization stage completed successfully with additional diagnostic logs.")
+    except Exception as e:
+        logger.error("Error adding columns or saving dataset in summarization: {}", str(e))
+        logger.warning("Summarization stage encountered errors, but the pipeline will continue.")
