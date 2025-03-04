@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from typing import Dict, Any, List, Optional
 import sys
+import uuid
 import asyncio
 import time  # ### [CHANGED OR ADDED] ### for timing logs
 from contextlib import asynccontextmanager
@@ -27,7 +28,35 @@ GLOBAL_TIMEOUT = 600
 # Optional: Customize success/failure callbacks
 # litellm.success_callback = ['langfuse']
 # litellm.failure_callback = ['langfuse']
+class EventLoopAwareCache(litellm.InMemoryCache):
+    """
+    A cache that maintains cache isolation between event loops.
 
+    LiteLLM caches LLM clients for better performance, but shares this cache across
+    event loops. LiteLLM uses httpx AsyncClient under the hood, and you should not
+    share AsyncClients across event loops.
+    - Same issue posted to LiteLLM: https://github.com/BerriAI/litellm/issues/7667
+    - Reference to httpx behavior: https://github.com/encode/httpx/issues/2473
+
+    The cache needs to manage a uuid identifier that won't be reused after an event
+    loop is terminated.
+    """
+    def get_cache(self, key, **kwargs):
+        new_key = self._get_event_loop_aware_cache_key(key)
+        return super().get_cache(new_key)
+
+    def set_cache(self, key, value, **kwargs):
+        new_key = self._get_event_loop_aware_cache_key(key)
+        return super().set_cache(new_key, value, **kwargs)
+
+    def _get_event_loop_aware_cache_key(self, key):
+        loop = asyncio.get_running_loop()
+        if not hasattr(loop, "_custom_identifier"):
+            loop._custom_identifier = uuid.uuid4()
+        loop_id = loop._custom_identifier
+        return f"{key}-{loop_id}"
+
+litellm.in_memory_llm_clients_cache = EventLoopAwareCache()
 
 @dataclass
 class Model:
@@ -41,6 +70,7 @@ class Model:
 @dataclass
 class InferenceCall:
     messages: List[Dict[str, str]]
+    temperature: Optional[float] = None
     tags: List[str] = field(default_factory=lambda: ['dev'])
     max_retries: int = 3
     seed: Optional[int] = None
@@ -76,16 +106,15 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         model.model_name, start_time
     )
 
-    # TODO: Do we need a timout context here? litellm.acompletion already supports timeouts 
-    async with _timeout_context(GLOBAL_TIMEOUT):
-        response = await litellm.acompletion(
+    response = await litellm.acompletion(
             model=f"{model.provider}/{model.model_name}",
             base_url=model.base_url,
             api_key=model.api_key,
             messages=inference_call.messages,
+            temperature=inference_call.temperature,
             metadata={"tags": inference_call.tags},
-            seed=inference_call.seed
-        )
+            timeout=GLOBAL_TIMEOUT
+    )
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
         logger.warning("Empty response or missing .choices from model {}", model.model_name)
