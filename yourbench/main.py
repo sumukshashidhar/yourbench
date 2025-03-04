@@ -15,7 +15,7 @@ Options:
 
 import argparse
 from loguru import logger
-from yourbench.pipeline._handler import run_pipeline
+from yourbench.pipeline import run_pipeline
 
 def main() -> None:
     """
