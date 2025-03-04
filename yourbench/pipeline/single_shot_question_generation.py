@@ -177,11 +177,38 @@ def run(config: Dict[str, Any]) -> None:
             try:
                 # Attempt to load as JSON
                 question_answer_pairs = json.loads(parsed_json_str)
+            except json.JSONDecodeError as e:
+                error_msg = (
+                    f"JSON parsing error at line {e.lineno}, column {e.colno}: {e.msg}\n"
+                    f"Failed input (row={row_idx}, chunk={c_idx}, model={model_name}): {parsed_json_str[:256]}"
+                )
+                logger.warning(error_msg)
+                continue
             except Exception as e:
                 logger.warning(
-                    "Failed to parse JSON for row {}, chunk {} (model={}): {}",
-                    row_idx, c_idx, model_name, e
+                    "Unexpected error parsing JSON for row %d, chunk %d (model=%s): %s, sample: %s",
+                    row_idx, c_idx, model_name, str(e), parsed_json_str[:128]
                 )
+                continue
+            
+            if not isinstance(question_answer_pairs, list):
+                logger.warning(
+                    "Wrong JSON response type {} for row {}, chunk {} (model={})",
+                    type(question_answer_pairs), row_idx, c_idx, model_name,
+                )
+
+            if not isinstance(question_answer_pairs[0], dict):
+                logger.warning(
+                    "Wrong JSON response type {} for row {}, chunk {} (model={})",
+                    type(question_answer_pairs[0]), row_idx, c_idx, model_name,
+                )
+
+                if isinstance(question_answer_pairs[0], str):
+                    logger.warning(
+                        "Wrong response type starts with: {}",
+                        question_answer_pairs[0][:64],
+                    )
+
                 continue
 
             # Build question rows
