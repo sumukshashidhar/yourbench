@@ -811,7 +811,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.61.5"
+version = "1.61.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -826,9 +826,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/0c/145830eec4375a995fe7ba0e597944576b891fb568911e8535eca7e2b9ab/litellm-1.61.5.tar.gz", hash = "sha256:0fda7698e64933e100398d2b3ed5d1dc096021adf699c885f8baf5a7b0d7589c", size = 6477731 }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/a5/0750edce9f4cbdce7f0d852b8e175cec4760d1c687c0079f7fe1b91c7d7f/litellm-1.61.16.tar.gz", hash = "sha256:02df5865f98ea9734a4d27ac7c33aad9a45c4015403d5c0797d3292ade3c5cb5", size = 6562533 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/7b/e30a2cb2d4cf92de7d2469cef8afc7439c3c523b533055da0f5e69520d0b/litellm-1.61.5-py3-none-any.whl", hash = "sha256:0f842fe96d8354fce71bdb50b7b8d86b329653161885a047de4a9c78e0cfbe82", size = 6783018 },
+    { url = "https://files.pythonhosted.org/packages/56/49/6af8c25e4e57426d322ee94e312a822162bb8122d24adcbcb913916225e2/litellm-1.61.16-py3-none-any.whl", hash = "sha256:d241436ac0edf64ec57fb5686f8d84a25998a7e52213d9063adf87df8432701f", size = 6871951 },
 ]
 
 [[package]]
@@ -2205,7 +2205,7 @@ requires-dist = [
     { name = "gradio", specifier = ">=5.16.0" },
     { name = "hf-transfer", specifier = ">=0.1.9" },
     { name = "langfuse", specifier = ">=2.59.3" },
-    { name = "litellm", specifier = ">=1.61.5" },
+    { name = "litellm", specifier = ">=1.61.16" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "markitdown", specifier = ">=0.0.1a4" },
     { name = "matplotlib", specifier = ">=3.10.0" },

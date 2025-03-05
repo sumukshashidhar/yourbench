@@ -142,7 +142,7 @@ def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
     # If there's no model specified for ingestion, just return a basic MarkItDown instance
     if not ingestion_roles or not model_list:
         logger.debug("No LLM configuration found for ingestion. Using default MarkItDown.")
-        return MarkItDown(enable_plugins=False)
+        return MarkItDown()
 
     # For simplicity, pick the first model in ingestion_roles that matches anything in model_list
     # (Feel free to adapt for more complex logic if needed)
@@ -164,7 +164,7 @@ def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
         logger.warning(
             "OpenAI client library not found. Unable to initialize LLM. Using default MarkItDown."
         )
-        return MarkItDown(enable_plugins=False)
+        return MarkItDown()
 
     # Extract relevant info
     provider = matched_model_config.get("provider")

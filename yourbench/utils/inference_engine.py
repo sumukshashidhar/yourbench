@@ -6,8 +6,9 @@ import litellm
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 from loguru import logger
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import sys
+import uuid
 import asyncio
 import time  # ### [CHANGED OR ADDED] ### for timing logs
 from contextlib import asynccontextmanager
@@ -23,10 +24,39 @@ load_dotenv()
 
 GLOBAL_TIMEOUT = 600
 
+# TODO: why do we need these lines
 # Optional: Customize success/failure callbacks
-litellm.success_callback = ['langfuse']
-litellm.failure_callback = ['langfuse']
+# litellm.success_callback = ['langfuse']
+# litellm.failure_callback = ['langfuse']
+class EventLoopAwareCache(litellm.InMemoryCache):
+    """
+    A cache that maintains cache isolation between event loops.
 
+    LiteLLM caches LLM clients for better performance, but shares this cache across
+    event loops. LiteLLM uses httpx AsyncClient under the hood, and you should not
+    share AsyncClients across event loops.
+    - Same issue posted to LiteLLM: https://github.com/BerriAI/litellm/issues/7667
+    - Reference to httpx behavior: https://github.com/encode/httpx/issues/2473
+
+    The cache needs to manage a uuid identifier that won't be reused after an event
+    loop is terminated.
+    """
+    def get_cache(self, key, **kwargs):
+        new_key = self._get_event_loop_aware_cache_key(key)
+        return super().get_cache(new_key)
+
+    def set_cache(self, key, value, **kwargs):
+        new_key = self._get_event_loop_aware_cache_key(key)
+        return super().set_cache(new_key, value, **kwargs)
+
+    def _get_event_loop_aware_cache_key(self, key):
+        loop = asyncio.get_running_loop()
+        if not hasattr(loop, "_custom_identifier"):
+            loop._custom_identifier = uuid.uuid4()
+        loop_id = loop._custom_identifier
+        return f"{key}-{loop_id}"
+
+litellm.in_memory_llm_clients_cache = EventLoopAwareCache()
 
 @dataclass
 class Model:
@@ -40,8 +70,10 @@ class Model:
 @dataclass
 class InferenceCall:
     messages: List[Dict[str, str]]
+    temperature: Optional[float] = None
     tags: List[str] = field(default_factory=lambda: ['dev'])
     max_retries: int = 3
+    seed: Optional[int] = None
 
 
 @dataclass
@@ -68,25 +100,27 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
     Send one inference call to the model endpoint within a global timeout context.
     Logs start/end times for better concurrency tracing.
     """
-    start_time = time.time()  # ### [CHANGED OR ADDED] ###
+    start_time = time.time()
     logger.debug(
         "START _get_response: model='{}'  (timestamp={:.4f})",
         model.model_name, start_time
     )
-    async with _timeout_context(GLOBAL_TIMEOUT):
-        response = await litellm.acompletion(
+
+    response = await litellm.acompletion(
             model=f"{model.provider}/{model.model_name}",
             base_url=model.base_url,
             api_key=model.api_key,
             messages=inference_call.messages,
-            metadata={"tags": inference_call.tags}
-        )
+            temperature=inference_call.temperature,
+            metadata={"tags": inference_call.tags},
+            timeout=GLOBAL_TIMEOUT
+    )
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
         logger.warning("Empty response or missing .choices from model {}", model.model_name)
         return ""
 
-    finish_time = time.time()  # ### [CHANGED OR ADDED] ###
+    finish_time = time.time()
     logger.debug(
         "END _get_response: model='{}'  (timestamp={:.4f}, duration={:.2f}s)",
         model.model_name, finish_time, (finish_time - start_time)
@@ -147,19 +181,17 @@ async def _run_inference_async_helper(
     """
     logger.info("Starting asynchronous inference with per-model concurrency control.")
 
-    # ### [CHANGED OR ADDED] ###
     # Instead of a single global concurrency, create a semaphore per model based on model.max_concurrent_requests
     model_semaphores: Dict[str, asyncio.Semaphore] = {}
-    for m in models:
+    for model in models:
         # If not specified, default to something reasonable like 1
-        concurrency = max(m.max_concurrent_requests, 1)
-        sem = asyncio.Semaphore(concurrency)
-        model_semaphores[m.model_name] = sem
+        concurrency = max(model.max_concurrent_requests, 1)
+        semaphore = asyncio.Semaphore(concurrency)
+        model_semaphores[model.model_name] = semaphore
         logger.debug(
             "Created semaphore for model='{}' with concurrency={}",
-            m.model_name, concurrency
+            model.model_name, concurrency
         )
-    # ### [END CHANGE] ###
 
     tasks = []
     # We'll build tasks in an order that ensures each model gets a contiguous
@@ -189,10 +221,10 @@ async def _run_inference_async_helper(
         idx = slice_end
 
     # Optional debug: confirm each model's result count
-    for m in models:
+    for model in models:
         logger.debug(
             "Model '{}' produced {} responses.",
-            m.model_name, len(responses[m.model_name])
+            model.model_name, len(responses[model.model_name])
         )
 
     return responses
@@ -201,9 +233,20 @@ async def _run_inference_async_helper(
 def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
     """
     Load only the models assigned to this step from the config's 'model_list' and 'model_roles'.
+    If no model role is defined for the step, use the first model from model_list.
     """
     all_configured_models = base_config.get("model_list", [])
     role_models = base_config["model_roles"].get(step_name, [])
+    
+    # If no role models are defined for this step, use the first model from model_list
+    if not role_models and all_configured_models:
+        logger.info(
+            "No models defined in model_roles for step '{}'. Using the first model from model_list: {}",
+            step_name,
+            all_configured_models[0]["model_name"]
+        )
+        return [Model(**all_configured_models[0])]
+    
     # Filter out only those with a matching 'model_name'
     matched = [
         Model(**m) for m in all_configured_models

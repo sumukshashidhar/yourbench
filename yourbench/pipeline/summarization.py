@@ -20,6 +20,11 @@ from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
 from yourbench.utils.saving_engine import save_dataset
 from yourbench.utils.dataset_engine import smart_load_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from loguru import logger
+
+def duplicate_rows(dataset, num_duplicates=20):
+    # Return the example as a list repeated num_duplicates times
+    return {k: [v] * num_duplicates for k, v in dataset.items()}
 
 
 def _safe_compute_bleu(predictions: List[str], references: List[List[str]]) -> float:
@@ -125,6 +130,21 @@ def run(config: Dict[str, Any]) -> None:
     logger.info("Running summarization stage with additional diagnostic logs.")
     dataset = smart_load_dataset(stage_cfg["source_dataset_name"], config)
     logger.info("Loaded dataset with {} documents for summarization.", len(dataset))
+    logger.info("Running summarization stage.")
+
+    # 1. Load the dataset
+    dataset = smart_load_dataset(summary_cfg["source_dataset_name"], config)
+    logger.info("Loaded dataset with %d documents.", len(dataset))
+
+    dataset = dataset.map(
+        duplicate_rows,
+        batched=False,
+        remove_columns=dataset.column_names
+    )
+
+    # Flatten the dataset
+    dataset = {k: sum(v, []) for k, v in dataset.to_dict().items()}
+    dataset = Dataset.from_dict(dataset)
 
     # Prepare inference calls
     documents: List[str] = dataset["document_text"]
@@ -138,6 +158,31 @@ def run(config: Dict[str, Any]) -> None:
         inference_calls.append(InferenceCall(messages=[user_msg]))
 
     logger.info("Dispatching {} summarization calls to inference engine.", len(inference_calls))
+
+    inference_calls = []
+
+    for document in documents:
+        # Generate a random temperature in the range [0.7, 1.0]
+        temperature_value = round(uniform(0.7, 1.0), 2)
+
+        # Log the temperature for debugging
+        logger.info(f"Selected temperature for document: {temperature_value}")
+
+        # Create inference call
+        call = InferenceCall(
+            messages=[
+                {
+                    "role": "user",
+                    "content": SUMMARIZATION_USER_PROMPT.format(document=document)
+                }
+            ],
+            temperature=temperature_value
+        )
+
+        inference_calls.append(call)
+
+    # 3. Run inference in parallel
+    logger.info("Sending %d summarization calls to inference engine.", len(inference_calls))
     responses_dict = run_inference(config, "summarization", inference_calls)
 
     # For simplicity, assume one summarization model in model_roles

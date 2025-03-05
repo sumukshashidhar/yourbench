@@ -7,17 +7,28 @@ from typing import Dict, Any
 from yourbench.utils.loading_engine import load_config
 from loguru import logger
 import importlib
+import time
 
-# 1) Create a global list to record pipeline-stage timings
-GLOBAL_PIPELINE_TIMINGS = []  # Each item: {"stage_name": str, "start": float, "end": float}
+def run_pipeline(config_file_path: str, debug: bool = False) -> None:
+    """Execute the pipeline stages defined in the configuration file.
 
-def run_pipeline(config_file_path: str) -> None:
-    """Execute the pipeline stages defined in the configuration file."""
+    Args:
+        config_file_path: Path to the configuration file containing pipeline settings.
+        debug: Boolean flag indicating whether to enable debug mode.
+
+    Raises:
+        FileNotFoundError: If the config file cannot be found.
+        Exception: For any other unexpected errors during pipeline execution.
+    """
     try:
         logger.debug(f"Loading configuration from {config_file_path}")
         config: Dict[str, Any] = load_config(config_file_path)
-        pipeline_configuration = config.get("pipeline", {})
 
+        # Inject the debug flag into the config
+        config["debug"] = debug
+        logger.info(f"Debug mode set to {config['debug']}")
+
+        pipeline_configuration = config.get("pipeline", {})
         if not pipeline_configuration:
             logger.warning("No pipeline stages configured")
             return
@@ -35,19 +46,19 @@ def run_pipeline(config_file_path: str) -> None:
                     continue
 
                 logger.info(f"Starting execution of stage: {stage_name}")
+                start_time = time.time()
+
+                # Import and execute the stage's run function
                 stage_module = importlib.import_module(f"yourbench.pipeline.{stage_name}")
 
                 # 2) Time the stage
                 t0 = time.time()
                 stage_module.run(config)
-                t1 = time.time()
 
-                logger.success(f"Successfully completed stage: {stage_name}")
-                GLOBAL_PIPELINE_TIMINGS.append({
-                    "stage_name": stage_name,
-                    "start": t0,
-                    "end": t1,
-                })
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                logger.success(f"Successfully completed stage: {stage_name} in {elapsed_time:.3f} seconds")
+
             except Exception as e:
                 logger.error(f"Error executing pipeline stage {stage_name}: {str(e)}")
                 raise

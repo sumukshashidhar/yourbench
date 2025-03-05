@@ -1,0 +1,24 @@
+hf_configuration:
+  token: $HF_TOKEN
+  private: true # true by default, set to false to make the dataset public
+  hf_organization: $HF_ORGANIZATION
+
+model_list:
+  - model_name: deepseek-chat
+    provider: openai
+    api_key: $DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    max_concurrent_requests: 512
+
+model_roles:
+  ingestion:
+    - deepseek-chat
+
+inference_config:
+  max_concurrent_requests: 512
+
+pipeline:
+  ingestion:
+    source_documents_dir: data/example/raw
+    output_dir: data/example/ingested
+    run: true
