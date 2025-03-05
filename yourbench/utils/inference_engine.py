@@ -233,9 +233,20 @@ async def _run_inference_async_helper(
 def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
     """
     Load only the models assigned to this step from the config's 'model_list' and 'model_roles'.
+    If no model role is defined for the step, use the first model from model_list.
     """
     all_configured_models = base_config.get("model_list", [])
     role_models = base_config["model_roles"].get(step_name, [])
+    
+    # If no role models are defined for this step, use the first model from model_list
+    if not role_models and all_configured_models:
+        logger.info(
+            "No models defined in model_roles for step '{}'. Using the first model from model_list: {}",
+            step_name,
+            all_configured_models[0]["model_name"]
+        )
+        return [Model(**all_configured_models[0])]
+    
     # Filter out only those with a matching 'model_name'
     matched = [
         Model(**m) for m in all_configured_models
