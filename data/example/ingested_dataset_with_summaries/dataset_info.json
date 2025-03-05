@@ -1,0 +1,90 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "yb_demo_ingested_documents",
+  "dataset_size": 6942,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/sumuks/yb_demo_ingested_documents@d505d3c102c830bf4dec9d0efc353228e9ab2cc7/data/train-00000-of-00001.parquet": {
+      "num_bytes": 6758,
+      "checksum": null
+    }
+  },
+  "download_size": 6758,
+  "features": {
+    "document_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_filename": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_metadata": {
+      "file_size": {
+        "dtype": "int64",
+        "_type": "Value"
+      }
+    },
+    "raw_document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "summarization_model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "quality_metrics": {
+      "bert_score_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "bleu": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "meteor": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rouge1_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rouge2_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rougeL_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      }
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 13700,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 6942,
+      "num_examples": 1,
+      "dataset_name": "yb_demo_ingested_documents"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

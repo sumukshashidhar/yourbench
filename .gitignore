@@ -11,6 +11,7 @@ fr.sh
 repo_contents.txt
 # C extensions
 *.so
+scratch_configs/
 
 .cursor
 # Distribution / packaging

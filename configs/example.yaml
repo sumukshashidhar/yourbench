@@ -39,20 +39,25 @@ model_list:
     base_url: https://openrouter.ai/api/v1
     api_key: $OPENROUTER_API_KEY
     max_concurrent_requests: 64
+  - model_name: google/gemini-2.0-flash-lite-001
+    provider: openai
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+    max_concurrent_requests: 64
 
 model_roles:
   ingestion:
-    - deepseek-ai/DeepSeek-V3
+    - google/gemini-2.0-flash-lite-001
   summarization:
-    - deepseek-ai/DeepSeek-V3
+    - google/gemini-2.0-flash-lite-001
   single_shot_question_generation:
-    - deepseek-ai/DeepSeek-V3
+    - google/gemini-2.0-flash-lite-001
   multi_hop_question_generation:
-    - deepseek-ai/DeepSeek-V3
+    - google/gemini-2.0-flash-lite-001
   answer_generation:
-    - deepseek-ai/DeepSeek-V3
+    - google/gemini-2.0-flash-lite-001
   judge_answers:
-    - deepseek-ai/DeepSeek-V3:nitro
+    - google/gemini-2.0-flash-lite-001
 
 inference_config:
   max_concurrent_requests: 16
@@ -64,14 +69,14 @@ pipeline:
   ingestion:
     source_documents_dir: data/example/raw
     output_dir: data/example/ingested
-    run: false # set to true to run the stage
+    run: true # set to true to run the stage
   
   # upload documents to a simple HF hub repo
   upload_ingest_to_hub:
     source_documents_dir: data/example/ingested
     hub_dataset_name: yb_demo_ingested_documents
     local_dataset_path: data/example/ingested_dataset
-    run: false
+    run: true
   
   # summarization to convert markdown to a summary
   summarization:
@@ -79,7 +84,7 @@ pipeline:
     output_dataset_name: yb_demo_ingested_documents_with_summaries
     local_dataset_path: data/example/ingested_dataset_with_summaries
     concat_existing_dataset: false
-    run: false
+    run: true
 
   # chunking to convert document to chunks
   chunking:
@@ -93,7 +98,7 @@ pipeline:
       tau_threshold: 0.3
       h_min: 2
       h_max: 4
-    run: false
+    run: true
   
   single_shot_question_generation:
     source_dataset_name: yb_demo_chunked_documents
@@ -101,17 +106,17 @@ pipeline:
     local_dataset_path: data/example/single_shot_questions
     diversification_seed: "24 year old adult"
     concat_existing_dataset: false
-    run: false
+    run: true
   
   multi_hop_question_generation:
     source_dataset_name: yb_demo_chunked_documents
     output_dataset_name: yb_demo_multi_hop_questions
     local_dataset_path: data/example/multi_hop_questions
     concat_existing_dataset: false
-    run: false
+    run: true
 
   answer_generation:
-    run: false
+    run: true
     question_dataset_name: yb_demo_single_shot_questions  # or yb_demo_multi_hop_questions
     output_dataset_name: yb_demo_answered_questions
     local_dataset_path: data/example/answered_questions
@@ -119,11 +124,11 @@ pipeline:
     strategies:
       - name: "zeroshot"
         prompt: "ZEROSHOT_QA_USER_PROMPT"
-        model_name: "deepseek-ai/DeepSeek-V3"
+        model_name: "google/gemini-2.0-flash-lite-001"
 
       - name: "gold"
         prompt: "GOLD_QA_USER_PROMPT"
-        model_name: "deepseek-ai/DeepSeek-V3"
+        model_name: "google/gemini-2.0-flash-lite-001"
 
   judge_answers:
     run: true
