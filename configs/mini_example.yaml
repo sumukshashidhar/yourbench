@@ -20,5 +20,5 @@ inference_config:
 pipeline:
   ingestion:
     source_documents_dir: data/example/raw
-    output_dir: data/example/ingested
+    output_dir: data/example/processed/ingested
     run: true

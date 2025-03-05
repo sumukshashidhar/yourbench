@@ -3,11 +3,14 @@
 import os
 import time
 import matplotlib.pyplot as plt
-from typing import Dict, Any
+from typing import Dict, Any, List
 from yourbench.utils.loading_engine import load_config
 from loguru import logger
 import importlib
 import time
+
+# Define the global variable to track pipeline stage timings
+GLOBAL_PIPELINE_TIMINGS: List[Dict[str, Any]] = []
 
 def run_pipeline(config_file_path: str, debug: bool = False) -> None:
     """Execute the pipeline stages defined in the configuration file.
@@ -20,6 +23,10 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
         FileNotFoundError: If the config file cannot be found.
         Exception: For any other unexpected errors during pipeline execution.
     """
+    # Clear the global timings list at the start of a new pipeline run
+    global GLOBAL_PIPELINE_TIMINGS
+    GLOBAL_PIPELINE_TIMINGS = []
+    
     try:
         logger.debug(f"Loading configuration from {config_file_path}")
         config: Dict[str, Any] = load_config(config_file_path)
@@ -51,12 +58,19 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
                 # Import and execute the stage's run function
                 stage_module = importlib.import_module(f"yourbench.pipeline.{stage_name}")
 
-                # 2) Time the stage
-                t0 = time.time()
+                # Time the stage
                 stage_module.run(config)
 
                 end_time = time.time()
                 elapsed_time = end_time - start_time
+                
+                # Record the timing information
+                GLOBAL_PIPELINE_TIMINGS.append({
+                    "stage_name": stage_name,
+                    "start": start_time,
+                    "end": end_time
+                })
+                
                 logger.success(f"Successfully completed stage: {stage_name} in {elapsed_time:.3f} seconds")
 
             except Exception as e:
@@ -65,7 +79,7 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
 
         pipeline_end_time = time.time()
 
-        # 3) Produce final waterfall chart after all stages
+        # Produce final waterfall chart after all stages
         _plot_pipeline_stage_timing(GLOBAL_PIPELINE_TIMINGS, pipeline_start_time, pipeline_end_time)
 
     except Exception as e:
