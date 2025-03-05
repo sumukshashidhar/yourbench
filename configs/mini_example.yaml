@@ -27,5 +27,11 @@ pipeline:
     source_documents_dir: data/example/processed/ingested
     hub_dataset_name: yb_mini_example_ingested_documents
     local_dataset_path: data/example/processed/ingested_dataset
+    run: false
+  
+  summarization:
+    source_dataset_name: yb_mini_example_ingested_documents
+    output_dataset_name: yb_mini_example_ingested_documents_with_summaries
+    local_dataset_path: data/example/processed/ingested_dataset_with_summaries
+    concat_existing_dataset: false
     run: true
-
