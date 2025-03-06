@@ -1,0 +1,140 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "yb_mini_example_ingested_documents_with_summaries",
+  "dataset_size": 18649,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/sumuks/yb_mini_example_ingested_documents_with_summaries@e8542ca50e0f8d2d99bb6a9e54bda85cfe25850e/data/train-00000-of-00001.parquet": {
+      "num_bytes": 27730,
+      "checksum": null
+    }
+  },
+  "download_size": 27730,
+  "features": {
+    "document_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_filename": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_metadata": {
+      "file_size": {
+        "dtype": "int64",
+        "_type": "Value"
+      }
+    },
+    "raw_document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "document_summary": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "summarization_model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "quality_metrics": {
+      "bert_score_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "bleu": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "meteor": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rouge1_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rouge2_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      },
+      "rougeL_f1": {
+        "dtype": "float64",
+        "_type": "Value"
+      }
+    },
+    "chunks": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "multihop_chunks": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "chunk_info_metrics": [
+      {
+        "avg_token_length": {
+          "dtype": "float64",
+          "_type": "Value"
+        },
+        "bigram_diversity": {
+          "dtype": "float64",
+          "_type": "Value"
+        },
+        "flesch_reading_ease": {
+          "dtype": "float64",
+          "_type": "Value"
+        },
+        "gunning_fog": {
+          "dtype": "float64",
+          "_type": "Value"
+        },
+        "perplexity": {
+          "dtype": "float64",
+          "_type": "Value"
+        },
+        "token_count": {
+          "dtype": "float64",
+          "_type": "Value"
+        },
+        "unique_token_ratio": {
+          "dtype": "float64",
+          "_type": "Value"
+        }
+      }
+    ],
+    "chunking_model": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 46379,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 18649,
+      "num_examples": 2,
+      "dataset_name": "yb_mini_example_ingested_documents_with_summaries"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

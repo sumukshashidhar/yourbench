@@ -7,7 +7,7 @@ similarity computation. This module also generates plots of sentence-pair
 similarities and saves them in the `plots/` folder for debugging and
 analysis purposes.
 
-References (from your paper):
+References (from paper):
 - Section 2.2.3 on Semantic Chunking
 - Equation for similarity-based boundary detection
 - Multi-hop chunking approach
@@ -68,10 +68,10 @@ def run(config: Dict[str, Any]) -> None:
          - Computes embeddings for each sentence via the E5 model.
          - Calculates consecutive sentence similarities.
          - Determines chunk boundaries based on l_min_tokens, l_max_tokens, and tau_threshold.
-         - Generates a plot of the consecutive similarities and saves it in plots/.
-      4. Optionally builds multi-hop chunks by sampling subsets of the single-hop chunks.
-      5. Computes "information density" metrics for each chunk (token_count, perplexity, etc.).
-      6. Appends 'chunks', 'multihop_chunks', and 'chunk_info_metrics' columns to the dataset, then saves it.
+      4. Generates a single plot with average similarity data.
+      5. Optionally builds multi-hop chunks by sampling subsets of the single-hop chunks.
+      6. Computes "information density" metrics for each chunk (token_count, perplexity, etc.).
+      7. Appends 'chunks', 'multihop_chunks', and 'chunk_info_metrics' columns to the dataset, then saves it.
 
     Configuration Example:
         pipeline:
@@ -106,6 +106,7 @@ def run(config: Dict[str, Any]) -> None:
     tau_threshold = cparams.get("tau_threshold", 0.3)
     h_min = cparams.get("h_min", 2)
     h_max = cparams.get("h_max", 3)
+    num_multihops_factor = cparams.get("num_multihops_factor", 2)
 
     logger.debug(
         "Chunking configuration: l_min_tokens={}, l_max_tokens={}, tau_threshold={}, h_min={}, h_max={}",
@@ -121,6 +122,9 @@ def run(config: Dict[str, Any]) -> None:
     all_single_hop_chunks = []
     all_multihop_chunks = []
     all_chunk_info_metrics = []
+    
+    # Collect similarities across all documents for aggregated plotting
+    all_similarities = []
 
     for idx, row in enumerate(dataset):
         doc_text = row["document_text"]
@@ -153,11 +157,12 @@ def run(config: Dict[str, Any]) -> None:
                 )[0]
             )
             similarities.append(cos_sim)
+        
+        # Add to the collection of all similarities
+        if similarities:
+            all_similarities.append(similarities)
 
-        # === 3C: Generate a plot of these similarities for inspection ===
-        _plot_sentence_similarities(similarities, idx)
-
-        # === 3D: Single-hop chunking with boundary logic ===
+        # === 3C: Single-hop chunking with boundary logic ===
         single_hop = _chunk_document(
             sentences,
             similarities,
@@ -166,15 +171,19 @@ def run(config: Dict[str, Any]) -> None:
             tau_threshold
         )
 
-        # === 3E: Multi-hop chunking ===
-        multihop = _multihop_chunking(single_hop, h_min, h_max)
+        # === 3D: Multi-hop chunking ===
+        multihop = _multihop_chunking(single_hop, h_min, h_max, num_multihops_factor)
 
-        # === 3F: Compute info density metrics for each single-hop chunk
+        # === 3E: Compute info density metrics for each single-hop chunk
         chunk_metrics = _compute_info_density_metrics(single_hop)
 
         all_single_hop_chunks.append(single_hop)
         all_multihop_chunks.append(multihop)
         all_chunk_info_metrics.append(chunk_metrics)
+
+    # Plot aggregated similarities
+    if all_similarities:
+        _plot_aggregated_similarities(all_similarities)
 
     # === Step 4: Add new columns and save ===
     dataset = dataset.add_column("chunks", all_single_hop_chunks)
@@ -318,47 +327,109 @@ def _chunk_document(
 def _multihop_chunking(
     single_hop_chunks: List[str],
     h_min: int,
-    h_max: int
+    h_max: int,
+    num_multihops_factor: int
 ) -> List[str]:
     """
-    Create multi-hop chunks by randomly sampling subsets of single-hop chunks
-    and concatenating them. (Per Section 2.2.3 in the paper.)
+    Create multiple multi-hop chunks by randomly sampling subsets
+    of single-hop chunks, then concatenating in ascending order,
+    inserting markers like '# === CHUNK X ==='.
 
-    Steps:
-      1. Let k ~ Uniform(h_min, h_max)
-      2. Sample k distinct indices from single_hop_chunks
-      3. Concatenate them in ascending order
-      4. Return as a single multihop chunk in a list
+    :param single_hop_chunks: The list of single-hop chunks.
+    :param h_min: Minimum number of chunks to combine.
+    :param h_max: Maximum number of chunks to combine.
+    :param num_multihops_factor: Factor controlling how many multi-hops to produce.
+    :return: List of multi-hop strings.
     """
+    multihop_chunks = []
     if not single_hop_chunks:
-        return []
+        return multihop_chunks
 
-    k = random.randint(h_min, h_max)
-    k = min(k, len(single_hop_chunks))
-    sampled_indices = sorted(random.sample(range(len(single_hop_chunks)), k))
-    multi_hop_concat = " ".join(single_hop_chunks[i] for i in sampled_indices)
+    # Example: produce roughly len / factor multi-hop chunks (at least 1)
+    num_multihops = max(1, len(single_hop_chunks) // num_multihops_factor)
 
-    return [multi_hop_concat]
+    for _ in range(num_multihops):
+        # pick how many single-hop chunks to combine this time
+        k = random.randint(h_min, h_max)
+        k = min(k, len(single_hop_chunks))  # can't exceed what's available
+
+        # choose k distinct indices, sort them so we keep original order
+        sampled_indices = sorted(random.sample(range(len(single_hop_chunks)), k))
+
+        # build a list of strings including demarcator lines
+        multi_hop_parts = []
+        for idx_num, chunk_idx in enumerate(sampled_indices, start=1):
+            multi_hop_parts.append(f"# === CHUNK {chunk_idx} ===")
+            multi_hop_parts.append(single_hop_chunks[chunk_idx])
+
+        # join them with newlines (or use something else if you prefer)
+        multi_hop_concat = "\n".join(multi_hop_parts)
+
+        multihop_chunks.append(multi_hop_concat)
+
+    return multihop_chunks
 
 
-def _plot_sentence_similarities(similarities: List[float], doc_idx: int) -> None:
+
+def _plot_aggregated_similarities(all_similarities: List[List[float]]) -> None:
     """
-    Plot and save the distribution of consecutive sentence similarities for a given document.
+    Plot and save aggregated statistics about sentence similarities across all documents.
+    
+    Args:
+        all_similarities: List of similarity lists from all documents
     """
-    if not similarities:
-        return
-
-    plt.figure(figsize=(8, 4))
-    plt.plot(range(len(similarities)), similarities, marker='o')
-    plt.title(f"Consecutive Sentence Similarities (doc {doc_idx})")
-    plt.xlabel("Sentence Pair Index (i -> i+1)")
-    plt.ylabel("Cosine Similarity (E5 Embeddings)")
+    plt.figure(figsize=(10, 6))
+    
+    # Calculate average similarity at each relative position
+    max_len = max(len(sims) for sims in all_similarities)
+    avg_similarities = []
+    std_similarities = []
+    counts = []
+    
+    for pos in range(max_len):
+        values = [sims[pos] for sims in all_similarities if pos < len(sims)]
+        if values:
+            avg_similarities.append(sum(values) / len(values))
+            std_similarities.append(
+                (sum((v - avg_similarities[-1])**2 for v in values) / len(values))**0.5
+            )
+            counts.append(len(values))
+        else:
+            break
+    
+    # Plot the average similarity with standard deviation band
+    x = list(range(len(avg_similarities)))
+    plt.plot(x, avg_similarities, 'b-', label='Average Similarity')
+    plt.fill_between(
+        x, 
+        [max(0, avg - std) for avg, std in zip(avg_similarities, std_similarities)],
+        [min(1, avg + std) for avg, std in zip(avg_similarities, std_similarities)],
+        alpha=0.3, color='blue'
+    )
+    
+    # Add count information as size of points
+    max_count = max(counts)
+    sizes = [30 * (count / max_count) for count in counts]
+    plt.scatter(x, avg_similarities, s=sizes, alpha=0.5, color='navy')
+    
+    plt.title(f"Average Sentence Similarity Across All Documents")
+    plt.xlabel("Sentence Pair Index (i → i+1)")
+    plt.ylabel("Average Cosine Similarity")
     plt.ylim([0.0, 1.05])
     plt.grid(True)
-    plot_path = os.path.join("plots", f"chunking_document_{doc_idx}.png")
+    
+    # Add annotation about what the plot shows
+    plt.figtext(
+        0.5, -0.05, 
+        "Note: Point size indicates number of documents contributing to each position.\n"
+        "Shaded area shows ±1 standard deviation around the mean.",
+        ha='center', fontsize=9
+    )
+    
+    plot_path = os.path.join("plots", "aggregated_similarities.png")
     plt.savefig(plot_path, dpi=150, bbox_inches="tight")
     plt.close()
-    logger.debug("Saved similarity plot for document {} at '{}'.", doc_idx, plot_path)
+    logger.info("Saved aggregated similarity plot at '{}'", plot_path)
 
 
 # -------------------------------------------------------------------

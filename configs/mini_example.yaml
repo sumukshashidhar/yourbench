@@ -19,19 +19,35 @@ inference_config:
 
 pipeline:
   ingestion:
+    run: false
     source_documents_dir: data/example/raw
     output_dir: data/example/processed/ingested
-    run: false
-  
+    
   upload_ingest_to_hub:
+    run: false
     source_documents_dir: data/example/processed/ingested
     hub_dataset_name: yb_mini_example_ingested_documents
     local_dataset_path: data/example/processed/ingested_dataset
-    run: false
-  
+    
   summarization:
+    run: false
+    concat_existing_dataset: false
     source_dataset_name: yb_mini_example_ingested_documents
     output_dataset_name: yb_mini_example_ingested_documents_with_summaries
     local_dataset_path: data/example/processed/ingested_dataset_with_summaries
-    concat_existing_dataset: false
+    
+  chunking:
     run: true
+    concat_existing_dataset: false
+    source_dataset_name: yb_mini_example_ingested_documents_with_summaries
+    output_dataset_name: yb_mini_example_ingested_documents_chunked
+    local_dataset_path: data/example/processed/ingested_dataset_chunked
+    
+    # chunking config
+    chunking_configuration:
+      l_min_tokens: 64
+      l_max_tokens: 128
+      tau_threshold: 0.8
+      h_min: 2
+      h_max: 5
+      num_multihops_factor: 2   # or any integer or float
