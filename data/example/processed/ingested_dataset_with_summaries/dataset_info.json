@@ -6,7 +6,7 @@
   "dataset_size": 13659,
   "description": "",
   "download_checksums": {
-    "hf://datasets/sumuks/yb_mini_example_ingested_documents@38e8b69ad7a2f050e94636f4dc4cb39cf926abde/data/train-00000-of-00001.parquet": {
+    "hf://datasets/sumuks/yb_mini_example_ingested_documents@cb23a407443d644cde5d7f95dba4ec29080e446f/data/train-00000-of-00001.parquet": {
       "num_bytes": 11029,
       "checksum": null
     }

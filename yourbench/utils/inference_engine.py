@@ -26,8 +26,8 @@ GLOBAL_TIMEOUT = 600
 
 # TODO: why do we need these lines
 # Optional: Customize success/failure callbacks
-# litellm.success_callback = ['langfuse']
-# litellm.failure_callback = ['langfuse']
+litellm.success_callback = ['langfuse']
+litellm.failure_callback = ['langfuse']
 class EventLoopAwareCache(litellm.InMemoryCache):
     """
     A cache that maintains cache isolation between event loops.

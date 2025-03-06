@@ -3,15 +3,15 @@
   "citation": "",
   "config_name": "default",
   "dataset_name": "yb_mini_example_ingested_documents_with_summaries",
-  "dataset_size": 18649,
+  "dataset_size": 18560,
   "description": "",
   "download_checksums": {
-    "hf://datasets/sumuks/yb_mini_example_ingested_documents_with_summaries@e8542ca50e0f8d2d99bb6a9e54bda85cfe25850e/data/train-00000-of-00001.parquet": {
-      "num_bytes": 27730,
+    "hf://datasets/sumuks/yb_mini_example_ingested_documents_with_summaries@6c44a308088a2651cd566c4f69812b006df7cb6d/data/train-00000-of-00001.parquet": {
+      "num_bytes": 27524,
       "checksum": null
     }
   },
-  "download_size": 27730,
+  "download_size": 27524,
   "features": {
     "document_id": {
       "dtype": "string",
@@ -69,20 +69,36 @@
         "_type": "Value"
       }
     },
-    "chunks": {
-      "feature": {
-        "dtype": "string",
-        "_type": "Value"
-      },
-      "_type": "Sequence"
-    },
-    "multihop_chunks": {
-      "feature": {
-        "dtype": "string",
-        "_type": "Value"
-      },
-      "_type": "Sequence"
-    },
+    "chunks": [
+      {
+        "chunk_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "chunk_text": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      }
+    ],
+    "multihop_chunks": [
+      {
+        "chunk_ids": {
+          "feature": {
+            "dtype": "string",
+            "_type": "Value"
+          },
+          "_type": "Sequence"
+        },
+        "chunks_text": {
+          "feature": {
+            "dtype": "string",
+            "_type": "Value"
+          },
+          "_type": "Sequence"
+        }
+      }
+    ],
     "chunk_info_metrics": [
       {
         "avg_token_length": {
@@ -122,11 +138,11 @@
   },
   "homepage": "",
   "license": "",
-  "size_in_bytes": 46379,
+  "size_in_bytes": 46084,
   "splits": {
     "train": {
       "name": "train",
-      "num_bytes": 18649,
+      "num_bytes": 18560,
       "num_examples": 2,
       "dataset_name": "yb_mini_example_ingested_documents_with_summaries"
     }

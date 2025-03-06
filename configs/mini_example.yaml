@@ -4,40 +4,41 @@ hf_configuration:
   hf_organization: $HF_ORGANIZATION
 
 model_list:
-  - model_name: deepseek-chat
+  - model_name: mistralai/Mistral-Large-Instruct-2411
     provider: openai
-    api_key: $DEEPSEEK_API_KEY
-    base_url: https://api.deepseek.com/v1
+    api_key: $OPENROUTER_API_KEY
+    # base_url: https://openrouter.ai/api/v1
+    base_url: http://convai-srv-06:8000/v1/
     max_concurrent_requests: 512
 
 model_roles:
   ingestion:
-    - deepseek-chat
+    - mistralai/Mistral-Large-Instruct-2411
 
 inference_config:
   max_concurrent_requests: 512
 
 pipeline:
   ingestion:
-    run: false
+    run: true
     source_documents_dir: data/example/raw
     output_dir: data/example/processed/ingested
     
   upload_ingest_to_hub:
-    run: false
+    run: true
     source_documents_dir: data/example/processed/ingested
     hub_dataset_name: yb_mini_example_ingested_documents
     local_dataset_path: data/example/processed/ingested_dataset
     
   summarization:
-    run: false
+    run: true
     concat_existing_dataset: false
     source_dataset_name: yb_mini_example_ingested_documents
     output_dataset_name: yb_mini_example_ingested_documents_with_summaries
     local_dataset_path: data/example/processed/ingested_dataset_with_summaries
     
   chunking:
-    run: false
+    run: true
     concat_existing_dataset: false
     source_dataset_name: yb_mini_example_ingested_documents_with_summaries
     output_dataset_name: yb_mini_example_ingested_documents_chunked
@@ -53,7 +54,7 @@ pipeline:
       num_multihops_factor: 2   # or any integer or float
   
   single_shot_question_generation:
-    run: false
+    run: true
     concat_existing_dataset: false
     source_dataset_name: yb_mini_example_ingested_documents_chunked
     output_dataset_name: yb_mini_example_single_shot_questions
