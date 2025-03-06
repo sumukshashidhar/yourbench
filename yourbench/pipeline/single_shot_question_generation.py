@@ -122,39 +122,68 @@ def run(config: Dict[str, Any]) -> None:
                 break
             row_idx, doc_id, chunk_id = call_index_map[idx]
 
-            json_str = _extract_output_json(raw_resp)
-            if not json_str.strip():
-                logger.warning("No parseable JSON found for row_idx={}, chunk_id={} (model={}).", row_idx, chunk_id, model_name)
-                continue
-
+            # Extract JSON with appropriate error handling
             try:
+                json_str = _extract_output_json(raw_resp)
+                if not json_str.strip():
+                    logger.warning("No parseable JSON found for row_idx={}, chunk_id={} (model={}).", row_idx, chunk_id, model_name)
+                    continue
+
                 question_answer_pairs = json.loads(json_str)
             except Exception as e:
                 logger.warning("JSON parse error row={} chunk={} model={}: {}", row_idx, chunk_id, model_name, e)
                 continue
 
+            # Validate the type of question_answer_pairs
             if not isinstance(question_answer_pairs, list):
                 logger.warning("JSON is not a list for row={}, chunk_id={} (model={}).", row_idx, chunk_id, model_name)
                 continue
 
+            # Process each QA pair with robust error handling
             for qap in question_answer_pairs:
-                question = qap.get("question", "")
-                self_answer = qap.get("answer", "")
-                difficulty = qap.get("estimated_difficulty", 5)
-                qtype = qap.get("question_type", "unknown")
-                thought_process = qap.get("thought_process", "")
+                try:
+                    # Type checking to catch non-dictionary values
+                    if not isinstance(qap, dict):
+                        logger.warning("Expected dictionary but got {} in row={}, chunk={}, model={}",
+                                      type(qap).__name__, row_idx, chunk_id, model_name)
+                        continue
+                    
+                    # Extract fields with type validation
+                    question = qap.get("question", "")
+                    self_answer = qap.get("answer", "")
+                    
+                    # Handle potential non-integer difficulty values
+                    difficulty_raw = qap.get("estimated_difficulty", 5)
+                    try:
+                        difficulty = int(difficulty_raw)
+                    except (ValueError, TypeError):
+                        logger.warning("Invalid difficulty value '{}' for chunk_id={}, defaulting to 5", 
+                                      difficulty_raw, chunk_id)
+                        difficulty = 5
+                    
+                    qtype = qap.get("question_type", "unknown")
+                    if not isinstance(qtype, str):
+                        qtype = str(qtype)
+                        
+                    thought_process = qap.get("thought_process", "")
 
-                question_row = SingleHopQuestionRow(
-                    chunk_id=chunk_id,
-                    document_id=doc_id,
-                    question=question,
-                    self_answer=self_answer,
-                    estimated_difficulty=difficulty,
-                    self_assessed_question_type=qtype,
-                    generating_model=model_name,
-                    thought_process=thought_process
-                )
-                question_dataset_rows.append(question_row.__dict__)
+                    # Create and add the question row
+                    question_row = SingleHopQuestionRow(
+                        chunk_id=chunk_id,
+                        document_id=doc_id,
+                        question=question,
+                        self_answer=self_answer,
+                        estimated_difficulty=difficulty,
+                        self_assessed_question_type=qtype,
+                        generating_model=model_name,
+                        thought_process=thought_process
+                    )
+                    question_dataset_rows.append(question_row.__dict__)
+                except Exception as e:
+                    # Catch any other unexpected errors during processing
+                    logger.warning("Error processing QA pair for row={}, chunk={}, model={}: {}", 
+                                  row_idx, chunk_id, model_name, e)
+                    continue
 
     if not question_dataset_rows:
         logger.warning("No valid questions produced. Exiting single_shot_question_generation.")
