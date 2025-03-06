@@ -37,7 +37,7 @@ pipeline:
     local_dataset_path: data/example/processed/ingested_dataset_with_summaries
     
   chunking:
-    run: true
+    run: false
     concat_existing_dataset: false
     source_dataset_name: yb_mini_example_ingested_documents_with_summaries
     output_dataset_name: yb_mini_example_ingested_documents_chunked
@@ -51,3 +51,19 @@ pipeline:
       h_min: 2
       h_max: 5
       num_multihops_factor: 2   # or any integer or float
+  
+  single_shot_question_generation:
+    run: false
+    concat_existing_dataset: false
+    source_dataset_name: yb_mini_example_ingested_documents_chunked
+    output_dataset_name: yb_mini_example_single_shot_questions
+    local_dataset_path: data/example/processed/ingested_dataset_chunked_single_shot_questions
+    diversification_seed: "a curious ponderer"
+  
+  multi_hop_question_generation:
+    run: true
+    concat_existing_dataset: false
+    source_dataset_name: yb_mini_example_ingested_documents_chunked
+    output_dataset_name: yb_mini_example_multi_hop_questions
+    local_dataset_path: data/example/processed/ingested_dataset_chunked_multi_hop_questions
+    diversification_seed: "a curious ponderer"
