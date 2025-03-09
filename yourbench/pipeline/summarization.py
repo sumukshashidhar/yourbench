@@ -9,7 +9,7 @@ from yourbench.utils.dataset_engine import smart_load_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from loguru import logger
 
-def duplicate_rows(dataset, num_duplicates=20):
+def duplicate_rows(dataset, num_duplicates=1):
     # Return the example as a list repeated num_duplicates times
     return {k: [v] * num_duplicates for k, v in dataset.items()}
 
