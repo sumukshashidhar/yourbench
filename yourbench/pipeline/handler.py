@@ -9,11 +9,25 @@ from loguru import logger
 import importlib
 import time
 
-# Define the global variable to track pipeline stage timings
+# === Pipeline Stage Order Definition ===
+# This list enforces the exact order in which pipeline stages are executed.
+# Stages not present here will be skipped (with a warning logged).
+DEFAULT_STAGE_ORDER: List[str] = [
+    "ingestion",
+    "upload_ingest_to_hub",
+    "summarization",
+    "chunking",
+    "single_shot_question_generation",
+    "multi_hop_question_generation"
+]
+
+# === Global Variable for Pipeline Stage Timings ===
 GLOBAL_PIPELINE_TIMINGS: List[Dict[str, Any]] = []
 
 def run_pipeline(config_file_path: str, debug: bool = False) -> None:
-    """Execute the pipeline stages defined in the configuration file.
+    """
+    Execute the pipeline stages defined in the configuration file in the
+    strictly defined order of `DEFAULT_STAGE_ORDER`.
 
     Args:
         config_file_path: Path to the configuration file containing pipeline settings.
@@ -23,7 +37,7 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
         FileNotFoundError: If the config file cannot be found.
         Exception: For any other unexpected errors during pipeline execution.
     """
-    # Clear the global timings list at the start of a new pipeline run
+    # === Initialization ===
     global GLOBAL_PIPELINE_TIMINGS
     GLOBAL_PIPELINE_TIMINGS = []
     
@@ -35,52 +49,68 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
         config["debug"] = debug
         logger.info(f"Debug mode set to {config['debug']}")
 
-        pipeline_configuration = config.get("pipeline", {})
+        # Retrieve the pipeline configuration dictionary
+        pipeline_configuration: Dict[str, Any] = config.get("pipeline", {})
         if not pipeline_configuration:
-            logger.warning("No pipeline stages configured")
+            logger.warning("No pipeline stages configured. Exiting pipeline execution.")
             return
 
-        # Make sure we have a 'plots' directory
+        # Ensure a 'plots' directory exists for saving charts
         os.makedirs("plots", exist_ok=True)
 
-        pipeline_start_time = time.time()
+        pipeline_start_time: float = time.time()
 
-        # Execute pipeline stages
-        for stage_name, stage_configuration in pipeline_configuration.items():
+        # === Execute pipeline stages in the fixed order ===
+        for stage_name in DEFAULT_STAGE_ORDER:
+            stage_configuration = pipeline_configuration.get(stage_name)
+            if stage_configuration is None:
+                # This means the stage is not present in the config. We skip it.
+                logger.debug(f"Stage '{stage_name}' is not present in the config. Skipping.")
+                continue
+
+            # Check if this stage is disabled
+            if not stage_configuration.get("run", True):
+                logger.info(f"Skipping stage: '{stage_name}' (run: false).")
+                continue
+
+            # === Stage Execution ===
+            logger.info(f"Starting execution of stage: '{stage_name}'")
+            start_time: float = time.time()
+            
             try:
-                if not stage_configuration.get("run", True):
-                    logger.info(f"Skipping stage: {stage_name}")
-                    continue
-
-                logger.info(f"Starting execution of stage: {stage_name}")
-                start_time = time.time()
-
-                # Import and execute the stage's run function
+                # Dynamically import and run the module
                 stage_module = importlib.import_module(f"yourbench.pipeline.{stage_name}")
-
-                # Time the stage
                 stage_module.run(config)
-
-                end_time = time.time()
-                elapsed_time = end_time - start_time
-                
-                # Record the timing information
-                GLOBAL_PIPELINE_TIMINGS.append({
-                    "stage_name": stage_name,
-                    "start": start_time,
-                    "end": end_time
-                })
-                
-                logger.success(f"Successfully completed stage: {stage_name} in {elapsed_time:.3f} seconds")
-
             except Exception as e:
-                logger.error(f"Error executing pipeline stage {stage_name}: {str(e)}")
+                logger.error(f"Error executing pipeline stage '{stage_name}': {str(e)}")
                 raise
 
-        pipeline_end_time = time.time()
+            end_time: float = time.time()
+            elapsed_time: float = end_time - start_time
+            
+            # Record the timing information
+            GLOBAL_PIPELINE_TIMINGS.append({
+                "stage_name": stage_name,
+                "start": start_time,
+                "end": end_time
+            })
+            
+            logger.success(f"Successfully completed stage: '{stage_name}' in {elapsed_time:.3f} seconds")
 
-        # Produce final waterfall chart after all stages
-        _plot_pipeline_stage_timing(GLOBAL_PIPELINE_TIMINGS, pipeline_start_time, pipeline_end_time)
+        pipeline_end_time: float = time.time()
+
+        # === Generate Waterfall Chart ===
+        _plot_pipeline_stage_timing(
+            stage_timings=GLOBAL_PIPELINE_TIMINGS,
+            pipeline_start=pipeline_start_time,
+            pipeline_end=pipeline_end_time
+        )
+
+        # === Handle any extra stages not in DEFAULT_STAGE_ORDER (if present) ===
+        _handle_unordered_stages(
+            pipeline_config=pipeline_configuration,
+            ordered_stages=DEFAULT_STAGE_ORDER
+        )
 
     except Exception as e:
         logger.critical(f"Pipeline execution failed: {str(e)}")
@@ -88,52 +118,55 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
 
 
 def _plot_pipeline_stage_timing(
-    stage_timings: list,
+    stage_timings: List[Dict[str, float]],
     pipeline_start: float,
     pipeline_end: float
 ) -> None:
     """
-    Generate and save a waterfall (or simple bar) chart showing how long each
-    pipeline stage took, plus total pipeline duration. Saves to 'plots/pipeline_stages_timing.png' (300 dpi).
+    Generate and save a bar chart (waterfall style) showing the duration of each
+    pipeline stage. The chart is saved to 'plots/pipeline_stages_timing.png'.
+
+    Args:
+        stage_timings: A list of dictionaries containing stage timing data.
+        pipeline_start: The start time of the overall pipeline.
+        pipeline_end: The end time of the overall pipeline.
     """
     if not stage_timings:
         logger.warning("No stage timings recorded. Skipping pipeline timing plot.")
         return
 
-    # Sort by actual run order (each entry is appended after the stage completes).
-    # If you want to preserve config order, you can skip sorting.
-    # We assume stage_timings is in the order of completion, but let's keep it stable:
-    # stage_timings is already appended in the same order we run them, so no sort needed.
+    # We rely on the append order in GLOBAL_PIPELINE_TIMINGS, which matches
+    # the actual run order from the strict pipeline ordering.
+    stage_names: List[str] = []
+    durations: List[float] = []
 
-    stage_names = []
-    durations = []
     for entry in stage_timings:
-        stage_name = entry["stage_name"]
-        start = entry["start"]
-        end = entry["end"]
-        elapsed = end - start
+        stage_name: str = entry["stage_name"]
+        start: float = entry["start"]
+        end: float = entry["end"]
+        elapsed: float = end - start
 
         stage_names.append(stage_name)
         durations.append(elapsed)
 
-    total_pipeline_time = pipeline_end - pipeline_start
+    total_pipeline_time: float = pipeline_end - pipeline_start
 
     logger.info("Pipeline total duration = {:.2f} seconds.", total_pipeline_time)
     logger.info("Stage-by-stage breakdown:")
     for name, dur in zip(stage_names, durations):
         logger.info("  Stage '{}' took {:.2f} seconds", name, dur)
 
-    # === Plotting ===
+    # === Plotting the bar chart ===
     fig, ax = plt.subplots(figsize=(8, 5))
-    # Simple bar chart approach:
     bars = ax.bar(stage_names, durations, color="royalblue")
     
     # Add duration text on top of each bar
+    max_duration: float = max(durations)
     for bar in bars:
-        height = bar.get_height()
+        height: float = bar.get_height()
         ax.text(
-            bar.get_x() + bar.get_width()/2.,
-            height + 0.02 * max(durations),
+            bar.get_x() + bar.get_width() / 2.0,
+            height + 0.02 * max_duration,
             f"{height:.2f}s",
             ha='center',
             va='bottom',
@@ -146,11 +179,27 @@ def _plot_pipeline_stage_timing(
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     
-    # Add a little padding at the top to make room for the labels
+    # Add extra padding for the labels
     ax.set_ylim(0, ax.get_ylim()[1] * 1.1)
     
-    out_path = "plots/pipeline_stages_timing.png"
+    out_path: str = "plots/pipeline_stages_timing.png"
     plt.savefig(out_path, dpi=300)
     plt.close(fig)
 
     logger.success(f"Pipeline timing chart saved to '{out_path}' (300 dpi).")
+
+
+def _handle_unordered_stages(pipeline_config: Dict[str, Any], ordered_stages: List[str]) -> None:
+    """
+    Check for stages in `pipeline_config` that are not in `ordered_stages`.
+    Log a warning if any are found (since they're skipped).
+
+    Args:
+        pipeline_config: Dictionary containing pipeline configuration from YAML.
+        ordered_stages: The list of known stages in the correct order.
+    """
+    for stage_name in pipeline_config.keys():
+        if stage_name not in ordered_stages:
+            logger.warning(
+                f"Stage '{stage_name}' is not in the default order list and has been skipped."
+            )
