@@ -4,7 +4,9 @@ def save_dataset(dataset: Dataset, step_name: str, config: Dict[str, Any], outpu
     """
     Save a dataset to huggingface
     """
-    dataset.save_to_disk(config["pipeline"][step_name]["local_dataset_path"])
+    local_path = config["pipeline"][step_name].get("local_dataset_path")
+    if local_path:
+        dataset.save_to_disk(local_path)
     # check if we need to concatenate with an existing dataset
     if config["pipeline"][step_name]["concat_existing_dataset"]:
         existing_dataset = load_dataset(config["pipeline"][step_name]["output_dataset_name"])

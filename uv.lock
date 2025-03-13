@@ -908,7 +908,7 @@ wheels = [
 
 [[package]]
 name = "markitdown"
-version = "0.0.1a4"
+version = "0.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-ai-documentintelligence" },
@@ -932,9 +932,9 @@ dependencies = [
     { name = "xlrd" },
     { name = "youtube-transcript-api" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/b2/41f94884f481d66539e5377f76b8e564d4cf54cba45c1f1a2bcd47949e43/markitdown-0.0.1a4.tar.gz", hash = "sha256:8bf738cf3d2a26efb0edde9eb109a53886a4550c0df12b17418182cd30ab1dde", size = 21563 }
+sdist = { url = "https://files.pythonhosted.org/packages/69/bf/8d5ee5ceef8dc175b4c8714e6f5170e3bc38862eeb6a45f29433c64611c1/markitdown-0.0.2.tar.gz", hash = "sha256:678fc2c9bc4eded0941c01155251982cab1f86c8148c8ac7ca3869116d3d49d7", size = 21008 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/24/f2de79bc50c82d63d243834b67af4ed3ae8b8bf71652aecc6118d4d1a306/markitdown-0.0.1a4-py3-none-any.whl", hash = "sha256:9fc78bb7b83dee13852d8a4b262066dcc7a5a1aac88924f0f29aa239ec9fbfec", size = 21934 },
+    { url = "https://files.pythonhosted.org/packages/4a/f9/d0d6c6a11a16e2e22faf79bb4a86764110a8b391a510d6bd5cbb4ec57f59/markitdown-0.0.2-py3-none-any.whl", hash = "sha256:6ee5a6b70fbc36ba1586a40d5ab1ea8ea7f89bf37ebbaaa11013e026dc55b16e", size = 21278 },
 ]
 
 [[package]]
@@ -2207,7 +2207,7 @@ requires-dist = [
     { name = "langfuse", specifier = ">=2.59.3" },
     { name = "litellm", specifier = ">=1.61.16" },
     { name = "loguru", specifier = ">=0.7.3" },
-    { name = "markitdown", specifier = ">=0.0.1a4" },
+    { name = "markitdown", specifier = ">=0.0.2" },
     { name = "matplotlib", specifier = ">=3.10.0" },
     { name = "openai", specifier = ">=1.63.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
