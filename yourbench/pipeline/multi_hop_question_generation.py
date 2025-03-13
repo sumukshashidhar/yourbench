@@ -40,8 +40,8 @@ from typing import Dict, Any, List
 from loguru import logger
 from datasets import Dataset
 
-from yourbench.utils.dataset_engine import smart_load_dataset
-from yourbench.utils.saving_engine import save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset
+from yourbench.utils.dataset_engine import custom_save_dataset
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
     MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
@@ -93,10 +93,7 @@ def run(config: Dict[str, Any]) -> None:
     Config Example:
       pipeline:
         multi_hop_question_generation:
-          source_dataset_name: yb_demo_chunked_documents
-          output_dataset_name: yb_demo_multi_hop_questions
           local_dataset_path: data/example/multi_hop_questions
-          concat_existing_dataset: false
           run: true
 
       model_roles:
@@ -110,11 +107,8 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("multi_hop_question_generation stage is disabled. Skipping.")
         return
 
-    source_dataset_name = stage_cfg["source_dataset_name"]
-    output_dataset_name = stage_cfg["output_dataset_name"]
-    logger.info("Loading chunked dataset: {}", source_dataset_name)
-
-    dataset = smart_load_dataset(source_dataset_name, config)
+    logger.info("Loading chunked dataset")
+    dataset = custom_load_dataset(config=config, step_name="chunking")
     logger.info("Loaded dataset with {} rows.", len(dataset))
 
     # Prepare the system prompt once
@@ -255,12 +249,11 @@ def run(config: Dict[str, Any]) -> None:
         for k in question_dataset_rows[0].keys()
     })
 
-    logger.info("Saving multi-hop question dataset to HF Hub under '{}'.", output_dataset_name)
-    save_dataset(
+    logger.info("Saving multi-hop question subset")
+    custom_save_dataset(
         dataset=question_dataset,
         step_name="multi_hop_question_generation",
         config=config,
-        output_dataset_name=output_dataset_name
     )
     logger.success("Multi-hop question generation completed successfully.")
 

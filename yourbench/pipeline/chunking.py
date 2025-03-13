@@ -25,8 +25,8 @@ from loguru import logger
 from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 
-from yourbench.utils.dataset_engine import smart_load_dataset
-from yourbench.utils.saving_engine import save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset
+from yourbench.utils.dataset_engine import custom_save_dataset
 
 # === GLOBALS ===
 E5_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
@@ -37,7 +37,7 @@ def run(config: Dict[str, Any]) -> None:
     Run the chunking stage of the pipeline.
 
     This function:
-      1. Loads the source dataset from Hugging Face using `smart_load_dataset`.
+      1. Loads the source dataset from Hugging Face using `custom_load_dataset`.
       2. Retrieves the chunking parameters (l_min_tokens, l_max_tokens, tau_threshold, etc.) from config.
       3. For each document:
          - Splits it into sentences.
@@ -51,8 +51,6 @@ def run(config: Dict[str, Any]) -> None:
     Configuration Example:
         pipeline:
           chunking:
-            source_dataset_name: yb_demo_ingested_documents_with_summaries
-            output_dataset_name: yb_demo_chunked_documents
             chunking_configuration:
               l_min_tokens: 256
               l_max_tokens: 1024
@@ -66,16 +64,13 @@ def run(config: Dict[str, Any]) -> None:
     """
     chunking_cfg = config.get("pipeline", {}).get("chunking", {})
     if not chunking_cfg.get("run", False):
-        logger.info("Chunking stage is disabled. Skipping.")
+        logger.info("Chunking stage is disabled. Skipping")
         return
 
     logger.info("Running chunking stage with E5 embeddings...")
 
     # === Step 1: Load dataset ===
-    source_dataset_name = chunking_cfg["source_dataset_name"]
-    output_dataset_name = chunking_cfg["output_dataset_name"]
-    dataset = smart_load_dataset(source_dataset_name, config)
-    logger.debug("Loaded dataset '{}' with {} rows.", source_dataset_name, len(dataset))
+    dataset = custom_load_dataset(config=config, step_name="summarization")
 
     # === Step 2: Retrieve chunking parameters ===
     cparams = chunking_cfg.get("chunking_configuration", {})
@@ -103,7 +98,7 @@ def run(config: Dict[str, Any]) -> None:
     for idx, row in enumerate(dataset):
         doc_text = row["document_text"]
         if not doc_text or not doc_text.strip():
-            logger.warning("Document at index {} has empty text. Storing empty chunks.", idx)
+            logger.warning("Document at index {} has empty text. Storing empty chunks", idx)
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             continue
@@ -112,7 +107,7 @@ def run(config: Dict[str, Any]) -> None:
 
         # If the document is extremely short or fails to produce sentences
         if not sentences:
-            logger.warning("No valid sentences found for doc at index {}.", idx)
+            logger.warning("No valid sentences found for doc at index {}", idx)
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             continue
@@ -158,8 +153,13 @@ def run(config: Dict[str, Any]) -> None:
     dataset = dataset.add_column("chunking_model", [E5_MODEL_NAME] * len(dataset))
 
     # === Step 5: Save dataset ===
-    save_dataset(dataset, "chunking", config, output_dataset_name)
-    logger.success("Chunking stage complete. Dataset updated and saved as '{}'.", output_dataset_name)
+    logger.info("Saving chunked subset to HF")
+    custom_save_dataset(
+        dataset=dataset,
+        config=config,
+        step_name="chunking",
+    )
+    logger.success("Chunking stage complete")
 
 
 def _compute_embeddings(
@@ -366,4 +366,4 @@ def _plot_sentence_similarities(similarities: List[float], doc_idx: int) -> None
     plot_path = os.path.join("plots", f"chunking_document_{doc_idx}.png")
     plt.savefig(plot_path, dpi=150, bbox_inches="tight")
     plt.close()
-    logger.debug("Saved similarity plot for document {} at '{}'.", doc_idx, plot_path)
+    logger.debug("Saved similarity plot for document {} at '{}'", doc_idx, plot_path)

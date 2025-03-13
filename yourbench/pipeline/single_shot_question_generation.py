@@ -12,11 +12,8 @@ Refactored to:
 Configuration Example (from config["pipeline"]["single_shot_question_generation"]):
 -----------------------------------------------------------------------------------
 single_shot_question_generation:
-  source_chunked_dataset_name: yb_demo_chunked_documents
-  output_question_dataset_name: yb_demo_single_shot_questions
   local_dataset_path: data/example/single_shot_questions
   diversification_seed: "24 year old adult"
-  concat_existing_dataset: true
   run: true
 
 Dependencies/Assumptions:
@@ -44,8 +41,8 @@ from typing import List, Dict, Any
 from loguru import logger
 from datasets import Dataset
 
-from yourbench.utils.dataset_engine import smart_load_dataset
-from yourbench.utils.saving_engine import save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset
+from yourbench.utils.dataset_engine import custom_save_dataset
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
     QUESTION_GENERATION_SYSTEM_PROMPT,
@@ -90,18 +87,16 @@ def run(config: Dict[str, Any]) -> None:
     """
     stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
     if not stage_cfg.get("run", False):
-        logger.info("single_shot_question_generation stage is disabled. Skipping.")
+        logger.info("single_shot_question_generation stage is disabled. Skipping")
         return
 
     # === Step 1: Load the chunked dataset ===
-    source_dataset_name = stage_cfg["source_dataset_name"]
-    output_dataset_name = stage_cfg["output_dataset_name"]
     diversification_seed = stage_cfg.get("diversification_seed", "generic_seed")
     use_multihop = stage_cfg.get("use_multihop", False)
 
-    logger.info("Loading chunked dataset: {}", source_dataset_name)
-    dataset = smart_load_dataset(source_dataset_name, config)
-    logger.info("Loaded dataset with {} rows.", len(dataset))
+    logger.info("Loading chunked dataset")
+    dataset = custom_load_dataset(config=config, step_name="chunking")
+    logger.info("Loaded dataset with {} rows", len(dataset))
 
     # Create the system message once. We'll reuse it for all calls.
     system_message = {"role": "system", "content": QUESTION_GENERATION_SYSTEM_PROMPT}
@@ -115,7 +110,7 @@ def run(config: Dict[str, Any]) -> None:
         # Use multi_hop or single-hop chunks
         relevant_chunks = row["multihop_chunks"] if use_multihop else row["chunks"]
 
-        doc_summary = row.get("document_summary", "No summary available.")
+        doc_summary = row.get("document_summary", "No summary available")
         title = row.get("document_filename", f"Document_{row_idx}")
 
         for c_idx, chunk_text in enumerate(relevant_chunks):
@@ -134,11 +129,11 @@ def run(config: Dict[str, Any]) -> None:
             call_index_to_row_chunk.append((row_idx, c_idx))
 
     if not all_inference_calls:
-        logger.warning("No chunks found. Exiting single_shot_question_generation.")
+        logger.warning("No chunks found. Exiting single_shot_question_generation")
         return
 
     # === Step 2: Run inference on all calls with all models
-    logger.info("Sending {} total calls to inference for single-hop QG.", len(all_inference_calls))
+    logger.info("Sending {} total calls to inference for single-hop QG", len(all_inference_calls))
     responses_dict = run_inference(
         config=config,
         step_name="single_shot_question_generation",
@@ -154,7 +149,7 @@ def run(config: Dict[str, Any]) -> None:
         # Ensure we have the same number of responses as calls
         if len(model_responses) != len(call_index_to_row_chunk):
             logger.error(
-                "Model '{}' returned {} responses, but we expected {}. Skipping leftover items.",
+                "Model '{}' returned {} responses, but we expected {}. Skipping leftover items",
                 model_name, len(model_responses), len(call_index_to_row_chunk)
             )
 
@@ -166,6 +161,13 @@ def run(config: Dict[str, Any]) -> None:
             doc_id = dataset[row_idx].get("document_id", f"doc_{row_idx}")
 
             # Attempt to parse JSON from the raw response
+            if raw_response is None:
+                logger.warning(
+                    "Response is None for row {}, chunk {}. Model={}",
+                    row_idx, c_idx, model_name
+                )
+                continue
+
             parsed_json_str = _extract_output_json(raw_response)
             if not parsed_json_str.strip():
                 logger.warning(
@@ -238,24 +240,23 @@ def run(config: Dict[str, Any]) -> None:
                 question_dataset_rows.append(question_row.__dict__)
 
     if not question_dataset_rows:
-        logger.warning("No valid question rows produced. Exiting single_shot_question_generation.")
+        logger.warning("No valid question rows produced. Exiting single_shot_question_generation")
         return
 
     # === Step 4: Convert question_dataset_rows -> HF Dataset, and save
-    logger.info("Constructing question-level dataset with {} rows...", len(question_dataset_rows))
+    logger.info("Constructing question-level dataset with {} rows..", len(question_dataset_rows))
     question_dataset = Dataset.from_dict({
         k: [d[k] for d in question_dataset_rows]
         for k in question_dataset_rows[0].keys()
     })
 
-    logger.info("Saving question dataset to HF Hub under '{}'.", output_dataset_name)
-    save_dataset(
+    logger.info("Saving single-shot question subset")
+    custom_save_dataset(
         dataset=question_dataset,
-        step_name="single_shot_question_generation",
         config=config,
-        output_dataset_name=output_dataset_name
+        step_name="single_shot_question_generation",
     )
-    logger.success("Single-hop question generation completed successfully.")
+    logger.success("Single-shot question generation completed successfully")
 
 
 def _extract_tag_content(text: str, tag: str) -> str:
@@ -269,7 +270,7 @@ def _extract_tag_content(text: str, tag: str) -> str:
         logger.debug("Tag <{}> found. Extracted substring length = {}", tag, len(match.group(1)))
         return match.group(1).strip()
     else:
-        logger.debug("Tag <{}> not found in the response.", tag)
+        logger.debug("Tag <{}> not found in the response", tag)
         return ""
 
 
@@ -301,14 +302,14 @@ def _extract_output_json(raw_response: str) -> str:
         logger.debug("Found fenced ```json block. Substring length = {}", len(snippet))
         return snippet
 
-    logger.debug("No ```json fenced block found. Will try best-effort bracket extraction next.")
+    logger.debug("No ```json fenced block found. Will try best-effort bracket extraction next")
     # 3. fallback
     fallback_candidates = _best_effort_json_extract(raw_response)
     if fallback_candidates:
-        logger.debug("best_effort_json_extract produced {} candidate(s).", len(fallback_candidates))
+        logger.debug("best_effort_json_extract produced {} candidate(s)", len(fallback_candidates))
         return fallback_candidates[0]
 
-    logger.debug("No parseable snippet found using fallback approach either.")
+    logger.debug("No parseable snippet found using fallback approach either")
     return ""
 
 

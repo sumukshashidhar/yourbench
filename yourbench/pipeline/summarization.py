@@ -4,8 +4,8 @@ from typing import Dict, Any, List
 
 from yourbench.utils.inference_engine import run_inference, InferenceCall
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
-from yourbench.utils.saving_engine import save_dataset
-from yourbench.utils.dataset_engine import smart_load_dataset
+from yourbench.utils.dataset_engine import custom_save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from loguru import logger
 
@@ -33,7 +33,7 @@ def run(config: Dict[str, Any]) -> None:
     logger.info("Running summarization stage.")
 
     # 1. Load the dataset
-    dataset = smart_load_dataset(summary_cfg["source_dataset_name"], config)
+    dataset = custom_load_dataset(config=config, step_name="ingested")
     logger.info("Loaded dataset with %d documents.", len(dataset))
 
     dataset = dataset.map(
@@ -91,10 +91,10 @@ def run(config: Dict[str, Any]) -> None:
     dataset = dataset.add_column("summarization_model", [summ_model] * len(dataset))
 
     # 5. Save the updated dataset
-    save_dataset(
-        dataset,
-        "summarization",
-        config,
-        summary_cfg["output_dataset_name"]
+    custom_save_dataset(
+        dataset=dataset,
+        config=config,
+        step_name="summarization",
     )
+
     logger.success("Summarization stage completed successfully.")
