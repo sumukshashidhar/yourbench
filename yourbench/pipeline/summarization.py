@@ -152,6 +152,9 @@ def _run_inference_with_timeout(
             logger.error("Error during inference: {}", str(exc))
     return None
 
+def duplicate_rows(dataset, num_duplicates=1):
+    # Return the example as a list repeated num_duplicates times
+    return {k: [v] * num_duplicates for k, v in dataset.items()}
 
 def run(config: Dict[str, Any]) -> None:
     """
