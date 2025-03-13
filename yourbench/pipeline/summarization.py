@@ -1,14 +1,12 @@
-# yourbench/pipeline/summarization.py
-
-"""
-Summarization Pipeline Stage
-"""
+# === Summarization Pipeline Stage ===
 
 from typing import Dict, Any, List, Optional
 from loguru import logger
 from datasets import Dataset
 import evaluate
 from random import uniform
+import functools
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 # HF Evaluate metrics
 _rouge = evaluate.load("rouge")
@@ -21,10 +19,16 @@ from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
 from yourbench.utils.saving_engine import save_dataset
 from yourbench.utils.dataset_engine import smart_load_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from loguru import logger
+
 
 def _safe_compute_bleu(predictions: List[str], references: List[List[str]]) -> float:
-    """Safely compute BLEU score with error handling."""
+    """
+    Safely compute BLEU score with error handling.
+    
+    :param predictions: List of prediction strings.
+    :param references: List of list of reference strings.
+    :return: BLEU score as a float.
+    """
     try:
         safe_preds = [p if p is not None else "" for p in predictions]
         safe_refs = [[r if r is not None else "" for r in ref_list] for ref_list in references]
@@ -41,7 +45,13 @@ def _safe_compute_bleu(predictions: List[str], references: List[List[str]]) -> f
 
 
 def _safe_compute_meteor(predictions: List[str], references: List[str]) -> float:
-    """Safely compute METEOR score with error handling."""
+    """
+    Safely compute METEOR score with error handling.
+    
+    :param predictions: List of prediction strings.
+    :param references: List of reference strings.
+    :return: METEOR score as a float.
+    """
     try:
         safe_preds = [p if p is not None else "" for p in predictions]
         safe_refs = [r if r is not None else "" for r in references]
@@ -58,7 +68,13 @@ def _safe_compute_meteor(predictions: List[str], references: List[str]) -> float
 
 
 def _safe_compute_rouge(predictions: List[str], references: List[str]) -> Dict[str, float]:
-    """Safely compute ROUGE scores with error handling."""
+    """
+    Safely compute ROUGE scores with error handling.
+    
+    :param predictions: List of prediction strings.
+    :param references: List of reference strings.
+    :return: Dictionary with keys 'rouge1', 'rouge2', 'rougeL' representing respective scores.
+    """
     try:
         safe_preds = [p if p is not None else "" for p in predictions]
         safe_refs = [r if r is not None else "" for r in references]
@@ -79,7 +95,13 @@ def _safe_compute_rouge(predictions: List[str], references: List[str]) -> Dict[s
 
 
 def _safe_compute_bertscore(predictions: List[str], references: List[str]) -> float:
-    """Safely compute BERTScore with error handling."""
+    """
+    Safely compute BERTScore with error handling.
+    
+    :param predictions: List of prediction strings.
+    :param references: List of reference strings.
+    :return: The average F1 BERTScore as a float.
+    """
     try:
         safe_preds = [p if p is not None else "" for p in predictions]
         safe_refs = [r if r is not None else "" for r in references]
@@ -103,122 +125,189 @@ def _safe_compute_bertscore(predictions: List[str], references: List[str]) -> fl
         return 0.0
 
 
+def _run_inference_with_timeout(
+    config: Dict[str, Any],
+    inference_calls: List[InferenceCall],
+    stage: str,
+    timeout_seconds: float
+) -> Optional[Dict[str, List[str]]]:
+    """
+    Wrapper to run inference with a configurable timeout.
+
+    :param config: The overall pipeline configuration dictionary.
+    :param inference_calls: A list of InferenceCall objects to pass to run_inference.
+    :param stage: The stage name (e.g., "summarization").
+    :param timeout_seconds: Timeout in seconds after which inference is considered stalled.
+    :return: A dictionary of responses from run_inference, or None if timed out or error.
+    """
+    logger.info("Attempting to run inference with a timeout of {} seconds...", timeout_seconds)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(run_inference, config, stage, inference_calls)
+        try:
+            responses = future.result(timeout=timeout_seconds)
+            return responses
+        except FuturesTimeoutError:
+            logger.error("Inference timed out after {} seconds.", timeout_seconds)
+        except Exception as exc:
+            logger.error("Error during inference: {}", str(exc))
+    return None
+
+
 def run(config: Dict[str, Any]) -> None:
     """
     Summarization pipeline stage:
-      1) Loads documents from HF dataset.
-      2) Uses a summarization model to generate summaries.
-      3) Computes corpus-level ROUGE, BLEU, METEOR, BERTScore.
-      4) Stores them in 'quality_metrics' as a dictionary for each row.
 
-    This version includes extra logging to investigate potential issues:
-      - We check if <final_summary> was actually found in the raw output
-      - We log raw output length, final summary length, and document length
-      - We keep an eye out for empty or trivially short final summaries
-      - We do not modify the actual summarization logic; just adding logs
+    1) Loads documents from HF dataset.
+    2) Uses a summarization model to generate summaries with a timeout to prevent hangs.
+    3) Computes corpus-level ROUGE, BLEU, METEOR, BERTScore metrics.
+    4) Stores them in 'quality_metrics' as a dictionary for each row.
+    
+    This version includes extra defensive programming:
+      - Thorough try/except blocks and logging at key steps.
+      - Timeouts around inference calls to avoid indefinite hanging.
+      - If a blank summary is detected, it is replaced with a descriptive string.
     """
 
-    stage_cfg = config["pipeline"]["summarization"]
+    # === Check Stage Configuration ===
+    stage_cfg: Dict[str, Any] = config["pipeline"].get("summarization", {})
     if not stage_cfg.get("run", False):
         logger.info("Summarization stage is disabled. Skipping.")
         return
 
     logger.info("Running summarization stage with additional diagnostic logs.")
-    dataset = smart_load_dataset(stage_cfg["source_dataset_name"], config)
-    logger.info("Loaded dataset with {} documents for summarization.", len(dataset))
-    logger.info("Running summarization stage.")
 
-    # Prepare inference calls
-    documents: List[str] = dataset["document_text"]
-    inference_calls = []
+    # === Load Dataset ===
+    try:
+        dataset: Dataset = smart_load_dataset(stage_cfg["source_dataset_name"], config)
+        logger.info("Loaded dataset with {} documents for summarization.", len(dataset))
+    except Exception as e:
+        logger.error("Failed to load dataset '{}': {}", stage_cfg.get("source_dataset_name"), str(e))
+        logger.warning("Summarization stage cannot proceed due to dataset load failure.")
+        return
+
+    # === Prepare Inference Calls ===
+    try:
+        documents: List[str] = dataset["document_text"]
+    except KeyError:
+        logger.error("Dataset does not contain 'document_text' column. Cannot proceed.")
+        return
+    except Exception as e:
+        logger.error("Unexpected error accessing 'document_text' column: {}", str(e))
+        return
+
+    inference_calls: List[InferenceCall] = []
     for idx, doc_text in enumerate(documents):
-        # Log the approximate length (to see if we might exceed model context)
-        doc_len_chars = len(doc_text)
+        doc_len_chars: int = len(doc_text)
         logger.debug("Doc index {} => doc length ~{} chars", idx, doc_len_chars)
-
-        user_msg = {"role": "user", "content": SUMMARIZATION_USER_PROMPT.format(document=doc_text)}
+        user_msg: Dict[str, str] = {
+            "role": "user",
+            "content": SUMMARIZATION_USER_PROMPT.format(document=doc_text)
+        }
         inference_calls.append(InferenceCall(messages=[user_msg]))
 
-    # Run inference in parallel
-    logger.info("Sending {} summarization calls to inference engine.", len(inference_calls))
-    responses_dict = run_inference(config, "summarization", inference_calls)
+    logger.info("Prepared {} summarization calls.", len(inference_calls))
 
-    # Get the model used for summarization
-    # Use the first key from responses_dict as the model name
-    # This is the safest approach since the inference engine returns results keyed by model name
-    if not responses_dict:
-        logger.error("No responses received from inference engine")
+    # === Run Inference with Timeout ===
+    timeout_seconds: float = stage_cfg.get("timeout_seconds", 300.0)
+    responses_dict: Optional[Dict[str, List[str]]] = _run_inference_with_timeout(
+        config=config,
+        inference_calls=inference_calls,
+        stage="summarization",
+        timeout_seconds=timeout_seconds
+    )
+
+    if responses_dict is None:
+        logger.error("Inference did not complete successfully. No summaries generated.")
         return
-        
-    summ_model = list(responses_dict.keys())[0]
+
+    if not responses_dict:
+        logger.error("No responses received from inference engine.")
+        return
+
+    # === Choose Summarization Model Key ===
+    try:
+        summ_model: str = list(responses_dict.keys())[0]
+    except IndexError:
+        logger.error("Response dictionary keys are empty; cannot determine summarization model.")
+        return
+
     logger.info("Using model for summarization: {}", summ_model)
-    
-    raw_summaries = responses_dict.get(summ_model, [])
+
+    # === Retrieve Summaries from Dictionary ===
+    raw_summaries: List[str] = responses_dict.get(summ_model, [])
     if len(raw_summaries) != len(documents):
         logger.warning(
-            "Model '{}' returned {} summaries, but we have {} documents. "
-            "Some mismatch or missing responses.",
+            "Model '{}' returned {} summaries, but we have {} documents. Potential mismatch.",
             summ_model, len(raw_summaries), len(documents)
         )
-        # Pad if fewer or trim if more
+        # Harmonize the lengths
         while len(raw_summaries) < len(documents):
             raw_summaries.append("")
         if len(raw_summaries) > len(documents):
             raw_summaries = raw_summaries[: len(documents)]
 
-    # Parse <final_summary> from each doc's output
-    final_summaries = []
-    for i in range(len(documents)):
-        raw_resp = raw_summaries[i]
-        # Additional logs to see raw length, check presence of <final_summary>
+    # === Parse Final Summaries ===
+    final_summaries: List[str] = []
+    for i, raw_resp in enumerate(raw_summaries):
         logger.debug(
             "Summary response idx={}, raw length={} chars. Searching for <final_summary> tag.",
             i, len(raw_resp)
         )
-        parsed = extract_content_from_xml_tags(raw_resp, "final_summary")
+        parsed: str = ""
+        try:
+            parsed = extract_content_from_xml_tags(raw_resp, "final_summary")
+        except Exception as e:
+            logger.error("Error parsing <final_summary> for doc idx={}: {}", i, str(e))
 
-        if not parsed.strip():
+        parsed_stripped = parsed.strip()
+        if not parsed_stripped:
             logger.warning(
                 "No <final_summary> content found or empty for doc idx={}. Raw output might be malformed.",
                 i
             )
-        final_summaries.append(parsed.strip())
+            final_summaries.append("There is no summary available for this document")
+        else:
+            final_summaries.append(parsed_stripped)
 
-        # Log final summary length
         logger.debug(
             "Doc idx={} => final_summary length={} chars",
             i, len(final_summaries[-1])
         )
 
-    # Compute corpus-level metrics
-    all_preds = [summary if summary else "" for summary in final_summaries]
-    # references for BLEU require list of lists
-    all_refs = [[doc if doc else ""] for doc in documents]
+    # === Compute Corpus-Level Metrics ===
+    try:
+        all_preds: List[str] = [summary if summary else "" for summary in final_summaries]
+        all_refs: List[List[str]] = [[doc if doc else ""] for doc in documents]
 
-    corpus_bleu = _safe_compute_bleu(all_preds, all_refs)
-    corpus_meteor = _safe_compute_meteor(all_preds, [r[0] for r in all_refs])
-    rouge_results = _safe_compute_rouge(all_preds, [r[0] for r in all_refs])
-    corpus_bert_f1 = _safe_compute_bertscore(all_preds, [r[0] for r in all_refs])
+        corpus_bleu: float = _safe_compute_bleu(all_preds, all_refs)
+        corpus_meteor: float = _safe_compute_meteor(all_preds, [r[0] for r in all_refs])
+        rouge_results: Dict[str, float] = _safe_compute_rouge(all_preds, [r[0] for r in all_refs])
+        corpus_bert_f1: float = _safe_compute_bertscore(all_preds, [r[0] for r in all_refs])
 
-    corpus_rouge1 = rouge_results["rouge1"]
-    corpus_rouge2 = rouge_results["rouge2"]
-    corpus_rougeL = rouge_results["rougeL"]
+        corpus_rouge1: float = rouge_results["rouge1"]
+        corpus_rouge2: float = rouge_results["rouge2"]
+        corpus_rougeL: float = rouge_results["rougeL"]
 
-    logger.info(
-        "Corpus-level summarization metrics:\n"
-        "  BLEU:  {:.4f}\n"
-        "  METEOR: {:.4f}\n"
-        "  ROUGE1: {:.4f}, ROUGE2: {:.4f}, ROUGEL: {:.4f}\n"
-        "  BERTScore-F1: {:.4f}",
-        corpus_bleu,
-        corpus_meteor,
-        corpus_rouge1,
-        corpus_rouge2,
-        corpus_rougeL,
-        corpus_bert_f1
-    )
+        logger.info(
+            "Corpus-level summarization metrics:\n"
+            "  BLEU:  {:.4f}\n"
+            "  METEOR: {:.4f}\n"
+            "  ROUGE1: {:.4f}, ROUGE2: {:.4f}, ROUGEL: {:.4f}\n"
+            "  BERTScore-F1: {:.4f}",
+            corpus_bleu,
+            corpus_meteor,
+            corpus_rouge1,
+            corpus_rouge2,
+            corpus_rougeL,
+            corpus_bert_f1
+        )
+    except Exception as e:
+        logger.error("Error computing corpus-level metrics: {}", str(e))
+        # Continue execution, but metrics are not reliable
+        corpus_bleu, corpus_meteor, corpus_rouge1, corpus_rouge2, corpus_rougeL, corpus_bert_f1 = 0, 0, 0, 0, 0, 0
 
-    all_metrics = []
+    # === Prepare Per-Document Metrics ===
+    all_metrics: List[Dict[str, float]] = []
     for _ in range(len(documents)):
         all_metrics.append({
             "rouge1_f1": corpus_rouge1,
@@ -226,23 +315,39 @@ def run(config: Dict[str, Any]) -> None:
             "rougeL_f1": corpus_rougeL,
             "bleu": corpus_bleu,
             "meteor": corpus_meteor,
-            "bert_score_f1": corpus_bert_f1,
+            "bert_score_f1": corpus_bert_f1
         })
 
-    # Add new columns: raw_document_summary, document_summary, summarization_model, quality_metrics
+    # === Add Columns and Save Dataset ===
     try:
         dataset = dataset.add_column("raw_document_summary", raw_summaries)
-        dataset = dataset.add_column("document_summary", final_summaries)
-        dataset = dataset.add_column("summarization_model", [summ_model] * len(dataset))
-        dataset = dataset.add_column("quality_metrics", all_metrics)
+    except Exception as e:
+        logger.error("Error adding 'raw_document_summary' column: {}", str(e))
 
+    try:
+        dataset = dataset.add_column("document_summary", final_summaries)
+    except Exception as e:
+        logger.error("Error adding 'document_summary' column: {}", str(e))
+
+    try:
+        dataset = dataset.add_column("summarization_model", [summ_model] * len(dataset))
+    except Exception as e:
+        logger.error("Error adding 'summarization_model' column: {}", str(e))
+
+    try:
+        dataset = dataset.add_column("quality_metrics", all_metrics)
+    except Exception as e:
+        logger.error("Error adding 'quality_metrics' column: {}", str(e))
+
+    # === Save Dataset ===
+    try:
         save_dataset(
             dataset=dataset,
             step_name="summarization",
             config=config,
             output_dataset_name=stage_cfg["output_dataset_name"]
         )
-        logger.success("Summarization stage completed successfully with additional diagnostic logs.")
+        logger.success("Summarization stage completed successfully with enhanced defensive programming.")
     except Exception as e:
-        logger.error("Error adding columns or saving dataset in summarization: {}", str(e))
+        logger.error("Error saving dataset in summarization stage: {}", str(e))
         logger.warning("Summarization stage encountered errors, but the pipeline will continue.")
