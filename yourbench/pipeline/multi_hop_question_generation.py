@@ -279,13 +279,16 @@ def _extract_output_json(raw_response: str) -> str:
 
     Returns the raw JSON string if found, otherwise empty string.
     """
+    if raw_response is None:
+        logger.error("Received None as raw_response, returning empty string.")
+        return ""
+
     logger.debug("Attempting to extract JSON from model response. Length of response: {}", len(raw_response))
 
     # 1. Try <output_json>
     extracted = _extract_tag_content(raw_response, "output_json")
     if extracted.strip():
         logger.debug("<output_json> block found. Substring length = {}", len(extracted))
-        # The fix: strip triple backticks if they're present at the start/end
         sanitized = _maybe_strip_triple_backticks(extracted)
         if sanitized.strip():
             return sanitized
