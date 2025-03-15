@@ -69,6 +69,12 @@ os.makedirs("plots", exist_ok=True)
 
 def run(config: Dict[str, Any]) -> None:
     chunking_cfg = config.get("pipeline", {}).get("chunking", {})
+    model_name = config.get("model_roles", {}).get("chunking", ["intfloat/multilingual-e5-large-instruct"])[0]
+    debug_mode = config.get("settings", {}).get("debug", False)
+    if not debug_mode:
+        _perplexity_metric = None
+        _use_textstat = False
+
     if not chunking_cfg.get("run", False):
         logger.info("Chunking stage is disabled. Skipping.")
         return
@@ -91,8 +97,8 @@ def run(config: Dict[str, Any]) -> None:
     num_multihops_factor = cparams.get("num_multihops_factor", 2)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large-instruct")
-    model = AutoModel.from_pretrained("intfloat/multilingual-e5-large-instruct").to(device).eval()
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name).to(device).eval()
 
     all_single_hop_chunks = []
     all_multihop_chunks = []
