@@ -12,6 +12,7 @@ repo_contents.txt
 # C extensions
 *.so
 scratch_configs/
+data/example/processed/
 
 .cursor
 # Distribution / packaging
