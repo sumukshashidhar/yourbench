@@ -110,12 +110,12 @@ def run(config: Dict[str, Any]) -> None:
                 for i, sc_text in enumerate(subchunk_texts):
                     text_chunks_aggregated += f"<text_chunk_{i}>{sc_text}</text_chunk_{i}>\n"
 
-                test_audience = stage_cfg.get("test_audience", "undergraduate")
+                additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
                 user_prompt = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT.format(
                     title=title,
                     document_summary=doc_summary,
                     chunks=text_chunks_aggregated,
-                    test_audience=test_audience
+                    additional_instructions=additional_instructions
                 )
                 user_msg = {"role": "user", "content": user_prompt}
                 inference_call = InferenceCall(

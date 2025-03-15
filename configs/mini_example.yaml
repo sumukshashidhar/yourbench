@@ -1,19 +1,18 @@
 hf_configuration:
   token: $HF_TOKEN
-  private: true # true by default, set to false to make the dataset public
+  private: false # true by default, set to false to make the dataset public
   hf_organization: $HF_ORGANIZATION
 
 model_list:
-  - model_name: mistralai/Mistral-Large-Instruct-2411
+  - model_name: google/gemma-3-27b-it
     provider: openai
-    api_key: $OPENROUTER_API_KEY
-    # base_url: https://openrouter.ai/api/v1
-    base_url: http://convai-srv-06:8000/v1/
+    api_key: $HF_TOKEN
+    base_url: http://localhost:8000/v1
     max_concurrent_requests: 512
 
 model_roles:
   ingestion:
-    - mistralai/Mistral-Large-Instruct-2411
+    - google/gemma-3-27b-it
 
 inference_config:
   max_concurrent_requests: 512
@@ -59,7 +58,7 @@ pipeline:
     source_dataset_name: yb_mini_example_ingested_documents_chunked
     output_dataset_name: yb_mini_example_single_shot_questions
     local_dataset_path: data/example/processed/ingested_dataset_chunked_single_shot_questions
-    diversification_seed: "a curious ponderer"
+    additional_instructions: "a curious ponderer"
   
   multi_hop_question_generation:
     run: true
@@ -67,4 +66,4 @@ pipeline:
     source_dataset_name: yb_mini_example_ingested_documents_chunked
     output_dataset_name: yb_mini_example_multi_hop_questions
     local_dataset_path: data/example/processed/ingested_dataset_chunked_multi_hop_questions
-    diversification_seed: "a curious ponderer"
+    additional_instructions: "a curious ponderer"

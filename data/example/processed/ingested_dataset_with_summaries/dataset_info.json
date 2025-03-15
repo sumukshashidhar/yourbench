@@ -6,12 +6,12 @@
   "dataset_size": 13659,
   "description": "",
   "download_checksums": {
-    "hf://datasets/sumuks/yb_mini_example_ingested_documents@cb23a407443d644cde5d7f95dba4ec29080e446f/data/train-00000-of-00001.parquet": {
-      "num_bytes": 11029,
+    "hf://datasets/sumuks/yb_mini_example_ingested_documents@d21928a88e084c59b5d8819e8552300553b77e36/data/train-00000-of-00001.parquet": {
+      "num_bytes": 11012,
       "checksum": null
     }
   },
-  "download_size": 11029,
+  "download_size": 11012,
   "features": {
     "document_id": {
       "dtype": "string",
@@ -72,7 +72,7 @@
   },
   "homepage": "",
   "license": "",
-  "size_in_bytes": 24688,
+  "size_in_bytes": 24671,
   "splits": {
     "train": {
       "name": "train",

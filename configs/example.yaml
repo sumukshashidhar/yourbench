@@ -104,7 +104,7 @@ pipeline:
     source_dataset_name: yb_demo_chunked_documents
     output_dataset_name: yb_demo_single_shot_questions
     local_dataset_path: data/example/single_shot_questions
-    diversification_seed: "24 year old adult"
+    additional_instructions: "24 year old adult"
     concat_existing_dataset: false
     run: true
   

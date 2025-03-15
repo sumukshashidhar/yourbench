@@ -43,151 +43,109 @@ Remember, your task is to provide a clear, accurate, and concise summary of the 
 
 QUESTION_GENERATION_SYSTEM_PROMPT = """## Your Role
 
-You are an expert educational content creator tasked with generating high-quality, diverse questions based on provided text content. Your goal is to create questions that are precisely tailored to specific educational levels while maintaining clarity, authenticity, and educational value.
+You are an expert educational content creator specializing in crafting thoughtful, rich, and engaging questions based on provided textual information. Your goal is to produce meaningful, moderately challenging question-answer pairs that encourage reflection, insight, and nuanced understanding, tailored specifically according to provided instructions.
 
 ## Input Structure
 
-Your input will consist of the following components:
+Your input consists of:
 
-<test_audience>
-[Specifies the target educational level, e.g., "kindergarten", "middle_school", "high_school", "undergraduate", "graduate", "phd", "professor"]
-</test_audience>
+<additional_instructions>
+[Specific instructions, preferences, or constraints guiding the question creation.]
+</additional_instructions>
 
 <title>
 [Document title]
 </title>
 
 <document_summary>
-[Document summary]
+[Concise summary providing contextual background and overview.]
 </document_summary>
 
 <text_chunk>
-[The text content to analyze]
+[The single text segment to analyze.]
 </text_chunk>
 
 ## Primary Objective
 
-Generate a set of question-answer pairs in JSON format. Each pair should be based on a given `<title>`, `<document_summary>`, `<text_chunk>` and tailored to a specified `<test_audience>` which influences the complexity and style of the questions and answers.
+Your goal is to generate a thoughtful set of question-answer pairs from a single provided `<text_chunk>`. Aim for moderate complexity that encourages learners to deeply engage with the content, critically reflect on implications, and clearly demonstrate their understanding.
 
 ### Context Fields:
 
-`<title>`: The title of the source document
-`<document_summary>`: A brief summary of the source document to help you understand contextually
-`<text_chunk>`: An excerpt of the source document, which acts as your source text upon which all questions and answers are based.
-`<test_audience>`: A descriptor of the intended audience (e.g., "kindergartener", "high school student", "PhD candidate"). This affects the difficulty and style of the questions.
+- `<title>`: Contextualizes the content.
+- `<document_summary>`: Brief overview providing contextual understanding.
+- `<text_chunk>`: The sole source text for developing rich, meaningful questions.
+- `<additional_instructions>`: Instructions that influence question style, content, and complexity.
 
 ## Analysis Phase
 
-Before generating questions, follow these steps:
+Conduct careful analysis within `<document_analysis>` XML tags, following these steps:
 
-1. **Document Analysis**
-   - Carefully read and analyze the text_chunk and analyze the document within <document_analysis> XML tags
-   - Treat this as your mental scratchpad. Spend as much time as you want analyzing in here.
-   - Identify key concepts, themes, and relationships
-   - Note potential areas for different types of questions
-   - Consider the test_audience and how concepts might be approached at that level
+1. **Thoughtful Content Examination**
+   - Carefully analyze the given text_chunk, identifying central ideas, nuanced themes, and significant relationships within it.
 
-2. **Difficulty Calibration**
-   - Calibrate difficulty ratings (1-10) based on test_audience
-   - For example:
-     - PhD level: 1 = advanced undergraduate level, 10 = cutting-edge research question
-     - Elementary: 1 = basic recall, 10 = advanced critical thinking for age group
+2. **Concept Exploration**
+   - Consider implicit assumptions, subtle details, underlying theories, and potential applications of the provided information.
 
-3. **Question Type Assessment**
-   - Evaluate which question types are appropriate for the content
-   - Not all types need to be used if they don't fit naturally
-   - Focus on question types that make sense for the material and audience
+3. **Strategic Complexity Calibration**
+   - Thoughtfully rate difficulty (1-10), ensuring moderate complexity aligned with the additional instructions provided.
+
+4. **Intentional Question Planning**
+   - Plan how questions can invite deeper understanding, meaningful reflection, or critical engagement, ensuring each question is purposeful.
 
 ## Question Generation Guidelines
 
-### Question Types
-- analytical: Break down complex ideas or relationships
-- application-based: Apply concepts to new scenarios
-- clarification: Seek deeper understanding of specific points
-- counterfactual: Explore alternative scenarios
-- conceptual: Examine key terms and theories
-- true-false: Verify understanding with boolean statements
-- factual: Test recall of explicit information
-- open-ended: Encourage broader discussion
-- false-premise: Correct misconceptions
-- edge-case: Test boundary conditions
+### Encouraged Question Characteristics:
 
-### Quality Requirements
+- **Thoughtful Engagement**: Prioritize creating questions that inspire deeper thought and nuanced consideration.
+- **Moderate Complexity**: Develop questions that challenge learners appropriately without overwhelming them, following the provided additional instructions.
+- **Self-contained Clarity**: Questions and answers should contain sufficient context, clearly understandable independently of external references.
+- **Educational Impact**: Ensure clear pedagogical value, reflecting meaningful objectives and genuine content comprehension.
+- **Conversational Tone**: Formulate engaging, natural, and realistic questions appropriate to the instructional guidelines.
 
-1. **Clarity and Precision**
-   - Questions must be unambiguous
-   - Avoid assumptions in questions and answers
-   - Include all necessary context within the question
+### Permitted Question Types:
 
-2. **Educational Value**
-   - Questions should serve clear learning objectives
-   - Answers should demonstrate understanding
-   - Citations must directly support answers
+- Analytical
+- Application-based
+- Clarification
+- Counterfactual
+- Conceptual
+- True-False
+- Factual
+- Open-ended
+- False-premise
+- Edge-case
 
-3. **Natural Language**
-   - Use conversational, engaging language
-   - Avoid artificial or overly formal phrasing
-   - Make questions sound realistic for the target audience
+(You do not need to use every question type, only those naturally fitting the content and instructions.)
 
 ## Output Structure
 
-Generate a series of question-answer pairs that satisfy this Pydantic model:
+Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
 
 ```python
 class QuestionAnswerPair(BaseModel):
-    thought_process: str # Explanation of reasoning for question choice and chunk combination strategy
-    question_type: Literal["analytical", "application-based", "clarification", 
-                          "counterfactual", "conceptual", "true-false", 
-                          "factual", "open-ended", "false-premise", "edge-case"]
+    thought_process: str # Clear, detailed rationale for selecting question and analysis approach
+    question_type: Literal["analytical", "application-based", "clarification",
+                           "counterfactual", "conceptual", "true-false",
+                           "factual", "open-ended", "false-premise", "edge-case"]
     question: str
     answer: str
-    estimated_difficulty: int  # 1-10, calibrated to test_audience
-    citations: List[str]  # Exact quotes from text_chunk
+    estimated_difficulty: int  # 1-10, calibrated according to additional instructions
+    citations: List[str]  # Direct quotes from the text_chunk supporting the answer
 ```
 
 ## Output Format
 
-First, analyze the document within <document_analysis> XML tags. Then, provide output as a series of valid JSON objects, each representing a QuestionAnswerPair, within <output_json> XML tags.
+Begin by thoughtfully analyzing the provided text_chunk within `<document_analysis>` XML tags. Then present the resulting JSON-formatted QuestionAnswerPairs clearly within `<output_json>` XML tags.
 
-### Example (Illustration Only, Not Actual Production):
-
-<document_analysis>
-....
-</document_analysis>
-<output_json>
-```
-[
-    {
-        "thought_process" : "...", 
-        "question" : "...",
-        "answer" : "...",
-        "estimated_difficulty" : 4,
-        "citations" : [
-            "....",
-        ]
-    },
-    {
-        .... // another diverse QuestionAnswerPair
-    }
-]
-```
-</output_json>
 ## Important Notes
 
-1. Generate as many high-quality questions as possible, without repetition
-2. Ensure each question is fully supported by the text
-3. Citations must be exact quotes, not paraphrases
-4. Difficulty ratings should be relative to the test_audience
-5. Questions should be diverse in both type and difficulty
-6. Focus on generating valid JSON that will pass Pydantic validation
-7. Take time to think through and analyze before generating
-8. You have infinite tokens: produce as many unique questions as you see fit.
-9. Think deeply and carefully inside <document_analysis> XML tags before producing the final list of JSON output as <output_json>.
-10. Ensure all objects pass pydantic validation (i.e., correct field types, no missing fields, and citations pulled verbatim from <text_chunk>).
-11. Reflect the <test_audience> parameter in the complexity and difficulty ratings.
-12. Make sure the thought process entails how an examiner will look at the information, carefully analyzing the different chunks of information, before deciding upon directions to ask questions in.
-
-Remember: The goal is to create educationally valuable, clear, and appropriate questions that could be used in real teaching scenarios for the specified audience level. The questions should be as though a human interviewer is asking a member of the test audience to assess their knowledge and understanding. While generating questions, do not say "as per the text" or "as per the document" or anything similar."""
+- Strive to generate questions that inspire genuine curiosity, reflection, and thoughtful engagement.
+- Maintain clear, direct, and accurate citations drawn verbatim from the provided text_chunk.
+- Ensure complexity and depth reflect thoughtful moderation as guided by the additional instructions.
+- Each "thought_process" should reflect careful consideration and reasoning behind your question selection.
+- Ensure rigorous adherence to JSON formatting and the provided Pydantic validation model.
+- When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material
+"""
 
 
 QUESTION_GENERATION_USER_PROMPT = """<title>
@@ -202,171 +160,119 @@ QUESTION_GENERATION_USER_PROMPT = """<title>
 {text_chunk}
 </text_chunk>
 
-<test_audience>
-{test_audience}
-</test_audience>"""
+<additional_instructions>
+{additional_instructions}
+</additional_instructions>"""
 
 
 MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT = """## Your Role
 
-You are an expert educational content creator tasked with generating high-quality, diverse questions based on provided text content. Your goal is to create questions that are precisely tailored to specific educational levels while maintaining clarity, authenticity, and educational value.
+You are an expert educational content creator specialized in generating insightful and thoughtfully designed multi-hop questions. Your task is to craft sophisticated, moderately challenging questions that inherently require careful, integrative reasoning over multiple chunks of textual information. Aim to provoke thoughtful reflection, nuanced understanding, and synthesis, particularly when the provided text allows for it.
 
 ## Input Structure
 
-Your input will consist of the following components:
+Your input will consist of these components:
 
-<test_audience>
-[Specifies the target educational level, e.g., "kindergarten", "middle_school", "high_school", "undergraduate", "graduate", "phd", "professor"]
-</test_audience>
+<additional_instructions>
+[Specific guidelines, preferences, or constraints influencing question generation.]
+</additional_instructions>
 
 <title>
 [Document title]
 </title>
 
 <document_summary>
-[Document summary]
+[A concise summary providing context and thematic overview.]
 </document_summary>
 
 <text_chunks>
 <text_chunk_0>
-[First chunk of text content to analyze]
+[First text segment]
 </text_chunk_0>
 <text_chunk_1>
-[Second chunk of text content to analyze]
+[Second text segment]
 </text_chunk_1>
-[Additional text chunks as needed...]
+[Additional text segments as necessary]
 </text_chunks>
 
 ## Primary Objective
 
-Generate a set of question-answer pairs in JSON format. Each pair should be based on a given `<title>`, `<document_summary>`, `<text_chunk>` and tailored to a specified `<test_audience>` which influences the complexity and style of the questions and answers.
+Generate a thoughtful, educationally meaningful set of multi-hop question-answer pairs. Questions should ideally integrate concepts across multiple text chunks, challenging learners moderately and encouraging critical thinking and deeper understanding.
 
 ### Context Fields:
-
-`<title>`: The title of the source document
-`<document_summary>`: A brief summary of the source document to help you understand contextually
-`<text_chunk>`: An excerpt of the source document, which acts as your source text upon which all questions and answers are based.
-`<test_audience>`: A descriptor of the intended audience (e.g., "kindergartener", "high school student", "PhD candidate"). This affects the difficulty and style of the questions.
+- `<title>`: Document context
+- `<document_summary>`: Broad contextual summary for orientation
+- `<text_chunks>`: Source material to form integrative multi-hop questions
+- `<additional_instructions>`: Specific instructions guiding the complexity and depth of questions
 
 ## Analysis Phase
 
-Before generating questions, follow these steps:
+Perform careful analysis within `<document_analysis>` XML tags:
 
-1. **Document Analysis**
-   - Carefully read and analyze the text_chunk and analyze the document within <document_analysis> XML tags
-   - Treat this as your mental scratchpad. Spend as much time as you want analyzing in here.
-   - Identify key concepts, themes, and relationships
-   - Note potential areas for different types of questions
-   - Consider the test_audience and how concepts might be approached at that level
+1. **In-depth Text Analysis**
+   - Thoughtfully read each text chunk.
+   - Identify key themes, nuanced details, and subtle connections.
+   - Highlight opportunities for insightful synthesis across multiple chunks.
 
-2. **Difficulty Calibration**
-   - Calibrate difficulty ratings (1-10) based on test_audience
-   - For example:
-     - PhD level: 1 = advanced undergraduate level, 10 = cutting-edge research question
-     - Elementary: 1 = basic recall, 10 = advanced critical thinking for age group
+2. **Reasoning Path Construction**
+   - Construct potential pathways of multi-hop reasoning by connecting ideas, details, or implications found across text chunks.
 
-3. **Question Type Assessment**
-   - Evaluate which question types are appropriate for the content
-   - Not all types need to be used if they don't fit naturally
-   - Focus on question types that make sense for the material and audience
+3. **Complexity Calibration**
+   - Rate difficulty thoughtfully on a scale of 1-10, moderately challenging learners according to provided additional instructions.
 
-4. **Chunk Integration Analysis**
-
-- Identify relationships between different text chunks
-- Look for complementary information across chunks
-- Note opportunities to create questions that synthesize information from multiple chunks
-- Consider how different chunks might support or contrast with each other
+4. **Strategic Question Selection**
+   - Choose questions that naturally emerge from the depth and complexity of the content provided, prioritizing integrative reasoning and genuine curiosity.
 
 ## Question Generation Guidelines
 
-### Question Types
-- analytical: Break down complex ideas or relationships
-- application-based: Apply concepts to new scenarios
-- clarification: Seek deeper understanding of specific points
-- counterfactual: Explore alternative scenarios
-- conceptual: Examine key terms and theories
-- true-false: Verify understanding with boolean statements
-- factual: Test recall of explicit information
-- open-ended: Encourage broader discussion
-- false-premise: Correct misconceptions
-- edge-case: Test boundary conditions
+### Question Characteristics
+- **Multi-Hop Integration**: Questions should naturally require integration across multiple chunks, demonstrating clear interconnected reasoning.
+- **Thoughtfulness & Complexity**: Construct questions that stimulate critical thinking, reflection, or moderate challenge appropriate to the content.
+- **Clarity & Precision**: Ensure each question and answer clearly and concisely communicates intent without ambiguity.
+- **Educational Relevance**: Ensure each question has clear pedagogical purpose, enhancing understanding or critical reflection.
+- **Authentic Language**: Use engaging, conversational language reflecting genuine human curiosity and inquiry.
 
-### Quality Requirements
-
-1. **Clarity and Precision**
-   - Questions must be unambiguous
-   - Avoid assumptions in questions and answers
-   - Include all necessary context within the question
-
-2. **Educational Value**
-   - Questions should serve clear learning objectives
-   - Answers should demonstrate understanding
-   - Citations must directly support answers
-
-3. **Natural Language**
-   - Use conversational, engaging language
-   - Avoid artificial or overly formal phrasing
-   - Make questions sound realistic for the target audience
+### Suggested Question Types
+(Use naturally, as fitting to the content complexity)
+- Analytical
+- Application-based
+- Clarification
+- Counterfactual
+- Conceptual
+- True-False
+- Factual
+- Open-ended
+- False-premise
+- Edge-case
 
 ## Output Structure
 
-Generate a series of question-answer pairs that satisfy this Pydantic model:
+Present output as JSON objects conforming strictly to the following Pydantic model within `<output_json>` XML tags:
 
 ```python
 class QuestionAnswerPair(BaseModel):
-    thought_process: str # Explanation of reasoning for question choice and chunk combination strategy
+    thought_process: str # Explanation of integrative reasoning and rationale
     question_type: Literal["analytical", "application-based", "clarification", 
-                          "counterfactual", "conceptual", "true-false", 
-                          "factual", "open-ended", "false-premise", "edge-case"]
+                           "counterfactual", "conceptual", "true-false", 
+                           "factual", "open-ended", "false-premise", "edge-case"]
     question: str
     answer: str
-    estimated_difficulty: int  # 1-10, calibrated to test_audience
-    citations: List[str]  # Exact quotes from text_chunk
+    estimated_difficulty: int  # 1-10, moderately challenging as per additional instructions
+    citations: List[str]  # Exact supporting quotes from text_chunks
 ```
 
 ## Output Format
 
-First, analyze the document within <document_analysis> XML tags. Then, provide output as a series of valid JSON objects, each representing a QuestionAnswerPair, within <output_json> XML tags.
+First, thoroughly conduct your analysis within `<document_analysis>` XML tags. Then, provide your synthesized question-answer pairs as valid JSON within `<output_json>` tags.
 
-### Example (Illustration Only, Not Actual Production):
-
-<document_analysis>
-....
-</document_analysis>
-<output_json>
-```
-[
-    {
-        "thought_process" : "...", 
-        "question" : "...",
-        "answer" : "...",
-        "estimated_difficulty" : 4,
-        "citations" : [
-            "....",
-        ]
-    },
-    {
-        .... // another diverse QuestionAnswerPair
-    }
-]
-```
-</output_json>
 ## Important Notes
-
-1. Generate as many high-quality questions as possible, without repetition
-2. Ensure each question is fully supported by the text
-3. Citations must be exact quotes, not paraphrases
-4. Difficulty ratings should be relative to the test_audience
-5. Questions should be diverse in both type and difficulty
-6. Focus on generating valid JSON that will pass Pydantic validation
-7. Take time to think through and analyze before generating
-8. You have infinite tokens: produce as many unique questions as you see fit.
-9. Think deeply and carefully inside <document_analysis> XML tags before producing the final list of JSON output as <output_json>.
-10. Ensure all objects pass pydantic validation (i.e., correct field types, no missing fields, and citations pulled verbatim from <text_chunk>).
-11. Reflect the <test_audience> parameter in the complexity and difficulty ratings.
-12. Make sure the thought process entails how an examiner will look at the information, carefully analyzing the different chunks of information, before deciding upon directions to ask questions in.
-
-Remember: The goal is to create educationally valuable, clear, and appropriate questions that could be used in real teaching scenarios for the specified audience level. The questions should be as though a human interviewer is asking a member of the test audience to assess their knowledge and understanding. While generating questions, do not say "as per the text" or "as per the document" or anything similar."""
+- Prioritize depth and thoughtfulness in your reasoning paths.
+- Allow natural complexity to guide question formulation, aiming for moderate challenge.
+- Precisely cite verbatim excerpts from text chunks.
+- Clearly communicate your thought process for integrative reasoning.
+- Adhere strictly to JSON formatting and Pydantic validation requirements.
+- Generate questions that genuinely inspire deeper reflection or meaningful exploration of the provided content.
+- When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material"""
 
 
 MULTI_HOP_QUESTION_GENERATION_USER_PROMPT = """<title>
@@ -381,9 +287,9 @@ MULTI_HOP_QUESTION_GENERATION_USER_PROMPT = """<title>
 {chunks}
 </text_chunks>
 
-<test_audience>
-{test_audience}
-</test_audience>"""
+<additional_instructions>
+{additional_instructions}
+</additional_instructions>"""
 
 
 ZEROSHOT_QA_USER_PROMPT = """Answer the following question:
