@@ -1,142 +1,42 @@
-###
-# this is a test config file for yourbench, which will help you understand how the yb architecture works.
-# you will need a simple openrouter (https://openrouter.ai/) api key, with gemini access to test this.
-# this is free!
-###
+settings:
+  debug: false
+# === HUGGINGFACE SETTINGS CONFIGURATION ===
 hf_configuration:
-  token: $HF_TOKEN
-  private: true # true by default, set to false to make the dataset public
-  hf_organization: $HF_ORGANIZATION
+  token: $HF_TOKEN # you can get one from here: https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication
+  hf_organization: $HF_ORGANIZATION # defaults to your HF username. You can set it to your organization name.
+  private: false # true by default, set to false to make the dataset public
 
+# === MODEL LIST CONFIGURATION ===
+# we use https://www.litellm.ai internally to route requests!
 model_list:
-  # - model_name: google/gemini-2.0-flash-lite-preview-02-05:free
-  #   provider: openrouter
-  #   base_url: https://openrouter.ai/api/v1
-  #   api_key: $OPENROUTER_API_KEY
-  #   max_concurrent_requests: 1
-  # - model_name: qwen/qwen-vl-plus:free
-  #   provider: openrouter
-  #   base_url: https://openrouter.ai/api/v1
-  #   api_key: $OPENROUTER_API_KEY
-  #   max_concurrent_requests: 1
-  # - model_name: cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic
-  #   provider: openai
-  #   base_url: $LOCALHOST_BASE_URL
-  #   api_key: $OPENROUTER_API_KEY
-  #   max_concurrent_requests: 1
-  # - model_name: mistralai/Mistral-Small-24B-Instruct-2501
-  #   provider: openai
-  #   base_url: $LOCALHOST_BASE_URL_2
-  #   api_key: $OPENROUTER_API_KEY
-  #   max_concurrent_requests: 1
-  # - model_name: deepseek-ai/DeepSeek-V3
-  #   provider: openai
-  #   base_url: https://router.huggingface.co/together
-  #   api_key: $HF_TOKEN
-  #   max_concurrent_requests: 8
-  - model_name: deepseek-ai/DeepSeek-V3:nitro
-    provider: openai
-    base_url: https://openrouter.ai/api/v1
-    api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 64
-  - model_name: google/gemini-2.0-flash-lite-001
-    provider: openai
-    base_url: https://openrouter.ai/api/v1
-    api_key: $OPENROUTER_API_KEY
-    max_concurrent_requests: 64
+  - model_name: deepseek-ai/DeepSeek-V3 # we use deepseek v3
+    provider: openai # we use the openai api endpoint style
+    api_key: $HF_TOKEN 
+    base_url: https://router.huggingface.co/hyperbolic # we use hyperbolic.xyz as our HF inference provider!
+    max_concurrent_requests: 32
+  
+  - model_name: Qwen/Qwen2-VL-72B-Instruct
+    provider: openai # we use the openai api endpoint style
+    api_key: $HF_TOKEN 
+    base_url: https://router.huggingface.co/together # another inference provider supported via HF!
+    max_concurrent_requests: 32
 
 model_roles:
   ingestion:
-    - google/gemini-2.0-flash-lite-001
+    - Qwen/Qwen2-VL-72B-Instruct # you must use a vision supported model for ingestion
   summarization:
-    - google/gemini-2.0-flash-lite-001
-  single_shot_question_generation:
-    - google/gemini-2.0-flash-lite-001
-  multi_hop_question_generation:
-    - google/gemini-2.0-flash-lite-001
-  answer_generation:
-    - google/gemini-2.0-flash-lite-001
-  judge_answers:
-    - google/gemini-2.0-flash-lite-001
-
-inference_config:
-  max_concurrent_requests: 16
-
-# this is the pipeline for yourbench. you can run the stages of the pipeline you wish to.
-# the design principle dictates that each stage is self contained, and does not require any existing state from the previous stages
-pipeline:
-  # ingestion to convert documents to markdown
-  ingestion:
-    source_documents_dir: data/example/raw
-    output_dir: data/example/ingested
-    run: true # set to true to run the stage
-  
-  # upload documents to a simple HF hub repo
-  upload_ingest_to_hub:
-    source_documents_dir: data/example/ingested
-    hub_dataset_name: yb_demo_ingested_documents
-    local_dataset_path: data/example/ingested_dataset
-    run: true
-  
-  # summarization to convert markdown to a summary
-  summarization:
-    source_dataset_name: yb_demo_ingested_documents
-    output_dataset_name: yb_demo_ingested_documents_with_summaries
-    local_dataset_path: data/example/ingested_dataset_with_summaries
-    concat_existing_dataset: false
-    run: true
-
-  # chunking to convert document to chunks
+    - deepseek-ai/DeepSeek-V3 
   chunking:
-    source_dataset_name: yb_demo_ingested_documents_with_summaries
-    output_dataset_name: yb_demo_chunked_documents
-    local_dataset_path: data/example/chunked_dataset
-    concat_existing_dataset: false
-    chunking_configuration:
-      l_min_tokens: 64
-      l_max_tokens: 128
-      tau_threshold: 0.3
-      h_min: 2
-      h_max: 4
+    - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
+
+pipeline:
+  ingestion:
     run: true
+    source_documents_dir: data/example/raw
+    output_dir: data/example/processed/ingested
   
-  single_shot_question_generation:
-    source_dataset_name: yb_demo_chunked_documents
-    output_dataset_name: yb_demo_single_shot_questions
-    local_dataset_path: data/example/single_shot_questions
-    additional_instructions: "24 year old adult"
-    concat_existing_dataset: false
+  upload_ingest_to_hub:
     run: true
-  
-  multi_hop_question_generation:
-    source_dataset_name: yb_demo_chunked_documents
-    output_dataset_name: yb_demo_multi_hop_questions
-    local_dataset_path: data/example/multi_hop_questions
-    concat_existing_dataset: false
-    run: true
-
-  answer_generation:
-    run: true
-    question_dataset_name: yb_demo_single_shot_questions  # or yb_demo_multi_hop_questions
-    output_dataset_name: yb_demo_answered_questions
-    local_dataset_path: data/example/answered_questions
-    concat_existing_dataset: false
-    strategies:
-      - name: "zeroshot"
-        prompt: "ZEROSHOT_QA_USER_PROMPT"
-        model_name: "google/gemini-2.0-flash-lite-001"
-
-      - name: "gold"
-        prompt: "GOLD_QA_USER_PROMPT"
-        model_name: "google/gemini-2.0-flash-lite-001"
-
-  judge_answers:
-    run: true
-    source_judge_dataset_name: yb_demo_answered_questions
-    output_judged_dataset_name: yb_demo_judged_comparisons
-    local_dataset_path: data/example/judged_comparisons
-    concat_existing_dataset: false
-    comparing_strategies:
-      - ["zeroshot", "gold"]
-    chunk_column_index: 0
-    random_seed: 42
+    source_documents_dir: data/example/processed/ingested
+    hub_dataset_name: yb_example_ingested_documents
+    # local_dataset_path: data/example/processed/ingested_dataset 
