@@ -8,12 +8,6 @@ from random import uniform
 import functools
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-# HF Evaluate metrics
-_rouge = evaluate.load("rouge")
-_bleu = evaluate.load("bleu")
-_meteor = evaluate.load("meteor")
-_bertscore = evaluate.load("bertscore")
-
 from yourbench.utils.inference_engine import run_inference, InferenceCall
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
 from yourbench.utils.dataset_engine import save_dataset
@@ -279,7 +273,12 @@ def run(config: Dict[str, Any]) -> None:
 
     # === Compute Corpus-Level Metrics ===
     if debug_mode:
+
         try:
+            _rouge = evaluate.load("rouge")
+            _bleu = evaluate.load("bleu")
+            _meteor = evaluate.load("meteor")
+            _bertscore = evaluate.load("bertscore")
             all_preds: List[str] = [summary if summary else "" for summary in final_summaries]
             all_refs: List[List[str]] = [[doc if doc else ""] for doc in documents]
 
