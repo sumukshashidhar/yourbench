@@ -350,7 +350,8 @@ def run(config: Dict[str, Any]) -> None:
             dataset=dataset,
             step_name="summarization",
             config=config,
-            output_dataset_name=stage_cfg["output_dataset_name"]
+            output_dataset_name=stage_cfg.get("output_dataset_name", None),
+            split=stage_cfg.get("dataset_split", "train")
         )
         logger.success("Summarization stage completed successfully with enhanced defensive programming.")
     except Exception as e:
