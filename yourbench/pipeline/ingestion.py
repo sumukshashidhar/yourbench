@@ -157,7 +157,7 @@ def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
 
     if not matched_model_config:
         logger.debug("No matching LLM config found for roles: {}. Using default MarkItDown.", ingestion_roles)
-        return MarkItDown(enable_plugins=False)
+        return MarkItDown()
 
     # Attempt to initialize the LLM client
     if OpenAI is None:
