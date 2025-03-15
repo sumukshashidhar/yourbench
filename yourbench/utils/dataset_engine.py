@@ -1,7 +1,7 @@
 from datasets import load_dataset, Dataset
 from typing import Dict, Any
 
-def smart_load_dataset(dataset_name: str, config: Dict[str, Any]) -> Dataset:
+def smart_load_dataset(dataset_name: str, config: Dict[str, Any], split: str = "train") -> Dataset:
     """
     Load a dataset from huggingface, with the option to concatenate with an existing dataset
     """
@@ -9,5 +9,5 @@ def smart_load_dataset(dataset_name: str, config: Dict[str, Any]) -> Dataset:
     if "/" not in dataset_name:
         dataset_name = f"{config['hf_configuration']['hf_organization']}/{dataset_name}"
     # load the dataset
-    dataset = load_dataset(dataset_name, token=config["hf_configuration"]["token"], split="train")
+    dataset = load_dataset(dataset_name, token=config["hf_configuration"]["token"], split=split)
     return dataset
