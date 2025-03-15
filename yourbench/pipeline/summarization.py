@@ -278,49 +278,51 @@ def run(config: Dict[str, Any]) -> None:
         )
 
     # === Compute Corpus-Level Metrics ===
-    try:
-        all_preds: List[str] = [summary if summary else "" for summary in final_summaries]
-        all_refs: List[List[str]] = [[doc if doc else ""] for doc in documents]
+    if debug_mode:
+        try:
+            all_preds: List[str] = [summary if summary else "" for summary in final_summaries]
+            all_refs: List[List[str]] = [[doc if doc else ""] for doc in documents]
 
-        corpus_bleu: float = _safe_compute_bleu(all_preds, all_refs)
-        corpus_meteor: float = _safe_compute_meteor(all_preds, [r[0] for r in all_refs])
-        rouge_results: Dict[str, float] = _safe_compute_rouge(all_preds, [r[0] for r in all_refs])
-        corpus_bert_f1: float = _safe_compute_bertscore(all_preds, [r[0] for r in all_refs])
+            corpus_bleu: float = _safe_compute_bleu(all_preds, all_refs)
+            corpus_meteor: float = _safe_compute_meteor(all_preds, [r[0] for r in all_refs])
+            rouge_results: Dict[str, float] = _safe_compute_rouge(all_preds, [r[0] for r in all_refs])
+            corpus_bert_f1: float = _safe_compute_bertscore(all_preds, [r[0] for r in all_refs])
 
-        corpus_rouge1: float = rouge_results["rouge1"]
-        corpus_rouge2: float = rouge_results["rouge2"]
-        corpus_rougeL: float = rouge_results["rougeL"]
+            corpus_rouge1: float = rouge_results["rouge1"]
+            corpus_rouge2: float = rouge_results["rouge2"]
+            corpus_rougeL: float = rouge_results["rougeL"]
 
-        logger.info(
-            "Corpus-level summarization metrics:\n"
-            "  BLEU:  {:.4f}\n"
-            "  METEOR: {:.4f}\n"
-            "  ROUGE1: {:.4f}, ROUGE2: {:.4f}, ROUGEL: {:.4f}\n"
-            "  BERTScore-F1: {:.4f}",
-            corpus_bleu,
-            corpus_meteor,
-            corpus_rouge1,
-            corpus_rouge2,
-            corpus_rougeL,
-            corpus_bert_f1
-        )
-    except Exception as e:
-        logger.error("Error computing corpus-level metrics: {}", str(e))
-        # Continue execution, but metrics are not reliable
-        corpus_bleu, corpus_meteor, corpus_rouge1, corpus_rouge2, corpus_rougeL, corpus_bert_f1 = 0, 0, 0, 0, 0, 0
+            logger.info(
+                "Corpus-level summarization metrics:\n"
+                "  BLEU:  {:.4f}\n"
+                "  METEOR: {:.4f}\n"
+                "  ROUGE1: {:.4f}, ROUGE2: {:.4f}, ROUGEL: {:.4f}\n"
+                "  BERTScore-F1: {:.4f}",
+                corpus_bleu,
+                corpus_meteor,
+                corpus_rouge1,
+                corpus_rouge2,
+                corpus_rougeL,
+                corpus_bert_f1
+            )
+        except Exception as e:
+            logger.error("Error computing corpus-level metrics: {}", str(e))
+            # Continue execution, but metrics are not reliable
+            corpus_bleu, corpus_meteor, corpus_rouge1, corpus_rouge2, corpus_rougeL, corpus_bert_f1 = 0, 0, 0, 0, 0, 0
 
-    # === Prepare Per-Document Metrics ===
+        # === Prepare Per-Document Metrics ===
+        all_metrics: List[Dict[str, float]] = []
+        for _ in range(len(documents)):
+            all_metrics.append({
+                "rouge1_f1": corpus_rouge1,
+                "rouge2_f1": corpus_rouge2,
+                "rougeL_f1": corpus_rougeL,
+                "bleu": corpus_bleu,
+                "meteor": corpus_meteor,
+                "bert_score_f1": corpus_bert_f1
+            })
+    
     all_metrics: List[Dict[str, float]] = []
-    for _ in range(len(documents)):
-        all_metrics.append({
-            "rouge1_f1": corpus_rouge1,
-            "rouge2_f1": corpus_rouge2,
-            "rougeL_f1": corpus_rougeL,
-            "bleu": corpus_bleu,
-            "meteor": corpus_meteor,
-            "bert_score_f1": corpus_bert_f1
-        })
-
     # === Add Columns and Save Dataset ===
     try:
         dataset = dataset.add_column("raw_document_summary", raw_summaries)
