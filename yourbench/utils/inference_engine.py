@@ -61,10 +61,10 @@ litellm.in_memory_llm_clients_cache = EventLoopAwareCache()
 @dataclass
 class Model:
     model_name: str
-    provider: str
-    base_url: str
-    api_key: str
-    max_concurrent_requests: int
+    provider: str = "openai"
+    base_url: str = ""
+    api_key: str = ""
+    max_concurrent_requests: int = 8
 
 
 @dataclass
