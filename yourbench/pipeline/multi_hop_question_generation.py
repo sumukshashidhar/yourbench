@@ -32,7 +32,7 @@ from typing import Dict, Any, List
 from loguru import logger
 from datasets import Dataset
 
-from yourbench.utils.dataset_engine import smart_load_dataset
+from yourbench.utils.dataset_engine import smart_load_dataset, smart_get_source_dataset_name, smart_get_output_dataset_name, smart_get_source_subset, smart_get_output_subset
 from yourbench.utils.dataset_engine import save_dataset
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
@@ -69,18 +69,15 @@ def run(config: Dict[str, Any]) -> None:
             return
 
         # Add defensive error handling throughout entire function
-        source_dataset_name = stage_cfg.get("source_dataset_name")
-        if not source_dataset_name:
-            logger.error("No source_dataset_name provided in config. Skipping multi_hop_question_generation.")
-            return
-            
-        output_dataset_name = stage_cfg.get("output_dataset_name")
-        if not output_dataset_name:
-            logger.error("No output_dataset_name provided in config. Skipping multi_hop_question_generation.")
-            return
+        source_dataset_name = smart_get_source_dataset_name("multi_hop_question_generation", config)
+
+        source_subset = smart_get_source_subset("multi_hop_question_generation", config)
+        
+        output_subset = smart_get_output_subset("multi_hop_question_generation", config)
+        output_dataset_name = smart_get_output_dataset_name("multi_hop_question_generation", config)
             
         logger.info("Loading chunked dataset: {}", source_dataset_name)
-        dataset = smart_load_dataset(source_dataset_name, config)
+        dataset = smart_load_dataset(source_dataset_name, config, source_subset)
         logger.info("Loaded dataset with {} rows.", len(dataset))
 
         system_msg = {"role": "system", "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT}
@@ -323,7 +320,8 @@ def run(config: Dict[str, Any]) -> None:
             dataset=question_dataset,
             step_name="multi_hop_question_generation",
             config=config,
-            output_dataset_name=output_dataset_name
+            output_dataset_name=output_dataset_name,
+            output_subset=output_subset
         )
         logger.success("Multi-hop question generation completed successfully.")
     except Exception as e:

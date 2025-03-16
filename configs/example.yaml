@@ -28,14 +28,30 @@ model_list:
     api_key: $HF_TOKEN 
     base_url: http://convai-srv-01.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
     max_concurrent_requests: 32
+  
+  - model_name: mistralai/Mistral-Small-24B-Instruct-2501
+    provider: openai # we use the openai api endpoint style
+    api_key: $HF_TOKEN 
+    base_url: http://convai-srv-02.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
+    max_concurrent_requests: 32
+  
+  - model_name: RekaAI/reka-flash-3
+    provider: openai # we use the openai api endpoint style
+    api_key: $HF_TOKEN 
+    base_url: http://convai-srv-01.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
+    max_concurrent_requests: 32
 
-# model_roles:
-#   ingestion:
-#     - Qwen/Qwen2-VL-72B-Instruct # you must use a vision supported model for ingestion
-#   summarization:
-#     - deepseek-ai/DeepSeek-V3 
-#   chunking:
-#     - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
+model_roles:
+  ingestion:
+    - Qwen/Qwen2-VL-72B-Instruct # you must use a vision supported model for ingestion
+  summarization:
+    - deepseek-ai/DeepSeek-V3 
+  chunking:
+    - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
+  single_shot_question_generation:
+    - RekaAI/reka-flash-3
+  multi_hop_question_generation:
+    - RekaAI/reka-flash-3
 
 pipeline:
   ingestion:
@@ -75,6 +91,14 @@ pipeline:
   
   single_shot_question_generation:
     run: true
+    concat_existing_dataset: true
     source_subset: chunked_documents
     output_subset: single_shot_questions
+    additional_instructions: "Generate questions to test a curious ponderer"
+  
+  multi_hop_question_generation:
+    run: true
+    concat_existing_dataset: true
+    source_subset: chunked_documents
+    output_subset: multi_hop_questions
     additional_instructions: "Generate questions to test a curious ponderer"
