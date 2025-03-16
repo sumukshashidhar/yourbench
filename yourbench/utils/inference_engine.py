@@ -236,7 +236,7 @@ def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
     If no model role is defined for the step, use the first model from model_list.
     """
     all_configured_models = base_config.get("model_list", [])
-    role_models = base_config["model_roles"].get(step_name, [])
+    role_models = base_config.get("model_roles", {}).get(step_name, [])
     
     # If no role models are defined for this step, use the first model from model_list
     if not role_models and all_configured_models:

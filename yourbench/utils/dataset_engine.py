@@ -1,28 +1,38 @@
 from datasets import load_dataset, Dataset, concatenate_datasets
 from typing import Dict, Any
 
-def smart_load_dataset(dataset_name: str, config: Dict[str, Any], split: str = "train") -> Dataset:
+def smart_load_dataset(dataset_name: str, config: Dict[str, Any], dataset_subset: str = "", split: str = "train") -> Dataset:
     """
     Load a dataset from huggingface, with the option to concatenate with an existing dataset
     """
+    if not dataset_name:
+        # try to get the global dataset name
+        dataset_name = config.get("hf_configuration", {}).get("global_dataset_name")
     # check the name, does it have a organization in it?
     if "/" not in dataset_name:
-        dataset_name = f"{config['hf_configuration']['hf_organization']}/{dataset_name}"
+        dataset_name = f"{config.get('hf_configuration', {}).get('hf_organization')}/{dataset_name}"
     # load the dataset
-    dataset = load_dataset(dataset_name, token=config["hf_configuration"]["token"], split=split)
+    dataset = load_dataset(
+        dataset_name, token=config.get("hf_configuration", {}).get("token"), name=dataset_subset, split=split
+        )
     return dataset
 
-def save_dataset(dataset: Dataset, step_name: str, config: Dict[str, Any], output_dataset_name: str) -> None:
+def save_dataset(dataset: Dataset, step_name: str, config: Dict[str, Any], output_dataset_name: str, output_subset: str = None, split: str = "train") -> None:
     """
     Save a dataset to huggingface
     """
-    local_path = config["pipeline"][step_name].get("local_dataset_path")
+    output_subset = output_subset or config.get("pipeline", {}).get(step_name, {}).get("output_subset")
+    
+    if not output_dataset_name:
+        output_dataset_name = config.get("hf_configuration", {}).get("global_dataset_name")
+    local_path = config.get("pipeline", {}).get(step_name, {}).get("local_dataset_path", False)
     if local_path:
         dataset.save_to_disk(local_path)
+
     # check if we need to concatenate with an existing dataset
-    if config["pipeline"][step_name]["concat_existing_dataset"]:
-        existing_dataset = load_dataset(config["pipeline"][step_name]["output_dataset_name"])
+    if config.get("pipeline", {}).get(step_name, {}).get("concat_existing_dataset", False):
+        existing_dataset = load_dataset(config.get("pipeline", {}).get(step_name, {}).get("output_dataset_name"), token=config.get("hf_configuration", {}).get("token"), split=split, config_name=output_subset)
         dataset = concatenate_datasets([existing_dataset, dataset])
     # push to hub
-    dataset.push_to_hub(output_dataset_name, token=config["hf_configuration"]["token"], private=config["hf_configuration"]["private"])
+    dataset.push_to_hub(output_dataset_name, token=config.get("hf_configuration", {}).get("token"), private=config.get("hf_configuration", {}).get("private"), split=split, config_name=output_subset)
     return

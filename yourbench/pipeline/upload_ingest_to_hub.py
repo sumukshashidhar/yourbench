@@ -34,7 +34,7 @@ import uuid
 from loguru import logger
 from datasets import Dataset
 from yourbench.utils.loading_engine import load_config
-
+from yourbench.utils.dataset_engine import save_dataset
 
 @dataclass
 class IngestedDocument:
@@ -72,6 +72,8 @@ def run(config: Dict[str, Any]) -> None:
     """
     stage_name = "upload_ingest_to_hub"
     stage_cfg = config.get("pipeline", {}).get(stage_name, {})
+    output_dataset_name = stage_cfg.get("output_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name"))
+    output_subset = stage_cfg.get("output_subset", stage_name)
 
     if not stage_cfg.get("run", False):
         logger.info(f"Stage '{stage_name}' is disabled. Skipping.")
@@ -79,13 +81,13 @@ def run(config: Dict[str, Any]) -> None:
 
     # === Extract essential fields from configuration ===
     source_dir: str = stage_cfg.get("source_documents_dir")
-    hub_dataset_name: str = stage_cfg.get("hub_dataset_name")
-    local_dataset_path: Optional[str] = stage_cfg.get("local_dataset_path")
+    # hub_dataset_name: str = stage_cfg.get("hub_dataset_name")
+    # local_dataset_path: Optional[str] = stage_cfg.get("local_dataset_path")
 
-    if not source_dir or not hub_dataset_name:
+    if not source_dir:
         raise ValueError(
             f"Missing required config fields in pipeline.{stage_name} "
-            f"(needed: 'source_documents_dir', 'hub_dataset_name')."
+            f"(needed: 'source_documents_dir')."
         )
 
     # Global Hugging Face configuration
@@ -101,8 +103,6 @@ def run(config: Dict[str, Any]) -> None:
 
     logger.info("Starting '{}' stage: uploading ingested files to HF Hub.", stage_name)
     logger.debug(f"Source directory: {source_dir}")
-    logger.debug(f"Hugging Face dataset name: {hub_dataset_name}")
-    logger.debug(f"Local dataset path: {local_dataset_path}")
     logger.debug(f"HF dataset visibility set to private={hf_private}")
 
     # === Collect .md files and create IngestedDocument objects ===
@@ -120,23 +120,14 @@ def run(config: Dict[str, Any]) -> None:
     # === Convert to Hugging Face Dataset ===
     dataset = _create_hf_dataset_from_ingested_documents(ingested_documents)
 
-    # === Optionally save to disk ===
-    if local_dataset_path:
-        logger.info("Saving dataset to disk at: {}", local_dataset_path)
-        dataset.save_to_disk(local_dataset_path)
-
-    # === Push dataset to Hugging Face Hub ===
-    try:
-        logger.info("Pushing dataset to Hugging Face Hub with repo_id='{}'.", hub_dataset_name)
-        dataset.push_to_hub(
-            repo_id=hub_dataset_name,
-            token=hf_token,
-            private=hf_private
-        )
-        logger.success("Dataset successfully pushed to the Hugging Face Hub: {}", hub_dataset_name)
-    except Exception as e:
-        logger.error("Failed to push dataset to the Hugging Face Hub: {}", str(e))
-        raise RuntimeError("Error pushing dataset to Hugging Face Hub") from e
+    save_dataset(
+        dataset = dataset,
+        step_name = stage_name,
+        config = config,
+        output_dataset_name = output_dataset_name,
+        output_subset = output_subset
+    )
+    return
 
 
 def _load_md_files_as_dataclasses(md_file_paths: List[str]) -> List[IngestedDocument]:
@@ -178,7 +169,7 @@ def _load_md_files_as_dataclasses(md_file_paths: List[str]) -> List[IngestedDocu
 
 
 def _create_hf_dataset_from_ingested_documents(
-    ingested_docs: List[IngestedDocument]
+    ingested_docs: List[IngestedDocument]   
 ) -> Dataset:
     """
     Convert a list of IngestedDocument objects into a Hugging Face Dataset.

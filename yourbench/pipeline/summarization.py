@@ -167,6 +167,7 @@ def run(config: Dict[str, Any]) -> None:
 
     # === Check Stage Configuration ===
     stage_cfg: Dict[str, Any] = config["pipeline"].get("summarization", {})
+    debug_mode: bool = config.get("settings", {}).get("debug", False)
     if not stage_cfg.get("run", False):
         logger.info("Summarization stage is disabled. Skipping.")
         return
@@ -175,13 +176,16 @@ def run(config: Dict[str, Any]) -> None:
 
     # === Load Dataset ===
     try:
-        dataset: Dataset = smart_load_dataset(stage_cfg["source_dataset_name"], config)
+        dataset: Dataset = smart_load_dataset(
+            stage_cfg.get("source_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name")),
+            config,
+            dataset_subset=stage_cfg.get("source_subset", "ingested_documents"),
+        )
         logger.info("Loaded dataset with {} documents for summarization.", len(dataset))
     except Exception as e:
-        logger.error("Failed to load dataset '{}': {}", stage_cfg.get("source_dataset_name"), str(e))
+        logger.error("Failed to load dataset '{}': {}", stage_cfg.get("source_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name")), str(e))
         logger.warning("Summarization stage cannot proceed due to dataset load failure.")
         return
-
     # === Prepare Inference Calls ===
     try:
         documents: List[str] = dataset["document_text"]
@@ -320,9 +324,21 @@ def run(config: Dict[str, Any]) -> None:
                 "meteor": corpus_meteor,
                 "bert_score_f1": corpus_bert_f1
             })
-    
-    all_metrics: List[Dict[str, float]] = []
+    else:
+        # Initialize metrics with zeros when not in debug mode
+        all_metrics: List[Dict[str, float]] = []
+        for _ in range(len(documents)):
+            all_metrics.append({
+                "rouge1_f1": 0.0,
+                "rouge2_f1": 0.0,
+                "rougeL_f1": 0.0,
+                "bleu": 0.0,
+                "meteor": 0.0,
+                "bert_score_f1": 0.0
+            })
     # === Add Columns and Save Dataset ===
+    # create a new dataset and copy over all columns, then add new columns
+
     try:
         dataset = dataset.add_column("raw_document_summary", raw_summaries)
     except Exception as e:
@@ -349,8 +365,9 @@ def run(config: Dict[str, Any]) -> None:
             dataset=dataset,
             step_name="summarization",
             config=config,
-            output_dataset_name=stage_cfg.get("output_dataset_name", None),
-            split=stage_cfg.get("dataset_split", "train")
+            output_dataset_name=stage_cfg.get("output_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name")),
+            output_subset=stage_cfg.get("output_subset", "summarized_documents"),
+            split=stage_cfg.get("output_split", "train")
         )
         logger.success("Summarization stage completed successfully with enhanced defensive programming.")
     except Exception as e:

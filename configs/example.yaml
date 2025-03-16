@@ -5,29 +5,37 @@ hf_configuration:
   token: $HF_TOKEN # you can get one from here: https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication
   hf_organization: $HF_ORGANIZATION # defaults to your HF username. You can set it to your organization name.
   private: false # true by default, set to false to make the dataset public
+  global_dataset_name: yb_example_global_dataset_x15
 
 # === MODEL LIST CONFIGURATION ===
 # we use https://www.litellm.ai internally to route requests!
-model_list:
-  - model_name: deepseek-ai/DeepSeek-V3 # we use deepseek v3
-    provider: openai # we use the openai api endpoint style
-    api_key: $HF_TOKEN 
-    base_url: https://router.huggingface.co/hyperbolic # we use hyperbolic.xyz as our HF inference provider!
-    max_concurrent_requests: 32
+# model_list:
+#   - model_name: deepseek-ai/DeepSeek-V3 # we use deepseek v3
+#     provider: openai # we use the openai api endpoint style
+#     api_key: $HF_TOKEN 
+#     base_url: https://router.huggingface.co/together/v1 # we use hyperbolic.xyz as our HF inference provider!
+
+#     max_concurrent_requests: 32
   
-  - model_name: Qwen/Qwen2-VL-72B-Instruct
+#   - model_name: Qwen/Qwen2-VL-72B-Instruct
+#     provider: openai # we use the openai api endpoint style
+#     api_key: $HF_TOKEN 
+#     base_url: https://router.huggingface.co/hyperbolic/v1 # another inference provider supported via HF!
+#     max_concurrent_requests: 32
+model_list:
+  - model_name: google/gemma-3-27b-it
     provider: openai # we use the openai api endpoint style
     api_key: $HF_TOKEN 
-    base_url: https://router.huggingface.co/together # another inference provider supported via HF!
+    base_url: http://convai-srv-01.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
     max_concurrent_requests: 32
 
-model_roles:
-  ingestion:
-    - Qwen/Qwen2-VL-72B-Instruct # you must use a vision supported model for ingestion
-  summarization:
-    - deepseek-ai/DeepSeek-V3 
-  chunking:
-    - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
+# model_roles:
+#   ingestion:
+#     - Qwen/Qwen2-VL-72B-Instruct # you must use a vision supported model for ingestion
+#   summarization:
+#     - deepseek-ai/DeepSeek-V3 
+#   chunking:
+#     - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
 
 pipeline:
   ingestion:
@@ -38,5 +46,13 @@ pipeline:
   upload_ingest_to_hub:
     run: true
     source_documents_dir: data/example/processed/ingested
-    hub_dataset_name: yb_example_ingested_documents
+    output_subset: ingested_documents
+    # hub_dataset_name: yb_example_ingested_documents
     # local_dataset_path: data/example/processed/ingested_dataset 
+  
+  summarization:
+    run: true
+    source_subset: ingested_documents
+    output_subset: summarized_documents
+    # hub_dataset_name: yb_example_summarized_documents
+    # local_dataset_path: data/example/processed/summarized_dataset
