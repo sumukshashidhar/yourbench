@@ -1,6 +1,19 @@
 from datasets import load_dataset, Dataset, concatenate_datasets
 from typing import Dict, Any
 
+def smart_get_source_dataset_name(stage_name: str, config: Dict[str, Any]) -> str:
+    return config.get("pipeline", {}).get(stage_name, {}).get("source_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name"))
+
+def smart_get_source_subset(stage_name: str, config: Dict[str, Any]) -> str:
+    return config.get("pipeline", {}).get(stage_name, {}).get("source_subset", "")
+
+def smart_get_output_dataset_name(stage_name: str, config: Dict[str, Any]) -> str:
+    return config.get("pipeline", {}).get(stage_name, {}).get("output_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name"))
+
+def smart_get_output_subset(stage_name: str, config: Dict[str, Any]) -> str:
+    return config.get("pipeline", {}).get(stage_name, {}).get("output_subset", "")
+
+
 def smart_load_dataset(dataset_name: str, config: Dict[str, Any], dataset_subset: str = "", split: str = "train") -> Dataset:
     """
     Load a dataset from huggingface, with the option to concatenate with an existing dataset

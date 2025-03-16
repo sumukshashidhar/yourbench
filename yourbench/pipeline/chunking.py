@@ -45,7 +45,7 @@ from loguru import logger
 from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 
-from yourbench.utils.dataset_engine import smart_load_dataset
+from yourbench.utils.dataset_engine import smart_load_dataset, smart_get_source_dataset_name, smart_get_output_dataset_name, smart_get_source_subset, smart_get_output_subset
 from yourbench.utils.dataset_engine import save_dataset
 
 import evaluate
@@ -82,9 +82,12 @@ def run(config: Dict[str, Any]) -> None:
     logger.info("Running chunking stage with minimal chunk tracking...")
 
     # 1. Load dataset
-    source_dataset_name = chunking_cfg["source_dataset_name"]
-    output_dataset_name = chunking_cfg["output_dataset_name"]
-    dataset = smart_load_dataset(source_dataset_name, config)
+    source_dataset_name = smart_get_source_dataset_name("chunking", config)
+    source_subset = smart_get_source_subset("chunking", config)
+    output_dataset_name = smart_get_output_dataset_name("chunking", config)
+    output_subset = smart_get_output_subset("chunking", config)
+
+    dataset = smart_load_dataset(source_dataset_name, config, source_subset)
     logger.debug("Loaded dataset '{}' with {} rows.", source_dataset_name, len(dataset))
 
     # 2. Retrieve chunking parameters
@@ -160,7 +163,7 @@ def run(config: Dict[str, Any]) -> None:
     dataset = dataset.add_column("chunk_info_metrics", all_chunk_info_metrics)
     dataset = dataset.add_column("chunking_model", ["intfloat/multilingual-e5-large-instruct"] * len(dataset))
 
-    save_dataset(dataset, "chunking", config, output_dataset_name)
+    save_dataset(dataset, "chunking", config, output_dataset_name, output_subset)
     logger.success("Chunking stage complete. Dataset saved as '{}'.", output_dataset_name)
 
 
