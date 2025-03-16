@@ -22,7 +22,7 @@ from typing import List, Dict, Any
 from loguru import logger
 from datasets import Dataset
 
-from yourbench.utils.dataset_engine import smart_load_dataset
+from yourbench.utils.dataset_engine import smart_load_dataset, smart_get_source_dataset_name, smart_get_output_dataset_name, smart_get_source_subset, smart_get_output_subset
 from yourbench.utils.dataset_engine import save_dataset
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
@@ -54,10 +54,15 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("single_shot_question_generation stage is disabled. Skipping.")
         return
 
-    source_dataset_name = stage_cfg["source_dataset_name"]
-    output_dataset_name = stage_cfg["output_dataset_name"]
+    source_dataset_name = smart_get_source_dataset_name("single_shot_question_generation", config)
+    output_dataset_name = smart_get_output_dataset_name("single_shot_question_generation", config)
+    
+    source_subset = smart_get_source_subset("single_shot_question_generation", config)
+    output_subset = smart_get_output_subset("single_shot_question_generation", config)
+
+
     logger.info("Loading chunked dataset: {}", source_dataset_name)
-    dataset = smart_load_dataset(source_dataset_name, config)
+    dataset = smart_load_dataset(source_dataset_name, config, dataset_subset=source_subset)
     logger.info("Loaded dataset with {} rows.", len(dataset))
 
     system_msg = {"role": "system", "content": QUESTION_GENERATION_SYSTEM_PROMPT}
@@ -200,7 +205,8 @@ def run(config: Dict[str, Any]) -> None:
         dataset=question_dataset,
         step_name="single_shot_question_generation",
         config=config,
-        output_dataset_name=output_dataset_name
+        output_dataset_name=output_dataset_name,
+        output_subset=output_subset
     )
     logger.success("Single-hop question generation completed successfully.")
 

@@ -58,7 +58,7 @@ pipeline:
     # local_dataset_path: data/example/processed/summarized_dataset
   
   chunking:
-    run: true
+    run: false
     source_subset: summarized_documents
     output_subset: chunked_documents
     
@@ -72,3 +72,9 @@ pipeline:
       num_multihops_factor: 2   # or any integer or float
     # hub_dataset_name: yb_example_chunked_documents
     # local_dataset_path: data/example/processed/chunked_dataset
+  
+  single_shot_question_generation:
+    run: true
+    source_subset: chunked_documents
+    output_subset: single_shot_questions
+    additional_instructions: "Generate questions to test a curious ponderer"
