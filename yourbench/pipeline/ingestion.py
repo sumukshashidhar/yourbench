@@ -1,3 +1,44 @@
+# ingestion.py
+
+"""
+Author: @sumukshashidhar
+
+This module implements the "ingestion" stage of the YourBench pipeline.
+
+Purpose:
+    The ingestion stage reads source documents from a user-specified directory,
+    converts each document into markdown (optionally assisted by an LLM), and
+    saves the converted outputs in the specified output directory. This normalized
+    markdown output sets the foundation for subsequent pipeline steps.
+
+Usage:
+    from yourbench.pipeline import ingestion
+    ingestion.run(config)
+
+Configuration Requirements (in `config["pipeline"]["ingestion"]`):
+    {
+      "run": bool,  # Whether to enable the ingestion stage
+      "source_documents_dir": str,  # Directory containing raw source documents
+      "output_dir": str,           # Directory where converted .md files are saved
+    }
+
+    Additionally, LLM details can be defined in:
+    config["model_roles"]["ingestion"] = [list_of_model_names_for_ingestion]
+    config["model_list"] = [
+      {
+        "model_name": str,
+        "request_style": str,
+        "base_url": str,
+        "api_key": str,
+        ...
+      },
+      ...
+    ]
+
+Stage-Specific Logging:
+    All major ingestion activity is logged to "logs/ingestion.log".
+"""
+
 import os
 import glob
 from typing import Dict, Any, Optional
@@ -5,192 +46,208 @@ from typing import Dict, Any, Optional
 from loguru import logger
 from markitdown import MarkItDown
 
-# If you have a custom OpenAI/OpenRouter Python client, import here.
-# For demonstration, we use "openai.OpenAI" as a placeholder.
-# If you have a different library or custom code, adjust accordingly.
+# Attempt to import an OpenAI-like client if available.
+# This is only used if advanced LLM-driven conversions are requested.
 try:
     from openai import OpenAI
 except ImportError:
-    logger.warning("Could not import 'openai.OpenAI'. Please ensure it's installed if you need LLM features.")
-    OpenAI = None  # Fallback if library isn't installed
+    # If not installed, fall back gracefully and warn
+    logger.warning(
+        "Could not import 'openai.OpenAI'. "
+        "LLM-based conversion may not be available."
+    )
+    OpenAI = None
+
+# Add a stage-specific file sink for logging
+# Rotation can be tuned as preferred (e.g., daily rotation, size-based, etc.)
+os.makedirs("logs", exist_ok=True)
+logger.add("logs/ingestion.log", level="DEBUG", rotation="5 MB")
 
 
 def run(config: Dict[str, Any]) -> None:
     """
     Execute the ingestion stage of the pipeline.
 
-    This function checks the pipeline configuration for the ingestion stage. If the user
-    has enabled the ingestion stage (run == True), it proceeds to:
-      1. Read the source_documents_dir for all files.
-      2. For each file, convert it to Markdown using MarkItDown.
-      3. Save the output (.md) to the output_dir.
+    This function checks whether the ingestion stage is enabled in the pipeline
+    configuration. If enabled, it performs the following actions:
 
-    If an LLM is specified in the configuration (through model_roles and model_list),
-    MarkItDown can use this LLM for advanced conversions (e.g., generating image captions).
+    1. Reads all files from the directory specified by `config["pipeline"]["ingestion"]["source_documents_dir"]`.
+    2. Converts each file to Markdown using the MarkItDown library.
+       Optionally, an LLM can be leveraged for advanced conversions (e.g., image descriptions).
+    3. Saves the resulting .md outputs to the directory specified by `config["pipeline"]["ingestion"]["output_dir"]`.
 
-    Parameters:
-        config (Dict[str, Any]): A dictionary containing overall pipeline configuration.
-                                 Expected structure:
-                                 {
-                                   "pipeline": {
-                                     "ingestion": {
-                                       "source_documents_dir": str,
-                                       "output_dir": str,
-                                       "run": bool
-                                     }
-                                   },
-                                   "model_roles": {
-                                     "ingestion": [list_of_model_keys_for_ingestion]
-                                   },
-                                   "model_list": [
-                                     {
-                                       "model_name": str,
-                                       "request_style": str,
-                                       "base_url": str,
-                                       "api_key": str
-                                     },
-                                     ...
-                                   ]
-                                 }
+    Args:
+        config (Dict[str, Any]): A configuration dictionary with keys:
+            - config["pipeline"]["ingestion"]["run"] (bool): Whether to run ingestion.
+            - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
+            - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
+            - config["model_roles"]["ingestion"] (Optional[List[str]]): Model names for LLM ingestion support.
+            - config["model_list"] (Optional[List[Dict[str, str]]]): Detailed LLM model configs.
 
     Returns:
         None
+
+    Logs:
+        Writes detailed logs to logs/ingestion.log describing each step taken
+        and any errors encountered during file reading or conversion.
     """
-    # Validate and extract ingestion configuration 
-    logger.debug(f"Ingestion config: {config.get('pipeline', {}).get('ingestion', {})}")
-    ingestion_cfg = config.get("pipeline", {}).get("ingestion", {})
-    if not isinstance(ingestion_cfg, dict):
-        logger.error("Ingestion config is missing or incorrectly formatted.")
+    stage_config = config.get("pipeline", {}).get("ingestion", {})
+    if not isinstance(stage_config, dict):
+        logger.error("Ingestion config is missing or not a dictionary. Aborting ingestion.")
         return
 
-    if not ingestion_cfg.get("run", False):
-        logger.info("Ingestion stage disabled. Skipping.")
+    # Check if ingestion is enabled
+    if not stage_config.get("run", False):
+        logger.info("Ingestion stage is disabled. No action will be taken.")
         return
 
-    source_dir = ingestion_cfg.get("source_documents_dir")
-    output_dir = ingestion_cfg.get("output_dir")
+    # Extract required directories
+    source_dir: Optional[str] = stage_config.get("source_documents_dir")
+    output_dir: Optional[str] = stage_config.get("output_dir")
+
     if not source_dir or not output_dir:
-        logger.error("source_documents_dir or output_dir not specified. Cannot proceed.")
+        logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
         return
 
-    # Prepare output directory 
+    # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
-    logger.debug("Ensured output directory exists: {}", output_dir)
+    logger.debug("Prepared output directory: {}", output_dir)
 
-    # (Optional) Resolve a model for advanced image descriptions, etc. 
-    md = _initialize_markitdown_with_llm(config)
+    # Initialize MarkItDown processor (may include LLM if configured)
+    markdown_processor = _initialize_markdown_processor(config)
 
-    # Convert each file in the source directory 
-    file_paths = glob.glob(os.path.join(source_dir, "**"), recursive=True)
-    if not file_paths:
+    # Gather all files in the source directory (recursively if desired)
+    all_source_files = glob.glob(os.path.join(source_dir, "**"), recursive=True)
+    if not all_source_files:
         logger.warning("No files found in source directory: {}", source_dir)
         return
 
     logger.info(
-        "Starting ingestion: converting files from '{}' to '{}'.",
+        "Ingestion stage: Converting files from '{}' to '{}'...",
         source_dir,
         output_dir
     )
 
-    for fp in file_paths:
-        if os.path.isfile(fp):
-            _convert_file(fp, output_dir, md)
+    # Process each file in the source directory
+    for file_path in all_source_files:
+        if os.path.isfile(file_path):
+            _convert_document_to_markdown(
+                file_path=file_path,
+                output_dir=output_dir,
+                markdown_processor=markdown_processor
+            )
 
-    logger.success("Ingestion complete. Processed files from '{}' to '{}'.", source_dir, output_dir)
+    logger.success(
+        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.",
+        source_dir,
+        output_dir
+    )
 
 
-def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
-    ingestion_roles = config.get("model_roles", {}).get("ingestion", [])
+def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
+    """
+    Initialize a MarkItDown processor with optional LLM support for advanced conversion.
+
+    This function looks up model details under `config["model_roles"]["ingestion"]`
+    and `config["model_list"]` to see if an LLM is defined for ingestion tasks.
+    If no suitable model is found or if necessary libraries are missing, a standard
+    MarkItDown instance is returned without LLM augmentation.
+
+    Args:
+        config (Dict[str, Any]): Global pipeline configuration dictionary.
+
+    Returns:
+        MarkItDown: A MarkItDown instance, possibly configured with an LLM client.
+
+    Logs:
+        - Warnings if an LLM model is specified but cannot be initialized.
+        - Info about which model (if any) is used for ingestion.
+    """
+    ingestion_role_models = config.get("model_roles", {}).get("ingestion", [])
     model_list = config.get("model_list", [])
 
-    if not ingestion_roles or not model_list:
-        logger.debug("No LLM configuration found for ingestion. Using default MarkItDown.")
-        return MarkItDown()
-        return MarkItDown()
-
-    matched_model_config = next((m for m in model_list if m["model_name"] in ingestion_roles), None)
-
-    if not matched_model_config:
-        logger.debug("No matching LLM config found for roles: {}. Using default MarkItDown.", ingestion_roles)
+    if not ingestion_role_models or not model_list:
+        logger.debug("No LLM ingestion config found. Using default MarkItDown processor.")
         return MarkItDown()
 
-    if OpenAI is None:
-        logger.warning(
-            "OpenAI client library not found. Unable to initialize LLM. Using default MarkItDown."
+    # Attempt to match the first model in model_list that appears in ingestion_role_models
+    matched_model_info = next(
+        (m for m in model_list if m["model_name"] in ingestion_role_models),
+        None
+    )
+
+    if not matched_model_info:
+        logger.debug(
+            "No matching LLM model found for roles: {}. Using default MarkItDown.",
+            ingestion_role_models
         )
         return MarkItDown()
 
-    # Extract relevant info
-    request_style = matched_model_config.get("request_style")
-    base_url = matched_model_config.get("base_url")
-    api_key = matched_model_config.get("api_key")
-    model_name = matched_model_config.get("model_name")  # e.g. "gemini_flash" or something similar
+    # If the openai library is not available, fallback
+    if OpenAI is None:
+        logger.warning(
+            "OpenAI library is not available; cannot initialize LLM for ingestion. Using default MarkItDown."
+        )
+        return MarkItDown()
 
-    # Expand any environment variables in the api_key string
-    if api_key:
-        api_key = os.path.expandvars(api_key)
+    # Extract relevant info from the matched model config
+    request_style = matched_model_info.get("request_style", "")
+    base_url = matched_model_info.get("base_url", "")
+    api_key = matched_model_info.get("api_key", "")
+    model_name = matched_model_info.get("model_name", "unknown_model")
 
-    # Log the chosen model
+    # Expand environment variables in the api_key, if present
+    api_key = os.path.expandvars(api_key) if api_key else ""
+
     logger.info(
         "Initializing MarkItDown with LLM support: request_style='{}', model='{}'.",
         request_style,
         model_name
     )
 
-    # Construct the LLM client (this is an example, adjust to your actual client interface)
-    llm_client = OpenAI(api_key=api_key, base_url=base_url)
+    # Construct the LLM client (placeholder usage, adjust to real client as needed)
+    llm_client = OpenAI(api_key=api_key, base_url=base_url)  # Example usage
     return MarkItDown(llm_client=llm_client, llm_model=model_name)
 
 
-def _convert_file(file_path: str, output_dir: str, md: MarkItDown) -> None:
+def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_processor: MarkItDown) -> None:
     """
-    Convert a single file to Markdown and save the output.
+    Convert a single source file into Markdown using MarkItDown and save the result.
 
-    Parameters:
-        file_path (str): Path to the source file to be converted.
-        output_dir (str): Directory where the resulting .md file should be saved.
-        md (MarkItDown): A configured MarkItDown instance.
+    Args:
+        file_path (str): The path to the source document.
+        output_dir (str): Directory where the converted .md file will be written.
+        markdown_processor (MarkItDown): Configured MarkItDown instance to handle the conversion.
+
+    Returns:
+        None
+
+    Logs:
+        - Debug info about the file being processed.
+        - Warning if conversion fails or the file is empty.
     """
     logger.debug("Converting file: {}", file_path)
     try:
-        # Convert the file to Markdown
-        result = md.convert(file_path)
+        # Perform the file-to-markdown conversion
+        conversion_result = markdown_processor.convert(file_path)
 
         # Construct an output filename with .md extension
         base_name = os.path.basename(file_path)
         file_name_no_ext = os.path.splitext(base_name)[0]
         output_file = os.path.join(output_dir, f"{file_name_no_ext}.md")
 
-        # Save the converted text content
+        # Write the converted Markdown to disk
         with open(output_file, "w", encoding="utf-8") as out_f:
-            out_f.write(result.text_content)
+            out_f.write(conversion_result.text_content)
 
-        logger.info("Successfully converted '{}' -> '{}'.", file_path, output_file)
+        logger.info(
+            "Successfully converted '%s' -> '%s'.",
+            file_path,
+            output_file
+        )
     except Exception as exc:
-        logger.error("Failed to convert '{}'. Error: {}", file_path, exc)
-
-
-if __name__ == "__main__":
-    # This is just a placeholder if you run this module directly.
-    # Typically, you'd import and call `run(config)` from another part of your application.
-    example_config = {
-        "pipeline": {
-            "ingestion": {
-                "source_documents_dir": "data/example/raw",
-                "output_dir": "data/example/ingested",
-                "run": True
-            }
-        },
-        "model_roles": {
-            "ingestion": ["gemini_flash"]
-        },
-        "model_list": [
-            {
-                "model_name": "gemini_flash",
-                "request_style": "openrouter",
-                "base_url": "https://openrouter.ai/api/v1",
-                "api_key": "$OPENROUTER_API_KEY"
-            }
-        ]
-    }
-    run(example_config)
+        logger.error(
+            "Failed to convert '%s'. Error details: %s",
+            file_path,
+            exc
+        )
