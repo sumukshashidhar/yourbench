@@ -1,176 +1,97 @@
-# 🤗 Yourbench
+<!--
+  README.md (Partial Snippet)
+  ===========================
+  This is a work-in-progress README for YourBench. 
+  There is more coming soon—stay tuned!
+-->
 
-**Dynamic Evaluation Set Generation for LLM Benchmarking [NAACL '25*]*
+<div align="center">
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![🤗 Hugging Face](https://img.shields.io/badge/huggingface-datasets-yellow)](https://huggingface.co/docs/datasets)
+<!-- Replace the paths below with your actual SVG logo paths or PNGs 
+     Make sure these files exist in docs/assets or an accessible directory -->
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/yourbench_banner_dark_mode.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/yourbench_banner_light_mode.svg">
+  <img alt="YourBench Logo" src="docs/assets/yourbench_banner_light_mode.svg" width="50%" height="50%">
+</picture>
+
+<h2>YourBench: A Dynamic Benchmark Generation Framework</h2>
+
+<p>
+  <strong>
+    [<a href="https://github.com/huggingface/yourbench">GitHub</a>] 
+    &middot; 
+    [<a href="https://huggingface.co/datasets/sumuks/yourbench_y1">Dataset</a>] 
+    &middot; 
+    [<a href="https://github.com/huggingface/yourbench/tree/main/docs">Documentation</a>]
+  </strong>
+</p>
+
+<!-- Example badges -->
+<a href="https://github.com/sumukshashidhar/yourbench/stargazers">
+  <img src="https://img.shields.io/github/stars/sumukshashidhar/yourbench?style=social" alt="GitHub Repo stars">
+</a>
 
 </div>
 
-## 🌟 Overview
+---
 
-Yourbench is a powerful framework for dynamically generating evaluation sets from source documents. It addresses the limitations of static benchmarks and benchmark saturation by creating diverse, contextually-rich questions tailored to specific educational levels.
+> **YourBench** is an open-source framework for generating domain-specific benchmarks in a zero-shot manner, inspired by modern software testing practices. It aims to keep your large language models on their toes—even as new data sources, domains, and knowledge demands evolve.
 
-### 🔄 Process Flow
+**Highlights**:
+- **Dynamic Benchmark Generation**: Produce diverse, up-to-date questions from real-world source documents (PDF, Word, HTML, even multimedia).
+- **Scalable & Structured**: Seamlessly handles ingestion, summarization, and multi-hop chunking for large or specialized datasets.
+- **Zero-Shot Focus**: Emulates real-world usage scenarios by creating fresh tasks that guard against memorized knowledge.
+- **Extensible**: Out-of-the-box pipeline stages (ingestion, summarization, question generation), plus an easy plugin mechanism to accommodate custom models or domain constraints.
 
-![Process Flow](static/images/process-figure.png)
+---
 
-## ✨ Features
-
-- 🔄 **Dynamic Generation**: Create evaluation sets on-the-fly from any source documents
-- 📚 **Semantic Chunking**: Smart document splitting that maintains context and meaning
-- 🤔 **Multi-hop Questions**: Generate questions that require synthesizing information across document sections
-- 📊 **Configurable Difficulty**: Tailor questions to specific educational levels
-- 🔍 **Diverse Question Types**: Support for 10 different question types
-- 🤖 **Model Flexibility**: Works with OpenAI and Azure OpenAI models via LiteLLM
-- 📦 **Hugging Face Integration**: Direct dataset publishing to Hugging Face Hub
-
-## 🛠️ Requirements
-
-- Python 3.10+
-- [LiteLLM](https://github.com/BerriAI/litellm) for model inference
-- [Sentence Transformers](https://www.sbert.net/) for semantic chunking
-- [Hugging Face Datasets](https://huggingface.co/docs/datasets) for dataset management
-- OpenAI API Compatible API / Azure AI. (more model types coming soon!)
-
-## 📦 Installation
+## Quick Start (Alpha)
 
 ```bash
-# Create a virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-.\venv\Scripts\activate  # Windows
+# 1. Clone the repo
+git clone https://github.com/huggingface/yourbench.git
+cd yourbench
 
-# Install dependencies
-pip install -r requirements.txt
+# Use uv to install the dependencies
+uv venv
+source .venv/bin/activate
+uv sync
+
+# 3. Get a key from https://openrouter.ai/ and add it to the .env file (or make your own config with a different model!)
+touch .env
+echo "OPENROUTER_API_KEY=<your_openrouter_api_key>" >> .env
+
+# 4. Run the pipeline with an example config
+yourbench --config configs/example.yaml
 ```
 
-## 🚀 Quick Start
+You can also launch a minimal Gradio UI by including `--gui`. 
+It will let you interactively explore your pipeline stages.
 
-1. Set up your environment:
-```bash
-# For OpenAI / OpenAI compatible APIs
-export MODEL_BASE_URL=your_openai_url
-export MODEL_API_KEY=your_openai_key
+**Note**: The above instructions are a work-in-progress, and more comprehensive usage info will be provided soon.
 
-# For Azure OpenAI
-export AZURE_BASE_URL=your_azure_url
-export AZURE_API_KEY=your_azure_key
+---
+
+## Repository Structure (Overview)
+
+```
+.
+├── yourbench/                   # Core framework modules
+│   ├── pipeline/                # Stages: ingestion, summarization, question generation, etc.
+│   ├── utils/                   # Utility modules (loading, prompts, inference, etc.)
+│   └── main.py                  # CLI and UI entry point
+├── configs/                     # Example YAML configs
+├── docs/                        # Documentation, assets
+├── data/                        # Example data (raw, ingested, HF dataset)
+├── pyproject.toml               # Project metadata
+└── README.md                    # (This File)
 ```
 
-2. Create a task configuration (`config.yaml`). [Here is some more information!](docs/configuration.md). You can also look at an [example task configuration](task_configs/yourbench_y1/config.yaml)
+---
 
-3. Run the example task (after setting your 🤗 username / organization in the config!):
-```bash
-python src/yourbench/run_task.py --task-name yourbench_y1
+<!-- Placeholder for more details! We will add deeper explanations, usage examples, 
+     code references, advanced configuration notes, performance analyses, 
+     and best practices in the next sections. Stay tuned. -->
 ```
-
-## 📚 Documentation
-
-Detailed documentation is available in the `docs` directory:
-
-- [Configuration Guide](docs/configuration.md): Comprehensive guide to YAML configuration
-- [Question Generation](docs/question_generation.md): Details about the question generation process
-- [Chunking System](docs/chunking.md): Information about the semantic chunking system
-
-## 🏗️ Pipeline Components
-
-### 1. Dataset Generation
-- Processes source documents
-- Creates structured datasets
-- Supports local files and Hugging Face datasets
-
-### 2. Document Summarization
-- Generates document summaries
-- Provides context for question generation
-- Uses configured language model
-
-### 3. Semantic Chunking
-- Splits documents intelligently
-- Maintains semantic coherence
-- Configurable chunk sizes and overlap
-
-### 4. Multi-hop Chunk Creation
-- Pairs related document chunks
-- Enables complex reasoning questions
-- Smart chunk selection
-
-### 5. Question Generation
-- Single-shot questions from individual chunks
-- Multi-hop questions from chunk pairs
-- 10 different question types
-- Difficulty calibration
-- Educational level targeting
-
-### 6. Dataset Management
-- Hugging Face integration
-- Local storage options
-- Dataset versioning
-
-## 🎯 Question Types
-
-1. **Analytical**: Break down complex ideas
-2. **Application-based**: Apply concepts to scenarios
-3. **Clarification**: Deep dive into specifics
-4. **Counterfactual**: Explore alternatives
-5. **Conceptual**: Examine theories
-6. **True-false**: Verify understanding
-7. **Factual**: Test recall
-8. **Open-ended**: Encourage discussion
-9. **False-premise**: Correct misconceptions
-10. **Edge-case**: Test boundaries
-
-## ⚙️ Configuration
-
-Example configuration:
-
-```yaml
-task_name: yourbench_y1
-configurations:
-  push_to_huggingface: true
-  set_hf_repo_visibility: public
-  hf_organization: your-org
-  model:
-    model_name: gpt-4
-    model_type: openai
-    max_concurrent_requests: 512
-
-selected_choices:
-  generate_dataset:
-    execute: true
-    files_directory: examples/data
-    dataset_name: my_dataset
-```
-
-See [Configuration Guide](docs/configuration.md) for detailed options.
-
-## 🧰 Development
-
-We use:
-- [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting
-- [pytest](https://docs.pytest.org/) for testing
-
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Install development dependencies
-4. Make your changes
-5. Run tests and ensure code style compliance
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [LiteLLM](https://github.com/BerriAI/litellm) for model inference
-- [Sentence Transformers](https://www.sbert.net/) for semantic embeddings
-- [Hugging Face](https://huggingface.co/) for dataset infrastructure

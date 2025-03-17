@@ -1,3 +1,6 @@
+/configs
+/results
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -7,10 +10,14 @@ log_backups/
 plots/
 files/
 .gradio/
-
+dev_utils.sh
+repo_contents.txt
 # C extensions
 *.so
+scratch_configs/
+data/example/processed/
 
+.cursor
 # Distribution / packaging
 .Python
 build/

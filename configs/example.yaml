@@ -1,0 +1,117 @@
+settings:
+  debug: false
+# === HUGGINGFACE SETTINGS CONFIGURATION ===
+hf_configuration:
+  token: $HF_TOKEN # you can get one from here: https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication
+  hf_organization: $HF_ORGANIZATION # defaults to your HF username. You can set it to your organization name.
+  private: false # true by default, set to false to make the dataset public
+  global_dataset_name: yourbench_example_run
+
+model_list:
+  - model_name: RekaAI/reka-flash-3
+    request_style: openai
+    base_url: $BASE_URL # to use hf dedicated endpoint
+    api_key: $HF_TOKEN 
+    max_concurrent_requests: 512
+    inference_backend: litellm
+
+  - model_name: Qwen/Qwen2.5-VL-7B-Instruct
+    provider: hf_hub
+    api_key: $HF_TOKEN 
+    max_concurrent_requests: 512
+    inference_backend: hf_hub
+
+  - model_name: gpt-4o-mini
+    request_style: openai
+    api_key: $OPENAI_API_KEY
+    max_concurrent_requests: 8
+    inference_backend: litellm
+
+model_roles:
+  ingestion:
+    - Qwen/Qwen2-VL-7B-Instruct # you must use a vision supported model for ingestion
+  summarization:
+    - RekaAI/reka-flash-3
+  chunking:
+    - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
+  single_shot_question_generation:
+      # use the ensemble to generate questions
+    - RekaAI/reka-flash-3
+    - gpt-4o-mini
+  multi_hop_question_generation:
+    - RekaAI/reka-flash-3
+    - gpt-4o-mini
+
+pipeline:
+  ingestion:
+    run: false
+    source_documents_dir: data/example/raw
+    output_dir: data/example/processed/ingested
+  
+  upload_ingest_to_hub:
+    run: false
+    source_documents_dir: data/example/processed/ingested
+    output_subset: ingested_documents
+    # hub_dataset_name: yb_example_ingested_documents
+    # local_dataset_path: data/example/processed/ingested_dataset 
+  
+  summarization:
+    run: false
+    source_subset: ingested_documents
+    output_subset: summarized_documents
+    # hub_dataset_name: yb_example_summarized_documents
+    # local_dataset_path: data/example/processed/summarized_dataset
+  
+  chunking:
+    run: false
+    source_subset: summarized_documents
+    output_subset: chunked_documents
+    
+    # chunking config
+    chunking_configuration:
+      l_min_tokens: 64
+      l_max_tokens: 128
+      tau_threshold: 0.8
+      h_min: 2
+      h_max: 5
+      num_multihops_factor: 2   # or any integer or float
+    # hub_dataset_name: yb_example_chunked_documents
+    # local_dataset_path: data/example/processed/chunked_dataset
+  
+  single_shot_question_generation:
+    run: false
+    concat_existing_dataset: true
+    source_subset: chunked_documents
+    output_subset: single_shot_questions
+    additional_instructions: "Generate questions to test a curious ponderer"
+    # for cost reduction
+    chunk_sampling:
+      mode: "count" # or "all" for all chunks
+      value: 10
+      random_seed: 123
+  
+  multi_hop_question_generation:
+    run: false
+    concat_existing_dataset: true
+    source_subset: chunked_documents
+    output_subset: multi_hop_questions
+    additional_instructions: "Generate questions to test a curious ponderer"
+    # for cost reduction
+    chunk_sampling:
+      mode: "percentage" # or "count" for a fixed number
+      value: 0.5
+      random_seed: 42
+  
+  deduplicate_single_shot_questions:
+    run: true
+    source_subset: single_shot_questions
+    output_subset: single_shot_questions_deduplicated
+    similarity_threshold: 0.8   # e.g. items above 0.8 similarity are grouped
+    retain_ratio: 0.4          # keep about 40% of total
+  
+  deduplicate_multi_hop_questions:
+    run: true
+    source_subset: multi_hop_questions
+    output_subset: multi_hop_questions_deduplicated
+    similarity_threshold: 0.85
+    retain_ratio: 0.8

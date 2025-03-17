@@ -1,62 +1,39 @@
 [project]
 name = "yourbench"
-version = "0.1.0"
-description = "Dynamic Evaluation Set Generation with LLMs"
+version = "0.2.0"
+description = "Dynamic Evaluation Set Generation with Large Language Models"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12, <3.13"
 dependencies = [
-    "async-timeout>=5.0.1",
     "asyncio>=3.4.3",
-    "datasets>=3.2.0",
-    "faiss-cpu>=1.9.0.post1",
-    "gradio>=5.9.1",
-    "hf-transfer>=0.1.8",
-    "ipykernel>=6.29.5",
-    "jupyter>=1.1.1",
-    "kneed>=0.8.5",
-    "langfuse>=2.57.1",
-    "litellm>=1.55.12",
+    "bert-score>=0.3.13",
+    "black>=25.1.0",
+    "datasets>=3.3.0",
+    "evaluate>=0.4.3",
+    "gradio>=5.16.0",
+    "hf-transfer>=0.1.9",
+    "huggingface-hub>=0.28.1",
+    "langfuse>=2.59.3",
+    "litellm>=1.61.16",
     "loguru>=0.7.3",
+    "markitdown>=0.0.2",
     "matplotlib>=3.10.0",
-    "nltk>=3.9.1",
-    "pandas>=2.2.3",
-    "plotly>=5.24.1",
-    "ruff>=0.8.4",
-    "scikit-learn>=1.6.0",
-    "seaborn>=0.13.2",
-    "sentence-transformers>=3.3.1",
-    "torch>=2.5.1",
+    "openai>=1.63.0",
+    "python-dotenv>=1.0.1",
+    "rouge-score>=0.1.2",
+    "scikit-learn>=1.6.1",
+    "textstat>=0.7.5",
+    "torch>=2.6.0",
     "tqdm>=4.67.1",
-    "transformers>=4.47.1",
-]
-
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.8.4",
+    "transformers>=4.48.3",
 ]
 
 [project.scripts]
 yourbench = "yourbench.main:main"
 
-# Code style
-[tool.ruff]
-line-length = 119
-
-# Move these settings directly under [tool.ruff]
-lint.ignore = ["E501"]
-lint.select = ["C", "E", "F", "I", "W"]
-lint.fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
-preview = true
-
-[tool.ruff.lint.isort]
-lines-after-imports = 2
-known-first-party = ["yourbench"]
-
-[tool.ruff.format]
-quote-style = "double" # Like Black, use double quotes for strings.
-indent-style = "space" # Like Black, indent with spaces, rather than tabs.
-skip-magic-trailing-comma = false # Like Black, respect magic trailing commas.
-line-ending = "auto" # Like Black, automatically detect the appropriate line ending.
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+include = ["yourbench*"]
