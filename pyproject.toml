@@ -21,6 +21,7 @@ dependencies = [
     "openai>=1.63.0",
     "python-dotenv>=1.0.1",
     "rouge-score>=0.1.2",
+    "scikit-learn>=1.6.1",
     "textstat>=0.7.5",
     "torch>=2.6.0",
     "tqdm>=4.67.1",

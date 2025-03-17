@@ -1,4 +1,4 @@
-# yourbench/pipeline/_handler.py
+# yourbench/pipeline/handler.py
 
 import os
 import time
@@ -12,13 +12,16 @@ import time
 # === Pipeline Stage Order Definition ===
 # This list enforces the exact order in which pipeline stages are executed.
 # Stages not present here will be skipped (with a warning logged).
+
 DEFAULT_STAGE_ORDER: List[str] = [
     "ingestion",
     "upload_ingest_to_hub",
     "summarization",
     "chunking",
     "single_shot_question_generation",
-    "multi_hop_question_generation"
+    "multi_hop_question_generation",
+    "deduplicate_single_shot_questions",
+    "deduplicate_multi_hop_questions"
 ]
 
 # === Global Variable for Pipeline Stage Timings ===
@@ -37,7 +40,6 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
         FileNotFoundError: If the config file cannot be found.
         Exception: For any other unexpected errors during pipeline execution.
     """
-    # === Initialization ===
     global GLOBAL_PIPELINE_TIMINGS
     GLOBAL_PIPELINE_TIMINGS = []
     
@@ -135,8 +137,8 @@ def _plot_pipeline_stage_timing(
         logger.warning("No stage timings recorded. Skipping pipeline timing plot.")
         return
 
-    # We rely on the append order in GLOBAL_PIPELINE_TIMINGS, which matches
-    # the actual run order from the strict pipeline ordering.
+    import numpy as np
+
     stage_names: List[str] = []
     durations: List[float] = []
 
@@ -156,11 +158,9 @@ def _plot_pipeline_stage_timing(
     for name, dur in zip(stage_names, durations):
         logger.info("  Stage '{}' took {:.2f} seconds", name, dur)
 
-    # === Plotting the bar chart ===
     fig, ax = plt.subplots(figsize=(8, 5))
     bars = ax.bar(stage_names, durations, color="royalblue")
     
-    # Add duration text on top of each bar
     max_duration: float = max(durations)
     for bar in bars:
         height: float = bar.get_height()
@@ -178,8 +178,6 @@ def _plot_pipeline_stage_timing(
     ax.set_title("YourBench Pipeline Stage Timings")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
-    
-    # Add extra padding for the labels
     ax.set_ylim(0, ax.get_ylim()[1] * 1.1)
     
     out_path: str = "plots/pipeline_stages_timing.png"
@@ -192,7 +190,7 @@ def _plot_pipeline_stage_timing(
 def _handle_unordered_stages(pipeline_config: Dict[str, Any], ordered_stages: List[str]) -> None:
     """
     Check for stages in `pipeline_config` that are not in `ordered_stages`.
-    Log a warning if any are found (since they're skipped).
+    Log a warning if any are found.
 
     Args:
         pipeline_config: Dictionary containing pipeline configuration from YAML.

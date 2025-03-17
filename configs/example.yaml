@@ -79,7 +79,7 @@ pipeline:
     # local_dataset_path: data/example/processed/chunked_dataset
   
   single_shot_question_generation:
-    run: true
+    run: false
     concat_existing_dataset: true
     source_subset: chunked_documents
     output_subset: single_shot_questions
@@ -91,7 +91,7 @@ pipeline:
       random_seed: 123
   
   multi_hop_question_generation:
-    run: true
+    run: false
     concat_existing_dataset: true
     source_subset: chunked_documents
     output_subset: multi_hop_questions
@@ -101,3 +101,17 @@ pipeline:
       mode: "percentage" # or "count" for a fixed number
       value: 0.5
       random_seed: 42
+  
+  deduplicate_single_shot_questions:
+    run: true
+    source_subset: single_shot_questions
+    output_subset: single_shot_questions_deduplicated
+    similarity_threshold: 0.8   # e.g. items above 0.8 similarity are grouped
+    retain_ratio: 0.4          # keep about 40% of total
+  
+  deduplicate_multi_hop_questions:
+    run: true
+    source_subset: multi_hop_questions
+    output_subset: multi_hop_questions_deduplicated
+    similarity_threshold: 0.85
+    retain_ratio: 0.8
