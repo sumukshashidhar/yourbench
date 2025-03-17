@@ -12,7 +12,7 @@ import uuid
 import asyncio
 import time  # ### [CHANGED OR ADDED] ### for timing logs
 from contextlib import asynccontextmanager
-
+from huggingface_hub import AsyncInferenceClient
 if sys.version_info >= (3, 11):
     from asyncio import timeout as aio_timeout
 else:
@@ -22,7 +22,7 @@ from tqdm.asyncio import tqdm_asyncio
 
 load_dotenv()
 
-GLOBAL_TIMEOUT = 600
+GLOBAL_TIMEOUT = 1800
 
 # TODO: why do we need these lines
 # Optional: Customize success/failure callbacks
@@ -61,10 +61,12 @@ litellm.in_memory_llm_clients_cache = EventLoopAwareCache()
 @dataclass
 class Model:
     model_name: str
-    provider: str = "openai"
+    request_style: str = "openai"
     base_url: str = ""
     api_key: str = ""
     max_concurrent_requests: int = 8
+    inference_backend: str = "litellm"
+    provider: str = None
 
 
 @dataclass
@@ -72,7 +74,7 @@ class InferenceCall:
     messages: List[Dict[str, str]]
     temperature: Optional[float] = None
     tags: List[str] = field(default_factory=lambda: ['dev'])
-    max_retries: int = 3
+    max_retries: int = 6
     seed: Optional[int] = None
 
 
@@ -106,15 +108,31 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         model.model_name, start_time
     )
 
-    response = await litellm.acompletion(
-            model=f"{model.provider}/{model.model_name}",
+    if model.inference_backend == "litellm":
+        response = await litellm.acompletion(
+            model=f"{model.request_style}/{model.model_name}",
             base_url=model.base_url,
             api_key=model.api_key,
             messages=inference_call.messages,
             temperature=inference_call.temperature,
             metadata={"tags": inference_call.tags},
             timeout=GLOBAL_TIMEOUT
-    )
+        )
+    elif model.inference_backend == "hf_hub":
+        # make the client first
+        # TODO: support langfuse logging with hf_hub
+        client = AsyncInferenceClient(
+            model = model.model_name,
+            token = model.api_key,
+            provider=model.provider,
+            base_url=model.base_url,
+            timeout=GLOBAL_TIMEOUT
+        )
+        # get the response
+        response = await client.chat.completions.create(
+            messages=inference_call.messages,
+            temperature=inference_call.temperature,
+        )
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
         logger.warning("Empty response or missing .choices from model {}", model.model_name)

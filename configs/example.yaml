@@ -5,53 +5,42 @@ hf_configuration:
   token: $HF_TOKEN # you can get one from here: https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication
   hf_organization: $HF_ORGANIZATION # defaults to your HF username. You can set it to your organization name.
   private: false # true by default, set to false to make the dataset public
-  global_dataset_name: yb_example_global_dataset_x15
+  global_dataset_name: yourbench_example_run
 
-# === MODEL LIST CONFIGURATION ===
-# we use https://www.litellm.ai internally to route requests!
-# model_list:
-#   - model_name: deepseek-ai/DeepSeek-V3 # we use deepseek v3
-#     provider: openai # we use the openai api endpoint style
-#     api_key: $HF_TOKEN 
-#     base_url: https://router.huggingface.co/together/v1 # we use hyperbolic.xyz as our HF inference provider!
-
-#     max_concurrent_requests: 32
-  
-#   - model_name: Qwen/Qwen2-VL-72B-Instruct
-#     provider: openai # we use the openai api endpoint style
-#     api_key: $HF_TOKEN 
-#     base_url: https://router.huggingface.co/hyperbolic/v1 # another inference provider supported via HF!
-#     max_concurrent_requests: 32
 model_list:
-  - model_name: google/gemma-3-27b-it
-    provider: openai # we use the openai api endpoint style
-    api_key: $HF_TOKEN 
-    base_url: http://convai-srv-01.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
-    max_concurrent_requests: 32
-  
-  - model_name: mistralai/Mistral-Small-24B-Instruct-2501
-    provider: openai # we use the openai api endpoint style
-    api_key: $HF_TOKEN 
-    base_url: http://convai-srv-02.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
-    max_concurrent_requests: 32
-  
   - model_name: RekaAI/reka-flash-3
-    provider: openai # we use the openai api endpoint style
+    request_style: openai
+    base_url: $BASE_URL # to use hf dedicated endpoint
     api_key: $HF_TOKEN 
-    base_url: http://convai-srv-01.cs.illinois.edu:8000/v1 # another inference provider supported via HF!
-    max_concurrent_requests: 32
+    max_concurrent_requests: 512
+    inference_backend: litellm
+
+  - model_name: Qwen/Qwen2.5-VL-7B-Instruct
+    provider: hf_hub
+    api_key: $HF_TOKEN 
+    max_concurrent_requests: 512
+    inference_backend: hf_hub
+
+  - model_name: gpt-4o-mini
+    request_style: openai
+    api_key: $OPENAI_API_KEY
+    max_concurrent_requests: 8
+    inference_backend: litellm
 
 model_roles:
   ingestion:
-    - Qwen/Qwen2-VL-72B-Instruct # you must use a vision supported model for ingestion
+    - Qwen/Qwen2-VL-7B-Instruct # you must use a vision supported model for ingestion
   summarization:
-    - deepseek-ai/DeepSeek-V3 
+    - RekaAI/reka-flash-3
   chunking:
     - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
   single_shot_question_generation:
+      # use the ensemble to generate questions
     - RekaAI/reka-flash-3
+    - gpt-4o-mini
   multi_hop_question_generation:
     - RekaAI/reka-flash-3
+    - gpt-4o-mini
 
 pipeline:
   ingestion:

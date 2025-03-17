@@ -66,7 +66,7 @@ def run(config: Dict[str, Any]) -> None:
                                    "model_list": [
                                      {
                                        "model_name": str,
-                                       "provider": str,
+                                       "request_style": str,
                                        "base_url": str,
                                        "api_key": str
                                      },
@@ -167,7 +167,7 @@ def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
         return MarkItDown()
 
     # Extract relevant info
-    provider = matched_model_config.get("provider")
+    request_style = matched_model_config.get("request_style")
     base_url = matched_model_config.get("base_url")
     api_key = matched_model_config.get("api_key")
     model_name = matched_model_config.get("model_name")  # e.g. "gemini_flash" or something similar
@@ -178,8 +178,8 @@ def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
 
     # Log the chosen model
     logger.info(
-        "Initializing MarkItDown with LLM support: provider='{}', model='{}'.",
-        provider,
+        "Initializing MarkItDown with LLM support: request_style='{}', model='{}'.",
+        request_style,
         model_name
     )
 
@@ -233,7 +233,7 @@ if __name__ == "__main__":
         "model_list": [
             {
                 "model_name": "gemini_flash",
-                "provider": "openrouter",
+                "request_style": "openrouter",
                 "base_url": "https://openrouter.ai/api/v1",
                 "api_key": "$OPENROUTER_API_KEY"
             }
