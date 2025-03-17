@@ -73,10 +73,7 @@ def run(config: Dict[str, Any]) -> None:
 
     judge_answers:
       run: true
-      source_judge_dataset_name: yb_demo_answered_questions
-      output_judged_dataset_name: yb_demo_judged_comparisons
       local_dataset_path: data/example/judged_comparisons
-      concat_existing_dataset: false
       comparing_strategies:
         - ["zeroshot", "gold"]
       # Optional: which chunk to feed the judge (by default, just chunk 0):
@@ -95,32 +92,25 @@ def run(config: Dict[str, Any]) -> None:
       5) Re-map if inverted. Save who the real winner is.
       6) Save a "judge-level" dataset with columns for the chunk, question, gold, answerA, 
          answerB, chain-of-thought, final winner, etc.
-      7) Generate a pie chart of how many times each strategy was selected as winner overall, 
-         and save it to "judged_results_pie_chart.png" for reference.
     """
     stage_cfg = config.get("pipeline", {}).get("judge_answers", {})
     if not stage_cfg.get("run", False):
-        logger.info("judge_answers stage is disabled. Skipping.")
+        logger.info("judge_answers stage is disabled, skipping")
         return
 
     random_seed = stage_cfg.get("random_seed", 42)
     random.seed(random_seed)
 
-    source_judge_dataset_name = stage_cfg.get("source_judge_dataset_name")
-    output_judged_dataset_name = stage_cfg.get("output_judged_dataset_name")
+
     comparing_strategies = stage_cfg.get("comparing_strategies", [])
     chunk_column_index = stage_cfg.get("chunk_column_index", 0)
 
-    if not source_judge_dataset_name or not output_judged_dataset_name or not comparing_strategies:
-        logger.error(
-            "judge_answers stage requires 'source_judge_dataset_name', "
-            "'output_judged_dataset_name', and 'comparing_strategies'."
-        )
-        return
 
-    logger.info("Loading dataset with answers from: {}", source_judge_dataset_name)
-    base_dataset = smart_load_dataset(source_judge_dataset_name, config)
-    logger.info("Dataset loaded with {} rows.", len(base_dataset))
+
+    logger.info("Loading answers dataset")
+    
+    base_dataset = custom_load_dataset(config=config, step_name="answer_generation")
+    logger.info("Dataset loaded with {} rows", len(base_dataset))
 
     # We'll expect columns for the question, gold, plus {strategy_name}_answer, etc.
     # Example columns: [ "question", "gold_answer", "zeroshot_answer", "gold_answer" ... ]
@@ -153,7 +143,7 @@ def run(config: Dict[str, Any]) -> None:
             # Example strat_pair might be ["zeroshot", "gold"]
             if len(strat_pair) != 2:
                 logger.warning(
-                    "Strategy pair {} is not length 2. Skipping row_idx={}.",
+                    "Strategy pair {} is not length 2. Skipping row_idx={}",
                     strat_pair, row_idx
                 )
                 continue
@@ -199,7 +189,7 @@ def run(config: Dict[str, Any]) -> None:
             call_index_map.append((row_idx, stratA, stratB, do_invert))
 
     if not all_inference_calls:
-        logger.warning("No inference calls created for judge_answers. Exiting.")
+        logger.warning("No inference calls created for judge_answers. Exiting")
         return
 
     # Run inference
@@ -208,14 +198,14 @@ def run(config: Dict[str, Any]) -> None:
     responses_dict = run_inference(config, "judge_answers", all_inference_calls)
     # Typically you might have a single judge model, but the code can handle multiple if needed.
     if not responses_dict:
-        logger.error("No responses received from judge model(s). Exiting.")
+        logger.error("No responses received from judge model(s). Exiting")
         return
 
     # We'll just take the first model in model_roles["judge_answers"] 
     # or loop over them if multiple. For simplicity, let's handle the first only:
     judge_models = config["model_roles"].get("judge_answers", [])
     if not judge_models:
-        logger.error("No judge model found in config['model_roles']['judge_answers']. Exiting.")
+        logger.error("No judge model found in config['model_roles']['judge_answers']. Exiting")
         return
 
     judge_model_name = judge_models[0]
@@ -321,10 +311,10 @@ def run(config: Dict[str, Any]) -> None:
         judged_rows.append(judged_row)
 
     if not judged_rows:
-        logger.warning("No judged rows produced. Exiting judge_answers stage.")
+        logger.warning("No judged rows produced. Exiting judge_answers stage")
         return
 
-    logger.info("Constructing judge-level dataset with {} rows.", len(judged_rows))
+    logger.info("Constructing judge-level dataset with {} rows", len(judged_rows))
     # Convert to HF Dataset
     col_names = list(judged_rows[0].keys())
     final_dict = {c: [] for c in col_names}
@@ -335,37 +325,11 @@ def run(config: Dict[str, Any]) -> None:
     judge_dataset = Dataset.from_dict(final_dict)
 
     # Save the judge dataset
-    logger.info("Saving judge-level dataset as '{}'.", output_judged_dataset_name)
-    save_dataset(
+    logger.info("Saving judge-level dataset")
+    custom_save_dataset(
         dataset=judge_dataset,
         step_name="judge_answers",
         config=config,
-        output_dataset_name=output_judged_dataset_name
     )
-    logger.success("judge_answers dataset saved successfully.")
+    logger.success("Answer generation stage completed successfully")
 
-    # Finally, produce a pie chart. Let's see how many times each strategy was the winner.
-    strategy_win_counts = {}
-    for row_data in judged_rows:
-        win_strat = row_data["winner_strategy"]
-        if win_strat == "none":
-            continue
-        strategy_win_counts[win_strat] = strategy_win_counts.get(win_strat, 0) + 1
-
-    if not strategy_win_counts:
-        logger.warning("No valid winners found to plot a pie chart. Possibly all unrecognized final answers.")
-        return
-
-    # Pie chart
-    labels = list(strategy_win_counts.keys())
-    sizes = [strategy_win_counts[l] for l in labels]
-
-    fig, ax = plt.subplots()
-    ax.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=140)
-    ax.axis("equal")
-    ax.set_title("Judge: Strategy Win Distribution")
-
-    chart_filename = "judged_results_pie_chart.png"
-    plt.savefig(chart_filename, dpi=150, bbox_inches="tight")
-    logger.info("Saved pie chart to '{}'. Win counts = {}", chart_filename, strategy_win_counts)
-    plt.close()

@@ -19,10 +19,7 @@ Configuration Example (part of your config["pipeline"]["answer_generation"]):
 -----------------------------------------------------------------------------
 answer_generation:
   run: true
-  question_dataset_name: yb_demo_single_shot_questions
-  output_dataset_name: yb_demo_answered_questions
   local_dataset_path: data/example/answered_questions
-  concat_existing_dataset: false
   # Each strategy block includes:
   #  - name (str): used to name output columns (e.g., "zeroshot_answer", "zeroshot_model")
   #  - prompt (str): which prompt from yourbench.utils.prompts to fill
@@ -93,22 +90,20 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # 1. Basic config validation
-    question_dataset_name = stage_cfg.get("question_dataset_name")
-    output_dataset_name = stage_cfg.get("output_dataset_name")
-    if not question_dataset_name or not output_dataset_name:
-        logger.critical(
-            "Missing question_dataset_name or output_dataset_name in answer_generation config. Cannot proceed."
-        )
-        return
+    question_type = stage_cfg.get("question_type")
+    if question_type == "single_shot":
+        question_step_name = "single_shot_question_generation"
+    elif question_type == "multi_hop":
+        question_step_name = "multi_hop_question_generation"
+    else:
+        logger.error(f"Unsuported question_type given: {question_type}")
 
     strategies = stage_cfg.get("strategies", [])
     if not strategies:
         logger.critical("No strategies defined in answer_generation config. Exiting.")
         return
-
-    logger.info("Loading question-level dataset: {}", question_dataset_name)
-    question_dataset = smart_load_dataset(question_dataset_name, config)
-    logger.info("Loaded dataset with {} rows.", len(question_dataset))
+    
+    question_dataset = custom_load_dataset(config=config, step_name=question_step_name)
 
     # 2. Build InferenceCalls for each row-strategy pair
     all_inference_calls: List[InferenceCall] = []
@@ -275,12 +270,11 @@ def run(config: Dict[str, Any]) -> None:
         question_dataset = question_dataset.add_column(model_col_name, build_col_for_strategy(sn, is_answer=False))
 
     # 6. Save the dataset
-    logger.info("Saving answered dataset to HF under '{}'.", output_dataset_name)
-    save_dataset(
+    logger.info("Saving answered dataset")
+    custom_save_dataset(
         dataset=question_dataset,
         step_name="answer_generation",
         config=config,
-        output_dataset_name=output_dataset_name
     )
     logger.success("Answer generation stage completed successfully.")
 

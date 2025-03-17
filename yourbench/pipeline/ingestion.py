@@ -1,24 +1,3 @@
-"""
-Ingestion Module
-
-This module handles the "ingestion" stage of the Yourbench pipeline. It reads raw source
-documents from a specified directory, converts each file to Markdown using MarkItDown,
-and saves the output Markdown files to an output directory. If an LLM is configured for
-image descriptions or more advanced conversions, it is integrated via MarkItDown’s
-`llm_client` and `llm_model`.
-
-Usage:
-    # Example usage within the Yourbench pipeline
-    from ingestion import run
-
-    ingestion_config = {
-        "source_documents_dir": "data/example/raw",
-        "output_dir": "data/example/ingested",
-        "run": True
-    }
-    run({"pipeline": {"ingestion": ingestion_config}})
-"""
-
 import os
 import glob
 from typing import Dict, Any, Optional
@@ -77,10 +56,11 @@ def run(config: Dict[str, Any]) -> None:
     Returns:
         None
     """
-    # === Validate and extract ingestion configuration ===
+    # Validate and extract ingestion configuration 
+    logger.debug(f"Ingestion config: {config.get('pipeline', {}).get('ingestion', {})}")
     ingestion_cfg = config.get("pipeline", {}).get("ingestion", {})
-    if not ingestion_cfg:
-        logger.warning("No ingestion configuration found. Skipping ingestion stage.")
+    if not isinstance(ingestion_cfg, dict):
+        logger.error("Ingestion config is missing or incorrectly formatted.")
         return
 
     if not ingestion_cfg.get("run", False):
@@ -93,14 +73,14 @@ def run(config: Dict[str, Any]) -> None:
         logger.error("source_documents_dir or output_dir not specified. Cannot proceed.")
         return
 
-    # === Prepare output directory ===
+    # Prepare output directory 
     os.makedirs(output_dir, exist_ok=True)
     logger.debug("Ensured output directory exists: {}", output_dir)
 
-    # === (Optional) Resolve a model for advanced image descriptions, etc. ===
+    # (Optional) Resolve a model for advanced image descriptions, etc. 
     md = _initialize_markitdown_with_llm(config)
 
-    # === Convert each file in the source directory ===
+    # Convert each file in the source directory 
     file_paths = glob.glob(os.path.join(source_dir, "**"), recursive=True)
     if not file_paths:
         logger.warning("No files found in source directory: {}", source_dir)
@@ -120,46 +100,20 @@ def run(config: Dict[str, Any]) -> None:
 
 
 def _initialize_markitdown_with_llm(config: Dict[str, Any]) -> MarkItDown:
-    """
-    Optionally initialize MarkItDown with LLM client settings if configured.
-
-    If the ingestion stage has associated model roles that specify an LLM (e.g., for
-    image descriptions), this function attempts to read those settings from the config
-    and initialize MarkItDown accordingly. If no relevant model is found or if the
-    openai.OpenAI library isn't installed, returns a basic MarkItDown instance.
-
-    Parameters:
-        config (Dict[str, Any]): Overall pipeline configuration.
-
-    Returns:
-        MarkItDown: An instance of MarkItDown, possibly with an LLM client attached.
-    """
-
-    # Try retrieving the model role for ingestion
     ingestion_roles = config.get("model_roles", {}).get("ingestion", [])
     model_list = config.get("model_list", [])
 
-    # If there's no model specified for ingestion, just return a basic MarkItDown instance
     if not ingestion_roles or not model_list:
         logger.debug("No LLM configuration found for ingestion. Using default MarkItDown.")
         return MarkItDown()
+        return MarkItDown()
 
-    # For simplicity, pick the first model in ingestion_roles that matches anything in model_list
-    # (Feel free to adapt for more complex logic if needed)
-    matched_model_config: Optional[Dict[str, Any]] = None
-    for role_key in ingestion_roles:
-        for model_conf in model_list:
-            if model_conf.get("model_name") == role_key:
-                matched_model_config = model_conf
-                break
-        if matched_model_config:
-            break
+    matched_model_config = next((m for m in model_list if m["model_name"] in ingestion_roles), None)
 
     if not matched_model_config:
         logger.debug("No matching LLM config found for roles: {}. Using default MarkItDown.", ingestion_roles)
         return MarkItDown()
 
-    # Attempt to initialize the LLM client
     if OpenAI is None:
         logger.warning(
             "OpenAI client library not found. Unable to initialize LLM. Using default MarkItDown."

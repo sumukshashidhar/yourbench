@@ -76,7 +76,7 @@ def run(config: Dict[str, Any]) -> None:
         _use_textstat = False
 
     if not chunking_cfg.get("run", False):
-        logger.info("Chunking stage is disabled. Skipping.")
+        logger.info("Chunking stage is disabled. Skipping")
         return
 
     logger.info("Running chunking stage with minimal chunk tracking...")
@@ -113,7 +113,7 @@ def run(config: Dict[str, Any]) -> None:
         doc_id = row.get("document_id", f"doc_{idx}")
 
         if not doc_text or not doc_text.strip():
-            logger.warning("Document at index {} has empty text. Storing empty chunks.", idx)
+            logger.warning("Document at index {} has empty text. Storing empty chunks", idx)
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
@@ -121,7 +121,7 @@ def run(config: Dict[str, Any]) -> None:
 
         sentences = _split_into_sentences(doc_text)
         if not sentences:
-            logger.warning("No valid sentences found for doc at index {}.", idx)
+            logger.warning("No valid sentences found for doc at index {}", idx)
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])

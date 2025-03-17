@@ -94,7 +94,7 @@ def run(config: Dict[str, Any]) -> None:
     """
     stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
     if not stage_cfg.get("run", False):
-        logger.info("single_shot_question_generation stage is disabled. Skipping.")
+        logger.info("single_shot_question_generation stage is disabled. Skipping")
         return
 
     # === Identify source & output dataset info from config ===
@@ -310,12 +310,13 @@ def run(config: Dict[str, Any]) -> None:
     logger.info("Saving single-shot questions to dataset name '{}'.", output_dataset_name)
     save_dataset(
         dataset=question_dataset,
+        config=config,
         step_name="single_shot_question_generation",
         config=config,
         output_dataset_name=output_dataset_name,
         output_subset=output_subset
     )
-    logger.success("Single-hop question generation completed successfully.")
+    logger.success("Single-shot question generation completed successfully")
 
 
 # === Helper Functions ===
