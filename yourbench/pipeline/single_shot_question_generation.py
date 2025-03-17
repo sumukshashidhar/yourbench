@@ -2,21 +2,35 @@
 # single_shot_question_generation.py
 # ============================================================
 """
-Single-Hop Question Generation Module
+Author: @sumukshashidhar
 
-Minimal approach:
-----------------
-- Each "chunks" entry is now just:
-    { "chunk_id": "...", "chunk_text": "..." }
-- We only store that chunk_id in the final question row (plus document_id),
-  so you can map which chunk is responsible for each question.
-- We do NOT store chunk_location_id or chunk_uuid. 
-- The final question dataset includes columns:
-    [chunk_id, document_id, question, self_answer, estimated_difficulty, ...]
+This module implements the Single-Shot Question Generation stage of the YourBench pipeline.
+
+Overview:
+    - Given a dataset containing document summaries and their associated single-hop chunks, 
+      this stage generates question-answer pairs for each chunk using one or more LLMs.
+    - The generated questions are intended to be standalone, moderately challenging, 
+      and reflect a deep understanding of the provided text chunk.
+
+Usage:
+    1) The pipeline will call the `run()` function from this module if the user configures 
+       `pipeline.single_shot_question_generation.run = True`.
+    2) This function loads the required dataset (specified in the pipeline configuration), 
+       samples chunks if necessary, and calls an LLM to generate questions.
+    3) The output is stored in a new dataset containing each generated question, 
+       an estimated difficulty rating, and the model's self-provided reasoning.
+
+Stage-Specific Logging:
+    - All errors and relevant log messages are recorded in `logs/single_shot_question_generation.log`.
+
+Google-Style Docstrings:
+    - This codebase uses Python type hints and Google-style docstrings for clarity, 
+      maintainability, and consistency.
 """
 
-import json
+import os
 import re
+import json
 import random
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
@@ -38,21 +52,26 @@ from yourbench.utils.prompts import (
     QUESTION_GENERATION_USER_PROMPT,
 )
 
+# Ensure the logs directory exists and set up a stage-specific log file.
+os.makedirs("logs", exist_ok=True)
+logger.add("logs/single_shot_question_generation.log", level="DEBUG")
 
-# === Data Model for storing each question row ===
+
 @dataclass
 class SingleHopQuestionRow:
     """
-    Minimal question row.
+    Represents a single-hop question row derived from a single chunk of text.
 
-    chunk_id: which single-hop chunk this question came from
-    document_id: the original document
-    question: the generated question text
-    self_answer: a plausible answer or reasoning from the model
-    estimated_difficulty: an integer from 1-10
-    self_assessed_question_type: a descriptor for question style or category
-    generating_model: which model produced this question
-    thought_process: a free-form description of how the question was derived
+    Attributes:
+        chunk_id: A string identifier for the chunk from which this question was generated.
+        document_id: Identifier for the parent document.
+        question: The generated question text.
+        self_answer: The LLM-produced short answer or reasoning.
+        estimated_difficulty: An integer from 1-10 indicating the estimated difficulty.
+        self_assessed_question_type: A descriptor for the type or style of question.
+        generating_model: The model used to generate this question.
+        thought_process: Free-form text describing how the question was derived or the
+            model’s chain-of-thought (if provided).
     """
     chunk_id: str
     document_id: str
@@ -66,117 +85,128 @@ class SingleHopQuestionRow:
 
 def run(config: Dict[str, Any]) -> None:
     """
-    Main entry point for the single-shot question generation pipeline stage.
-    
-    This function:
+    Executes the Single-Shot Question Generation stage of the pipeline.
 
-    1. Loads the dataset containing document summaries and single-hop chunks.
-    2. Optionally samples a subset of chunks according to user-defined config 
-       to limit cost (fixed count or fixed percentage).
-    3. For each sampled chunk, calls an LLM to generate question-answer pairs.
-    4. Constructs a final question-level dataset with relevant fields.
-    5. Saves the question dataset to disk or the Hugging Face Hub.
+    This function performs the following steps:
+      1. Checks configuration to ensure this stage is enabled.
+      2. Loads the dataset containing document and chunk information.
+      3. Optionally samples chunks from each document to control inference costs.
+      4. Calls one or more LLMs to generate question-answer pairs for each sampled chunk.
+      5. Parses the JSON from each LLM response and constructs a final question-level dataset.
+      6. Saves the resulting dataset to local storage or the Hugging Face Hub, according to config.
 
-    The YAML config should contain a block like:
+    Args:
+        config (Dict[str, Any]): The overall pipeline configuration dictionary.
+            Expected keys and structure:
+            - pipeline:
+                - single_shot_question_generation:
+                    run (bool): Whether to execute this stage.
+                    source_subset (str): Subset of the dataset to load from.
+                    output_subset (str): Subset of the dataset to save the results to.
+                    additional_instructions (str): Extra prompts or instructions for the LLM.
+                    chunk_sampling: Optional sub-dict specifying how to sample chunks.
+            - model_roles and model_list: Model and inference configuration.
 
-    single_shot_question_generation:
-      run: true
-      source_subset: chunked_documents
-      output_subset: single_shot_questions
-      additional_instructions: "Generate moderately challenging questions"
-      chunk_sampling:
-        mode: "percentage"  # or "count"
-        value: 0.5          # if percentage, 0.5 => 50% of chunks
-                            # if count, e.g., 10 => sample 10 chunks
-        random_seed: 42
-
-    The key "chunk_sampling" is optional. If not present, all chunks will be used.
+    Returns:
+        None. Results are saved directly to a dataset (local or HF Hub).
     """
-    stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
-    if not stage_cfg.get("run", False):
-        logger.info("single_shot_question_generation stage is disabled. Skipping")
+    stage_config = config.get("pipeline", {}).get("single_shot_question_generation", {})
+    if not stage_config.get("run", False):
+        logger.info("single_shot_question_generation stage is disabled. Skipping.")
         return
 
-    # === Identify source & output dataset info from config ===
+    # Identify dataset names and subsets
     source_dataset_name = smart_get_source_dataset_name("single_shot_question_generation", config)
     output_dataset_name = smart_get_output_dataset_name("single_shot_question_generation", config)
     source_subset = smart_get_source_subset("single_shot_question_generation", config)
     output_subset = smart_get_output_subset("single_shot_question_generation", config)
 
     logger.info("Loading chunked dataset for single-shot QG: {}", source_dataset_name)
-    dataset = smart_load_dataset(source_dataset_name, config, dataset_subset=source_subset)
+    try:
+        dataset = smart_load_dataset(source_dataset_name, config, dataset_subset=source_subset)
+    except Exception as err:
+        logger.error(
+            "Failed to load dataset '{0}' for single_shot_question_generation: {1}",
+            source_dataset_name, err
+        )
+        return
+
     logger.info("Loaded dataset with {} rows.", len(dataset))
 
-    # === Prepare system prompt for question generation ===
-    system_msg = {"role": "system", "content": QUESTION_GENERATION_SYSTEM_PROMPT}
+    # Prepare the system message for question generation
+    system_message = {"role": "system", "content": QUESTION_GENERATION_SYSTEM_PROMPT}
 
-    # Will collect all calls to inference and a map back to row
-    all_inference_calls: List[InferenceCall] = []
-    call_index_map: List[tuple] = []
+    inference_calls = []
+    call_index_mapping = []
 
-    # === Helper to sample chunks according to config ===
     def sample_chunks_if_needed(chunks_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Given the config's `chunk_sampling` block, either sample a fraction or 
-        a fixed number of chunks, or return them all if none specified.
+        Samples chunks according to user configuration, either by percentage or count.
+        Returns all chunks if no sampling configuration is provided.
+
+        Args:
+            chunks_list (List[Dict[str, Any]]): A list of chunk dictionaries with keys
+                like "chunk_id" and "chunk_text".
+
+        Returns:
+            List[Dict[str, Any]]: A possibly reduced list of chunk dictionaries.
         """
-        chunk_sampling_cfg = stage_cfg.get("chunk_sampling", {})
-        if not chunk_sampling_cfg:
-            # If no sampling config is provided, return all
+        sampling_config = stage_config.get("chunk_sampling", {})
+        if not sampling_config:
             return chunks_list
 
-        mode = chunk_sampling_cfg.get("mode", "all").lower()  # 'percentage' or 'count'
-        value = chunk_sampling_cfg.get("value", 1.0)
-        rand_seed = chunk_sampling_cfg.get("random_seed", 42)
-        random.seed(rand_seed)
+        mode = sampling_config.get("mode", "all").lower()
+        value = sampling_config.get("value", 1.0)
+        random_seed = sampling_config.get("random_seed", 42)
+        random.seed(random_seed)
 
         total_chunks = len(chunks_list)
         if total_chunks == 0:
             return chunks_list
 
+        # Handle sampling mode
         if mode == "percentage":
-            # e.g. value=0.5 means 50%
-            k = int(total_chunks * float(value))
-            k = max(0, min(k, total_chunks))
-            if k < total_chunks:
-                return random.sample(chunks_list, k)
+            # e.g., value = 0.5 => sample 50% of the chunks
+            num_selected = int(total_chunks * float(value))
+            num_selected = max(0, min(num_selected, total_chunks))
+            if num_selected < total_chunks:
+                return random.sample(chunks_list, num_selected)
             return chunks_list
 
         elif mode == "count":
-            # e.g. value=10 means sample 10 chunks
-            k = min(int(value), total_chunks)
-            if k < total_chunks:
-                return random.sample(chunks_list, k)
+            # e.g., value = 10 => sample 10 chunks
+            num_selected = min(int(value), total_chunks)
+            if num_selected < total_chunks:
+                return random.sample(chunks_list, num_selected)
             return chunks_list
 
-        # Fallback if mode not recognized
         return chunks_list
 
-    # === Loop over each row in the dataset, and sample chunks as needed ===
-    for row_idx, row in enumerate(dataset):
+    # Create inference calls for each row (document)
+    for row_index, row in enumerate(dataset):
         doc_summary = row.get("document_summary", "No summary available.")
-        title = row.get("document_filename", f"Document_{row_idx}")
-        doc_id = row.get("document_id", f"doc_{row_idx}")
+        title = row.get("document_filename", f"Document_{row_index}")
+        doc_id = row.get("document_id", f"doc_{row_index}")
 
         single_hop_chunks = row.get("chunks", [])
         if not isinstance(single_hop_chunks, list) or not single_hop_chunks:
-            logger.debug("No chunks found in row index={} for doc_id={}. Skipping row.", row_idx, doc_id)
+            logger.debug(
+                "No chunks found in row index={} for doc_id={}. Skipping row.",
+                row_index, doc_id
+            )
             continue
 
-        # Sample chunks to control cost
         chosen_chunks = sample_chunks_if_needed(single_hop_chunks)
+        additional_instructions = stage_config.get("additional_instructions", "undergraduate")
 
-        additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
-
-        # For each chunk, build an inference call
-        for c_idx, chunk_dict in enumerate(chosen_chunks):
-            if not isinstance(chunk_dict, dict):
-                # Fallback if old format
-                chunk_text = str(chunk_dict)
-                chunk_id = f"{doc_id}_{c_idx}"
+        # Build user messages for each chunk
+        for chunk_index, chunk_info in enumerate(chosen_chunks):
+            if not isinstance(chunk_info, dict):
+                chunk_text = str(chunk_info)
+                chunk_id = f"{doc_id}_{chunk_index}"
             else:
-                chunk_text = chunk_dict.get("chunk_text", "")
-                chunk_id = chunk_dict.get("chunk_id", f"{doc_id}_{c_idx}")
+                chunk_text = chunk_info.get("chunk_text", "")
+                chunk_id = chunk_info.get("chunk_id", f"{doc_id}_{chunk_index}")
 
             user_prompt_str = QUESTION_GENERATION_USER_PROMPT.format(
                 title=title,
@@ -184,196 +214,230 @@ def run(config: Dict[str, Any]) -> None:
                 text_chunk=chunk_text,
                 additional_instructions=additional_instructions
             )
-            user_msg = {"role": "user", "content": user_prompt_str}
-            inference_call = InferenceCall(
-                messages=[system_msg, user_msg],
-                tags=["single_shot_qa"]
-            )
-            all_inference_calls.append(inference_call)
-            call_index_map.append((row_idx, doc_id, chunk_id))
+            user_message = {"role": "user", "content": user_prompt_str}
 
-    if not all_inference_calls:
-        logger.warning("No calls were created for single_shot_question_generation. Exiting.")
+            inference_call = InferenceCall(messages=[system_message, user_message], tags=["single_shot_qa"])
+            inference_calls.append(inference_call)
+            call_index_mapping.append((row_index, doc_id, chunk_id))
+
+    if not inference_calls:
+        logger.warning("No inference calls were created for single_shot_question_generation.")
         return
 
-    logger.info("Sending {} calls to inference for single-shot question generation.", len(all_inference_calls))
-    # === Run the calls in parallel using the pipeline's inference engine ===
-    responses_dict = run_inference(
-        config=config,
-        step_name="single_shot_question_generation",
-        inference_calls=all_inference_calls,
-    )
+    logger.info("Sending {} calls to inference for single-shot question generation.", len(inference_calls))
+    try:
+        responses_dict = run_inference(
+            config=config,
+            step_name="single_shot_question_generation",
+            inference_calls=inference_calls,
+        )
+    except Exception as err:
+        logger.error("Inference failed for single_shot_question_generation: {}", err)
+        return
 
-    # We'll store the final question dataset rows in memory
+    # Container for final question dataset rows
     question_dataset_rows: List[Dict[str, Any]] = []
 
-    # For each model that responded, we have a list of responses in the same order
+    # Process the responses
     for model_name, model_responses in responses_dict.items():
         logger.info("Processing {} responses from model: {}", len(model_responses), model_name)
 
-        # Check for mismatch in number of responses
-        if len(model_responses) != len(call_index_map):
+        if len(model_responses) != len(call_index_mapping):
             logger.error(
                 "Model '{}' returned {} responses but we have {} calls. Possible mismatch.",
-                model_name, len(model_responses), len(call_index_map)
+                model_name, len(model_responses), len(call_index_mapping)
             )
 
-        # Process each raw response in order
-        for idx, raw_resp in enumerate(model_responses):
-            if idx >= len(call_index_map):
+        for idx, raw_response in enumerate(model_responses):
+            if idx >= len(call_index_mapping):
                 break
-            row_idx, doc_id, chunk_id = call_index_map[idx]
 
-            # Extract JSON containing question-answer pairs
-            json_str = _extract_output_json(raw_resp)
-            if not json_str.strip():
+            row_index, doc_id, chunk_id = call_index_mapping[idx]
+
+            json_text = _extract_output_json(raw_response)
+            if not json_text.strip():
                 logger.warning(
-                    "No parseable JSON found for row_idx={}, chunk_id={}, model={}. Skipping.",
-                    row_idx, chunk_id, model_name
+                    "No parseable JSON found for row_index={}, chunk_id={}, model={}. Skipping.",
+                    row_index, chunk_id, model_name
                 )
                 continue
 
             try:
-                question_answer_pairs = json.loads(json_str)
-            except Exception as e:
+                question_answer_pairs = json.loads(json_text)
+            except Exception as parse_err:
                 logger.warning(
-                    "JSON parse error row_idx={}, chunk_id={}, model={}: {}",
-                    row_idx, chunk_id, model_name, e
+                    "Failed to parse JSON for row_index={}, chunk_id={}, model={}: {}",
+                    row_index, chunk_id, model_name, parse_err
                 )
                 continue
 
             if not isinstance(question_answer_pairs, list):
                 logger.warning(
-                    "Expected a list of QA pairs, got something else for row_idx={}, chunk_id={}, model={}.",
-                    row_idx, chunk_id, model_name
+                    "Expected a list of QA pairs, got something else for row_index={}, chunk_id={}, model={}.",
+                    row_index, chunk_id, model_name
                 )
                 continue
 
             # Process each QA pair
-            for qap in question_answer_pairs:
-                if not isinstance(qap, dict):
+            for pair in question_answer_pairs:
+                if not isinstance(pair, dict):
                     logger.warning(
-                        "Invalid QA pair structure for row_idx={}, chunk_id={}, model={}. Expected dict, got {}",
-                        row_idx, chunk_id, model_name, type(qap).__name__
+                        "Invalid QA pair structure at row_index={}, chunk_id={}, model={}. Expected dict, got {}",
+                        row_index, chunk_id, model_name, type(pair).__name__
                     )
                     continue
 
-                # Extract fields robustly
-                question_text = qap.get("question", "").strip()
+                question_text = pair.get("question", "").strip()
                 if not question_text:
-                    logger.debug("Empty question found, skipping. row_idx={}, chunk_id={}", row_idx, chunk_id)
+                    logger.debug(
+                        "Empty question found; skipping. row_index={}, chunk_id={}", 
+                        row_index, chunk_id
+                    )
                     continue
-                self_answer = qap.get("answer", "").strip()
 
-                # Difficulty
-                difficulty_raw = qap.get("estimated_difficulty", 5)
+                self_answer = pair.get("answer", "").strip()
+
+                difficulty_raw = pair.get("estimated_difficulty", 5)
                 try:
                     difficulty_val = int(difficulty_raw)
                 except (ValueError, TypeError):
                     logger.warning("Invalid estimated_difficulty '{}', defaulting to 5", difficulty_raw)
                     difficulty_val = 5
 
-                # Question type
-                qtype = qap.get("question_type", "unknown")
-                if not isinstance(qtype, str):
-                    qtype = str(qtype)
+                question_type = pair.get("question_type", "unknown")
+                if not isinstance(question_type, str):
+                    question_type = str(question_type)
 
-                # Thought process
-                thought_process = qap.get("thought_process", "")
+                thought_process = pair.get("thought_process", "")
                 if not isinstance(thought_process, str):
                     thought_process = str(thought_process)
 
-                # Construct row object
+                # Construct final data row
                 question_row = SingleHopQuestionRow(
                     chunk_id=chunk_id,
                     document_id=doc_id,
                     question=question_text,
                     self_answer=self_answer,
                     estimated_difficulty=difficulty_val,
-                    self_assessed_question_type=qtype,
+                    self_assessed_question_type=question_type,
                     generating_model=model_name,
                     thought_process=thought_process
                 )
                 question_dataset_rows.append(question_row.__dict__)
 
     if not question_dataset_rows:
-        logger.warning("No valid questions produced in single_shot_question_generation. Exiting.")
+        logger.warning("No valid questions produced in single_shot_question_generation.")
         return
 
-    logger.info("Constructing a final dataset with {} single-hop questions.", len(question_dataset_rows))
-    # Convert our list of dicts to an HF Dataset
-    col_names = question_dataset_rows[0].keys()
-    final_data = {c: [row[c] for row in question_dataset_rows] for c in col_names}
+    logger.info("Constructing final dataset with {} single-hop questions.", len(question_dataset_rows))
+    try:
+        column_names = list(question_dataset_rows[0].keys())
+    except IndexError:
+        logger.error("No question rows available to generate dataset columns. Exiting.")
+        return
+
+    # Convert to HF Dataset
+    final_data = {
+        column: [row[column] for row in question_dataset_rows] for column in column_names
+    }
     question_dataset = Dataset.from_dict(final_data)
 
-    # === Save the question dataset ===
-    logger.info("Saving single-shot questions to dataset name '{}'.", output_dataset_name)
-    save_dataset(
-        dataset=question_dataset,
-        config=config,
-        step_name="single_shot_question_generation",
-        config=config,
-        output_dataset_name=output_dataset_name,
-        output_subset=output_subset
-    )
-    logger.success("Single-shot question generation completed successfully")
+    # Save the dataset
+    logger.info("Saving single-shot questions to dataset '{}'.", output_dataset_name)
+    try:
+        save_dataset(
+            dataset=question_dataset,
+            config=config,
+            step_name="single_shot_question_generation",
+            output_dataset_name=output_dataset_name,
+            output_subset=output_subset
+        )
+        logger.success("Single-shot question generation completed successfully.")
+    except Exception as save_err:
+        logger.error("Error saving single-shot question dataset: {}", save_err)
 
-
-# === Helper Functions ===
 
 def _extract_tag_content(text: str, tag: str) -> str:
     """
-    Extract the text enclosed in <tag>...</tag>.
-    Returns empty string if not found.
+    Extracts text enclosed in the specified XML tag from a given string.
+
+    Args:
+        text (str): The source string potentially containing XML tags.
+        tag (str): The name of the XML tag to extract content from.
+
+    Returns:
+        str: The extracted content within <tag> ... </tag>, or empty if none found.
     """
     pattern = fr"<{tag}\s*>([\s\S]*?)</{tag}>"
     match = re.search(pattern, text)
-    return match.group(1).strip() if match else ""
+    if match:
+        return match.group(1).strip()
+    return ""
 
 
 def _extract_output_json(raw_response: str) -> str:
     """
-    Attempt to extract JSON from the model response by searching
-    for <output_json> tags or fenced code blocks with 'json'.
+    Extracts JSON content from the model response by searching
+    for <output_json> blocks or fenced code blocks with `json`.
+
+    Args:
+        raw_response (str): The raw string returned by the model.
+
+    Returns:
+        str: The JSON content as a string, or an empty string if not found.
     """
-    # 1) Check <output_json> block
+    # Check for <output_json> block first
     extracted = _extract_tag_content(raw_response, "output_json")
     if extracted.strip():
         sanitized = _maybe_strip_triple_backticks(extracted)
         if sanitized.strip():
             return sanitized
 
-    # 2) Check ```json fenced block
-    fence_pattern = r"```json\s*([\s\S]*?)\s*```"
-    fence_match = re.search(fence_pattern, raw_response)
-    if fence_match:
-        return fence_match.group(1).strip()
+    # Check for ```json fenced code block
+    fenced_pattern = r"```json\s*([\s\S]*?)\s*```"
+    fenced_match = re.search(fenced_pattern, raw_response)
+    if fenced_match:
+        return fenced_match.group(1).strip()
 
-    # 3) Attempt a best-effort bracket-based extraction
+    # Fallback bracket-based extraction
     fallback_candidates = _best_effort_json_extract(raw_response)
     return fallback_candidates[0] if fallback_candidates else ""
 
 
 def _maybe_strip_triple_backticks(text_in: str) -> str:
     """
-    If the text is wrapped in triple backticks (```), remove them.
+    Removes triple backticks (``` or ```json) from the beginning and end of a string,
+    if present.
+
+    Args:
+        text_in (str): The string that may be wrapped in triple backticks.
+
+    Returns:
+        str: The unwrapped text or the original string if no wrapping was found.
     """
     pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
-    m = re.match(pattern, text_in)
-    if m:
-        return m.group(1)
+    match = re.match(pattern, text_in)
+    if match:
+        return match.group(1)
     return text_in
 
 
 def _best_effort_json_extract(full_text: str) -> List[str]:
     """
-    Search for bracket-delimited content that might be valid JSON.
+    Searches for bracket-delimited content (curly or square) that might be valid JSON.
     Returns a list of candidate strings.
+
+    Args:
+        full_text (str): The complete text from which to extract JSON-like content.
+
+    Returns:
+        List[str]: A list of candidate JSON strings. May be empty if none found.
     """
     pattern = r"([\[{].*?[\]}])"
     matches = re.findall(pattern, full_text, flags=re.DOTALL)
     candidates = []
-    for m in matches:
-        if (m.startswith("[") and m.endswith("]")) or (m.startswith("{") and m.endswith("}")):
-            candidates.append(m.strip())
+    for match_str in matches:
+        if (match_str.startswith("[") and match_str.endswith("]")) or \
+           (match_str.startswith("{") and match_str.endswith("}")):
+            candidates.append(match_str.strip())
     return candidates
