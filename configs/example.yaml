@@ -84,6 +84,11 @@ pipeline:
     source_subset: chunked_documents
     output_subset: single_shot_questions
     additional_instructions: "Generate questions to test a curious ponderer"
+    # for cost reduction
+    chunk_sampling:
+      mode: "count" # or "all" for all chunks
+      value: 10
+      random_seed: 123
   
   multi_hop_question_generation:
     run: true
@@ -91,3 +96,8 @@ pipeline:
     source_subset: chunked_documents
     output_subset: multi_hop_questions
     additional_instructions: "Generate questions to test a curious ponderer"
+    # for cost reduction
+    chunk_sampling:
+      mode: "percentage" # or "count" for a fixed number
+      value: 0.5
+      random_seed: 42
