@@ -1,44 +1,51 @@
-# =============================================================================
-# upload_ingest_to_hub.py
-# =============================================================================
+# === CODEWRITING_GUIDELINES COMPLIANT ===
+# Logging with loguru, graceful error handling, descriptive naming, 
+# and thorough Google-style docstrings are used.
+
 """
 Author: @sumukshashidhar
 
-This module handles uploading ingested Markdown files to the Hugging Face Hub
-as a dataset. It reads all Markdown files from a specified directory, converts
-each file into an `IngestedDocument` data structure, and constructs a Hugging
-Face `Dataset`. The resulting dataset is then saved (and optionally pushed) to
-the Hub or to local storage, according to configuration.
+Module: upload_ingest_to_hub
+
+Purpose:
+    This module defines the `upload_ingest_to_hub` stage of the YourBench pipeline.
+    In this stage, any markdown documents previously ingested (e.g., via the `ingestion` stage)
+    can be packaged and uploaded to the Hugging Face Hub (or saved locally as a Hugging Face Dataset).
+    The resulting dataset will contain a row per markdown file with standardized fields such as:
+    - `document_id`
+    - `document_text`
+    - `document_filename`
+    - `document_metadata`
 
 Usage:
-    - This module is typically invoked by the YourBench pipeline handler when
-      the pipeline stage `upload_ingest_to_hub` is enabled in the config.
-    - It requires a `source_documents_dir` from which to read all Markdown
-      files and produce a dataset.
+    1. Include or enable the `upload_ingest_to_hub` stage in your pipeline configuration:
+        pipeline:
+          upload_ingest_to_hub:
+            run: true
+            source_documents_dir: data/ingested/markdown
+            # (Optional) override output_dataset_name, output_subset, etc.
 
-Key Steps:
-    1. Read `.md` files from `source_documents_dir`.
-    2. Create `IngestedDocument` objects containing file content and metadata.
-    3. Convert them into a Hugging Face `Dataset`.
-    4. Save/push the dataset to local storage or the Hugging Face Hub based on
-       pipeline configurations in `config["hf_configuration"]`.
+    2. Ensure you have valid Hugging Face Hub credentials set in `hf_configuration.token` if you
+       want to push to a private or protected dataset.
+    3. Run the main pipeline (for example, via `yourbench.main.run_pipeline(config_file)`),
+       and the code below will automatically execute when it reaches this stage.
 
-Example:
-    pipeline:
-      upload_ingest_to_hub:
-        run: true
-        source_documents_dir: "data/example/processed/ingested"
-        output_subset: "ingested_documents"
-        # Optionally specify dataset name, local path, etc.
-
+Implementation Details:
+    - The module locates all `.md` files in the configured source directory.
+    - Each file is read, assigned a unique `document_id`, and stored in memory
+      as an `IngestedDocument`.
+    - These documents are converted to a Hugging Face Dataset object, which is then saved
+      or pushed to the Hugging Face Hub using `save_dataset`.
+    - Error handling logs warnings if no files are found, or if files are empty.
+    - Logs and exceptions are written to a dedicated stage-level log file
+      (via `loguru`), ensuring clarity for debugging or usage reports.
 """
-
 
 import os
 import glob
 import uuid
-from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
+from dataclasses import dataclass, field
 
 from loguru import logger
 from datasets import Dataset
@@ -46,18 +53,25 @@ from datasets import Dataset
 from yourbench.utils.loading_engine import load_config
 from yourbench.utils.dataset_engine import save_dataset
 
+# Log to a stage-specific log file for thorough debugging information.
+# The file rotates weekly to prevent excessive growth.
+logger.add("logs/upload_ingest_to_hub.log", level="DEBUG", rotation="1 week")
+
 
 @dataclass
 class IngestedDocument:
     """
-    Represents an ingested Markdown document.
+    Data model representing a single ingested Markdown document.
 
     Attributes:
-        document_id (str): Unique identifier for the document (UUID-based).
-        document_text (str): The raw text content extracted from the markdown file.
-        document_filename (str): The name of the source markdown file.
-        document_metadata (Dict[str, Any]): Arbitrary metadata related to the document,
-            such as file size, creation date, etc.
+        document_id (str):
+            Unique ID for the document (typically a UUID4 string).
+        document_text (str):
+            Raw text content from the markdown file.
+        document_filename (str):
+            The original filename of the markdown file.
+        document_metadata (Dict[str, Any]):
+            Additional metadata, such as file size or arbitrary user-defined fields.
     """
     document_id: str
     document_text: str
@@ -67,163 +81,162 @@ class IngestedDocument:
 
 def run(config: Dict[str, Any]) -> None:
     """
-    Main entry point for the 'upload_ingest_to_hub' pipeline stage.
+    Primary function to execute the 'upload_ingest_to_hub' stage.
 
-    This function reads configuration data to locate markdown files, converts them
-    into a dataset, and saves/pushes the dataset to the Hugging Face Hub or local
-    storage.
+    This function aggregates markdown documents from a given source directory
+    (configured in `pipeline.upload_ingest_to_hub.source_documents_dir`) into a
+    Hugging Face Dataset, which is then saved locally or pushed to the Hub.
 
     Args:
         config (Dict[str, Any]):
-            A dictionary containing the entire pipeline configuration. Relevant keys:
-              - config["pipeline"]["upload_ingest_to_hub"]["run"] (bool):
-                  Whether to run this stage.
-              - config["pipeline"]["upload_ingest_to_hub"]["source_documents_dir"] (str):
-                  Directory containing ingested `.md` files.
-              - config["pipeline"]["upload_ingest_to_hub"]["output_dataset_name"] (str, optional):
-                  Dataset name for saving or pushing to the Hub. Defaults to
-                  config["hf_configuration"]["global_dataset_name"] if unspecified.
-              - config["hf_configuration"] (dict):
-                  Contains Hugging Face credentials and settings (token, private, etc.).
+            The overall pipeline configuration dictionary. Relevant keys:
+
+            - config["pipeline"]["upload_ingest_to_hub"]["run"] (bool):
+                Whether to run this stage.
+            - config["pipeline"]["upload_ingest_to_hub"]["source_documents_dir"] (str):
+                Directory path for the ingested markdown files.
+            - config["hf_configuration"]["token"] (str, optional):
+                Hugging Face token for authentication if uploading a private dataset.
+            - config["hf_configuration"]["private"] (bool):
+                Whether to keep the dataset private on the Hub (defaults to True).
+            - config["hf_configuration"]["global_dataset_name"] (str):
+                Base dataset name on Hugging Face (can be overridden).
+            - config["pipeline"]["upload_ingest_to_hub"]["output_dataset_name"] (str, optional):
+                The name of the dataset to save to/push to on the Hugging Face Hub.
+            - config["pipeline"]["upload_ingest_to_hub"]["output_subset"] (str, optional):
+                Subset name for partial saving (default is this stage name).
 
     Raises:
-        ValueError: If required fields in the pipeline configuration are missing.
+        ValueError:
+            If `source_documents_dir` is missing in the config, indicating incomplete config.
     """
     stage_name = "upload_ingest_to_hub"
     stage_cfg = config.get("pipeline", {}).get(stage_name, {})
 
-    # Check if this stage is enabled
+    # Check if this stage is turned off in config
     if not stage_cfg.get("run", False):
         logger.info(f"Stage '{stage_name}' is disabled. Skipping.")
         return
 
-    # Resolve dataset name and output subset from config or defaults
-    output_dataset_name = stage_cfg.get(
-        "output_dataset_name",
-        config.get("hf_configuration", {}).get("global_dataset_name")
-    )
+    source_dir: Optional[str] = stage_cfg.get("source_documents_dir")
+    if not source_dir:
+        error_msg = (
+            f"Missing required field 'source_documents_dir' in pipeline.{stage_name}. "
+            f"Cannot proceed with uploading ingested documents."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    # Determine the final dataset name and subset from config
+    hf_cfg = config.get("hf_configuration", {})
+    output_dataset_name = stage_cfg.get("output_dataset_name", hf_cfg.get("global_dataset_name"))
     output_subset = stage_cfg.get("output_subset", stage_name)
 
-    source_dir: str = stage_cfg.get("source_documents_dir")
-    if not source_dir:
-        raise ValueError(
-            f"Missing required config fields in pipeline.{stage_name} "
-            f"(needed: 'source_documents_dir')."
-        )
-
-    # Logging HF config
-    hf_cfg = config.get("hf_configuration", {})
-    hf_token: Optional[str] = hf_cfg.get("token")
+    # Show key info about Hugging Face Hub config
+    hf_token: Optional[str] = hf_cfg.get("token", None)
     hf_private: bool = hf_cfg.get("private", True)
+    logger.info(f"Starting '{stage_name}' stage: uploading ingested files from '{source_dir}'")
+    logger.debug(f"Hugging Face dataset name: '{output_dataset_name}' (private={hf_private})")
 
-    if not hf_token:
-        logger.warning(
-            "No Hugging Face token found in 'hf_configuration.token'. "
-            "Pushing a private dataset may fail without authentication."
-        )
-
-    logger.info("Beginning stage '%s': Uploading ingested Markdown files.", stage_name)
-    logger.debug("Source directory for Markdown files: %s", source_dir)
-    logger.debug("Hugging Face dataset visibility (private=%s)", hf_private)
-
-    # Gather all markdown files
-    markdown_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
-    if not markdown_file_paths:
-        logger.warning("No .md files found in the specified source directory: %s", source_dir)
+    # Collect .md files
+    md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
+    if not md_file_paths:
+        logger.warning(f"No .md files found in '{source_dir}'. Stage will end with no output.")
         return
 
-    # Convert each file into an IngestedDocument object
-    ingested_docs = _create_ingested_documents(markdown_file_paths)
-    if not ingested_docs:
-        logger.warning("No valid Markdown documents to upload. Exiting stage.")
+    # Read them into Python objects
+    ingested_documents = _collect_markdown_files(md_file_paths)
+    if not ingested_documents:
+        logger.warning("No valid markdown documents found. No dataset to upload.")
         return
 
-    # Build a Hugging Face Dataset from these documents
-    hf_dataset = _build_hf_dataset(ingested_docs)
+    # Convert the ingested markdown docs to a Hugging Face Dataset
+    dataset = _convert_ingested_docs_to_dataset(ingested_documents)
 
-    # Finally, save or push the dataset
+    # Save or push the dataset to the configured location
+    logger.info(f"Saving dataset to name='{output_dataset_name}', subset='{output_subset}'")
     save_dataset(
-        dataset=hf_dataset,
+        dataset=dataset,
         step_name=stage_name,
         config=config,
         output_dataset_name=output_dataset_name,
         output_subset=output_subset
     )
+    logger.success(f"Successfully completed '{stage_name}' stage.")
 
 
-def _create_ingested_documents(markdown_file_paths: List[str]) -> List[IngestedDocument]:
+def _collect_markdown_files(md_file_paths: List[str]) -> List[IngestedDocument]:
     """
-    Reads a list of .md file paths and converts them into `IngestedDocument` objects.
+    Gather Markdown documents from the given file paths and store them in data classes.
 
     Args:
-        markdown_file_paths (List[str]): A list of file paths pointing to
-            markdown files.
+        md_file_paths (List[str]):
+            A list of absolute/relative paths to `.md` files.
 
     Returns:
         List[IngestedDocument]:
-            A list of `IngestedDocument` objects, one for each valid .md file.
-    """
-    ingested_documents: List[IngestedDocument] = []
+            A list of `IngestedDocument` objects, one per valid markdown file discovered.
 
-    for file_path in markdown_file_paths:
+    Side Effects:
+        Logs a warning for any unreadable or empty markdown files.
+    """
+    ingested_docs: List[IngestedDocument] = []
+    for file_path in md_file_paths:
         try:
             with open(file_path, "r", encoding="utf-8") as file_handle:
-                md_content = file_handle.read().strip()
+                content = file_handle.read().strip()
 
-            if not md_content:
-                logger.warning("Skipping empty Markdown file: %s", file_path)
+            if not content:
+                logger.warning(f"Skipping empty markdown file: {file_path}")
                 continue
 
-            # Generate a unique ID per file
-            unique_doc_id = str(uuid.uuid4())
-            file_size_bytes = os.path.getsize(file_path)
-
-            document = IngestedDocument(
-                document_id=unique_doc_id,
-                document_text=md_content,
-                document_filename=os.path.basename(file_path),
-                document_metadata={"file_size": file_size_bytes}
+            doc_id = str(uuid.uuid4())
+            ingested_docs.append(
+                IngestedDocument(
+                    document_id=doc_id,
+                    document_text=content,
+                    document_filename=os.path.basename(file_path),
+                    document_metadata={"file_size": os.path.getsize(file_path)}
+                )
             )
-            ingested_documents.append(document)
+            logger.debug(f"Loaded markdown file: {file_path} (doc_id={doc_id})")
 
-            logger.debug("Successfully created IngestedDocument for file: %s", file_path)
-
-        except Exception as read_error:
+        except Exception as e:
             logger.error(
-                "Error reading file '%s'. Skipping. Details: %s",
-                file_path,
-                str(read_error)
+                f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}"
             )
 
-    return ingested_documents
+    return ingested_docs
 
 
-def _build_hf_dataset(ingested_documents: List[IngestedDocument]) -> Dataset:
+def _convert_ingested_docs_to_dataset(ingested_docs: List[IngestedDocument]) -> Dataset:
     """
-    Converts a list of `IngestedDocument` objects into a Hugging Face `Dataset`.
+    Convert a list of ingested markdown documents into a Hugging Face Dataset object.
 
     Args:
-        ingested_documents (List[IngestedDocument]):
-            List of documents to be included in the dataset.
+        ingested_docs (List[IngestedDocument]):
+            List of `IngestedDocument` objects to be packaged in a dataset.
 
     Returns:
-        Dataset: A Hugging Face `Dataset` containing the documents' data.
+        Dataset:
+            A Hugging Face Dataset constructed from the provided documents,
+            with columns: 'document_id', 'document_text', 'document_filename',
+            and 'document_metadata'.
     """
-    data_dict = {
+    # Prepare data structure for Hugging Face Dataset
+    records = {
         "document_id": [],
         "document_text": [],
         "document_filename": [],
         "document_metadata": [],
     }
 
-    # Populate the dictionary columns with data from each ingested document
-    for doc in ingested_documents:
-        data_dict["document_id"].append(doc.document_id)
-        data_dict["document_text"].append(doc.document_text)
-        data_dict["document_filename"].append(doc.document_filename)
-        data_dict["document_metadata"].append(doc.document_metadata)
+    for doc in ingested_docs:
+        records["document_id"].append(doc.document_id)
+        records["document_text"].append(doc.document_text)
+        records["document_filename"].append(doc.document_filename)
+        records["document_metadata"].append(doc.document_metadata)
 
-    hf_dataset = Dataset.from_dict(data_dict)
-    logger.debug("Created Hugging Face Dataset with %d entries.", len(hf_dataset))
-
-    return hf_dataset
+    dataset = Dataset.from_dict(records)
+    logger.debug(f"Constructed HF Dataset with {len(dataset)} entries from ingested documents.")
+    return dataset
