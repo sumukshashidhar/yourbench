@@ -47,7 +47,7 @@ Error Handling and Logging:
 
 """
 
-import itertools  # <--- Added to generate all combinations for multi-hop chunking.
+import itertools
 import os
 import random
 import re
