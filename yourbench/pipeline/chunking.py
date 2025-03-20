@@ -159,7 +159,7 @@ def run(config: Dict[str, Any]) -> None:
     """
     # Retrieve chunking configuration from config
     chunking_config = config.get("pipeline", {}).get("chunking", {})
-    if not chunking_config.get("run", False):
+    if chunking_config is None or not chunking_config.get("run", False):
         logger.info("Chunking stage is disabled. Skipping.")
         return
 
@@ -190,7 +190,7 @@ def run(config: Dict[str, Any]) -> None:
 
     # Check debug setting
     debug_mode: bool = config.get("settings", {}).get("debug", False)
-    if not debug_mode:
+    if debug_mode is False:
         # If not debug mode, skip perplexity and readability to save time
         logger.debug("Skipping perplexity and readability metrics (debug mode off).")
         local_perplexity_metric = None
@@ -203,7 +203,7 @@ def run(config: Dict[str, Any]) -> None:
     try:
         # Extract model name from config if available
         model_name_list = config.get("model_roles", {}).get("chunking", [])
-        if not model_name_list:
+        if model_name_list is None or len(model_name_list) == 0:
             logger.info(
                 f"No chunking model specified in config['model_roles']['chunking']. "
                 f"Using default 'intfloat/multilingual-e5-large-instruct'."
@@ -233,7 +233,7 @@ def run(config: Dict[str, Any]) -> None:
         doc_id = row.get("document_id", f"doc_{idx}")
 
         # If text is empty or missing
-        if not doc_text or not doc_text.strip():
+        if doc_text is None or not doc_text.strip():
             logger.warning(f"Document at index {idx} has empty text. Storing empty chunks.")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
@@ -242,7 +242,7 @@ def run(config: Dict[str, Any]) -> None:
 
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
-        if not sentences:
+        if sentences is None or len(sentences) == 0:
             logger.warning(f"No valid sentences found for doc at index {idx}, doc_id={doc_id}.")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
@@ -290,7 +290,7 @@ def run(config: Dict[str, Any]) -> None:
         all_chunk_info_metrics.append(chunk_metrics)
 
     # Optional: Save aggregated similarity plot
-    if all_similarities and debug_mode:
+    if all_similarities is not None and len(all_similarities) > 0 and debug_mode:
         _plot_aggregated_similarities(all_similarities)
 
     # Convert dataclasses back to dicts for safe addition to the dataset
@@ -340,7 +340,7 @@ def _split_into_sentences(text: str) -> list[str]:
     """
     # Replace newlines with spaces for consistency
     normalized_text = text.replace("\n", " ").strip()
-    if not normalized_text:
+    if normalized_text is None or normalized_text == "":
         return []
 
     # Split using capturing parentheses to retain delimiters, then recombine.
@@ -375,7 +375,7 @@ def _compute_embeddings(
     Returns:
         list[torch.Tensor]: A list of PyTorch tensors (one per sentence).
     """
-    if not texts:
+    if texts is None or len(texts) == 0:
         return []
 
     batch_dict = tokenizer(texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt").to(device)
@@ -435,7 +435,7 @@ def _chunk_document(
         # then store this sentence as its own chunk.
         if sentence_token_count >= l_max_tokens:
             # Dump the current chunk
-            if current_chunk:
+            if len(current_chunk) > 0:
                 chunk_str = " ".join(current_chunk)
                 chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
                 chunk_index += 1
@@ -469,7 +469,7 @@ def _chunk_document(
                 current_len = 0
 
     # Any leftover
-    if current_chunk:
+    if len(current_chunk) > 0:
         chunk_str = " ".join(current_chunk)
         chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
 
@@ -504,7 +504,7 @@ def _multihop_chunking(
     Returns:
         list[MultiHopChunk]: The resulting multi-hop chunk objects.
     """
-    if not single_hop_chunks:
+    if single_hop_chunks is None or len(single_hop_chunks) == 0:
         return []
 
     total_single_hops = len(single_hop_chunks)
@@ -580,7 +580,7 @@ def _compute_info_density_metrics(
 
         # Perplexity
         ppl_score: float = 0.0
-        if local_perplexity_metric and token_count > 0:
+        if local_perplexity_metric is not None and token_count > 0:
             try:
                 result = local_perplexity_metric.compute(data=[chunk_text], batch_size=1)
                 ppl_score = result.get("mean_perplexity", 0.0)
@@ -596,7 +596,7 @@ def _compute_info_density_metrics(
         # Readability
         flesch_reading_ease = 0.0
         gunning_fog = 0.0
-        if local_use_textstat and chunk_text.strip():
+        if local_use_textstat is True and chunk_text.strip():
             try:
                 flesch_reading_ease = float(textstat.flesch_reading_ease(chunk_text))
                 gunning_fog = float(textstat.gunning_fog(chunk_text))
@@ -628,7 +628,7 @@ def _plot_aggregated_similarities(all_similarities: list[list[float]]) -> None:
             sub-list is the array of consecutive sentence similarities for
             a particular document.
     """
-    if not all_similarities:
+    if all_similarities is None or len(all_similarities) == 0:
         logger.debug("No similarities to plot. Skipping aggregated similarity plot.")
         return
 
