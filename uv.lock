@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = "==3.12.*"
 resolution-markers = [
     "sys_platform != 'linux'",
@@ -1792,6 +1793,7 @@ dependencies = [
     { name = "nltk" },
     { name = "pandas" },
     { name = "plotly" },
+    { name = "rich" },
     { name = "ruff" },
     { name = "scikit-learn" },
     { name = "seaborn" },
@@ -1816,6 +1818,7 @@ requires-dist = [
     { name = "nltk", specifier = ">=3.9.1" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "plotly", specifier = ">=5.24.1" },
+    { name = "rich", specifier = ">=13.9.4" },
     { name = "ruff", specifier = ">=0.8.4" },
     { name = "scikit-learn", specifier = ">=1.6.0" },
     { name = "seaborn", specifier = ">=0.13.2" },

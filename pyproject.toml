@@ -25,6 +25,7 @@ dependencies = [
     "tqdm>=4.67.1",
     "transformers>=4.48.1",
     "gradio>=5.13.1",
+    "rich>=13.9.4",
 ]
 
 [tool.uv.sources]
