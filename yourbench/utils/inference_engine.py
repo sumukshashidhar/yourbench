@@ -14,6 +14,7 @@ from huggingface_hub import AsyncInferenceClient
 from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
 
+
 load_dotenv()
 
 GLOBAL_TIMEOUT = 3600
