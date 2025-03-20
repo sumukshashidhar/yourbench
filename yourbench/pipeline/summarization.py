@@ -64,50 +64,6 @@ from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
 
-def _run_inference_with_timeout(
-    config: Dict[str, Any], inference_calls: List[InferenceCall], stage_name: str, timeout_seconds: float
-) -> Optional[Dict[str, List[str]]]:
-    """
-    Run inference with a forced timeout, preventing infinite hang.
-
-    Args:
-        config (Dict[str, Any]): Pipeline configuration dictionary.
-        inference_calls (List[InferenceCall]): A list of calls to be passed to run_inference.
-        stage_name (str): The pipeline stage name (e.g. "summarization").
-        timeout_seconds (float): Timeout in seconds before we consider it a failure.
-
-    Returns:
-        Optional[Dict[str, List[str]]]: Dictionary of responses per model. If
-        timed out or errored, returns None.
-    """
-    logger.info("Attempting inference with a maximum timeout of {} seconds...", timeout_seconds)
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(run_inference, config, stage_name, inference_calls)
-        try:
-            result = future.result(timeout=timeout_seconds)
-            if result is None or not isinstance(result, dict):
-                logger.error("Inference returned None or invalid result type: {}", type(result))
-                return None
-
-            if len(result) == 0:
-                logger.error("Inference returned an empty dictionary")
-                return None
-
-            for model_name, responses in result.items():
-                if not responses:
-                    logger.warning("Model '{}' returned empty response list", model_name)
-                else:
-                    logger.info("Received {} responses from model '{}'", len(responses), model_name)
-
-            return result
-
-        except FuturesTimeoutError:
-            logger.error("Inference timed out after {} seconds.", timeout_seconds)
-        except Exception as exc:
-            logger.error("Error during inference: {}", str(exc))
-
-    return None
-
 
 def duplicate_rows(dataset: Dict[str, Any], num_duplicates: int = 1) -> Dict[str, List[Any]]:
     """
@@ -183,10 +139,11 @@ def run(config: Dict[str, Any]) -> None:
 
     logger.info("Prepared {} inference calls for summarization.", len(inference_calls))
 
-    # 3) Perform summarization with timeout
-    timeout_seconds: float = stage_cfg.get("timeout_seconds", 1800.0)
-    response_dict = _run_inference_with_timeout(
-        config=config, inference_calls=inference_calls, stage_name="summarization", timeout_seconds=timeout_seconds
+    # 3) Perform summarization
+    response_dict = run_inference(
+        config=config,
+        step_name="summarization",
+        inference_calls=inference_calls,
     )
     if response_dict is None:
         logger.error("Inference for summarization returned no data.")
