@@ -76,7 +76,7 @@ try:
     logger.info("Loaded 'perplexity' metric with model_id='gpt2'.")
 except Exception as perplexity_load_error:
     logger.warning(
-        "Could not load perplexity metric from 'evaluate'. Skipping perplexity. Error: {}", perplexity_load_error
+        f"Could not load perplexity metric from 'evaluate'. Skipping perplexity. Error: {perplexity_load_error}"
     )
     _perplexity_metric = None
 
@@ -173,9 +173,9 @@ def run(config: Dict[str, Any]) -> None:
         output_subset = smart_get_output_subset("chunking", config)
 
         dataset = smart_load_dataset(source_dataset_name, config, source_subset)
-        logger.debug("Loaded dataset '{}' with {} rows for chunking.", source_dataset_name, len(dataset))
+        logger.debug(f"Loaded dataset '{source_dataset_name}' with {len(dataset)} rows for chunking.")
     except Exception as ds_error:
-        logger.error("Failed to load dataset: {}", ds_error)
+        logger.error(f"Failed to load dataset: {ds_error}")
         logger.warning("Chunking stage cannot proceed. Exiting.")
         raise ds_error
 
@@ -205,19 +205,19 @@ def run(config: Dict[str, Any]) -> None:
         model_name_list = config.get("model_roles", {}).get("chunking", [])
         if not model_name_list:
             logger.info(
-                "No chunking model specified in config['model_roles']['chunking']. "
-                "Using default 'intfloat/multilingual-e5-large-instruct'."
+                f"No chunking model specified in config['model_roles']['chunking']. "
+                f"Using default 'intfloat/multilingual-e5-large-instruct'."
             )
             model_name = "intfloat/multilingual-e5-large-instruct"
         else:
             model_name = model_name_list[0]
 
-        logger.info("Using chunking model: '{}'", model_name)
+        logger.info(f"Using chunking model: '{model_name}'")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModel.from_pretrained(model_name).to(device).eval()
     except Exception as model_error:
-        logger.error("Error loading tokenizer/model '{}': {}", model_name, model_error)
+        logger.error(f"Error loading tokenizer/model '{model_name}': {model_error}")
         logger.warning("Chunking stage cannot proceed. Exiting.")
         return
 
@@ -234,7 +234,7 @@ def run(config: Dict[str, Any]) -> None:
 
         # If text is empty or missing
         if not doc_text or not doc_text.strip():
-            logger.warning("Document at index {} has empty text. Storing empty chunks.", idx)
+            logger.warning(f"Document at index {idx} has empty text. Storing empty chunks.")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
@@ -243,7 +243,7 @@ def run(config: Dict[str, Any]) -> None:
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
         if not sentences:
-            logger.warning("No valid sentences found for doc at index {}, doc_id={}.", idx, doc_id)
+            logger.warning(f"No valid sentences found for doc at index {idx}, doc_id={doc_id}.")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
@@ -321,10 +321,10 @@ def run(config: Dict[str, Any]) -> None:
     try:
         save_dataset(dataset, "chunking", config, output_dataset_name, output_subset)
         logger.success(
-            "Chunking stage complete. Dataset saved to '{}', subset '{}'.", output_dataset_name, output_subset
+            f"Chunking stage complete. Dataset saved to '{output_dataset_name}', subset '{output_subset}'."
         )
     except Exception as save_error:
-        logger.error("Failed to save chunked dataset for doc '{}': {}", output_dataset_name, save_error)
+        logger.error(f"Failed to save chunked dataset for doc '{output_dataset_name}': {save_error}")
 
 
 def _split_into_sentences(text: str) -> List[str]:
@@ -585,7 +585,7 @@ def _compute_info_density_metrics(
                 result = local_perplexity_metric.compute(data=[chunk_text], batch_size=1)
                 ppl_score = result.get("mean_perplexity", 0.0)
             except Exception as e:
-                logger.warning("Could not compute perplexity for chunk. Error: {}", e)
+                logger.warning(f"Could not compute perplexity for chunk. Error: {e}")
 
         # Average token length
         avg_token_length = 0.0
@@ -601,7 +601,7 @@ def _compute_info_density_metrics(
                 flesch_reading_ease = float(textstat.flesch_reading_ease(chunk_text))
                 gunning_fog = float(textstat.gunning_fog(chunk_text))
             except Exception as e:
-                logger.warning("Textstat error: {}", e)
+                logger.warning(f"Textstat error: {e}")
 
         results.append(
             ChunkInfoMetrics(
@@ -673,4 +673,4 @@ def _plot_aggregated_similarities(all_similarities: List[List[float]]) -> None:
     plot_path: str = os.path.join("plots", "aggregated_similarities.png")
     plt.savefig(plot_path, dpi=150, bbox_inches="tight")
     plt.close()
-    logger.info("Saved aggregated similarity plot at '{}'.", plot_path)
+    logger.info(f"Saved aggregated similarity plot at '{plot_path}'.")
