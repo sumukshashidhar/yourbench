@@ -51,7 +51,7 @@ import itertools
 import os
 import random
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import evaluate
 import matplotlib.pyplot as plt
@@ -111,8 +111,8 @@ class SingleHopChunk:
 
 @dataclass
 class MultiHopChunk:
-    chunk_ids: List[str]
-    chunks_text: List[str]
+    chunk_ids: list[str]
+    chunks_text: list[str]
 
 
 @dataclass
@@ -222,10 +222,10 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Prepare data structures
-    all_single_hop_chunks: List[List[SingleHopChunk]] = []
-    all_multihop_chunks: List[List[MultiHopChunk]] = []
-    all_chunk_info_metrics: List[List[ChunkInfoMetrics]] = []
-    all_similarities: List[List[float]] = []
+    all_single_hop_chunks: list[list[SingleHopChunk]] = []
+    all_multihop_chunks: list[list[MultiHopChunk]] = []
+    all_chunk_info_metrics: list[list[ChunkInfoMetrics]] = []
+    all_similarities: list[list[float]] = []
 
     # Process each document in the dataset
     for idx, row in enumerate(dataset):
@@ -253,7 +253,7 @@ def run(config: Dict[str, Any]) -> None:
         sentence_embeddings = _compute_embeddings(tokenizer, model, texts=sentences, device=device, max_len=512)
 
         # Compute consecutive sentence similarities
-        consecutive_sims: List[float] = []
+        consecutive_sims: list[float] = []
         for sentence_index in range(len(sentences) - 1):
             cos_sim = float(
                 F.cosine_similarity(
@@ -327,7 +327,7 @@ def run(config: Dict[str, Any]) -> None:
         logger.error(f"Failed to save chunked dataset for doc '{output_dataset_name}': {save_error}")
 
 
-def _split_into_sentences(text: str) -> List[str]:
+def _split_into_sentences(text: str) -> list[str]:
     """
     Splits the input text into sentences using a simple rule-based approach
     that looks for punctuation delimiters ('.', '!', '?').
@@ -336,7 +336,7 @@ def _split_into_sentences(text: str) -> List[str]:
         text (str): The full document text to be split.
 
     Returns:
-        List[str]: A list of sentence strings.
+        list[str]: A list of sentence strings.
     """
     # Replace newlines with spaces for consistency
     normalized_text = text.replace("\n", " ").strip()
@@ -345,7 +345,7 @@ def _split_into_sentences(text: str) -> List[str]:
 
     # Split using capturing parentheses to retain delimiters, then recombine.
     segments = re.split(r"([.!?])", normalized_text)
-    sentences: List[str] = []
+    sentences: list[str] = []
     for i in range(0, len(segments), 2):
         if i + 1 < len(segments):
             # Combine the text and delimiter
@@ -359,8 +359,8 @@ def _split_into_sentences(text: str) -> List[str]:
 
 
 def _compute_embeddings(
-    tokenizer: AutoTokenizer, model: AutoModel, texts: List[str], device: torch.device, max_len: int = 512
-) -> List[torch.Tensor]:
+    tokenizer: AutoTokenizer, model: AutoModel, texts: list[str], device: torch.device, max_len: int = 512
+) -> list[torch.Tensor]:
     """
     Computes sentence embeddings by mean pooling the last hidden states,
     normalized to unit length.
@@ -368,12 +368,12 @@ def _compute_embeddings(
     Args:
         tokenizer (AutoTokenizer): A Hugging Face tokenizer.
         model (AutoModel): A pretrained transformer model to generate embeddings.
-        texts (List[str]): The list of sentence strings to be embedded.
+        texts (list[str]): The list of sentence strings to be embedded.
         device (torch.device): The device on which to run inference (CPU or GPU).
         max_len (int): Max sequence length for tokenization.
 
     Returns:
-        List[torch.Tensor]: A list of PyTorch tensors (one per sentence).
+        list[torch.Tensor]: A list of PyTorch tensors (one per sentence).
     """
     if not texts:
         return []
@@ -400,31 +400,31 @@ def _compute_embeddings(
 
 
 def _chunk_document(
-    sentences: List[str],
-    similarities: List[float],
+    sentences: list[str],
+    similarities: list[float],
     l_min_tokens: int,
     l_max_tokens: int,
     tau: float,
     doc_id: str,
-) -> List[SingleHopChunk]:
+) -> list[SingleHopChunk]:
     """
     Creates single-hop chunks from sentences, ensuring each chunk is at least
     l_min_tokens in length and at most l_max_tokens, and introducing a chunk
     boundary when consecutive sentence similarity is below a threshold tau.
 
     Args:
-        sentences (List[str]): The list of sentences for a single document.
-        similarities (List[float]): Cosine similarities between consecutive sentences.
+        sentences (list[str]): The list of sentences for a single document.
+        similarities (list[float]): Cosine similarities between consecutive sentences.
         l_min_tokens (int): Minimum tokens per chunk.
         l_max_tokens (int): Maximum tokens per chunk.
         tau (float): Similarity threshold for introducing a chunk boundary.
         doc_id (str): Unique identifier for the document.
 
     Returns:
-        List[SingleHopChunk]: A list of SingleHopChunk objects.
+        list[SingleHopChunk]: A list of SingleHopChunk objects.
     """
-    chunks: List[SingleHopChunk] = []
-    current_chunk: List[str] = []
+    chunks: list[SingleHopChunk] = []
+    current_chunk: list[str] = []
     current_len: int = 0
     chunk_index: int = 0
 
@@ -477,11 +477,11 @@ def _chunk_document(
 
 
 def _multihop_chunking(
-    single_hop_chunks: List[SingleHopChunk],
+    single_hop_chunks: list[SingleHopChunk],
     h_min: int,
     h_max: int,
     num_multihops_factor: int,
-) -> List[MultiHopChunk]:
+) -> list[MultiHopChunk]:
     """
     Creates multi-hop chunks by generating all valid combinations of single-hop chunks
     (from size h_min to h_max), then shuffling and picking the desired number. This
@@ -495,14 +495,14 @@ def _multihop_chunking(
     unique combinations.
 
     Args:
-        single_hop_chunks (List[SingleHopChunk]): List of single-hop chunk objects.
+        single_hop_chunks (list[SingleHopChunk]): list of single-hop chunk objects.
         h_min (int): Minimum number of chunks to combine.
         h_max (int): Maximum number of chunks to combine.
         num_multihops_factor (int): Determines how many multi-hop chunks to generate,
                                     typically a fraction of the total single-hop chunks.
 
     Returns:
-        List[MultiHopChunk]: The resulting multi-hop chunk objects.
+        list[MultiHopChunk]: The resulting multi-hop chunk objects.
     """
     if not single_hop_chunks:
         return []
@@ -512,7 +512,7 @@ def _multihop_chunking(
     num_multihops = max(1, total_single_hops // num_multihops_factor)
 
     # Build a list of ALL possible multi-hop combinations from h_min to h_max
-    all_combos: List[MultiHopChunk] = []
+    all_combos: list[MultiHopChunk] = []
     for size in range(h_min, h_max + 1):
         if size > total_single_hops:
             break
@@ -532,22 +532,22 @@ def _multihop_chunking(
 
 
 def _compute_info_density_metrics(
-    chunks: List[SingleHopChunk],
+    chunks: list[SingleHopChunk],
     local_perplexity_metric: Optional[Any],
     local_use_textstat: bool,
-) -> List[ChunkInfoMetrics]:
+) -> list[ChunkInfoMetrics]:
     """
     Computes optional statistics for each chunk, including token count, perplexity,
     readability (flesch, gunning fog), and basic lexical diversity metrics.
 
     Args:
-        chunks (List[SingleHopChunk]): The list of single-hop chunk objects.
+        chunks (list[SingleHopChunk]): The list of single-hop chunk objects.
         local_perplexity_metric (Optional[Any]): If provided, used to compute
                                                  perplexity (from evaluate.load("perplexity")).
         local_use_textstat (bool): If True, compute text readability metrics using textstat.
 
     Returns:
-        List[ChunkInfoMetrics]: One object per chunk with fields like:
+        list[ChunkInfoMetrics]: One object per chunk with fields like:
           - token_count
           - unique_token_ratio
           - bigram_diversity
@@ -556,7 +556,7 @@ def _compute_info_density_metrics(
           - flesch_reading_ease
           - gunning_fog
     """
-    results: List[ChunkInfoMetrics] = []
+    results: list[ChunkInfoMetrics] = []
 
     for chunk in chunks:
         chunk_text: str = chunk.chunk_text
@@ -618,13 +618,13 @@ def _compute_info_density_metrics(
     return results
 
 
-def _plot_aggregated_similarities(all_similarities: List[List[float]]) -> None:
+def _plot_aggregated_similarities(all_similarities: list[list[float]]) -> None:
     """
     Plots the average cosine similarity for each sentence-pair position across
     all documents, with shaded regions representing one standard deviation.
 
     Args:
-        all_similarities (List[List[float]]): A list of lists, where each
+        all_similarities (list[list[float]]): A list of lists, where each
             sub-list is the array of consecutive sentence similarities for
             a particular document.
     """
@@ -635,9 +635,9 @@ def _plot_aggregated_similarities(all_similarities: List[List[float]]) -> None:
     plt.figure(figsize=(10, 6))
     max_len = max(len(sims) for sims in all_similarities)
 
-    avg_sim: List[float] = []
-    std_sim: List[float] = []
-    counts: List[int] = []
+    avg_sim: list[float] = []
+    std_sim: list[float] = []
+    counts: list[int] = []
 
     for position in range(max_len):
         vals = [s[position] for s in all_similarities if position < len(s)]
