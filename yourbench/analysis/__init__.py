@@ -2,13 +2,15 @@
 Analysis module for running various analyses on the evaluation results.
 """
 
-from loguru import logger
 from typing import List, Optional
+
+from loguru import logger
+
 
 def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bool = False) -> None:
     """
     Run a specific analysis by name.
-    
+
     Args:
         analysis_name: Name of the analysis to run
         args: Additional arguments for the analysis
@@ -18,7 +20,7 @@ def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bo
         # Import the analysis module dynamically
         module_name = f"yourbench.analysis.{analysis_name}"
         module = __import__(module_name, fromlist=["run"])
-        
+
         # Run the analysis with the provided arguments
         if hasattr(module, "run"):
             module.run(*(args or []))
@@ -31,4 +33,4 @@ def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bo
     except Exception as e:
         logger.error(f"Error running analysis {analysis_name}")
         if debug:
-            logger.exception(e) 
+            logger.exception(e)
