@@ -27,14 +27,16 @@
 #    `DEFAULT_STAGE_ORDER` and log a warning about them.
 # =============================================================================
 
+import importlib
 import os
 import time
-import importlib
+from typing import Any, Dict, List
+
 import matplotlib.pyplot as plt
-from typing import Dict, Any, List
 from loguru import logger
 
 from yourbench.utils.loading_engine import load_config
+
 
 # === Pipeline Stage Order Definition ===
 DEFAULT_STAGE_ORDER: List[str] = [
@@ -46,7 +48,7 @@ DEFAULT_STAGE_ORDER: List[str] = [
     "multi_hop_question_generation",
     "deduplicate_single_shot_questions",
     "deduplicate_multi_hop_questions",
-    "lighteval"
+    "lighteval",
 ]
 
 # This global list tracks the timing for all executed stages in the pipeline.
@@ -117,9 +119,7 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
 
         # Set up a stage-specific error log file
         error_log_path = os.path.join("logs", f"pipeline_{stage_name}.log")
-        log_id = logger.add(
-            error_log_path, level="ERROR", backtrace=True, diagnose=True, mode="a"
-        )
+        log_id = logger.add(error_log_path, level="ERROR", backtrace=True, diagnose=True, mode="a")
 
         logger.info(f"Starting execution of stage: '{stage_name}'")
         stage_start_time: float = time.time()
@@ -147,15 +147,9 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
 
         stage_end_time: float = time.time()
         elapsed_time: float = stage_end_time - stage_start_time
-        PIPELINE_STAGE_TIMINGS.append({
-            "stage_name": stage_name,
-            "start": stage_start_time,
-            "end": stage_end_time
-        })
+        PIPELINE_STAGE_TIMINGS.append({"stage_name": stage_name, "start": stage_start_time, "end": stage_end_time})
 
-        logger.success(
-            f"Successfully completed stage: '{stage_name}' in {elapsed_time:.3f} seconds"
-        )
+        logger.success(f"Successfully completed stage: '{stage_name}' in {elapsed_time:.3f} seconds")
 
     # Record the overall pipeline end time
     pipeline_execution_end_time: float = time.time()
@@ -168,17 +162,14 @@ def run_pipeline(config_file_path: str, debug: bool = False) -> None:
     )
 
     # Handle any unrecognized pipeline stages in the config
-    _handle_unordered_stages(
-        pipeline_config=pipeline_config,
-        ordered_stages=DEFAULT_STAGE_ORDER
+    _handle_unordered_stages(pipeline_config=pipeline_config, ordered_stages=DEFAULT_STAGE_ORDER)
+    logger.success(
+        f"Please visit https://huggingface.co/datasets/{config['hf_configuration']['global_dataset_name']} to view your results!"
     )
-    logger.success(f"Please visit https://huggingface.co/datasets/{config['hf_configuration']['global_dataset_name']} to view your results!")
 
 
 def _plot_pipeline_stage_timing(
-    stage_timings: List[Dict[str, float]],
-    pipeline_start: float,
-    pipeline_end: float
+    stage_timings: List[Dict[str, float]], pipeline_start: float, pipeline_end: float
 ) -> None:
     """
     Create and save a bar chart of pipeline stage durations as
@@ -198,8 +189,6 @@ def _plot_pipeline_stage_timing(
     if not stage_timings:
         logger.warning("No stage timings recorded. Skipping pipeline timing plot.")
         return
-
-    import numpy as np
 
     stage_names: List[str] = []
     durations: List[float] = []
@@ -231,7 +220,7 @@ def _plot_pipeline_stage_timing(
             f"{height:.2f}s",
             ha="center",
             va="bottom",
-            fontsize=9
+            fontsize=9,
         )
 
     ax.set_xlabel("Pipeline Stage")
@@ -249,10 +238,7 @@ def _plot_pipeline_stage_timing(
     logger.success(f"Pipeline timing chart saved to '{plot_file_path}' (300 dpi).")
 
 
-def _handle_unordered_stages(
-    pipeline_config: Dict[str, Any],
-    ordered_stages: List[str]
-) -> None:
+def _handle_unordered_stages(pipeline_config: Dict[str, Any], ordered_stages: List[str]) -> None:
     """
     Identify stages in `pipeline_config` that do not appear
     in `ordered_stages` and log a warning for each.
@@ -270,6 +256,4 @@ def _handle_unordered_stages(
     """
     for stage_name in pipeline_config.keys():
         if stage_name not in ordered_stages:
-            logger.warning(
-                f"Stage '{stage_name}' is not in the default order list and has been skipped."
-            )
+            logger.warning(f"Stage '{stage_name}' is not in the default order list and has been skipped.")
