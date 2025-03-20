@@ -14,12 +14,7 @@ import litellm
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
 from loguru import logger
-
-
-if sys.version_info >= (3, 11):
-    from asyncio import timeout as aio_timeout
-else:
-    from async_timeout import timeout as aio_timeout
+from asyncio import timeout as aio_timeout
 
 from tqdm.asyncio import tqdm_asyncio
 
