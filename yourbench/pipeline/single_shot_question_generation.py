@@ -7,50 +7,51 @@ Author: @sumukshashidhar
 This module implements the Single-Shot Question Generation stage of the YourBench pipeline.
 
 Overview:
-    - Given a dataset containing document summaries and their associated single-hop chunks, 
+    - Given a dataset containing document summaries and their associated single-hop chunks,
       this stage generates question-answer pairs for each chunk using one or more LLMs.
-    - The generated questions are intended to be standalone, moderately challenging, 
+    - The generated questions are intended to be standalone, moderately challenging,
       and reflect a deep understanding of the provided text chunk.
 
 Usage:
-    1) The pipeline will call the `run()` function from this module if the user configures 
+    1) The pipeline will call the `run()` function from this module if the user configures
        `pipeline.single_shot_question_generation.run = True`.
-    2) This function loads the required dataset (specified in the pipeline configuration), 
+    2) This function loads the required dataset (specified in the pipeline configuration),
        samples chunks if necessary, and calls an LLM to generate questions.
-    3) The output is stored in a new dataset containing each generated question, 
+    3) The output is stored in a new dataset containing each generated question,
        an estimated difficulty rating, and the model's self-provided reasoning.
 
 Stage-Specific Logging:
     - All errors and relevant log messages are recorded in `logs/single_shot_question_generation.log`.
 
 Google-Style Docstrings:
-    - This codebase uses Python type hints and Google-style docstrings for clarity, 
+    - This codebase uses Python type hints and Google-style docstrings for clarity,
       maintainability, and consistency.
 """
 
-import os
-import re
 import json
+import os
 import random
-from dataclasses import dataclass, field
-from typing import List, Dict, Any
+import re
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
-from loguru import logger
 from datasets import Dataset
+from loguru import logger
 
 from yourbench.utils.dataset_engine import (
-    smart_load_dataset,
-    smart_get_source_dataset_name,
+    save_dataset,
     smart_get_output_dataset_name,
-    smart_get_source_subset,
     smart_get_output_subset,
-    save_dataset
+    smart_get_source_dataset_name,
+    smart_get_source_subset,
+    smart_load_dataset,
 )
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
     QUESTION_GENERATION_SYSTEM_PROMPT,
     QUESTION_GENERATION_USER_PROMPT,
 )
+
 
 # Ensure the logs directory exists and set up a stage-specific log file.
 os.makedirs("logs", exist_ok=True)
@@ -74,6 +75,7 @@ class SingleHopQuestionRow:
             model's chain-of-thought (if provided).
         raw_response: The full, unedited response from the model.
     """
+
     chunk_id: str
     document_id: str
     question: str
@@ -127,10 +129,7 @@ def run(config: Dict[str, Any]) -> None:
     try:
         dataset = smart_load_dataset(source_dataset_name, config, dataset_subset=source_subset)
     except Exception as err:
-        logger.error(
-            "Failed to load dataset '{0}' for single_shot_question_generation: {1}",
-            source_dataset_name, err
-        )
+        logger.error("Failed to load dataset '{0}' for single_shot_question_generation: {1}", source_dataset_name, err)
         return
 
     logger.info("Loaded dataset with {} rows.", len(dataset))
@@ -192,10 +191,7 @@ def run(config: Dict[str, Any]) -> None:
 
         single_hop_chunks = row.get("chunks", [])
         if not isinstance(single_hop_chunks, list) or not single_hop_chunks:
-            logger.debug(
-                "No chunks found in row index={} for doc_id={}. Skipping row.",
-                row_index, doc_id
-            )
+            logger.debug("No chunks found in row index={} for doc_id={}. Skipping row.", row_index, doc_id)
             continue
 
         chosen_chunks = sample_chunks_if_needed(single_hop_chunks)
@@ -214,7 +210,7 @@ def run(config: Dict[str, Any]) -> None:
                 title=title,
                 document_summary=doc_summary,
                 text_chunk=chunk_text,
-                additional_instructions=additional_instructions
+                additional_instructions=additional_instructions,
             )
             user_message = {"role": "user", "content": user_prompt_str}
 
@@ -247,7 +243,9 @@ def run(config: Dict[str, Any]) -> None:
         if len(model_responses) != len(call_index_mapping):
             logger.error(
                 "Model '{}' returned {} responses but we have {} calls. Possible mismatch.",
-                model_name, len(model_responses), len(call_index_mapping)
+                model_name,
+                len(model_responses),
+                len(call_index_mapping),
             )
 
         for idx, raw_response in enumerate(model_responses):
@@ -260,7 +258,9 @@ def run(config: Dict[str, Any]) -> None:
             if not json_text.strip():
                 logger.warning(
                     "No parseable JSON found for row_index={}, chunk_id={}, model={}. Skipping.",
-                    row_index, chunk_id, model_name
+                    row_index,
+                    chunk_id,
+                    model_name,
                 )
                 continue
 
@@ -269,14 +269,19 @@ def run(config: Dict[str, Any]) -> None:
             except Exception as parse_err:
                 logger.warning(
                     "Failed to parse JSON for row_index={}, chunk_id={}, model={}: {}",
-                    row_index, chunk_id, model_name, parse_err
+                    row_index,
+                    chunk_id,
+                    model_name,
+                    parse_err,
                 )
                 continue
 
             if not isinstance(question_answer_pairs, list):
                 logger.warning(
                     "Expected a list of QA pairs, got something else for row_index={}, chunk_id={}, model={}.",
-                    row_index, chunk_id, model_name
+                    row_index,
+                    chunk_id,
+                    model_name,
                 )
                 continue
 
@@ -285,17 +290,17 @@ def run(config: Dict[str, Any]) -> None:
                 if not isinstance(pair, dict):
                     logger.warning(
                         "Invalid QA pair structure at row_index={}, chunk_id={}, model={}. Expected dict, got {}",
-                        row_index, chunk_id, model_name, type(pair).__name__
+                        row_index,
+                        chunk_id,
+                        model_name,
+                        type(pair).__name__,
                     )
                     continue
 
                 question_text = pair.get("question") or ""
                 question_text = question_text.strip() if isinstance(question_text, str) else str(question_text).strip()
                 if not question_text:
-                    logger.debug(
-                        "Empty question found; skipping. row_index={}, chunk_id={}", 
-                        row_index, chunk_id
-                    )
+                    logger.debug("Empty question found; skipping. row_index={}, chunk_id={}", row_index, chunk_id)
                     continue
 
                 # Handle potential non-string answers
@@ -332,7 +337,7 @@ def run(config: Dict[str, Any]) -> None:
                     self_assessed_question_type=question_type,
                     generating_model=model_name,
                     thought_process=thought_process,
-                    raw_response=raw_response
+                    raw_response=raw_response,
                 )
                 question_dataset_rows.append(question_row.__dict__)
 
@@ -348,9 +353,7 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Convert to HF Dataset
-    final_data = {
-        column: [row[column] for row in question_dataset_rows] for column in column_names
-    }
+    final_data = {column: [row[column] for row in question_dataset_rows] for column in column_names}
     question_dataset = Dataset.from_dict(final_data)
 
     # Save the dataset
@@ -361,7 +364,7 @@ def run(config: Dict[str, Any]) -> None:
             config=config,
             step_name="single_shot_question_generation",
             output_dataset_name=output_dataset_name,
-            output_subset=output_subset
+            output_subset=output_subset,
         )
         logger.success("Single-shot question generation completed successfully.")
     except Exception as save_err:
@@ -381,9 +384,9 @@ def _extract_tag_content(text: str, tag: str) -> str:
     """
     if not text or not isinstance(text, str):
         return ""
-    
+
     try:
-        pattern = fr"<{tag}\s*>([\s\S]*?)</{tag}>"
+        pattern = rf"<{tag}\s*>([\s\S]*?)</{tag}>"
         match = re.search(pattern, text)
         if match:
             return match.group(1).strip()
@@ -405,7 +408,7 @@ def _extract_output_json(raw_response: str) -> str:
     """
     if not raw_response or not isinstance(raw_response, str):
         return ""
-        
+
     try:
         # Check for <output_json> block first
         extracted = _extract_tag_content(raw_response, "output_json")
@@ -441,7 +444,7 @@ def _maybe_strip_triple_backticks(text_in: str) -> str:
     """
     if not text_in or not isinstance(text_in, str):
         return ""
-        
+
     try:
         pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
         match = re.match(pattern, text_in)
@@ -465,14 +468,15 @@ def _best_effort_json_extract(full_text: str) -> List[str]:
     """
     if not full_text or not isinstance(full_text, str):
         return []
-        
+
     candidates = []
     try:
         pattern = r"([\[{].*?[\]}])"
         matches = re.findall(pattern, full_text, flags=re.DOTALL)
         for match_str in matches:
-            if (match_str.startswith("[") and match_str.endswith("]")) or \
-               (match_str.startswith("{") and match_str.endswith("}")):
+            if (match_str.startswith("[") and match_str.endswith("]")) or (
+                match_str.startswith("{") and match_str.endswith("}")
+            ):
                 candidates.append(match_str.strip())
     except Exception as e:
         logger.debug("Error in best effort JSON extraction: {}", e)

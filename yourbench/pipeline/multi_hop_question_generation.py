@@ -10,18 +10,18 @@ multi_hop_question_generation
 
 Purpose:
 --------
-This module implements the multi-hop question generation stage within the YourBench pipeline. 
-It processes a dataset of documents—each containing a list of multi-hop chunks—and generates 
-multi-hop questions requiring integrative reasoning across those chunks. It uses a large 
+This module implements the multi-hop question generation stage within the YourBench pipeline.
+It processes a dataset of documents—each containing a list of multi-hop chunks—and generates
+multi-hop questions requiring integrative reasoning across those chunks. It uses a large
 language model to produce question-answer pairs in JSON format.
 
 Usage:
 ------
 This module is typically invoked as part of the overall YourBench pipeline. It expects:
 1. A source dataset (e.g., documents with 'multihop_chunks' field).
-2. Configuration for multi-hop question generation, such as sampling parameters and 
+2. Configuration for multi-hop question generation, such as sampling parameters and
    additional instructions.
-3. The pipeline orchestrator (in `handler.py`) calls `run(config)` if 
+3. The pipeline orchestrator (in `handler.py`) calls `run(config)` if
    `multi_hop_question_generation` is enabled in the YAML configuration.
 
 The module then:
@@ -32,33 +32,33 @@ The module then:
 Error Handling and Logging:
 ---------------------------
 - Comprehensive logging is performed using `loguru` at various levels to trace execution.
-- Exceptions are caught and logged as errors, with the module attempting to continue 
+- Exceptions are caught and logged as errors, with the module attempting to continue
   where practical.
 - Critical issues produce warnings or errors and gracefully terminate the stage.
 
 Module-Level Dependencies:
 --------------------------
-- Relies on the shared pipeline utilities (e.g., `yourbench.utils.dataset_engine`, 
+- Relies on the shared pipeline utilities (e.g., `yourbench.utils.dataset_engine`,
   `yourbench.utils.inference_engine`, `yourbench.utils.prompts`).
 - Preserves the existing signature and functionality for downstream consistency.
 """
 
 import json
-import re
 import random
+import re
 from dataclasses import dataclass, field
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
-from loguru import logger
 from datasets import Dataset
+from loguru import logger
 
 from yourbench.utils.dataset_engine import (
-    smart_load_dataset,
-    smart_get_source_dataset_name,
+    save_dataset,
     smart_get_output_dataset_name,
-    smart_get_source_subset,
     smart_get_output_subset,
-    save_dataset
+    smart_get_source_dataset_name,
+    smart_get_source_subset,
+    smart_load_dataset,
 )
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
@@ -94,6 +94,7 @@ class MultiHopQuestionRow:
         raw_response (str):
             The full, unedited response from the model.
     """
+
     document_id: str
     source_chunk_ids: List[str]
     question: str
@@ -117,8 +118,8 @@ def run(config: Dict[str, Any]) -> None:
       4. Parsing and structuring the results into a new dataset.
 
     Args:
-        config (Dict[str, Any]): 
-            The overall pipeline configuration dictionary, usually loaded 
+        config (Dict[str, Any]):
+            The overall pipeline configuration dictionary, usually loaded
             from a YAML file. Must include:
             - pipeline.multi_hop_question_generation.run (bool)
             - pipeline.multi_hop_question_generation.source_subset (str)
@@ -131,7 +132,7 @@ def run(config: Dict[str, Any]) -> None:
         based on the configuration settings.
 
     Raises:
-        Exception: Logs errors if something unexpected occurs during 
+        Exception: Logs errors if something unexpected occurs during
         inference or dataset processing, but does not halt the entire pipeline.
     """
     try:
@@ -151,26 +152,23 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("Loaded dataset with {} rows.", len(dataset))
 
         # Prepare system message for LLM
-        system_msg = {
-            "role": "system",
-            "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
-        }
+        system_msg = {"role": "system", "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT}
 
         all_inference_calls: List[InferenceCall] = []
         call_index_map: List[tuple] = []
 
         def sample_multi_hop_chunks(mh_chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             """
-            Sample multi-hop chunks from each row based on config settings 
+            Sample multi-hop chunks from each row based on config settings
             to control cost (percentage or count-based).
 
             Args:
-                mh_chunks (List[Dict[str, Any]]): 
+                mh_chunks (List[Dict[str, Any]]):
                     List of multi-hop chunk dictionaries containing 'chunk_ids'
                     and 'chunks_text'.
 
             Returns:
-                List[Dict[str, Any]]: 
+                List[Dict[str, Any]]:
                     The potentially sampled subset of multi-hop chunks.
             """
             chunk_sampling_cfg = stage_cfg.get("chunk_sampling", {})
@@ -209,18 +207,12 @@ def run(config: Dict[str, Any]) -> None:
 
             multi_hop_chunks = row.get("multihop_chunks", [])
             if not isinstance(multi_hop_chunks, list) or not multi_hop_chunks:
-                logger.debug(
-                    "No multi-hop chunks found in row index={}, doc_id={}. Skipping row.",
-                    row_idx, doc_id
-                )
+                logger.debug("No multi-hop chunks found in row index={}, doc_id={}. Skipping row.", row_idx, doc_id)
                 continue
 
             chosen_multi_hops = sample_multi_hop_chunks(multi_hop_chunks)
             if not chosen_multi_hops:
-                logger.debug(
-                    "Row idx={} doc_id={} had multi-hop chunks but none after sampling.",
-                    row_idx, doc_id
-                )
+                logger.debug("Row idx={} doc_id={} had multi-hop chunks but none after sampling.", row_idx, doc_id)
                 continue
 
             additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
@@ -233,10 +225,7 @@ def run(config: Dict[str, Any]) -> None:
                 subchunk_ids = mh_dict.get("chunk_ids", [])
                 subchunk_texts = mh_dict.get("chunks_text", [])
                 if not subchunk_texts:
-                    logger.debug(
-                        "Empty multi-hop chunk at row_idx={}, doc_id={}. Skipping.",
-                        row_idx, doc_id
-                    )
+                    logger.debug("Empty multi-hop chunk at row_idx={}, doc_id={}. Skipping.", row_idx, doc_id)
                     continue
 
                 # Build the user prompt by enumerating each subchunk
@@ -248,13 +237,10 @@ def run(config: Dict[str, Any]) -> None:
                     title=title,
                     document_summary=doc_summary,
                     chunks=text_chunks_aggregated,
-                    additional_instructions=additional_instructions
+                    additional_instructions=additional_instructions,
                 )
                 user_msg = {"role": "user", "content": user_prompt_str}
-                inference_call = InferenceCall(
-                    messages=[system_msg, user_msg],
-                    tags=["multi_hop_qa"]
-                )
+                inference_call = InferenceCall(messages=[system_msg, user_msg], tags=["multi_hop_qa"])
                 all_inference_calls.append(inference_call)
                 # Keep track of the row, doc_id, and subchunk_ids for reconstruction later
                 call_index_map.append((row_idx, doc_id, subchunk_ids))
@@ -280,7 +266,9 @@ def run(config: Dict[str, Any]) -> None:
             if len(model_responses) != len(call_index_map):
                 logger.error(
                     "Model '{}' returned {} responses, expected {}. Possible mismatch.",
-                    model_name, len(model_responses), len(call_index_map)
+                    model_name,
+                    len(model_responses),
+                    len(call_index_map),
                 )
 
             for idx, raw_resp in enumerate(model_responses):
@@ -291,8 +279,7 @@ def run(config: Dict[str, Any]) -> None:
                 json_str = _extract_output_json(raw_resp)
                 if not json_str.strip():
                     logger.warning(
-                        "No parseable JSON for row={}, doc_id={} (model={}). Skipping.",
-                        row_idx, doc_id, model_name
+                        "No parseable JSON for row={}, doc_id={} (model={}). Skipping.", row_idx, doc_id, model_name
                     )
                     continue
 
@@ -300,15 +287,17 @@ def run(config: Dict[str, Any]) -> None:
                     question_answer_list = json.loads(json_str)
                 except Exception as e:
                     logger.warning(
-                        "Failed to parse JSON for row={}, doc_id={} (model={}): {}",
-                        row_idx, doc_id, model_name, e
+                        "Failed to parse JSON for row={}, doc_id={} (model={}): {}", row_idx, doc_id, model_name, e
                     )
                     continue
 
                 if not isinstance(question_answer_list, list):
                     logger.warning(
                         "Expected a list of question-answer pairs; got type={} instead. row={}, doc_id={}, model={}",
-                        type(question_answer_list).__name__, row_idx, doc_id, model_name
+                        type(question_answer_list).__name__,
+                        row_idx,
+                        doc_id,
+                        model_name,
                     )
                     continue
 
@@ -316,12 +305,11 @@ def run(config: Dict[str, Any]) -> None:
                 for qap in question_answer_list:
                     try:
                         question_text = qap.get("question", "")
-                        question_text = question_text.strip() if isinstance(question_text, str) else str(question_text).strip()
+                        question_text = (
+                            question_text.strip() if isinstance(question_text, str) else str(question_text).strip()
+                        )
                         if not question_text:
-                            logger.debug(
-                                "Empty question found for row={}, doc_id={}, skipping pair.",
-                                row_idx, doc_id
-                            )
+                            logger.debug("Empty question found for row={}, doc_id={}, skipping pair.", row_idx, doc_id)
                             continue
 
                         # Handle potential non-string answers
@@ -333,10 +321,7 @@ def run(config: Dict[str, Any]) -> None:
                         try:
                             diff_val = int(diff_raw)
                         except (ValueError, TypeError):
-                            logger.warning(
-                                "Invalid difficulty '{}' for doc_id={}, defaulting to 5",
-                                diff_raw, doc_id
-                            )
+                            logger.warning("Invalid difficulty '{}' for doc_id={}, defaulting to 5", diff_raw, doc_id)
                             diff_val = 5
                         # Ensure difficulty is in range 1-10
                         diff_val = max(1, min(10, diff_val))
@@ -353,12 +338,9 @@ def run(config: Dict[str, Any]) -> None:
 
                         cits = qap.get("citations", [])
                         if not isinstance(cits, list):
-                            logger.warning(
-                                "Citations for doc_id={} is not a list. Converting to empty list.",
-                                doc_id
-                            )
+                            logger.warning("Citations for doc_id={} is not a list. Converting to empty list.", doc_id)
                             cits = []
-                            
+
                         # Ensure all citation items are strings
                         cits = [str(c) for c in cits]
 
@@ -372,25 +354,19 @@ def run(config: Dict[str, Any]) -> None:
                             generating_model=model_name,
                             thought_process=thought_process,
                             citations=cits,
-                            raw_response=raw_resp
+                            raw_response=raw_resp,
                         )
                         final_multi_hop_questions.append(row_obj.__dict__)
 
                     except Exception as pair_error:
-                        logger.warning(
-                            "Error processing QA pair for doc_id={}, skipping pair: {}",
-                            doc_id, pair_error
-                        )
+                        logger.warning("Error processing QA pair for doc_id={}, skipping pair: {}", doc_id, pair_error)
                         continue
 
         if not final_multi_hop_questions:
             logger.warning("No valid multi-hop question rows produced. Exiting stage.")
             return
 
-        logger.info(
-            "Constructing multi-hop question dataset with {} rows...",
-            len(final_multi_hop_questions)
-        )
+        logger.info("Constructing multi-hop question dataset with {} rows...", len(final_multi_hop_questions))
 
         # Convert to Hugging Face Dataset
         try:
@@ -408,7 +384,7 @@ def run(config: Dict[str, Any]) -> None:
             step_name="multi_hop_question_generation",
             config=config,
             output_dataset_name=output_dataset_name,
-            output_subset=output_subset
+            output_subset=output_subset,
         )
         logger.success("Multi-hop question generation completed successfully.")
 
@@ -422,20 +398,20 @@ def _extract_tag_content(text: str, tag: str) -> str:
     Extract content from a specified XML tag in a given text.
 
     Args:
-        text (str): 
+        text (str):
             The full string from which to extract content.
-        tag (str): 
+        tag (str):
             The name of the XML tag to search for.
 
     Returns:
-        str: The content found between <tag>...</tag>. 
+        str: The content found between <tag>...</tag>.
              Returns an empty string if not found or parsing fails.
     """
     if not text or not isinstance(text, str):
         return ""
-    
+
     try:
-        pattern = fr"<{tag}\s*>([\s\S]*?)</{tag}>"
+        pattern = rf"<{tag}\s*>([\s\S]*?)</{tag}>"
         match = re.search(pattern, text)
         if match:
             return match.group(1).strip()
@@ -446,7 +422,7 @@ def _extract_tag_content(text: str, tag: str) -> str:
 
 def _extract_output_json(raw_response: str) -> str:
     """
-    Attempt to extract JSON from the model's raw response. 
+    Attempt to extract JSON from the model's raw response.
     Looks for <output_json> blocks or fenced code blocks with ```json.
 
     Args:
@@ -458,7 +434,7 @@ def _extract_output_json(raw_response: str) -> str:
     """
     if not raw_response or not isinstance(raw_response, str):
         return ""
-        
+
     try:
         # Priority 1: <output_json> block
         extracted = _extract_tag_content(raw_response, "output_json")
@@ -493,7 +469,7 @@ def _maybe_strip_triple_backticks(text_in: str) -> str:
     """
     if not text_in or not isinstance(text_in, str):
         return ""
-        
+
     try:
         pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
         m = re.match(pattern, text_in)
@@ -506,12 +482,12 @@ def _maybe_strip_triple_backticks(text_in: str) -> str:
 
 def _best_effort_json_extract(full_text: str) -> List[str]:
     """
-    Attempt to locate JSON-like bracketed text from a larger string. 
-    Collects all substring candidates starting with '{' or '[' and 
+    Attempt to locate JSON-like bracketed text from a larger string.
+    Collects all substring candidates starting with '{' or '[' and
     ending with '}' or ']'.
 
     Args:
-        full_text (str): 
+        full_text (str):
             The raw text potentially containing JSON.
 
     Returns:
@@ -519,14 +495,15 @@ def _best_effort_json_extract(full_text: str) -> List[str]:
     """
     if not full_text or not isinstance(full_text, str):
         return []
-        
+
     candidates = []
     try:
         pattern = r"([\[{].*?[\]}])"
         matches = re.findall(pattern, full_text, flags=re.DOTALL)
         for match_text in matches:
-            if (match_text.startswith("[") and match_text.endswith("]")) or \
-               (match_text.startswith("{") and match_text.endswith("}")):
+            if (match_text.startswith("[") and match_text.endswith("]")) or (
+                match_text.startswith("{") and match_text.endswith("}")
+            ):
                 candidates.append(match_text.strip())
     except Exception as e:
         logger.debug("Error in best effort JSON extraction: {}", e)
