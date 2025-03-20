@@ -69,11 +69,6 @@ from yourbench.utils.dataset_engine import (
     smart_load_dataset,
 )
 
-
-# === Stage-Specific Logger Configuration ===
-os.makedirs("logs", exist_ok=True)
-logger.add("logs/chunking.log", level="DEBUG", rotation="10 MB", enqueue=True, backtrace=True, diagnose=True)
-
 try:
     # Attempt to load perplexity metric from evaluate
     _perplexity_metric = evaluate.load("perplexity", module_type="metric", model_id="gpt2")
