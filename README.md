@@ -47,7 +47,7 @@
 
 ---
 
-> **YourBench** is an open-source framework for generating domain-specific benchmarks in a zero-shot manner, inspired by modern software testing practices. It aims to keep your large language models on their toes—even as new data sources, domains, and knowledge demands evolve.
+> **YourBench** is an open-source framework for generating domain-specific benchmarks in a zero-shot manner. It aims to keep your large language models on their toes—even as new data sources, domains, and knowledge demands evolve.
 
 **Highlights**:
 - **Dynamic Benchmark Generation**: Produce diverse, up-to-date questions from real-world source documents (PDF, Word, HTML, even multimedia).
