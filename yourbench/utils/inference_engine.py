@@ -97,20 +97,6 @@ class InferenceJob:
     inference_calls: List[InferenceCall]
 
 
-@asynccontextmanager
-async def _timeout_context(timeout_seconds: int):
-    """
-    Async context manager to raise a TimeoutError if code inside takes
-    longer than 'timeout_seconds'.
-    """
-    try:
-        async with aio_timeout(timeout_seconds):
-            yield
-    except asyncio.TimeoutError:
-        logger.error("Operation timed out after {} seconds", timeout_seconds)
-        raise
-
-
 async def _get_response(model: Model, inference_call: InferenceCall) -> str:
     """
     Send one inference call to the model endpoint within a global timeout context.
