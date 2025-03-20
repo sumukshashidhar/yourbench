@@ -38,12 +38,6 @@ from loguru import logger
 
 from yourbench.utils.loading_engine import load_config
 
-try:
-    import matplotlib.pyplot as plt
-    MATPLOTLIB_AVAILABLE = True
-except ImportError:
-    MATPLOTLIB_AVAILABLE = False
-
 
 # === Pipeline Stage Order Definition ===
 DEFAULT_STAGE_ORDER: List[str] = [
@@ -130,9 +124,7 @@ def run_pipeline(
             stage_module = importlib.import_module(f"yourbench.pipeline.{stage_name}")
             stage_module.run(config)
         except Exception as pipeline_error:
-            logger.error(
-                f"Error executing pipeline stage '{stage_name}': {str(pipeline_error)}"
-            )
+            logger.error(f"Error executing pipeline stage '{stage_name}': {str(pipeline_error)}")
             # Remove stage-specific log handler before re-raising
             _remove_log_handler_safely(log_id)
             raise
@@ -141,14 +133,12 @@ def run_pipeline(
 
         stage_end_time: float = time.time()
         elapsed_time: float = stage_end_time - stage_start_time
-        PIPELINE_STAGE_TIMINGS.append(
-            {
-                "stage_name": stage_name,
-                "start": stage_start_time,
-                "end": stage_end_time,
-                "elapsed": elapsed_time,
-            }
-        )
+        PIPELINE_STAGE_TIMINGS.append({
+            "stage_name": stage_name,
+            "start": stage_start_time,
+            "end": stage_end_time,
+            "elapsed": elapsed_time,
+        })
         logger.success(f"Completed stage: '{stage_name}' in {elapsed_time:.3f}s")
 
     # Record overall pipeline end
@@ -159,15 +149,10 @@ def run_pipeline(
 
     # Optionally plot pipeline stage timings
     if plot_stage_timing or debug:
-        if MATPLOTLIB_AVAILABLE:
-            _plot_pipeline_stage_timing(
-                pipeline_start=pipeline_execution_start_time,
-                pipeline_end=pipeline_execution_end_time,
-            )
-        else:
-            logger.warning(
-                "Requested pipeline stage timing plot but 'matplotlib' is not installed. Skipping plot."
-            )
+        _plot_pipeline_stage_timing(
+            pipeline_start=pipeline_execution_start_time,
+            pipeline_end=pipeline_execution_end_time,
+        )
 
 
 def _check_for_unrecognized_stages(pipeline_config: Dict[str, Any]) -> None:
@@ -181,9 +166,7 @@ def _check_for_unrecognized_stages(pipeline_config: Dict[str, Any]) -> None:
     """
     for stage in pipeline_config.keys():
         if stage not in DEFAULT_STAGE_ORDER:
-            logger.warning(
-                f"Unrecognized stage '{stage}' is present in config but not in DEFAULT_STAGE_ORDER."
-            )
+            logger.warning(f"Unrecognized stage '{stage}' is present in config but not in DEFAULT_STAGE_ORDER.")
 
 
 def _plot_pipeline_stage_timing(
@@ -200,7 +183,11 @@ def _plot_pipeline_stage_timing(
             Timestamp when the pipeline ended.
     """
     logger.info("Generating pipeline stage timing chart.")
-    import matplotlib.pyplot as plt  # safe here because we guarded import above
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        logger.warning("Cannot generate timing chart: matplotlib is not installed.")
+        return
 
     # Gather data
     stages = [timing["stage_name"] for timing in PIPELINE_STAGE_TIMINGS]

@@ -6,9 +6,11 @@ from typing import Optional
 
 import typer
 from loguru import logger
+
 from yourbench.analysis import run_analysis
 from yourbench.config_cache import get_last_config, save_last_config
 from yourbench.pipeline.handler import run_pipeline
+
 
 app = typer.Typer(
     name="yourbench",
@@ -50,8 +52,7 @@ def run(
         False,
         "--plot-stage-timing",
         help=(
-            "If set, generates a bar chart illustrating how long each pipeline stage took. "
-            "This requires matplotlib."
+            "If set, generates a bar chart illustrating how long each pipeline stage took. This requires matplotlib."
         ),
     ),
 ) -> None:
