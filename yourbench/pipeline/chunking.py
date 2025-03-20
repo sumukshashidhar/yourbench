@@ -31,7 +31,7 @@ The `run(config)` function:
    concatenating them.
 4. Computes optional readability and perplexity metrics for each chunk if debug
    mode is enabled.
-5. Saves the dataset containing new columns: 
+5. Saves the dataset containing new columns:
    - "chunks" (list of single-hop segments)
    - "multihop_chunks" (list of multi-hop segment groups)
    - "chunk_info_metrics" (various statistics)
@@ -47,63 +47,50 @@ Error Handling and Logging:
 
 """
 
+import itertools  # <--- Added to generate all combinations for multi-hop chunking.
 import os
 import random
 import re
-import torch
-import torch.nn.functional as F
-import matplotlib.pyplot as plt
-from typing import Dict, Any, List, Optional
-from loguru import logger
-
-from transformers import AutoTokenizer, AutoModel
-
-from yourbench.utils.dataset_engine import (
-    smart_load_dataset,
-    smart_get_source_dataset_name,
-    smart_get_output_dataset_name,
-    smart_get_source_subset,
-    smart_get_output_subset,
-    save_dataset
-)
+from typing import Any, Dict, List, Optional
 
 import evaluate
-import itertools  # <--- Added to generate all combinations for multi-hop chunking.
+import matplotlib.pyplot as plt
+import torch
+import torch.nn.functional as F
+from loguru import logger
+from transformers import AutoModel, AutoTokenizer
+
+from yourbench.utils.dataset_engine import (
+    save_dataset,
+    smart_get_output_dataset_name,
+    smart_get_output_subset,
+    smart_get_source_dataset_name,
+    smart_get_source_subset,
+    smart_load_dataset,
+)
+
 
 # === Stage-Specific Logger Configuration ===
 os.makedirs("logs", exist_ok=True)
-logger.add(
-    "logs/chunking.log",
-    level="DEBUG",
-    rotation="10 MB",
-    enqueue=True,
-    backtrace=True,
-    diagnose=True
-)
+logger.add("logs/chunking.log", level="DEBUG", rotation="10 MB", enqueue=True, backtrace=True, diagnose=True)
 
 try:
     # Attempt to load perplexity metric from evaluate
-    _perplexity_metric = evaluate.load(
-        "perplexity",
-        module_type="metric",
-        model_id="gpt2"
-    )
+    _perplexity_metric = evaluate.load("perplexity", module_type="metric", model_id="gpt2")
     logger.info("Loaded 'perplexity' metric with model_id='gpt2'.")
 except Exception as perplexity_load_error:
     logger.warning(
-        "Could not load perplexity metric from 'evaluate'. Skipping perplexity. "
-        "Error: {}", perplexity_load_error
+        "Could not load perplexity metric from 'evaluate'. Skipping perplexity. Error: {}", perplexity_load_error
     )
     _perplexity_metric = None
 
 try:
     # Attempt to import textstat for readability metrics
     import textstat
+
     _use_textstat = True
 except ImportError:
-    logger.warning(
-        "Package 'textstat' not installed. Readability metrics will be skipped."
-    )
+    logger.warning("Package 'textstat' not installed. Readability metrics will be skipped.")
     _use_textstat = False
 
 # Ensure local plots directory
@@ -141,10 +128,7 @@ def run(config: Dict[str, Any]) -> None:
         output_subset = smart_get_output_subset("chunking", config)
 
         dataset = smart_load_dataset(source_dataset_name, config, source_subset)
-        logger.debug(
-            "Loaded dataset '{}' with {} rows for chunking.",
-            source_dataset_name, len(dataset)
-        )
+        logger.debug("Loaded dataset '{}' with {} rows for chunking.", source_dataset_name, len(dataset))
     except Exception as ds_error:
         logger.error("Failed to load dataset: {}", ds_error)
         logger.warning("Chunking stage cannot proceed. Exiting.")
@@ -188,10 +172,7 @@ def run(config: Dict[str, Any]) -> None:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModel.from_pretrained(model_name).to(device).eval()
     except Exception as model_error:
-        logger.error(
-            "Error loading tokenizer/model '{}': {}",
-            model_name, model_error
-        )
+        logger.error("Error loading tokenizer/model '{}': {}", model_name, model_error)
         logger.warning("Chunking stage cannot proceed. Exiting.")
         return
 
@@ -208,10 +189,7 @@ def run(config: Dict[str, Any]) -> None:
 
         # If text is empty or missing
         if not doc_text or not doc_text.strip():
-            logger.warning(
-                "Document at index {} has empty text. Storing empty chunks.",
-                idx
-            )
+            logger.warning("Document at index {} has empty text. Storing empty chunks.", idx)
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
@@ -220,23 +198,14 @@ def run(config: Dict[str, Any]) -> None:
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
         if not sentences:
-            logger.warning(
-                "No valid sentences found for doc at index {}, doc_id={}.",
-                idx, doc_id
-            )
+            logger.warning("No valid sentences found for doc at index {}, doc_id={}.", idx, doc_id)
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
             continue
 
         # Compute embeddings for sentences
-        sentence_embeddings = _compute_embeddings(
-            tokenizer,
-            model,
-            texts=sentences,
-            device=device,
-            max_len=512
-        )
+        sentence_embeddings = _compute_embeddings(tokenizer, model, texts=sentences, device=device, max_len=512)
 
         # Compute consecutive sentence similarities
         consecutive_sims: List[float] = []
@@ -245,7 +214,7 @@ def run(config: Dict[str, Any]) -> None:
                 F.cosine_similarity(
                     sentence_embeddings[sentence_index].unsqueeze(0),
                     sentence_embeddings[sentence_index + 1].unsqueeze(0),
-                    dim=1
+                    dim=1,
                 )[0]
             )
             consecutive_sims.append(cos_sim)
@@ -259,23 +228,16 @@ def run(config: Dict[str, Any]) -> None:
             l_min_tokens=l_min_tokens,
             l_max_tokens=l_max_tokens,
             tau=tau_threshold,
-            doc_id=doc_id
+            doc_id=doc_id,
         )
 
         # Create multi-hop chunks (modified to ensure no duplicates)
         multihop = _multihop_chunking(
-            single_hop_chunks,
-            h_min=h_min,
-            h_max=h_max,
-            num_multihops_factor=num_multihops_factor
+            single_hop_chunks, h_min=h_min, h_max=h_max, num_multihops_factor=num_multihops_factor
         )
 
         # Compute metrics (token_count, perplexity, readability, etc.)
-        chunk_metrics = _compute_info_density_metrics(
-            single_hop_chunks,
-            local_perplexity_metric,
-            local_use_textstat
-        )
+        chunk_metrics = _compute_info_density_metrics(single_hop_chunks, local_perplexity_metric, local_use_textstat)
 
         # Accumulate
         all_single_hop_chunks.append(single_hop_chunks)
@@ -296,14 +258,10 @@ def run(config: Dict[str, Any]) -> None:
     try:
         save_dataset(dataset, "chunking", config, output_dataset_name, output_subset)
         logger.success(
-            "Chunking stage complete. Dataset saved to '{}', subset '{}'.",
-            output_dataset_name, output_subset
+            "Chunking stage complete. Dataset saved to '{}', subset '{}'.", output_dataset_name, output_subset
         )
     except Exception as save_error:
-        logger.error(
-            "Failed to save chunked dataset for doc '{}': {}",
-            output_dataset_name, save_error
-        )
+        logger.error("Failed to save chunked dataset for doc '{}': {}", output_dataset_name, save_error)
 
 
 def _split_into_sentences(text: str) -> List[str]:
@@ -323,7 +281,7 @@ def _split_into_sentences(text: str) -> List[str]:
         return []
 
     # Split using capturing parentheses to retain delimiters, then recombine.
-    segments = re.split(r'([.!?])', normalized_text)
+    segments = re.split(r"([.!?])", normalized_text)
     sentences: List[str] = []
     for i in range(0, len(segments), 2):
         if i + 1 < len(segments):
@@ -338,11 +296,7 @@ def _split_into_sentences(text: str) -> List[str]:
 
 
 def _compute_embeddings(
-    tokenizer: AutoTokenizer,
-    model: AutoModel,
-    texts: List[str],
-    device: torch.device,
-    max_len: int = 512
+    tokenizer: AutoTokenizer, model: AutoModel, texts: List[str], device: torch.device, max_len: int = 512
 ) -> List[torch.Tensor]:
     """
     Computes sentence embeddings by mean pooling the last hidden states,
@@ -361,13 +315,7 @@ def _compute_embeddings(
     if not texts:
         return []
 
-    batch_dict = tokenizer(
-        texts,
-        max_length=max_len,
-        padding=True,
-        truncation=True,
-        return_tensors="pt"
-    ).to(device)
+    batch_dict = tokenizer(texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt").to(device)
 
     with torch.no_grad():
         outputs = model(**batch_dict)
@@ -375,9 +323,7 @@ def _compute_embeddings(
         attention_mask = batch_dict["attention_mask"]
 
         # Zero out non-attended tokens
-        last_hidden_states = last_hidden_states.masked_fill(
-            ~attention_mask[..., None].bool(), 0.0
-        )
+        last_hidden_states = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
 
         # Mean pooling
         sum_hidden = last_hidden_states.sum(dim=1)
@@ -391,12 +337,7 @@ def _compute_embeddings(
 
 
 def _chunk_document(
-    sentences: List[str],
-    similarities: List[float],
-    l_min_tokens: int,
-    l_max_tokens: int,
-    tau: float,
-    doc_id: str
+    sentences: List[str], similarities: List[float], l_min_tokens: int, l_max_tokens: int, tau: float, doc_id: str
 ) -> List[Dict[str, str]]:
     """
     Creates single-hop chunks from sentences, ensuring each chunk is at least
@@ -430,18 +371,12 @@ def _chunk_document(
             # Dump the current chunk
             if current_chunk:
                 chunk_str = " ".join(current_chunk)
-                chunks.append({
-                    "chunk_id": f"{doc_id}_{chunk_index}",
-                    "chunk_text": chunk_str
-                })
+                chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
                 chunk_index += 1
                 current_chunk = []
                 current_len = 0
             # Store the sentence alone
-            chunks.append({
-                "chunk_id": f"{doc_id}_{chunk_index}",
-                "chunk_text": sentence
-            })
+            chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": sentence})
             chunk_index += 1
             continue
 
@@ -452,10 +387,7 @@ def _chunk_document(
         # If we exceed l_max, close the current chunk and start a new one
         if current_len >= l_max_tokens:
             chunk_str = " ".join(current_chunk)
-            chunks.append({
-                "chunk_id": f"{doc_id}_{chunk_index}",
-                "chunk_text": chunk_str
-            })
+            chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
             chunk_index += 1
             current_chunk = []
             current_len = 0
@@ -465,10 +397,7 @@ def _chunk_document(
         if (current_len >= l_min_tokens) and (i < len(sentences) - 1):
             if similarities[i] < tau:
                 chunk_str = " ".join(current_chunk)
-                chunks.append({
-                    "chunk_id": f"{doc_id}_{chunk_index}",
-                    "chunk_text": chunk_str
-                })
+                chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
                 chunk_index += 1
                 current_chunk = []
                 current_len = 0
@@ -476,19 +405,13 @@ def _chunk_document(
     # Any leftover
     if current_chunk:
         chunk_str = " ".join(current_chunk)
-        chunks.append({
-            "chunk_id": f"{doc_id}_{chunk_index}",
-            "chunk_text": chunk_str
-        })
+        chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
 
     return chunks
 
 
 def _multihop_chunking(
-    single_hop_chunks: List[Dict[str, str]],
-    h_min: int,
-    h_max: int,
-    num_multihops_factor: int
+    single_hop_chunks: List[Dict[str, str]], h_min: int, h_max: int, num_multihops_factor: int
 ) -> List[Dict[str, List[str]]]:
     """
     Creates multi-hop chunks by generating all valid combinations of single-hop chunks
@@ -530,7 +453,7 @@ def _multihop_chunking(
             chosen_chunks = [single_hop_chunks[idx] for idx in combo_indices]
             group_dict = {
                 "chunk_ids": [c["chunk_id"] for c in chosen_chunks],
-                "chunks_text": [c["chunk_text"] for c in chosen_chunks]
+                "chunks_text": [c["chunk_text"] for c in chosen_chunks],
             }
             all_combos.append(group_dict)
 
@@ -542,9 +465,7 @@ def _multihop_chunking(
 
 
 def _compute_info_density_metrics(
-    chunks: List[Dict[str, str]],
-    local_perplexity_metric: Optional[Any],
-    local_use_textstat: bool
+    chunks: List[Dict[str, str]], local_perplexity_metric: Optional[Any], local_use_textstat: bool
 ) -> List[Dict[str, float]]:
     """
     Computes optional statistics for each chunk, including token count, perplexity,
@@ -577,7 +498,7 @@ def _compute_info_density_metrics(
         metrics["token_count"] = float(token_count)
 
         if token_count > 0:
-            unique_toks = len(set(t.lower() for t in tokens))
+            unique_toks = len({t.lower() for t in tokens})
             metrics["unique_token_ratio"] = float(unique_toks / token_count)
         else:
             metrics["unique_token_ratio"] = 0.0
@@ -651,13 +572,11 @@ def _plot_aggregated_similarities(all_similarities: List[List[float]]) -> None:
     counts: List[int] = []
 
     for position in range(max_len):
-        vals = [
-            s[position] for s in all_similarities if position < len(s)
-        ]
+        vals = [s[position] for s in all_similarities if position < len(s)]
         if vals:
             mean_val = sum(vals) / len(vals)
             variance = sum((v - mean_val) ** 2 for v in vals) / len(vals)
-            stddev_val = variance ** 0.5
+            stddev_val = variance**0.5
 
             avg_sim.append(mean_val)
             std_sim.append(stddev_val)
@@ -667,17 +586,17 @@ def _plot_aggregated_similarities(all_similarities: List[List[float]]) -> None:
 
     # X-axis positions
     x_positions = list(range(len(avg_sim)))
-    plt.plot(x_positions, avg_sim, 'b-', label='Avg Similarity')
+    plt.plot(x_positions, avg_sim, "b-", label="Avg Similarity")
 
     # Create confidence interval region
     lower_bound = [max(0, a - s) for a, s in zip(avg_sim, std_sim)]
     upper_bound = [min(1, a + s) for a, s in zip(avg_sim, std_sim)]
-    plt.fill_between(x_positions, lower_bound, upper_bound, alpha=0.3, color='blue')
+    plt.fill_between(x_positions, lower_bound, upper_bound, alpha=0.3, color="blue")
 
     # Plot data points with size reflecting how many docs contributed
     max_count = max(counts) if counts else 1
     sizes = [30.0 * (c / max_count) for c in counts]
-    plt.scatter(x_positions, avg_sim, s=sizes, alpha=0.5, color='navy')
+    plt.scatter(x_positions, avg_sim, s=sizes, alpha=0.5, color="navy")
 
     plt.title("Average Consecutive Sentence Similarity Across Documents")
     plt.xlabel("Sentence Pair Index")
