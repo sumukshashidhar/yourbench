@@ -283,7 +283,7 @@ def run(config: Dict[str, Any]) -> None:
         all_chunk_info_metrics.append(chunk_metrics)
 
     # Optional: Save aggregated similarity plot
-    if all_similarities:
+    if all_similarities and debug_mode:
         _plot_aggregated_similarities(all_similarities)
 
     # Append new columns to dataset
