@@ -88,8 +88,6 @@ except ImportError:
     logger.warning("Package 'textstat' not installed. Readability metrics will be skipped.")
     _use_textstat = False
 
-# Ensure local plots directory
-os.makedirs("plots", exist_ok=True)
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -127,7 +125,7 @@ def run(config: Dict[str, Any]) -> None:
     except Exception as ds_error:
         logger.error("Failed to load dataset: {}", ds_error)
         logger.warning("Chunking stage cannot proceed. Exiting.")
-        return
+        raise ds_error
 
     # Retrieve chunking parameters
     chunking_parameters = chunking_config.get("chunking_configuration", {})
