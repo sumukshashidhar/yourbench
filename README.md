@@ -79,9 +79,6 @@ echo "HF_TOKEN=<your_huggingface_token>" >> .env
 yourbench run --config configs/example.yaml
 ```
 
-You can also launch a minimal Gradio UI by including `--gui`. 
-It will let you interactively explore your pipeline stages.
-
 **Note**: The above instructions are a work-in-progress, and more comprehensive usage info will be provided soon.
 
 
