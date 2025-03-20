@@ -18,15 +18,15 @@ less prominent content.
 
 Usage:
 ------
-Typically, you do not call this module directly. Instead, the `handler.py`
-automatically invokes `run(config)` if the corresponding pipeline setting
-(`pipeline.chunking.run`) is enabled.
+Typically, you do not call this module directly. Instead, the handler.py
+automatically invokes run(config) if the corresponding pipeline setting
+(pipeline.chunking.run) is enabled.
 
-The `run(config)` function:
+The run(config) function:
 1. Loads a dataset specified by the pipeline configuration.
 2. Splits each document into single-hop chunks, guided by user-defined token
-   length constraints (`l_min_tokens`, `l_max_tokens`) and a similarity threshold
-   (`tau_threshold`).
+   length constraints (l_min_tokens, l_max_tokens) and a similarity threshold
+   (tau_threshold).
 3. Creates multi-hop chunks by sampling subsets of single-hop chunks and
    concatenating them.
 4. Computes optional readability and perplexity metrics for each chunk if debug
@@ -40,7 +40,7 @@ The `run(config)` function:
 Error Handling and Logging:
 ---------------------------
 - All warnings, errors, and debugging information are logged to both the console
-  and a dedicated log file at `logs/chunking.log`.
+  and a dedicated log file at logs/chunking.log.
 - If any critical errors occur while loading or processing data, the process
   logs the exception and attempts a graceful exit without crashing the entire
   pipeline.
@@ -57,6 +57,7 @@ import evaluate
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
+from dataclasses import dataclass, asdict
 from loguru import logger
 from transformers import AutoModel, AutoTokenizer
 
@@ -88,6 +89,57 @@ except ImportError:
     logger.warning("Package 'textstat' not installed. Readability metrics will be skipped.")
     _use_textstat = False
 
+
+# -----------------------------------------------------------------------------
+# Dataclasses for cleaner configuration and result handling
+# -----------------------------------------------------------------------------
+@dataclass
+class ChunkingParameters:
+    l_min_tokens: int = 64
+    l_max_tokens: int = 128
+    tau_threshold: float = 0.3
+    h_min: int = 2
+    h_max: int = 3
+    num_multihops_factor: int = 2
+
+
+@dataclass
+class SingleHopChunk:
+    chunk_id: str
+    chunk_text: str
+
+
+@dataclass
+class MultiHopChunk:
+    chunk_ids: List[str]
+    chunks_text: List[str]
+
+
+@dataclass
+class ChunkInfoMetrics:
+    token_count: float
+    unique_token_ratio: float
+    bigram_diversity: float
+    perplexity: float
+    avg_token_length: float
+    flesch_reading_ease: float
+    gunning_fog: float
+
+
+def _parse_chunking_parameters(config: Dict[str, Any]) -> ChunkingParameters:
+    """
+    Extracts the chunking parameters from the config dictionary, falling back
+    to default values if keys are missing.
+    """
+    chunking_params = config.get("pipeline", {}).get("chunking", {}).get("chunking_configuration", {})
+    return ChunkingParameters(
+        l_min_tokens=chunking_params.get("l_min_tokens", 64),
+        l_max_tokens=chunking_params.get("l_max_tokens", 128),
+        tau_threshold=chunking_params.get("tau_threshold", 0.3),
+        h_min=chunking_params.get("h_min", 2),
+        h_max=chunking_params.get("h_max", 3),
+        num_multihops_factor=chunking_params.get("num_multihops_factor", 2),
+    )
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -127,14 +179,14 @@ def run(config: Dict[str, Any]) -> None:
         logger.warning("Chunking stage cannot proceed. Exiting.")
         raise ds_error
 
-    # Retrieve chunking parameters
-    chunking_parameters = chunking_config.get("chunking_configuration", {})
-    l_min_tokens = chunking_parameters.get("l_min_tokens", 64)
-    l_max_tokens = chunking_parameters.get("l_max_tokens", 128)
-    tau_threshold = chunking_parameters.get("tau_threshold", 0.3)
-    h_min = chunking_parameters.get("h_min", 2)
-    h_max = chunking_parameters.get("h_max", 3)
-    num_multihops_factor = chunking_parameters.get("num_multihops_factor", 2)
+    # Retrieve chunking parameters into a dataclass
+    params = _parse_chunking_parameters(config)
+    l_min_tokens = params.l_min_tokens
+    l_max_tokens = params.l_max_tokens
+    tau_threshold = params.tau_threshold
+    h_min = params.h_min
+    h_max = params.h_max
+    num_multihops_factor = params.num_multihops_factor
 
     # Check debug setting
     debug_mode: bool = config.get("settings", {}).get("debug", False)
@@ -170,9 +222,9 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Prepare data structures
-    all_single_hop_chunks: List[List[Dict[str, str]]] = []
-    all_multihop_chunks: List[List[Dict[str, List[str]]]] = []
-    all_chunk_info_metrics: List[List[Dict[str, float]]] = []
+    all_single_hop_chunks: List[List[SingleHopChunk]] = []
+    all_multihop_chunks: List[List[MultiHopChunk]] = []
+    all_chunk_info_metrics: List[List[ChunkInfoMetrics]] = []
     all_similarities: List[List[float]] = []
 
     # Process each document in the dataset
@@ -241,10 +293,28 @@ def run(config: Dict[str, Any]) -> None:
     if all_similarities and debug_mode:
         _plot_aggregated_similarities(all_similarities)
 
-    # Append new columns to dataset
-    dataset = dataset.add_column("chunks", all_single_hop_chunks)
-    dataset = dataset.add_column("multihop_chunks", all_multihop_chunks)
-    dataset = dataset.add_column("chunk_info_metrics", all_chunk_info_metrics)
+    # Convert dataclasses back to dicts for safe addition to the dataset
+    dataset = dataset.add_column(
+        "chunks",
+        [
+            [asdict(chunk) for chunk in chunk_list]
+            for chunk_list in all_single_hop_chunks
+        ],
+    )
+    dataset = dataset.add_column(
+        "multihop_chunks",
+        [
+            [asdict(mh) for mh in multihop_list]
+            for multihop_list in all_multihop_chunks
+        ],
+    )
+    dataset = dataset.add_column(
+        "chunk_info_metrics",
+        [
+            [asdict(cm) for cm in metric_list]
+            for metric_list in all_chunk_info_metrics
+        ],
+    )
     dataset = dataset.add_column("chunking_model", [model_name] * len(dataset))
 
     # Save updated dataset
@@ -330,8 +400,13 @@ def _compute_embeddings(
 
 
 def _chunk_document(
-    sentences: List[str], similarities: List[float], l_min_tokens: int, l_max_tokens: int, tau: float, doc_id: str
-) -> List[Dict[str, str]]:
+    sentences: List[str],
+    similarities: List[float],
+    l_min_tokens: int,
+    l_max_tokens: int,
+    tau: float,
+    doc_id: str,
+) -> List[SingleHopChunk]:
     """
     Creates single-hop chunks from sentences, ensuring each chunk is at least
     l_min_tokens in length and at most l_max_tokens, and introducing a chunk
@@ -346,11 +421,9 @@ def _chunk_document(
         doc_id (str): Unique identifier for the document.
 
     Returns:
-        List[Dict[str, str]]: A list of chunk dictionaries with keys:
-          - "chunk_id": A string representing the chunk identifier.
-          - "chunk_text": The content of the chunk.
+        List[SingleHopChunk]: A list of SingleHopChunk objects.
     """
-    chunks: List[Dict[str, str]] = []
+    chunks: List[SingleHopChunk] = []
     current_chunk: List[str] = []
     current_len: int = 0
     chunk_index: int = 0
@@ -364,12 +437,12 @@ def _chunk_document(
             # Dump the current chunk
             if current_chunk:
                 chunk_str = " ".join(current_chunk)
-                chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
+                chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
                 chunk_index += 1
                 current_chunk = []
                 current_len = 0
             # Store the sentence alone
-            chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": sentence})
+            chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=sentence))
             chunk_index += 1
             continue
 
@@ -380,7 +453,7 @@ def _chunk_document(
         # If we exceed l_max, close the current chunk and start a new one
         if current_len >= l_max_tokens:
             chunk_str = " ".join(current_chunk)
-            chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
+            chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
             chunk_index += 1
             current_chunk = []
             current_len = 0
@@ -390,7 +463,7 @@ def _chunk_document(
         if (current_len >= l_min_tokens) and (i < len(sentences) - 1):
             if similarities[i] < tau:
                 chunk_str = " ".join(current_chunk)
-                chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
+                chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
                 chunk_index += 1
                 current_chunk = []
                 current_len = 0
@@ -398,14 +471,17 @@ def _chunk_document(
     # Any leftover
     if current_chunk:
         chunk_str = " ".join(current_chunk)
-        chunks.append({"chunk_id": f"{doc_id}_{chunk_index}", "chunk_text": chunk_str})
+        chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
 
     return chunks
 
 
 def _multihop_chunking(
-    single_hop_chunks: List[Dict[str, str]], h_min: int, h_max: int, num_multihops_factor: int
-) -> List[Dict[str, List[str]]]:
+    single_hop_chunks: List[SingleHopChunk],
+    h_min: int,
+    h_max: int,
+    num_multihops_factor: int,
+) -> List[MultiHopChunk]:
     """
     Creates multi-hop chunks by generating all valid combinations of single-hop chunks
     (from size h_min to h_max), then shuffling and picking the desired number. This
@@ -419,16 +495,14 @@ def _multihop_chunking(
     unique combinations.
 
     Args:
-        single_hop_chunks (List[Dict[str, str]]): List of single-hop chunk dicts.
+        single_hop_chunks (List[SingleHopChunk]): List of single-hop chunk objects.
         h_min (int): Minimum number of chunks to combine.
         h_max (int): Maximum number of chunks to combine.
         num_multihops_factor (int): Determines how many multi-hop chunks to generate,
                                     typically a fraction of the total single-hop chunks.
 
     Returns:
-        List[Dict[str, List[str]]]: Each element has:
-          - "chunk_ids": The list of chunk_ids used in this multi-hop chunk.
-          - "chunks_text": The list of actual chunk texts.
+        List[MultiHopChunk]: The resulting multi-hop chunk objects.
     """
     if not single_hop_chunks:
         return []
@@ -438,17 +512,17 @@ def _multihop_chunking(
     num_multihops = max(1, total_single_hops // num_multihops_factor)
 
     # Build a list of ALL possible multi-hop combinations from h_min to h_max
-    all_combos: List[Dict[str, List[str]]] = []
+    all_combos: List[MultiHopChunk] = []
     for size in range(h_min, h_max + 1):
         if size > total_single_hops:
             break
         for combo_indices in itertools.combinations(range(total_single_hops), size):
             chosen_chunks = [single_hop_chunks[idx] for idx in combo_indices]
-            group_dict = {
-                "chunk_ids": [c["chunk_id"] for c in chosen_chunks],
-                "chunks_text": [c["chunk_text"] for c in chosen_chunks],
-            }
-            all_combos.append(group_dict)
+            group_obj = MultiHopChunk(
+                chunk_ids=[c.chunk_id for c in chosen_chunks],
+                chunks_text=[c.chunk_text for c in chosen_chunks],
+            )
+            all_combos.append(group_obj)
 
     random.shuffle(all_combos)
     if len(all_combos) <= num_multihops:
@@ -458,53 +532,51 @@ def _multihop_chunking(
 
 
 def _compute_info_density_metrics(
-    chunks: List[Dict[str, str]], local_perplexity_metric: Optional[Any], local_use_textstat: bool
-) -> List[Dict[str, float]]:
+    chunks: List[SingleHopChunk],
+    local_perplexity_metric: Optional[Any],
+    local_use_textstat: bool,
+) -> List[ChunkInfoMetrics]:
     """
     Computes optional statistics for each chunk, including token count, perplexity,
     readability (flesch, gunning fog), and basic lexical diversity metrics.
 
     Args:
-        chunks (List[Dict[str, str]]): The list of chunk dictionaries produced by
-                                       _chunk_document.
+        chunks (List[SingleHopChunk]): The list of single-hop chunk objects.
         local_perplexity_metric (Optional[Any]): If provided, used to compute
                                                  perplexity (from evaluate.load("perplexity")).
         local_use_textstat (bool): If True, compute text readability metrics using textstat.
 
     Returns:
-        List[Dict[str, float]]: One dictionary per chunk with fields like:
-          - "token_count"
-          - "unique_token_ratio"
-          - "bigram_diversity"
-          - "perplexity"
-          - "avg_token_length"
-          - "flesch_reading_ease"
-          - "gunning_fog"
+        List[ChunkInfoMetrics]: One object per chunk with fields like:
+          - token_count
+          - unique_token_ratio
+          - bigram_diversity
+          - perplexity
+          - avg_token_length
+          - flesch_reading_ease
+          - gunning_fog
     """
-    results: List[Dict[str, float]] = []
+    results: List[ChunkInfoMetrics] = []
+
     for chunk in chunks:
-        chunk_text: str = chunk["chunk_text"]
+        chunk_text: str = chunk.chunk_text
         tokens = chunk_text.strip().split()
         token_count: int = len(tokens)
 
-        metrics: Dict[str, float] = {}
-        metrics["token_count"] = float(token_count)
-
+        # Compute metrics step by step
+        unique_token_ratio = 0.0
         if token_count > 0:
             unique_toks = len({t.lower() for t in tokens})
-            metrics["unique_token_ratio"] = float(unique_toks / token_count)
-        else:
-            metrics["unique_token_ratio"] = 0.0
+            unique_token_ratio = float(unique_toks / token_count)
 
         # Bigram diversity
+        bigram_diversity = 0.0
         if token_count > 1:
             bigrams = []
             for i in range(token_count - 1):
                 bigrams.append((tokens[i].lower(), tokens[i + 1].lower()))
             unique_bigrams = len(set(bigrams))
-            metrics["bigram_diversity"] = float(unique_bigrams / len(bigrams))
-        else:
-            metrics["bigram_diversity"] = 0.0
+            bigram_diversity = float(unique_bigrams / len(bigrams))
 
         # Perplexity
         ppl_score: float = 0.0
@@ -514,31 +586,34 @@ def _compute_info_density_metrics(
                 ppl_score = result.get("mean_perplexity", 0.0)
             except Exception as e:
                 logger.warning("Could not compute perplexity for chunk. Error: {}", e)
-        metrics["perplexity"] = ppl_score
 
         # Average token length
+        avg_token_length = 0.0
         if token_count > 0:
             avg_len = sum(len(t) for t in tokens) / token_count
-            metrics["avg_token_length"] = float(avg_len)
-        else:
-            metrics["avg_token_length"] = 0.0
+            avg_token_length = float(avg_len)
 
         # Readability
+        flesch_reading_ease = 0.0
+        gunning_fog = 0.0
         if local_use_textstat and chunk_text.strip():
             try:
-                flesch = textstat.flesch_reading_ease(chunk_text)
-                fog = textstat.gunning_fog(chunk_text)
-                metrics["flesch_reading_ease"] = float(flesch)
-                metrics["gunning_fog"] = float(fog)
+                flesch_reading_ease = float(textstat.flesch_reading_ease(chunk_text))
+                gunning_fog = float(textstat.gunning_fog(chunk_text))
             except Exception as e:
                 logger.warning("Textstat error: {}", e)
-                metrics["flesch_reading_ease"] = 0.0
-                metrics["gunning_fog"] = 0.0
-        else:
-            metrics["flesch_reading_ease"] = 0.0
-            metrics["gunning_fog"] = 0.0
 
-        results.append(metrics)
+        results.append(
+            ChunkInfoMetrics(
+                token_count=float(token_count),
+                unique_token_ratio=unique_token_ratio,
+                bigram_diversity=bigram_diversity,
+                perplexity=ppl_score,
+                avg_token_length=avg_token_length,
+                flesch_reading_ease=flesch_reading_ease,
+                gunning_fog=gunning_fog,
+            )
+        )
 
     return results
 
