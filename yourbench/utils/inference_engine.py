@@ -74,6 +74,17 @@ class Model:
 
 @dataclass
 class InferenceCall:
+    """
+    A class that represents an inference call to a model.
+    
+    Attributes:
+        messages: List of message dictionaries in the format expected by the LLM API.
+        temperature: Optional sampling temperature for controlling randomness in generation.
+        tags: List of string tags that can be set to any values by the user. Used internally 
+              for logging and cost tracking purposes.
+        max_retries: Maximum number of retry attempts for failed inference calls.
+        seed: Optional random seed for reproducible outputs.
+    """
     messages: List[Dict[str, str]]
     temperature: Optional[float] = None
     tags: List[str] = field(default_factory=lambda: ["dev"])
