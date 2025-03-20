@@ -10,8 +10,7 @@ Summarization Stage
 
 This module handles the summarization stage of the YourBench pipeline. It takes
 documents (with their raw text) and generates concise yet comprehensive summaries
-for each document. Optionally, it can compute and store corpus-level metrics
-(e.g., BLEU, METEOR, ROUGE, BERTScore) if running in debug mode.
+for each document.
 
 Usage:
 ------
@@ -33,14 +32,12 @@ Usage:
      - raw_document_summary
      - document_summary
      - summarization_model
-     - quality_metrics (optional in debug mode)
 
 Error Handling & Logging:
 -------------------------
 - All errors are logged using `loguru` to `logs/summarization.log`.
 - The stage attempts to proceed with partial data even if some calls fail, never
   abruptly terminating the pipeline.
-- In debug mode, additional corpus-level metrics are computed and logged.
 
 Important Notes:
 ----------------
@@ -59,7 +56,6 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any, Dict, List, Optional
 
-import evaluate
 from datasets import Dataset
 from loguru import logger
 
@@ -67,142 +63,6 @@ from yourbench.utils.dataset_engine import save_dataset, smart_load_dataset
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
-
-
-# We add a stage-specific log file for summarization
-logger.add("logs/summarization.log", level="DEBUG", rotation="10 MB", enqueue=True)
-
-# === Utility metric loaders (only used in debug mode) ===
-# They are defined inside the run function to avoid overhead unless needed.
-
-
-def _safe_compute_bleu_score(predictions: List[str], references: List[List[str]]) -> float:
-    """
-    Compute BLEU score safely with error handling.
-
-    Args:
-        predictions (List[str]): The candidate summaries or predicted texts.
-        references (List[List[str]]): List of reference texts. Each element is
-            itself a list of strings (as BLEU can handle multiple references
-            for the same prediction).
-
-    Returns:
-        float: The overall BLEU score for the corpus. Returns 0.0 if an error
-        occurs or if inputs are empty.
-    """
-    try:
-        safe_preds = [p if p else "" for p in predictions]
-        safe_refs = []
-        for ref_list in references:
-            if not isinstance(ref_list, list) or not ref_list:
-                safe_refs.append([""])
-            else:
-                safe_refs.append([r if r else "" for r in ref_list])
-
-        if not safe_preds or not safe_refs:
-            logger.warning("Skipping BLEU due to empty inputs.")
-            return 0.0
-
-        bleu_metric = evaluate.load("bleu")
-        bleu_result = bleu_metric.compute(predictions=safe_preds, references=safe_refs)
-        return bleu_result.get("bleu", 0.0)
-    except Exception as e:
-        logger.error("Error computing BLEU score: {}", str(e))
-        return 0.0
-
-
-def _safe_compute_meteor_score(predictions: List[str], references: List[str]) -> float:
-    """
-    Compute METEOR score safely with error handling.
-
-    Args:
-        predictions (List[str]): The candidate summaries or predicted texts.
-        references (List[str]): The reference texts matching each prediction.
-
-    Returns:
-        float: The corpus-level METEOR score (0.0 to 1.0). Returns 0.0 if an
-        error occurs or if inputs are empty.
-    """
-    try:
-        safe_preds = [p if p else "" for p in predictions]
-        safe_refs = [r if r else "" for r in references]
-
-        if not safe_preds or not safe_refs:
-            logger.warning("Skipping METEOR due to empty inputs.")
-            return 0.0
-
-        meteor_metric = evaluate.load("meteor")
-        meteor_result = meteor_metric.compute(predictions=safe_preds, references=safe_refs)
-        return meteor_result.get("meteor", 0.0)
-    except Exception as e:
-        logger.error("Error computing METEOR score: {}", str(e))
-        return 0.0
-
-
-def _safe_compute_rouge_scores(predictions: List[str], references: List[str]) -> Dict[str, float]:
-    """
-    Compute ROUGE scores safely with error handling.
-
-    Args:
-        predictions (List[str]): Candidate summaries or predicted texts.
-        references (List[str]): Reference texts matching each prediction.
-
-    Returns:
-        Dict[str, float]: Contains 'rouge1', 'rouge2', and 'rougeL' scores.
-        Returns a dictionary of zeros if an error occurs or if inputs are empty.
-    """
-    try:
-        safe_preds = [p if p else "" for p in predictions]
-        safe_refs = [r if r else "" for r in references]
-
-        if not safe_preds or not safe_refs:
-            logger.warning("Skipping ROUGE due to empty inputs.")
-            return {"rouge1": 0.0, "rouge2": 0.0, "rougeL": 0.0}
-
-        rouge_metric = evaluate.load("rouge")
-        rouge_result = rouge_metric.compute(predictions=safe_preds, references=safe_refs)
-        return {
-            "rouge1": rouge_result.get("rouge1", 0.0),
-            "rouge2": rouge_result.get("rouge2", 0.0),
-            "rougeL": rouge_result.get("rougeL", 0.0),
-        }
-    except Exception as e:
-        logger.error("Error computing ROUGE scores: {}", str(e))
-        return {"rouge1": 0.0, "rouge2": 0.0, "rougeL": 0.0}
-
-
-def _safe_compute_bert_score_f1(predictions: List[str], references: List[str]) -> float:
-    """
-    Compute average BERTScore (F1) safely with error handling.
-
-    Args:
-        predictions (List[str]): Candidate summaries or predicted texts.
-        references (List[str]): Reference texts matching each prediction.
-
-    Returns:
-        float: The average BERTScore-F1. Returns 0.0 if an error occurs or inputs
-        are empty.
-    """
-    try:
-        safe_preds = [p if p else "" for p in predictions]
-        safe_refs = [r if r else "" for r in references]
-
-        if not safe_preds or not safe_refs:
-            logger.warning("Skipping BERTScore due to empty inputs.")
-            return 0.0
-
-        bert_score_metric = evaluate.load("bertscore")
-        bert_result = bert_score_metric.compute(
-            predictions=safe_preds, references=safe_refs, model_type="bert-base-uncased"
-        )
-        f1_scores = bert_result.get("f1", [])
-        if not f1_scores:
-            return 0.0
-        return float(sum(f1_scores) / len(f1_scores))
-    except Exception as e:
-        logger.error("Error computing BERTScore: {}", str(e))
-        return 0.0
-
 
 def _run_inference_with_timeout(
     config: Dict[str, Any], inference_calls: List[InferenceCall], stage_name: str, timeout_seconds: float
@@ -229,12 +89,10 @@ def _run_inference_with_timeout(
                 logger.error("Inference returned None or invalid result type: {}", type(result))
                 return None
 
-            # Check if the result dictionary is empty
             if not result:
                 logger.error("Inference returned an empty dictionary")
                 return None
 
-            # Check if any model returned empty response list
             for model_name, responses in result.items():
                 if not responses:
                     logger.warning("Model '{}' returned empty response list", model_name)
@@ -263,8 +121,6 @@ def duplicate_rows(dataset: Dict[str, Any], num_duplicates: int = 1) -> Dict[str
         Dict[str, List[Any]]: A new dictionary where each key's list is repeated
         num_duplicates times.
     """
-    # Example usage: repeat dataset rows for augmentation or testing.
-    # Not actively used in summarization, but provided to preserve functionality.
     repeated_data = {}
     for key, value in dataset.items():
         repeated_data[key] = [val for val in value for _ in range(num_duplicates)]
@@ -279,9 +135,7 @@ def run(config: Dict[str, Any]) -> None:
       1. Loads a dataset of documents from the configuration.
       2. Uses one or more summarization models to generate summaries for each doc.
       3. Attempts to parse each model's output for <final_summary> tags.
-      4. Optionally (in debug mode) computes corpus-level metrics (BLEU, METEOR,
-         ROUGE, BERTScore).
-      5. Logs results and saves updated columns in the dataset.
+      4. Logs results and saves updated columns in the dataset.
 
     Args:
         config (Dict[str, Any]): The entire pipeline configuration dictionary.
@@ -289,7 +143,6 @@ def run(config: Dict[str, Any]) -> None:
     Returns:
         None. The function saves the resulting dataset to disk/HF Hub if successful.
     """
-    # Retrieve stage config
     stage_cfg = config.get("pipeline", {}).get("summarization", {})
     debug_mode: bool = config.get("settings", {}).get("debug", False)
     if not stage_cfg.get("run", False):
@@ -346,9 +199,6 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # 4) Gather model responses
-    #    By design, we typically have a single summarization model. If multiple
-    #    are used, the pipeline can store them all, but we only pick the first
-    #    in the dictionary for the stage's final summaries.
     try:
         summ_model_name = list(response_dict.keys())[0]
         model_raw_summaries: List[str] = response_dict.get(summ_model_name, [])
@@ -368,7 +218,6 @@ def run(config: Dict[str, Any]) -> None:
         if len(model_raw_summaries) > len(documents):
             model_raw_summaries = model_raw_summaries[: len(documents)]
 
-    # 5) Parse out final summaries from <final_summary> tags
     extracted_summaries: List[str] = []
     for i, raw_resp in enumerate(model_raw_summaries):
         logger.debug("Parsing doc index {}, raw response length={}", i, len(raw_resp))
@@ -385,76 +234,7 @@ def run(config: Dict[str, Any]) -> None:
         else:
             extracted_summaries.append(parsed_stripped)
 
-    # 6) Compute corpus-level metrics if in debug mode
-    document_quality_metrics: List[Dict[str, float]] = []
-    if debug_mode:
-        try:
-            # Convert references to format expected by some metrics
-            all_preds = [s if s else "" for s in extracted_summaries]
-            all_refs_nested = [[d] for d in documents]  # for BLEU, we need list of list
-            all_refs_single = list(documents)
-
-            # BLEU
-            corpus_bleu = _safe_compute_bleu_score(all_preds, all_refs_nested)
-            # METEOR
-            corpus_meteor = _safe_compute_meteor_score(all_preds, all_refs_single)
-            # ROUGE
-            rouge_scores = _safe_compute_rouge_scores(all_preds, all_refs_single)
-            corpus_rouge1 = rouge_scores["rouge1"]
-            corpus_rouge2 = rouge_scores["rouge2"]
-            corpus_rougeL = rouge_scores["rougeL"]
-            # BERTScore
-            corpus_bert_f1 = _safe_compute_bert_score_f1(all_preds, all_refs_single)
-
-            logger.info(
-                "Debug Mode Metrics:\n"
-                "  BLEU: {:.4f}\n"
-                "  METEOR: {:.4f}\n"
-                "  ROUGE1: {:.4f}, ROUGE2: {:.4f}, ROUGEL: {:.4f}\n"
-                "  BERTScore-F1: {:.4f}",
-                corpus_bleu,
-                corpus_meteor,
-                corpus_rouge1,
-                corpus_rouge2,
-                corpus_rougeL,
-                corpus_bert_f1,
-            )
-
-            # Store per-document placeholders (we assign corpus-level scores to each doc).
-            for _ in range(len(documents)):
-                document_quality_metrics.append({
-                    "rouge1_f1": corpus_rouge1,
-                    "rouge2_f1": corpus_rouge2,
-                    "rougeL_f1": corpus_rougeL,
-                    "bleu": corpus_bleu,
-                    "meteor": corpus_meteor,
-                    "bert_score_f1": corpus_bert_f1,
-                })
-        except Exception as metric_exc:
-            logger.error("Error computing corpus-level metrics: {}", str(metric_exc))
-            # Default to zero metrics
-            for _ in range(len(documents)):
-                document_quality_metrics.append({
-                    "rouge1_f1": 0.0,
-                    "rouge2_f1": 0.0,
-                    "rougeL_f1": 0.0,
-                    "bleu": 0.0,
-                    "meteor": 0.0,
-                    "bert_score_f1": 0.0,
-                })
-    else:
-        # Not debug mode => store zero or empty metrics
-        for _ in range(len(documents)):
-            document_quality_metrics.append({
-                "rouge1_f1": 0.0,
-                "rouge2_f1": 0.0,
-                "rougeL_f1": 0.0,
-                "bleu": 0.0,
-                "meteor": 0.0,
-                "bert_score_f1": 0.0,
-            })
-
-    # 7) Add new columns to the dataset
+    # 5) Add new columns to the dataset
     try:
         dataset = dataset.add_column("raw_document_summary", model_raw_summaries)
     except Exception as e:
@@ -470,12 +250,7 @@ def run(config: Dict[str, Any]) -> None:
     except Exception as e:
         logger.error("Error adding 'summarization_model': {}", str(e))
 
-    try:
-        dataset = dataset.add_column("quality_metrics", document_quality_metrics)
-    except Exception as e:
-        logger.error("Error adding 'quality_metrics': {}", str(e))
-
-    # 8) Save updated dataset
+    # 6) Save updated dataset
     output_dataset_name = stage_cfg.get(
         "output_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name")
     )
