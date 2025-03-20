@@ -89,7 +89,7 @@ def _run_inference_with_timeout(
                 logger.error("Inference returned None or invalid result type: {}", type(result))
                 return None
 
-            if not result:
+            if len(result) == 0:
                 logger.error("Inference returned an empty dictionary")
                 return None
 
