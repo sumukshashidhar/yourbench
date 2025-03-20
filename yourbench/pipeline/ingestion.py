@@ -56,10 +56,6 @@ except ImportError:
     logger.warning("Could not import 'openai.OpenAI'. LLM-based conversion may not be available.")
     OpenAI = None
 
-# Add a stage-specific file sink for logging
-# Rotation can be tuned as preferred (e.g., daily rotation, size-based, etc.)
-os.makedirs("logs", exist_ok=True)
-logger.add("logs/ingestion.log", level="DEBUG", rotation="5 MB")
 
 
 def run(config: Dict[str, Any]) -> None:
