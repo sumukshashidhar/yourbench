@@ -1,147 +1,146 @@
-"""
-Universal main.py script for UI and CLI
+from __future__ import annotations
 
-Usage:
-    yourbench                    # Launches interactive CLI mode
-    yourbench run --config ...   # Runs the pipeline with the given config file
-    yourbench analyze ...        # Runs a specific analysis
-    yourbench gui               # Launches the Gradio UI
-"""
-
-import os
 import sys
+from pathlib import Path
+from typing import Optional
 
-import click
+import typer
 from loguru import logger
-from rich.console import Console
-from rich.panel import Panel
-from rich.prompt import Prompt
-from rich.table import Table
-
 from yourbench.analysis import run_analysis
 from yourbench.config_cache import get_last_config, save_last_config
-from yourbench.pipeline import run_pipeline
+from yourbench.pipeline.handler import run_pipeline
+
+app = typer.Typer(
+    name="yourbench",
+    add_completion=True,
+    help="YourBench - Dynamic Evaluation Set Generation with Large Language Models.",
+    pretty_exceptions_show_locals=False,
+)
 
 
-console = Console()
-
-
-def get_config_files():
-    """Get all config files from the configs directory."""
-    config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs")
-    if not os.path.exists(config_dir):
-        return []
-    return [f for f in os.listdir(config_dir) if f.endswith((".yaml", ".yml", ".json"))]
-
-
-def display_welcome():
-    """Display a welcome message with ASCII art and instructions."""
-    welcome_text = """
-    [bold blue]Welcome to YourBench![/bold blue]
-
-    [italic]Dynamic Evaluation Set Generation with Large Language Models[/italic]
-
-    [yellow]Available Commands:[/yellow]
-    • [green]run[/green] - Run the pipeline with a config file
-    • [green]analyze[/green] - Run a specific analysis
-    • [green]gui[/green] - Launch the Gradio UI
-    • [green]exit[/green] - Exit the program
+@app.callback()
+def main_callback() -> None:
     """
-    console.print(Panel(welcome_text, title="[bold]YourBench CLI[/bold]", border_style="blue"))
+    Global callback for YourBench CLI.
 
-
-def interactive_mode():
-    """Run the interactive CLI mode."""
-    display_welcome()
-
-    while True:
-        command = Prompt.ask("\n[bold blue]yourbench[/bold blue]")
-
-        if command.lower() == "exit":
-            console.print("[yellow]Goodbye![/yellow]")
-            break
-
-        elif command.lower() == "run":
-            config_files = get_config_files()
-            if not config_files:
-                console.print("[red]No config files found in the configs directory![/red]")
-                continue
-
-            table = Table(title="Available Config Files")
-            table.add_column("Index", style="cyan")
-            table.add_column("Config File", style="green")
-
-            for idx, config in enumerate(config_files, 1):
-                table.add_row(str(idx), config)
-
-            console.print(table)
-
-            try:
-                choice = int(Prompt.ask("\nSelect a config file by number", default="1"))
-                if 1 <= choice <= len(config_files):
-                    config_path = os.path.join("configs", config_files[choice - 1])
-                    save_last_config(config_path)
-                    run_pipeline(config_path)
-                else:
-                    console.print("[red]Invalid selection![/red]")
-            except ValueError:
-                console.print("[red]Please enter a valid number![/red]")
-
-        elif command.lower() == "analyze":
-            # TODO: Implement analysis selection
-            console.print("[yellow]Analysis mode coming soon![/yellow]")
-
-        else:
-            console.print("[red]Unknown command![/red]")
-            console.print("[yellow]Available commands: run, analyze, gui, exit[/yellow]")
-
-
-@click.group()
-def cli():
-    """YourBench - Dynamic Evaluation Set Generation with Large Language Models"""
+    This function runs before any subcommand and can handle
+    global flags or environment setup as needed.
+    """
     pass
 
 
-@cli.command()
-@click.option("--config", type=click.Path(exists=True), help="Path to the configuration file")
-@click.option("--debug/--no-debug", default=False, help="Enable debug logging")
-def run(config, debug):
-    """Run the pipeline with a configuration file."""
+@app.command(help="Run the pipeline with the given configuration file.")
+def run(
+    config: Optional[Path] = typer.Option(
+        None,
+        "--config",
+        "-c",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        help="Path to the configuration file (YAML, JSON). If not provided, attempts to use last used config.",
+    ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable debug logging for additional details.",
+    ),
+    plot_stage_timing: bool = typer.Option(
+        False,
+        "--plot-stage-timing",
+        help=(
+            "If set, generates a bar chart illustrating how long each pipeline stage took. "
+            "This requires matplotlib."
+        ),
+    ),
+) -> None:
+    """
+    Run the YourBench pipeline using a specified config file.
+
+    If no --config is provided, this command attempts to load the most recent
+    cached config (if any). Use --plot-stage-timing to generate a stage-timing chart.
+    """
+    # Adjust logger according to debug level
+    logger.remove()
+    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
+
+    # Use cached config if none specified
     if not config:
-        config = get_last_config()
-        if config:
-            logger.info(f"No config specified, using last used config: {config}")
+        cached_config: Optional[str] = get_last_config()
+        if cached_config:
+            config = Path(cached_config)
+            logger.info(f"No config specified; using last used config: {config}")
         else:
             logger.error(
-                "No config file specified and no cached config found. Please specify a config file using --config"
+                "No config file specified and no cached config found.\n"
+                "Please provide one with --config or create a config."
             )
-            return
+            raise typer.Exit(code=1)
 
-    logger.remove()  # Remove default handlers
-    logger.add(lambda msg: print(msg, end=""), level="DEBUG" if debug else "INFO")
+    # Ensure we have a valid config path
+    if not config.exists():
+        logger.error(f"Specified config file does not exist: {config}")
+        raise typer.Exit(code=1)
 
-    save_last_config(config)
-    run_pipeline(config, debug=debug)
+    # Save to cache for later
+    save_last_config(str(config))
+
+    logger.info(f"Running pipeline with config: {config}")
+    try:
+        run_pipeline(
+            config_file_path=str(config),
+            debug=debug,
+            plot_stage_timing=plot_stage_timing,
+        )
+    except Exception as e:
+        logger.exception(f"Pipeline failed: {e}")
+        raise typer.Exit(code=1)
 
 
-@cli.command()
-@click.argument("analysis_name")
-@click.argument("args", nargs=-1)
-@click.option("--debug/--no-debug", default=False, help="Enable debug logging")
-def analyze(analysis_name, args, debug):
-    """Run a specific analysis."""
-    logger.remove()  # Remove default handlers
-    logger.add(lambda msg: print(msg, end=""), level="DEBUG" if debug else "INFO")
+@app.command(help="Run a specific analysis by name with optional arguments.")
+def analyze(
+    analysis_name: str = typer.Argument(..., help="Name of the analysis to run."),
+    args: list[str] = typer.Argument(
+        None,
+        help="Additional arguments for the analysis (space-separated).",
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging."),
+) -> None:
+    """
+    Run a specific analysis by name, with optional space-separated arguments.
 
-    run_analysis(analysis_name, args, debug=debug)
+    Example:
+        yourbench analyze summarization --debug arg1 arg2
+    """
+    logger.remove()
+    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
+
+    logger.info(f"Running analysis '{analysis_name}' with arguments: {args}")
+    try:
+        run_analysis(analysis_name, args, debug=debug)
+    except Exception as e:
+        logger.exception(f"Analysis '{analysis_name}' failed: {e}")
+        raise typer.Exit(code=1)
 
 
-def main():
-    """Main entry point for the CLI application."""
-    if len(sys.argv) == 1:
-        interactive_mode()
-    else:
-        cli()
+@app.command(help="Launch the Gradio UI (if available).")
+def gui() -> None:
+    """
+    Launch the Gradio UI for YourBench, if implemented.
+    """
+    logger.info("Launching the Gradio UI...")
+    # TODO: Implement your Gradio UI logic here
+    raise NotImplementedError("GUI support is not yet implemented.")
+
+
+def main() -> None:
+    """
+    Main entry point for the CLI.
+
+    If no arguments are provided, Typer shows the help message.
+    """
+    app()
 
 
 if __name__ == "__main__":
