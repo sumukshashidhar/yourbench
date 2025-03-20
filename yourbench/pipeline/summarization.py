@@ -269,4 +269,4 @@ def run(config: Dict[str, Any]) -> None:
         logger.success("Summarization stage completed successfully.")
     except Exception as e:
         logger.error("Error saving summarized dataset: {}", str(e))
-        logger.warning("Summarization stage encountered errors but continuing pipeline.")
+        raise e
