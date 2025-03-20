@@ -41,7 +41,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
         # Read the raw configuration file
         with open(config_path, "r") as file:
             config_str = file.read()
-        logger.debug("Successfully read configuration file from {}", config_path)
+        logger.debug(
+            "Successfully read configuration file from {}",
+            config_path)
 
         # Substitute environment variables in the configuration string
         expanded_config_str = os.path.expandvars(config_str)
