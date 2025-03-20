@@ -2,23 +2,27 @@
 Inference Engine For Yourbench - Now with true concurrency throttling.
 """
 
-import litellm
-from dataclasses import dataclass, field
-from dotenv import load_dotenv
-from loguru import logger
-from typing import Dict, Any, List, Optional
-import sys
-import uuid
 import asyncio
+import sys
 import time  # ### [CHANGED OR ADDED] ### for timing logs
+import uuid
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+import litellm
+from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
+from loguru import logger
+
+
 if sys.version_info >= (3, 11):
     from asyncio import timeout as aio_timeout
 else:
     from async_timeout import timeout as aio_timeout
 
 from tqdm.asyncio import tqdm_asyncio
+
 
 load_dotenv()
 
@@ -28,6 +32,8 @@ GLOBAL_TIMEOUT = 3600
 # Optional: Customize success/failure callbacks
 litellm.success_callback = ['langfuse']
 litellm.failure_callback = ['langfuse']
+
+
 class EventLoopAwareCache(litellm.InMemoryCache):
     """
     A cache that maintains cache isolation between event loops.
@@ -56,7 +62,9 @@ class EventLoopAwareCache(litellm.InMemoryCache):
         loop_id = loop._custom_identifier
         return f"{key}-{loop_id}"
 
+
 litellm.in_memory_llm_clients_cache = EventLoopAwareCache()
+
 
 @dataclass
 class Model:
@@ -68,6 +76,7 @@ class Model:
     inference_backend: str = "litellm"
     provider: str = None
     api_version: str = None
+
 
 @dataclass
 class InferenceCall:
@@ -125,8 +134,8 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         # make the client first
         # TODO: support langfuse logging with hf_hub
         client = AsyncInferenceClient(
-            model = model.model_name,
-            token = model.api_key,
+            model=model.model_name,
+            token=model.api_key,
             provider=model.provider,
             base_url=model.base_url,
             timeout=GLOBAL_TIMEOUT
@@ -195,7 +204,7 @@ async def _run_inference_async_helper(
 ) -> Dict[str, List[str]]:
     """
     Launch tasks for each (model, inference_call) pair in parallel, respecting concurrency.
-    
+
     Returns:
         Dict[str, List[str]]: A dictionary keyed by model.model_name, each value
         is a list of responses (strings) in the same order as 'inference_calls'.
@@ -258,7 +267,7 @@ def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
     """
     all_configured_models = base_config.get("model_list", [])
     role_models = base_config.get("model_roles", {}).get(step_name, [])
-    
+
     # If no role models are defined for this step, use the first model from model_list
     if not role_models and all_configured_models:
         logger.info(
@@ -267,7 +276,7 @@ def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
             all_configured_models[0]["model_name"]
         )
         return [Model(**all_configured_models[0])]
-    
+
     # Filter out only those with a matching 'model_name'
     matched = [
         Model(**m) for m in all_configured_models
