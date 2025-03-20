@@ -31,7 +31,7 @@ def get_config_files():
     config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs")
     if not os.path.exists(config_dir):
         return []
-    return [f for f in os.listdir(config_dir) if f.endswith(('.yaml', '.yml', '.json'))]
+    return [f for f in os.listdir(config_dir) if f.endswith((".yaml", ".yml", ".json"))]
 
 
 def display_welcome():
@@ -103,8 +103,8 @@ def cli():
 
 
 @cli.command()
-@click.option('--config', type=click.Path(exists=True), help='Path to the configuration file')
-@click.option('--debug/--no-debug', default=False, help='Enable debug logging')
+@click.option("--config", type=click.Path(exists=True), help="Path to the configuration file")
+@click.option("--debug/--no-debug", default=False, help="Enable debug logging")
 def run(config, debug):
     """Run the pipeline with a configuration file."""
     if not config:
@@ -112,7 +112,9 @@ def run(config, debug):
         if config:
             logger.info(f"No config specified, using last used config: {config}")
         else:
-            logger.error("No config file specified and no cached config found. Please specify a config file using --config")
+            logger.error(
+                "No config file specified and no cached config found. Please specify a config file using --config"
+            )
             return
 
     logger.remove()  # Remove default handlers
@@ -123,9 +125,9 @@ def run(config, debug):
 
 
 @cli.command()
-@click.argument('analysis_name')
-@click.argument('args', nargs=-1)
-@click.option('--debug/--no-debug', default=False, help='Enable debug logging')
+@click.argument("analysis_name")
+@click.argument("args", nargs=-1)
+@click.option("--debug/--no-debug", default=False, help="Enable debug logging")
 def analyze(analysis_name, args, debug):
     """Run a specific analysis."""
     logger.remove()  # Remove default handlers

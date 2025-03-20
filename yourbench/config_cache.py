@@ -1,6 +1,7 @@
 """
 Module for handling configuration caching.
 """
+
 import json
 from pathlib import Path
 
@@ -19,9 +20,9 @@ def get_last_config() -> str | None:
         return None
 
     try:
-        with open(CACHE_FILE, 'r') as f:
+        with open(CACHE_FILE, "r") as f:
             cache = json.load(f)
-            return cache.get('last_config')
+            return cache.get("last_config")
     except (json.JSONDecodeError, IOError):
         return None
 
@@ -39,14 +40,14 @@ def save_last_config(config_path: str) -> None:
     try:
         cache = {}
         if CACHE_FILE.exists():
-            with open(CACHE_FILE, 'r') as f:
+            with open(CACHE_FILE, "r") as f:
                 cache = json.load(f)
 
-        cache['last_config'] = config_path
+        cache["last_config"] = config_path
 
-        with open(CACHE_FILE, 'w') as f:
+        with open(CACHE_FILE, "w") as f:
             json.dump(cache, f)
     except (json.JSONDecodeError, IOError):
         # If there's an error, try to create a new cache file
-        with open(CACHE_FILE, 'w') as f:
-            json.dump({'last_config': config_path}, f)
+        with open(CACHE_FILE, "w") as f:
+            json.dump({"last_config": config_path}, f)
