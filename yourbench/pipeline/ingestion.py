@@ -39,12 +39,13 @@ Stage-Specific Logging:
     All major ingestion activity is logged to "logs/ingestion.log".
 """
 
-import os
 import glob
-from typing import Dict, Any, Optional
+import os
+from typing import Any, Dict, Optional
 
 from loguru import logger
 from markitdown import MarkItDown
+
 
 # Attempt to import an OpenAI-like client if available.
 # This is only used if advanced LLM-driven conversions are requested.
