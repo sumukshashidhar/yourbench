@@ -73,6 +73,7 @@ class IngestedDocument:
         document_metadata (Dict[str, Any]):
             Additional metadata, such as file size or arbitrary user-defined fields.
     """
+
     document_id: str
     document_text: str
     document_filename: str
@@ -160,7 +161,7 @@ def run(config: Dict[str, Any]) -> None:
         step_name=stage_name,
         config=config,
         output_dataset_name=output_dataset_name,
-        output_subset=output_subset
+        output_subset=output_subset,
     )
     logger.success(f"Successfully completed '{stage_name}' stage.")
 
@@ -196,15 +197,13 @@ def _collect_markdown_files(md_file_paths: List[str]) -> List[IngestedDocument]:
                     document_id=doc_id,
                     document_text=content,
                     document_filename=os.path.basename(file_path),
-                    document_metadata={"file_size": os.path.getsize(file_path)}
+                    document_metadata={"file_size": os.path.getsize(file_path)},
                 )
             )
             logger.debug(f"Loaded markdown file: {file_path} (doc_id={doc_id})")
 
         except Exception as e:
-            logger.error(
-                f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}"
-            )
+            logger.error(f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}")
 
     return ingested_docs
 

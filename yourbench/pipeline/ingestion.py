@@ -53,10 +53,7 @@ try:
     from openai import OpenAI
 except ImportError:
     # If not installed, fall back gracefully and warn
-    logger.warning(
-        "Could not import 'openai.OpenAI'. "
-        "LLM-based conversion may not be available."
-    )
+    logger.warning("Could not import 'openai.OpenAI'. LLM-based conversion may not be available.")
     OpenAI = None
 
 # Add a stage-specific file sink for logging
@@ -123,25 +120,17 @@ def run(config: Dict[str, Any]) -> None:
         logger.warning("No files found in source directory: {}", source_dir)
         return
 
-    logger.info(
-        "Ingestion stage: Converting files from '{}' to '{}'...",
-        source_dir,
-        output_dir
-    )
+    logger.info("Ingestion stage: Converting files from '{}' to '{}'...", source_dir, output_dir)
 
     # Process each file in the source directory
     for file_path in all_source_files:
         if os.path.isfile(file_path):
             _convert_document_to_markdown(
-                file_path=file_path,
-                output_dir=output_dir,
-                markdown_processor=markdown_processor
+                file_path=file_path, output_dir=output_dir, markdown_processor=markdown_processor
             )
 
     logger.success(
-        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.",
-        source_dir,
-        output_dir
+        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.", source_dir, output_dir
     )
 
 
@@ -172,16 +161,10 @@ def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
         return MarkItDown()
 
     # Attempt to match the first model in model_list that appears in ingestion_role_models
-    matched_model_info = next(
-        (m for m in model_list if m["model_name"] in ingestion_role_models),
-        None
-    )
+    matched_model_info = next((m for m in model_list if m["model_name"] in ingestion_role_models), None)
 
     if not matched_model_info:
-        logger.debug(
-            "No matching LLM model found for roles: {}. Using default MarkItDown.",
-            ingestion_role_models
-        )
+        logger.debug("No matching LLM model found for roles: {}. Using default MarkItDown.", ingestion_role_models)
         return MarkItDown()
 
     # If the openai library is not available, fallback
@@ -200,11 +183,7 @@ def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
     # Expand environment variables in the api_key, if present
     api_key = os.path.expandvars(api_key) if api_key else ""
 
-    logger.info(
-        "Initializing MarkItDown with LLM support: request_style='{}', model='{}'.",
-        request_style,
-        model_name
-    )
+    logger.info("Initializing MarkItDown with LLM support: request_style='{}', model='{}'.", request_style, model_name)
 
     # Construct the LLM client (placeholder usage, adjust to real client as needed)
     llm_client = OpenAI(api_key=api_key, base_url=base_url)  # Example usage
@@ -241,14 +220,6 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
         with open(output_file, "w", encoding="utf-8") as out_f:
             out_f.write(conversion_result.text_content)
 
-        logger.info(
-            "Successfully converted '%s' -> '%s'.",
-            file_path,
-            output_file
-        )
+        logger.info("Successfully converted '%s' -> '%s'.", file_path, output_file)
     except Exception as exc:
-        logger.error(
-            "Failed to convert '%s'. Error details: %s",
-            file_path,
-            exc
-        )
+        logger.error("Failed to convert '%s'. Error details: %s", file_path, exc)
