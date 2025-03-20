@@ -3,11 +3,8 @@ Inference Engine For Yourbench - Now with true concurrency throttling.
 """
 
 import asyncio
-import sys
 import time
 import uuid
-from asyncio import timeout as aio_timeout
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -21,7 +18,7 @@ load_dotenv()
 
 GLOBAL_TIMEOUT = 3600
 
-# this is for inference logging. we can monitor 
+# this is for inference logging. we can monitor
 # costs, latency and collect data
 litellm.success_callback = ["langfuse"]
 litellm.failure_callback = ["langfuse"]
@@ -76,15 +73,16 @@ class Model:
 class InferenceCall:
     """
     A class that represents an inference call to a model.
-    
+
     Attributes:
         messages: List of message dictionaries in the format expected by the LLM API.
         temperature: Optional sampling temperature for controlling randomness in generation.
-        tags: List of string tags that can be set to any values by the user. Used internally 
+        tags: List of string tags that can be set to any values by the user. Used internally
               for logging and cost tracking purposes.
         max_retries: Maximum number of retry attempts for failed inference calls.
         seed: Optional random seed for reproducible outputs.
     """
+
     messages: List[Dict[str, str]]
     temperature: Optional[float] = None
     tags: List[str] = field(default_factory=lambda: ["dev"])
