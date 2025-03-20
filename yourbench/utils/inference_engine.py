@@ -6,6 +6,7 @@ import asyncio
 import sys
 import time
 import uuid
+from asyncio import timeout as aio_timeout
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -14,17 +15,14 @@ import litellm
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
 from loguru import logger
-from asyncio import timeout as aio_timeout
-
 from tqdm.asyncio import tqdm_asyncio
-
 
 load_dotenv()
 
 GLOBAL_TIMEOUT = 3600
 
-# TODO: why do we need these lines
-# Optional: Customize success/failure callbacks
+# this is for inference logging. we can monitor 
+# costs, latency and collect data
 litellm.success_callback = ["langfuse"]
 litellm.failure_callback = ["langfuse"]
 
