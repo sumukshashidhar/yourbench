@@ -71,6 +71,7 @@ from yourbench.utils.dataset_engine import (
 
 try:
     import evaluate
+
     # Attempt to load perplexity metric from evaluate
     _perplexity_metric = evaluate.load(
         "perplexity", module_type="metric", model_id="gpt2"
