@@ -7,7 +7,7 @@ log_backups/
 plots/
 files/
 .gradio/
-
+data/example/processed/
 # C extensions
 *.so
 
