@@ -53,7 +53,6 @@ import random
 import re
 from typing import Any, Dict, Optional
 
-import evaluate
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
@@ -71,6 +70,7 @@ from yourbench.utils.dataset_engine import (
 )
 
 try:
+    import evaluate
     # Attempt to load perplexity metric from evaluate
     _perplexity_metric = evaluate.load(
         "perplexity", module_type="metric", model_id="gpt2"
