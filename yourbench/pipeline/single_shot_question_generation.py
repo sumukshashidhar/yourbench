@@ -120,16 +120,26 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Identify dataset names and subsets
-    source_dataset_name = smart_get_source_dataset_name("single_shot_question_generation", config)
-    output_dataset_name = smart_get_output_dataset_name("single_shot_question_generation", config)
+    source_dataset_name = smart_get_source_dataset_name(
+        "single_shot_question_generation", config
+    )
+    output_dataset_name = smart_get_output_dataset_name(
+        "single_shot_question_generation", config
+    )
     source_subset = smart_get_source_subset("single_shot_question_generation", config)
     output_subset = smart_get_output_subset("single_shot_question_generation", config)
 
     logger.info("Loading chunked dataset for single-shot QG: {}", source_dataset_name)
     try:
-        dataset = smart_load_dataset(source_dataset_name, config, dataset_subset=source_subset)
+        dataset = smart_load_dataset(
+            source_dataset_name, config, dataset_subset=source_subset
+        )
     except Exception as err:
-        logger.error("Failed to load dataset '{0}' for single_shot_question_generation: {1}", source_dataset_name, err)
+        logger.error(
+            "Failed to load dataset '{0}' for single_shot_question_generation: {1}",
+            source_dataset_name,
+            err,
+        )
         return
 
     logger.info("Loaded dataset with {} rows.", len(dataset))
@@ -140,7 +150,9 @@ def run(config: Dict[str, Any]) -> None:
     inference_calls = []
     call_index_mapping = []
 
-    def sample_chunks_if_needed(chunks_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def sample_chunks_if_needed(
+        chunks_list: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
         """
         Samples chunks according to user configuration, either by percentage or count.
         Returns all chunks if no sampling configuration is provided.
@@ -191,11 +203,17 @@ def run(config: Dict[str, Any]) -> None:
 
         single_hop_chunks = row.get("chunks", [])
         if not isinstance(single_hop_chunks, list) or not single_hop_chunks:
-            logger.debug("No chunks found in row index={} for doc_id={}. Skipping row.", row_index, doc_id)
+            logger.debug(
+                "No chunks found in row index={} for doc_id={}. Skipping row.",
+                row_index,
+                doc_id,
+            )
             continue
 
         chosen_chunks = sample_chunks_if_needed(single_hop_chunks)
-        additional_instructions = stage_config.get("additional_instructions", "undergraduate")
+        additional_instructions = stage_config.get(
+            "additional_instructions", "undergraduate"
+        )
 
         # Build user messages for each chunk
         for chunk_index, chunk_info in enumerate(chosen_chunks):
@@ -214,15 +232,22 @@ def run(config: Dict[str, Any]) -> None:
             )
             user_message = {"role": "user", "content": user_prompt_str}
 
-            inference_call = InferenceCall(messages=[system_message, user_message], tags=["single_shot_qa"])
+            inference_call = InferenceCall(
+                messages=[system_message, user_message], tags=["single_shot_qa"]
+            )
             inference_calls.append(inference_call)
             call_index_mapping.append((row_index, doc_id, chunk_id))
 
     if not inference_calls:
-        logger.warning("No inference calls were created for single_shot_question_generation.")
+        logger.warning(
+            "No inference calls were created for single_shot_question_generation."
+        )
         return
 
-    logger.info("Sending {} calls to inference for single-shot question generation.", len(inference_calls))
+    logger.info(
+        "Sending {} calls to inference for single-shot question generation.",
+        len(inference_calls),
+    )
     try:
         responses_dict = run_inference(
             config=config,
@@ -238,7 +263,9 @@ def run(config: Dict[str, Any]) -> None:
 
     # Process the responses
     for model_name, model_responses in responses_dict.items():
-        logger.info("Processing {} responses from model: {}", len(model_responses), model_name)
+        logger.info(
+            "Processing {} responses from model: {}", len(model_responses), model_name
+        )
 
         if len(model_responses) != len(call_index_mapping):
             logger.error(
@@ -298,21 +325,36 @@ def run(config: Dict[str, Any]) -> None:
                     continue
 
                 question_text = pair.get("question") or ""
-                question_text = question_text.strip() if isinstance(question_text, str) else str(question_text).strip()
+                question_text = (
+                    question_text.strip()
+                    if isinstance(question_text, str)
+                    else str(question_text).strip()
+                )
                 if not question_text:
-                    logger.debug("Empty question found; skipping. row_index={}, chunk_id={}", row_index, chunk_id)
+                    logger.debug(
+                        "Empty question found; skipping. row_index={}, chunk_id={}",
+                        row_index,
+                        chunk_id,
+                    )
                     continue
 
                 # Handle potential non-string answers
                 answer_raw = pair.get("answer", "")
-                self_answer = answer_raw.strip() if isinstance(answer_raw, str) else str(answer_raw).strip()
+                self_answer = (
+                    answer_raw.strip()
+                    if isinstance(answer_raw, str)
+                    else str(answer_raw).strip()
+                )
 
                 # Handle potential non-int difficulty
                 difficulty_raw = pair.get("estimated_difficulty", 5)
                 try:
                     difficulty_val = int(difficulty_raw)
                 except (ValueError, TypeError):
-                    logger.warning("Invalid estimated_difficulty '{}', defaulting to 5", difficulty_raw)
+                    logger.warning(
+                        "Invalid estimated_difficulty '{}', defaulting to 5",
+                        difficulty_raw,
+                    )
                     difficulty_val = 5
                 # Ensure difficulty is in range 1-10
                 difficulty_val = max(1, min(10, difficulty_val))
@@ -342,10 +384,15 @@ def run(config: Dict[str, Any]) -> None:
                 question_dataset_rows.append(question_row.__dict__)
 
     if not question_dataset_rows:
-        logger.warning("No valid questions produced in single_shot_question_generation.")
+        logger.warning(
+            "No valid questions produced in single_shot_question_generation."
+        )
         return
 
-    logger.info("Constructing final dataset with {} single-hop questions.", len(question_dataset_rows))
+    logger.info(
+        "Constructing final dataset with {} single-hop questions.",
+        len(question_dataset_rows),
+    )
     try:
         column_names = list(question_dataset_rows[0].keys())
     except IndexError:
@@ -353,7 +400,10 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Convert to HF Dataset
-    final_data = {column: [row[column] for row in question_dataset_rows] for column in column_names}
+    final_data = {
+        column: [row[column] for row in question_dataset_rows]
+        for column in column_names
+    }
     question_dataset = Dataset.from_dict(final_data)
 
     # Save the dataset

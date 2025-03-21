@@ -142,9 +142,13 @@ def run(config: Dict[str, Any]) -> None:
             return
 
         # Identify relevant dataset subsets
-        source_dataset_name = smart_get_source_dataset_name("multi_hop_question_generation", config)
+        source_dataset_name = smart_get_source_dataset_name(
+            "multi_hop_question_generation", config
+        )
         source_subset = smart_get_source_subset("multi_hop_question_generation", config)
-        output_dataset_name = smart_get_output_dataset_name("multi_hop_question_generation", config)
+        output_dataset_name = smart_get_output_dataset_name(
+            "multi_hop_question_generation", config
+        )
         output_subset = smart_get_output_subset("multi_hop_question_generation", config)
 
         logger.info("Loading dataset for multi-hop QG: '{}'", source_dataset_name)
@@ -152,12 +156,17 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("Loaded dataset with {} rows.", len(dataset))
 
         # Prepare system message for LLM
-        system_msg = {"role": "system", "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT}
+        system_msg = {
+            "role": "system",
+            "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+        }
 
         all_inference_calls: List[InferenceCall] = []
         call_index_map: List[tuple] = []
 
-        def sample_multi_hop_chunks(mh_chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def sample_multi_hop_chunks(
+            mh_chunks: List[Dict[str, Any]],
+        ) -> List[Dict[str, Any]]:
             """
             Sample multi-hop chunks from each row based on config settings
             to control cost (percentage or count-based).
@@ -207,15 +216,25 @@ def run(config: Dict[str, Any]) -> None:
 
             multi_hop_chunks = row.get("multihop_chunks", [])
             if not isinstance(multi_hop_chunks, list) or not multi_hop_chunks:
-                logger.debug("No multi-hop chunks found in row index={}, doc_id={}. Skipping row.", row_idx, doc_id)
+                logger.debug(
+                    "No multi-hop chunks found in row index={}, doc_id={}. Skipping row.",
+                    row_idx,
+                    doc_id,
+                )
                 continue
 
             chosen_multi_hops = sample_multi_hop_chunks(multi_hop_chunks)
             if not chosen_multi_hops:
-                logger.debug("Row idx={} doc_id={} had multi-hop chunks but none after sampling.", row_idx, doc_id)
+                logger.debug(
+                    "Row idx={} doc_id={} had multi-hop chunks but none after sampling.",
+                    row_idx,
+                    doc_id,
+                )
                 continue
 
-            additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
+            additional_instructions = stage_cfg.get(
+                "additional_instructions", "undergraduate"
+            )
 
             # For each multi-hop chunk, create an LLM prompt
             for mh_idx, mh_dict in enumerate(chosen_multi_hops):
@@ -225,13 +244,19 @@ def run(config: Dict[str, Any]) -> None:
                 subchunk_ids = mh_dict.get("chunk_ids", [])
                 subchunk_texts = mh_dict.get("chunks_text", [])
                 if not subchunk_texts:
-                    logger.debug("Empty multi-hop chunk at row_idx={}, doc_id={}. Skipping.", row_idx, doc_id)
+                    logger.debug(
+                        "Empty multi-hop chunk at row_idx={}, doc_id={}. Skipping.",
+                        row_idx,
+                        doc_id,
+                    )
                     continue
 
                 # Build the user prompt by enumerating each subchunk
                 text_chunks_aggregated = ""
                 for i, sc_text in enumerate(subchunk_texts):
-                    text_chunks_aggregated += f"<text_chunk_{i}>{sc_text}</text_chunk_{i}>\n"
+                    text_chunks_aggregated += (
+                        f"<text_chunk_{i}>{sc_text}</text_chunk_{i}>\n"
+                    )
 
                 user_prompt_str = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT.format(
                     title=title,
@@ -240,7 +265,9 @@ def run(config: Dict[str, Any]) -> None:
                     additional_instructions=additional_instructions,
                 )
                 user_msg = {"role": "user", "content": user_prompt_str}
-                inference_call = InferenceCall(messages=[system_msg, user_msg], tags=["multi_hop_qa"])
+                inference_call = InferenceCall(
+                    messages=[system_msg, user_msg], tags=["multi_hop_qa"]
+                )
                 all_inference_calls.append(inference_call)
                 # Keep track of the row, doc_id, and subchunk_ids for reconstruction later
                 call_index_map.append((row_idx, doc_id, subchunk_ids))
@@ -250,7 +277,9 @@ def run(config: Dict[str, Any]) -> None:
             logger.warning("No multi-hop inference calls were created. Exiting stage.")
             return
 
-        logger.info("Sending {} multi-hop calls to inference...", len(all_inference_calls))
+        logger.info(
+            "Sending {} multi-hop calls to inference...", len(all_inference_calls)
+        )
         responses_dict = run_inference(
             config=config,
             step_name="multi_hop_question_generation",
@@ -262,7 +291,11 @@ def run(config: Dict[str, Any]) -> None:
 
         # Process each model that responded
         for model_name, model_responses in responses_dict.items():
-            logger.info("Processing {} responses for model: {}", len(model_responses), model_name)
+            logger.info(
+                "Processing {} responses for model: {}",
+                len(model_responses),
+                model_name,
+            )
             if len(model_responses) != len(call_index_map):
                 logger.error(
                     "Model '{}' returned {} responses, expected {}. Possible mismatch.",
@@ -279,7 +312,10 @@ def run(config: Dict[str, Any]) -> None:
                 json_str = _extract_output_json(raw_resp)
                 if not json_str.strip():
                     logger.warning(
-                        "No parseable JSON for row={}, doc_id={} (model={}). Skipping.", row_idx, doc_id, model_name
+                        "No parseable JSON for row={}, doc_id={} (model={}). Skipping.",
+                        row_idx,
+                        doc_id,
+                        model_name,
                     )
                     continue
 
@@ -287,7 +323,11 @@ def run(config: Dict[str, Any]) -> None:
                     question_answer_list = json.loads(json_str)
                 except Exception as e:
                     logger.warning(
-                        "Failed to parse JSON for row={}, doc_id={} (model={}): {}", row_idx, doc_id, model_name, e
+                        "Failed to parse JSON for row={}, doc_id={} (model={}): {}",
+                        row_idx,
+                        doc_id,
+                        model_name,
+                        e,
                     )
                     continue
 
@@ -306,22 +346,36 @@ def run(config: Dict[str, Any]) -> None:
                     try:
                         question_text = qap.get("question", "")
                         question_text = (
-                            question_text.strip() if isinstance(question_text, str) else str(question_text).strip()
+                            question_text.strip()
+                            if isinstance(question_text, str)
+                            else str(question_text).strip()
                         )
                         if not question_text:
-                            logger.debug("Empty question found for row={}, doc_id={}, skipping pair.", row_idx, doc_id)
+                            logger.debug(
+                                "Empty question found for row={}, doc_id={}, skipping pair.",
+                                row_idx,
+                                doc_id,
+                            )
                             continue
 
                         # Handle potential non-string answers
                         answer_raw = qap.get("answer", "")
-                        self_answer = answer_raw.strip() if isinstance(answer_raw, str) else str(answer_raw).strip()
+                        self_answer = (
+                            answer_raw.strip()
+                            if isinstance(answer_raw, str)
+                            else str(answer_raw).strip()
+                        )
 
                         # Handle potential non-int difficulty
                         diff_raw = qap.get("estimated_difficulty", 5)
                         try:
                             diff_val = int(diff_raw)
                         except (ValueError, TypeError):
-                            logger.warning("Invalid difficulty '{}' for doc_id={}, defaulting to 5", diff_raw, doc_id)
+                            logger.warning(
+                                "Invalid difficulty '{}' for doc_id={}, defaulting to 5",
+                                diff_raw,
+                                doc_id,
+                            )
                             diff_val = 5
                         # Ensure difficulty is in range 1-10
                         diff_val = max(1, min(10, diff_val))
@@ -338,7 +392,10 @@ def run(config: Dict[str, Any]) -> None:
 
                         cits = qap.get("citations", [])
                         if not isinstance(cits, list):
-                            logger.warning("Citations for doc_id={} is not a list. Converting to empty list.", doc_id)
+                            logger.warning(
+                                "Citations for doc_id={} is not a list. Converting to empty list.",
+                                doc_id,
+                            )
                             cits = []
 
                         # Ensure all citation items are strings
@@ -359,22 +416,33 @@ def run(config: Dict[str, Any]) -> None:
                         final_multi_hop_questions.append(row_obj.__dict__)
 
                     except Exception as pair_error:
-                        logger.warning("Error processing QA pair for doc_id={}, skipping pair: {}", doc_id, pair_error)
+                        logger.warning(
+                            "Error processing QA pair for doc_id={}, skipping pair: {}",
+                            doc_id,
+                            pair_error,
+                        )
                         continue
 
         if not final_multi_hop_questions:
             logger.warning("No valid multi-hop question rows produced. Exiting stage.")
             return
 
-        logger.info("Constructing multi-hop question dataset with {} rows...", len(final_multi_hop_questions))
+        logger.info(
+            "Constructing multi-hop question dataset with {} rows...",
+            len(final_multi_hop_questions),
+        )
 
         # Convert to Hugging Face Dataset
         try:
             col_keys = list(final_multi_hop_questions[0].keys())
-            dataset_dict = {k: [row[k] for row in final_multi_hop_questions] for k in col_keys}
+            dataset_dict = {
+                k: [row[k] for row in final_multi_hop_questions] for k in col_keys
+            }
             final_question_dataset = Dataset.from_dict(dataset_dict)
         except Exception as ds_error:
-            logger.error("Failed to create dataset from multi-hop question rows: {}", ds_error)
+            logger.error(
+                "Failed to create dataset from multi-hop question rows: {}", ds_error
+            )
             return
 
         # Save final dataset
@@ -389,7 +457,9 @@ def run(config: Dict[str, Any]) -> None:
         logger.success("Multi-hop question generation completed successfully.")
 
     except Exception as outer_exc:
-        logger.error("Error in multi_hop_question_generation run function: {}", str(outer_exc))
+        logger.error(
+            "Error in multi_hop_question_generation run function: {}", str(outer_exc)
+        )
         logger.warning("Multi-hop question generation stage encountered errors.")
 
 

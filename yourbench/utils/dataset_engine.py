@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-from typing import Any, Dict
 
 from datasets import Dataset, concatenate_datasets, load_dataset
 from loguru import logger
@@ -105,4 +104,3 @@ def save_dataset(
         split=split,
         config_name=output_subset,
     )
-    return
