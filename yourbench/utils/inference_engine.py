@@ -8,66 +8,21 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-import litellm
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
 from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
 
-
 load_dotenv()
 
 GLOBAL_TIMEOUT = 3600
-
-# this is for inference logging. we can monitor
-# costs, latency and collect data
-litellm.success_callback = ["langfuse"]
-litellm.failure_callback = ["langfuse"]
-
-
-class EventLoopAwareCache(litellm.InMemoryCache):
-    """
-    A cache that maintains cache isolation between event loops.
-
-    LiteLLM caches LLM clients for better performance, but shares this cache across
-    event loops. LiteLLM uses httpx AsyncClient under the hood, and you should not
-    share AsyncClients across event loops.
-    - Same issue posted to LiteLLM: https://github.com/BerriAI/litellm/issues/7667
-    - Reference to httpx behavior: https://github.com/encode/httpx/issues/2473
-
-    The cache needs to manage a uuid identifier that won't be reused after an event
-    loop is terminated.
-    """
-
-    def get_cache(self, key, **kwargs):
-        new_key = self._get_event_loop_aware_cache_key(key)
-        return super().get_cache(new_key)
-
-    def set_cache(self, key, value, **kwargs):
-        new_key = self._get_event_loop_aware_cache_key(key)
-        return super().set_cache(new_key, value, **kwargs)
-
-    def _get_event_loop_aware_cache_key(self, key):
-        loop = asyncio.get_running_loop()
-        if not hasattr(loop, "_custom_identifier"):
-            loop._custom_identifier = uuid.uuid4()
-        loop_id = loop._custom_identifier
-        return f"{key}-{loop_id}"
-
-
-litellm.in_memory_llm_clients_cache = EventLoopAwareCache()
-
-
 @dataclass
 class Model:
     model_name: str
-    request_style: str = "openai"
-    base_url: str = None
-    api_key: str = None
-    max_concurrent_requests: int = 8
-    inference_backend: str = "litellm"
-    provider: str = None
-    api_version: str = None
+    provider: str | None = None
+    base_url: str | None = None
+    api_key: str | None = None
+    max_concurrent_requests: int = 16
 
 
 @dataclass
@@ -108,36 +63,24 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         start_time,
     )
 
-    if model.inference_backend == "litellm":
-        logger.debug("Litellm inference call: {}".format(inference_call.messages))
-        response = await litellm.acompletion(
-            model=f"{model.request_style}/{model.model_name}",
-            base_url=model.base_url,
-            api_key=model.api_key,
-            api_version=str(model.api_version),
-            messages=inference_call.messages,
-            temperature=inference_call.temperature,
-            metadata={"tags": inference_call.tags},
-            timeout=GLOBAL_TIMEOUT,
-        )
-    elif model.inference_backend == "hf_hub":
-        logger.debug("HF Hub inference call: {}".format(inference_call.messages))
-        # make the client first
-        # TODO: support langfuse logging with hf_hub
-        client = AsyncInferenceClient(
-            model=model.model_name,
-            token=model.api_key,
-            provider=model.provider,
-            base_url=model.base_url,
-            timeout=GLOBAL_TIMEOUT,
-        )
-        # get the response
-        response = await client.chat.completions.create(
-            messages=inference_call.messages,
-            temperature=inference_call.temperature,
-        )
-    else:
-        raise ValueError(f"Unsupported inference backend: {model.inference_backend}")
+    request_id = str(uuid.uuid4())
+
+    client = AsyncInferenceClient(
+        base_url=model.base_url,
+        api_key=model.api_key,
+        provider=model.provider,
+        timeout=GLOBAL_TIMEOUT,
+        headers={"X-Request-ID": request_id},
+    )
+
+    logger.debug(f"Making request with ID: {request_id}")
+
+    response = await client.chat_completion(
+        model=model.model_name,
+        messages=inference_call.messages,
+        temperature=inference_call.temperature,
+    )
+
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
         logger.warning(
