@@ -267,21 +267,19 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
             )
             return MarkItDown()
 
-        # Expand environment variables in the api_key, if present
-        api_key = (
-            os.path.expandvars(matched_model.api_key) if matched_model.api_key else ""
-        )
-
         logger.info(
             "Initializing MarkItDown with LLM support: request_style='{}', model='{}'.",
             matched_model.request_style,
             matched_model.model_name,
         )
 
-        # Construct the LLM client (placeholder usage, adjust to real client as needed)
+        # Construct the InferenceClient client (as OpenAI replacement)
         llm_client = InferenceClient(
-            api_key=api_key, base_url=matched_model.base_url
-        )  # Example usage
+            base_url=matched_model.base_url,
+            api_key=matched_model.api_key,
+            provider=matched_model.provider,
+        )
+
         return MarkItDown(llm_client=llm_client, llm_model=matched_model.model_name)
     except Exception as exc:
         logger.error("Failed to initialize MarkItDown with LLM support: {}", str(exc))
