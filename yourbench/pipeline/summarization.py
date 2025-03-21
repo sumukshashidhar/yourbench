@@ -52,9 +52,7 @@ See Also:
 - yourbench.utils.dataset_engine for loading/saving dataset
 """
 
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FuturesTimeoutError
-from typing import Any, Dict, List, Optional
+from typing import Any 
 
 from datasets import Dataset
 from loguru import logger
@@ -65,16 +63,16 @@ from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
 
 
-def duplicate_rows(dataset: Dict[str, Any], num_duplicates: int = 1) -> Dict[str, List[Any]]:
+def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str, list[Any]]:
     """
     Create a dictionary that repeats each value in the dataset multiple times.
 
     Args:
-        dataset (Dict[str, Any]): A dictionary representing dataset columns.
+        dataset (dict[str, Any]): A dictionary representing dataset columns.
         num_duplicates (int): How many times to duplicate each row.
 
     Returns:
-        Dict[str, List[Any]]: A new dictionary where each key's list is repeated
+        dict[str, list[Any]]: A new dictionary where each key's list is repeated
         num_duplicates times.
     """
     repeated_data = {}
@@ -83,7 +81,7 @@ def duplicate_rows(dataset: Dict[str, Any], num_duplicates: int = 1) -> Dict[str
     return repeated_data
 
 
-def run(config: Dict[str, Any]) -> None:
+def run(config: dict[str, Any]) -> None:
     """
     Execute the Summarization Stage of YourBench.
 
@@ -94,7 +92,7 @@ def run(config: Dict[str, Any]) -> None:
       4. Logs results and saves updated columns in the dataset.
 
     Args:
-        config (Dict[str, Any]): The entire pipeline configuration dictionary.
+        config (dict[str, Any]): The entire pipeline configuration dictionary.
 
     Returns:
         None. The function saves the resulting dataset to disk/HF Hub if successful.
@@ -123,7 +121,7 @@ def run(config: Dict[str, Any]) -> None:
 
     # 2) Prepare calls to summarization model
     try:
-        documents: List[str] = dataset["document_text"]
+        documents: list[str] = dataset["document_text"]
     except KeyError:
         logger.error("Dataset does not contain 'document_text' column. Cannot proceed.")
         return
@@ -131,7 +129,7 @@ def run(config: Dict[str, Any]) -> None:
         logger.error("Unexpected error reading 'document_text': {}", str(exc))
         return
 
-    inference_calls: List[InferenceCall] = []
+    inference_calls: list[InferenceCall] = []
     for idx, doc_text in enumerate(documents):
         user_msg_content = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
         user_msg = {"role": "user", "content": user_msg_content}
@@ -158,7 +156,7 @@ def run(config: Dict[str, Any]) -> None:
     # 4) Gather model responses
     try:
         summ_model_name = list(response_dict.keys())[0]
-        model_raw_summaries: List[str] = response_dict.get(summ_model_name, [])
+        model_raw_summaries: list[str] = response_dict.get(summ_model_name, [])
 
         if not model_raw_summaries:
             logger.error("Model '{}' returned no summaries. Check your model configuration.", summ_model_name)
@@ -175,7 +173,7 @@ def run(config: Dict[str, Any]) -> None:
         if len(model_raw_summaries) > len(documents):
             model_raw_summaries = model_raw_summaries[: len(documents)]
 
-    extracted_summaries: List[str] = []
+    extracted_summaries: list[str] = []
     for i, raw_resp in enumerate(model_raw_summaries):
         logger.debug("Parsing doc index {}, raw response length={}", i, len(raw_resp))
         try:
