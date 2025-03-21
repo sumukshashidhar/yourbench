@@ -42,20 +42,9 @@ Stage-Specific Logging:
 import glob
 import os
 from typing import Any, Dict, Optional
-
+from huggingface_hub import InferenceClient
 from loguru import logger
 from markitdown import MarkItDown
-
-
-# Attempt to import an OpenAI-like client if available.
-# This is only used if advanced LLM-driven conversions are requested.
-try:
-    from openai import OpenAI
-except ImportError:
-    # If not installed, fall back gracefully and warn
-    logger.warning("Could not import 'openai.OpenAI'. LLM-based conversion may not be available.")
-    OpenAI = None
-
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -149,41 +138,38 @@ def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
         - Warnings if an LLM model is specified but cannot be initialized.
         - Info about which model (if any) is used for ingestion.
     """
-    ingestion_role_models = config.get("model_roles", {}).get("ingestion", [])
-    model_list = config.get("model_list", [])
+    try:
+        ingestion_role_models = config.get("model_roles", {}).get("ingestion", [])
+        model_list = config.get("model_list", [])
 
-    if not ingestion_role_models or not model_list:
-        logger.debug("No LLM ingestion config found. Using default MarkItDown processor.")
+        if not ingestion_role_models or not model_list:
+            logger.debug("No LLM ingestion config found. Using default MarkItDown processor.")
+            return MarkItDown()
+
+        # Attempt to match the first model in model_list that appears in ingestion_role_models
+        matched_model_info = next((m for m in model_list if m["model_name"] in ingestion_role_models), None)
+
+        if not matched_model_info:
+            logger.debug("No matching LLM model found for roles: {}. Using default MarkItDown.", ingestion_role_models)
+            return MarkItDown()
+
+        # Extract relevant info from the matched model config
+        request_style = matched_model_info.get("request_style", "")
+        base_url = matched_model_info.get("base_url", "")
+        api_key = matched_model_info.get("api_key", "")
+        model_name = matched_model_info.get("model_name", "unknown_model")
+
+        # Expand environment variables in the api_key, if present
+        api_key = os.path.expandvars(api_key) if api_key else ""
+
+        logger.info("Initializing MarkItDown with LLM support: request_style='{}', model='{}'.", request_style, model_name)
+
+        # Construct the LLM client (placeholder usage, adjust to real client as needed)
+        llm_client = InferenceClient(api_key=api_key, base_url=base_url)  # Example usage
+        return MarkItDown(llm_client=llm_client, llm_model=model_name)
+    except Exception as exc:
+        logger.error("Failed to initialize MarkItDown with LLM support: {}", str(exc))
         return MarkItDown()
-
-    # Attempt to match the first model in model_list that appears in ingestion_role_models
-    matched_model_info = next((m for m in model_list if m["model_name"] in ingestion_role_models), None)
-
-    if not matched_model_info:
-        logger.debug("No matching LLM model found for roles: {}. Using default MarkItDown.", ingestion_role_models)
-        return MarkItDown()
-
-    # If the openai library is not available, fallback
-    if OpenAI is None:
-        logger.warning(
-            "OpenAI library is not available; cannot initialize LLM for ingestion. Using default MarkItDown."
-        )
-        return MarkItDown()
-
-    # Extract relevant info from the matched model config
-    request_style = matched_model_info.get("request_style", "")
-    base_url = matched_model_info.get("base_url", "")
-    api_key = matched_model_info.get("api_key", "")
-    model_name = matched_model_info.get("model_name", "unknown_model")
-
-    # Expand environment variables in the api_key, if present
-    api_key = os.path.expandvars(api_key) if api_key else ""
-
-    logger.info("Initializing MarkItDown with LLM support: request_style='{}', model='{}'.", request_style, model_name)
-
-    # Construct the LLM client (placeholder usage, adjust to real client as needed)
-    llm_client = OpenAI(api_key=api_key, base_url=base_url)  # Example usage
-    return MarkItDown(llm_client=llm_client, llm_model=model_name)
 
 
 def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_processor: MarkItDown) -> None:
