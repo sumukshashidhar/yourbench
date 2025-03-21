@@ -50,7 +50,7 @@ from typing import Any, Optional
 from datasets import Dataset
 from loguru import logger
 
-from yourbench.utils.dataset_engine import save_dataset
+from yourbench.utils.dataset_engine import custom_save_dataset
 
 
 @dataclass
@@ -123,22 +123,6 @@ def run(config: dict[str, Any]) -> None:
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    # Determine the final dataset name and subset from config
-    hf_cfg = config.get("hf_configuration", {})
-    output_dataset_name = stage_cfg.get(
-        "output_dataset_name", hf_cfg.get("global_dataset_name")
-    )
-    output_subset = stage_cfg.get("output_subset", stage_name)
-
-    # Show key info about Hugging Face Hub config
-    hf_private: bool = hf_cfg.get("private", True)
-    logger.info(
-        f"Starting '{stage_name}' stage: uploading ingested files from '{source_dir}'"
-    )
-    logger.debug(
-        f"Hugging Face dataset name: '{output_dataset_name}' (private={hf_private})"
-    )
-
     # Collect .md files
     md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
     if not md_file_paths:
@@ -157,16 +141,7 @@ def run(config: dict[str, Any]) -> None:
     dataset = _convert_ingested_docs_to_dataset(ingested_documents)
 
     # Save or push the dataset to the configured location
-    logger.info(
-        f"Saving dataset to name='{output_dataset_name}', subset='{output_subset}'"
-    )
-    save_dataset(
-        dataset=dataset,
-        step_name=stage_name,
-        config=config,
-        output_dataset_name=output_dataset_name,
-        output_subset=output_subset,
-    )
+    custom_save_dataset(dataset=dataset, config=config, subset="ingested")
     logger.success(f"Successfully completed '{stage_name}' stage.")
 
 

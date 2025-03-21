@@ -1,106 +1,76 @@
-from typing import Any, Dict
-
-
-from datasets import Dataset, concatenate_datasets, load_dataset
+import os
+from typing import Any, Dict, Optional
+from datasets import Dataset, concatenate_datasets, load_dataset, DatasetDict
 from loguru import logger
 
 
-def smart_get_source_dataset_name(stage_name: str, config: Dict[str, Any]) -> str:
-    return (
-        config.get("pipeline", {})
-        .get(stage_name, {})
-        .get(
-            "source_dataset_name",
-            config.get("hf_configuration", {}).get("global_dataset_name"),
-        )
-    )
+def _get_full_dataset_repo_name(config: Dict[str, Any]):
+    dataset_name = config["hf_configuration"]["hf_dataset_name"]
+    if "/" not in dataset_name:
+        dataset_name = f"{config['hf_configuration']['hf_organization']}/{dataset_name}"
+
+    return dataset_name
 
 
-def smart_get_source_subset(stage_name: str, config: Dict[str, Any]) -> str:
-    return config.get("pipeline", {}).get(stage_name, {}).get("source_subset", "")
-
-
-def smart_get_output_dataset_name(stage_name: str, config: Dict[str, Any]) -> str:
-    return (
-        config.get("pipeline", {})
-        .get(stage_name, {})
-        .get(
-            "output_dataset_name",
-            config.get("hf_configuration", {}).get("global_dataset_name"),
-        )
-    )
-
-
-def smart_get_output_subset(stage_name: str, config: Dict[str, Any]) -> str:
-    return config.get("pipeline", {}).get(stage_name, {}).get("output_subset", "")
-
-
-def smart_load_dataset(
-    dataset_name: str,
-    config: Dict[str, Any],
-    dataset_subset: str = "",
-    split: str = "train",
+def custom_load_dataset(
+    config: Dict[str, Any], subset: Optional[str] = None
 ) -> Dataset:
     """
-    Load a dataset from huggingface, with the option to concatenate with an existing dataset
+    Load a dataset subset from Hugging Face, ensuring that we handle subsets correctly.
     """
-    if not dataset_name:
-        # try to get the global dataset name
-        dataset_name = config.get("hf_configuration", {}).get("global_dataset_name")
-    # check the name, does it have a organization in it?
-    if "/" not in dataset_name:
-        dataset_name = f"{config.get('hf_configuration', {}).get('hf_organization')}/{dataset_name}"
-    # load the dataset
-    dataset = load_dataset(
-        dataset_name,
-        token=config.get("hf_configuration", {}).get("token"),
-        name=dataset_subset,
-        split=split,
-    )
+    dataset_repo_name = _get_full_dataset_repo_name(config)
+
+    # if no step given, load full dataset
+    logger.info(f"Loading dataset HuggingFace Hub with repo_id='{dataset_repo_name}'")
+    if subset:
+        dataset = load_dataset(dataset_repo_name, name=subset, split="train")
+    else:
+        dataset = load_dataset(dataset_repo_name, split="train")
+
     return dataset
 
 
-def save_dataset(
+def custom_save_dataset(
     dataset: Dataset,
-    step_name: str,
     config: Dict[str, Any],
-    output_dataset_name: str,
-    output_subset: str = None,
-    split: str = "train",
+    subset: Optional[str] = None,
+    save_local: bool = True,
+    push_to_hub: bool = True,
 ) -> None:
     """
-    Save a dataset to huggingface
+    Save a dataset subset locally and push it to Hugging Face Hub.
     """
-    output_subset = output_subset or smart_get_output_subset(step_name, config)
 
-    if not output_dataset_name:
-        output_dataset_name = smart_get_output_dataset_name(step_name, config)
-    local_path = (
-        config.get("pipeline", {}).get(step_name, {}).get("local_dataset_path", False)
-    )
-    if local_path:
-        dataset.save_to_disk(local_path)
+    dataset_repo_name = _get_full_dataset_repo_name(config)
 
-    # check if we need to concatenate with an existing dataset
-    if (
-        config.get("pipeline", {})
-        .get(step_name, {})
-        .get("concat_existing_dataset", False)
-    ):
-        try:
-            existing_dataset = smart_load_dataset(
-                output_dataset_name, config, output_subset, split
-            )
-            dataset = concatenate_datasets([existing_dataset, dataset])
-        except Exception as e:
-            logger.warning(
-                f"Failed to concatenate existing dataset: {e}. Skipping concatenation."
-            )
-    # push to hub
-    dataset.push_to_hub(
-        output_dataset_name,
-        token=config.get("hf_configuration", {}).get("token"),
-        private=config.get("hf_configuration", {}).get("private"),
-        split=split,
-        config_name=output_subset,
-    )
+    local_dataset_dir = config.get("local_dataset_dir", None)
+    if local_dataset_dir and save_local:
+        logger.info(f"Saving dataset localy to: '{local_dataset_dir}'")
+        if subset:
+            local_dataset = DatasetDict({subset: dataset})
+            local_dataset_dir = os.path.join(local_dataset_dir, subset)
+        else:
+            local_dataset = dataset
+
+        os.makedirs(local_dataset_dir, exist_ok=True)
+        local_dataset.save_to_disk(local_dataset_dir)
+        logger.success(f"Dataset successfully saved localy to: '{local_dataset_dir}'")
+    
+    if config["hf_configuration"].get("concat_if_exist", False):
+        existing_dataset = custom_load_dataset(config=config, subset=subset)
+        dataset = concatenate_datasets([existing_dataset, dataset])
+        logger.info(f"Concatenated dataset with an existing one")
+
+    if subset:
+        config_name = subset
+    else:
+        config_name = "default"
+
+    if push_to_hub:
+        logger.info(f"Pushing dataset to HuggingFace Hub with repo_id='{dataset_repo_name}'")
+        dataset.push_to_hub(
+            repo_id=dataset_repo_name,
+            private=config["hf_configuration"].get("private", True),
+            config_name=config_name,
+        )
+        logger.success(f"Dataset successfully pushed to HuggingFace Hub with repo_id='{dataset_repo_name}'")
