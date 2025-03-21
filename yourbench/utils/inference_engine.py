@@ -102,7 +102,11 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
     Logs start/end times for better concurrency tracing.
     """
     start_time = time.time()
-    logger.debug("START _get_response: model='{}'  (timestamp={:.4f})", model.model_name, start_time)
+    logger.debug(
+        "START _get_response: model='{}'  (timestamp={:.4f})",
+        model.model_name,
+        start_time,
+    )
 
     if model.inference_backend == "litellm":
         logger.debug("Litellm inference call: {}".format(inference_call.messages))
@@ -136,7 +140,9 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         raise ValueError(f"Unsupported inference backend: {model.inference_backend}")
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
-        logger.warning("Empty response or missing .choices from model {}", model.model_name)
+        logger.warning(
+            "Empty response or missing .choices from model {}", model.model_name
+        )
         return ""
 
     finish_time = time.time()
@@ -146,11 +152,17 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         finish_time,
         (finish_time - start_time),
     )
-    logger.debug("Response content from model {} = {}", model.model_name, response.choices[0].message.content)
+    logger.debug(
+        "Response content from model {} = {}",
+        model.model_name,
+        response.choices[0].message.content,
+    )
     return response.choices[0].message.content
 
 
-async def _retry_with_backoff(model: Model, inference_call: InferenceCall, semaphore: asyncio.Semaphore) -> str:
+async def _retry_with_backoff(
+    model: Model, inference_call: InferenceCall, semaphore: asyncio.Semaphore
+) -> str:
     """
     Attempt to get the model's response with a simple exponential backoff,
     while respecting the concurrency limit via 'semaphore'.
@@ -179,11 +191,15 @@ async def _retry_with_backoff(model: Model, inference_call: InferenceCall, semap
         # Only sleep if not on the last attempt
         if attempt < inference_call.max_retries - 1:
             backoff_secs = 2 ** (attempt + 2)
-            logger.debug("Backing off for {} seconds before next attempt...", backoff_secs)
+            logger.debug(
+                "Backing off for {} seconds before next attempt...", backoff_secs
+            )
             await asyncio.sleep(backoff_secs)
 
     logger.critical(
-        "Failed to get response from model {} after {} attempts", model.model_name, inference_call.max_retries
+        "Failed to get response from model {} after {} attempts",
+        model.model_name,
+        inference_call.max_retries,
     )
     return ""
 
@@ -207,7 +223,11 @@ async def _run_inference_async_helper(
         concurrency = max(model.max_concurrent_requests, 1)
         semaphore = asyncio.Semaphore(concurrency)
         model_semaphores[model.model_name] = semaphore
-        logger.debug("Created semaphore for model='{}' with concurrency={}", model.model_name, concurrency)
+        logger.debug(
+            "Created semaphore for model='{}' with concurrency={}",
+            model.model_name,
+            concurrency,
+        )
 
     tasks = []
     # We'll build tasks in an order that ensures each model gets a contiguous
@@ -217,7 +237,12 @@ async def _run_inference_async_helper(
         for call in inference_calls:
             tasks.append(_retry_with_backoff(model, call, semaphore))
 
-    logger.info("Total tasks scheduled: {}  (models={}  x  calls={})", len(tasks), len(models), len(inference_calls))
+    logger.info(
+        "Total tasks scheduled: {}  (models={}  x  calls={})",
+        len(tasks),
+        len(models),
+        len(inference_calls),
+    )
 
     # Run them all concurrently
     results = await tqdm_asyncio.gather(*tasks)
@@ -235,7 +260,11 @@ async def _run_inference_async_helper(
 
     # Optional debug: confirm each model's result count
     for model in models:
-        logger.debug("Model '{}' produced {} responses.", model.model_name, len(responses[model.model_name]))
+        logger.debug(
+            "Model '{}' produced {} responses.",
+            model.model_name,
+            len(responses[model.model_name]),
+        )
 
     return responses
 
@@ -258,9 +287,14 @@ def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
         return [Model(**all_configured_models[0])]
 
     # Filter out only those with a matching 'model_name'
-    matched = [Model(**m) for m in all_configured_models if m["model_name"] in role_models]
+    matched = [
+        Model(**m) for m in all_configured_models if m["model_name"] in role_models
+    ]
     logger.info(
-        "Found {} models in config for step '{}': {}", len(matched), step_name, [m.model_name for m in matched]
+        "Found {} models in config for step '{}': {}",
+        len(matched),
+        step_name,
+        [m.model_name for m in matched],
     )
     return matched
 
@@ -281,7 +315,9 @@ def run_inference(
     # 1. Load relevant models for the pipeline step
     models = _load_models(config, step_name)
     if not models:
-        logger.warning("No models found for step '{}'. Returning empty dictionary.", step_name)
+        logger.warning(
+            "No models found for step '{}'. Returning empty dictionary.", step_name
+        )
         return {}
 
     # 2. Run the concurrency-enabled async helper

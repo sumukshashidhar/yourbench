@@ -7,7 +7,9 @@ from typing import List, Optional
 from loguru import logger
 
 
-def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bool = False) -> None:
+def run_analysis(
+    analysis_name: str, args: Optional[List[str]] = None, debug: bool = False
+) -> None:
     """
     Run a specific analysis by name.
 
@@ -25,7 +27,9 @@ def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bo
         if hasattr(module, "run"):
             module.run(*(args or []))
         else:
-            logger.error(f"Analysis module {analysis_name} does not have a 'run' function")
+            logger.error(
+                f"Analysis module {analysis_name} does not have a 'run' function"
+            )
     except ImportError as e:
         logger.error(f"Could not find analysis module: {analysis_name}")
         if debug:
