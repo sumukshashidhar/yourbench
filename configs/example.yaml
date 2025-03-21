@@ -14,12 +14,13 @@ hf_configuration:
 model_list: 
   # to use the default huggingface inference
   - model_name: Qwen/Qwen2.5-72B-Instruct
+    provider: novita # or hf-inference
     api_key: $HF_TOKEN
-    inference_backend: hf_hub
-    
+    max_concurrent_requests: 32
+
 model_roles:
   ingestion:
-    - Qwen/Qwen2.5-72B-Instruct # you must use a vision supported model for ingestion
+    - Qwen/Qwen2.5-VL-72B-Instruct # you should use a vision supported model for ingestion
   summarization:
     - Qwen/Qwen2.5-72B-Instruct
   chunking:
