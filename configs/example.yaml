@@ -1,8 +1,9 @@
 # === HUGGINGFACE SETTINGS CONFIGURATION ===
+# You can configure all aspects of your huggingface 
 hf_configuration:
   token: $HF_TOKEN # you can get one from here!: https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication
-  hf_organization: $HF_ORGANIZATION # defaults to your HF username. You can set it to your organization name.
-  private: false # true by default, set to false to make the dataset public
+  hf_organization: $HF_ORGANIZATION # set this env variable to be your username!
+  private: false # true by default, set to false to make the dataset publicly viewable!
   global_dataset_name: sumuks/yourbench-example # name of the dataset to save the traces, and generated questions to.
 
 # === MODEL CONFIGURATION ===
@@ -47,18 +48,27 @@ model_roles:
     - Qwen/Qwen2.5-72B-Instruct
 
 pipeline:
+  # to convert your documents from their source format to markdown
   ingestion:
     run: true
+    # set this to where your raw documents are located
     source_documents_dir: data/example/raw
+    # .... and this to where you want them to be processed to
     output_dir: data/example/processed
-  
+
+  # to convert your documents to a huggingface dataset
   upload_ingest_to_hub:
     run: true
     source_documents_dir: data/example/processed
     output_subset: ingested_documents
+    # you can also set this to be a local dataset, in order to not push it to hub
+    # local_dataset_path: 
 
+  # to create a global summary of your documents
   summarization:
     run: true
+    # you can rename each of these should you choose! we recommend leaving these as they are
+    # you can also set a output_dataset_name to push to a new dataset
     source_subset: ingested_documents
     output_subset: summarized_documents
   
@@ -68,20 +78,23 @@ pipeline:
     output_subset: chunked_documents
     
     chunking_configuration:
-      l_min_tokens: 64
-      l_max_tokens: 128
-      tau_threshold: 0.8
-      h_min: 2
-      h_max: 5
-      num_multihops_factor: 2   # or any integer or float
+      l_min_tokens: 64 # how many minimum tokens you want in each chunk
+      l_max_tokens: 128 # how many max tokens in each chunk
+      tau_threshold: 0.8 # what threshold to decide a boundary
+      h_min: 2 # for multi-hop configurations, minimum number of unique chunks to combine
+      h_max: 5 # maximum number of unique chunks to combine to make a multi-hop set
+      num_multihops_factor: 2   # or any integer or float. higher numbers generate a larger number of multi-hops
   
   single_shot_question_generation:
     run: true
+    # this is important - you can run one model at a time, and keep re-running this stage
+    # if concact_existing_dataset is true, then instead of overwriting the questions, it'll just add new ones
     concat_existing_dataset: true
     source_subset: chunked_documents
     output_subset: single_shot_questions
+    # you can add any additional instructions you want here! try it out!
     additional_instructions: "Generate questions to test a curious adult"
-    # for cost reduction
+    # for cost reduction. if you set all, then all chunks will be used
     chunk_sampling:
       mode: "count" # or "all" for all chunks
       value: 5
@@ -99,6 +112,7 @@ pipeline:
       value: 0.3
       random_seed: 42
 
+  # this combines your single shot and multi-hop questions into one nice dataset!
   lighteval:
     run: true
   
