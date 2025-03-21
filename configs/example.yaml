@@ -9,34 +9,13 @@ hf_configuration:
 model_list: 
   # to use the default huggingface inference
   - model_name: Qwen/Qwen2.5-72B-Instruct
+    provider: novita # or hf-inference
     api_key: $HF_TOKEN
-    inference_backend: hf_hub
-  
-  # to use openai inference
-  - model_name: gpt-4o-mini
-    api_key: $OPENAI_API_KEY
-
-  # to use anthropic inference
-  - model_name: claude-3-7-sonnet-20250219
-    request_style: anthropic
-    api_key: $ANTHROPIC_API_KEY
-  
-  # to use deepseek inference
-  - model_name: deepseek-chat
-    request_style: openai
-    base_url: $DEEPSEEK_API_BASE
-    api_key: $DEEPSEEK_API_KEY
-  
-  # to use local inference with vLLM
-  - model_name: your_model_here
-    base_url: http://localhost:8000/v1
-    max_concurrent_requests: 128 # optional, defaults to 8
-    
-
+    max_concurrent_requests: 32
 
 model_roles:
   ingestion:
-    - Qwen/Qwen2.5-72B-Instruct # you must use a vision supported model for ingestion
+    - Qwen/Qwen2.5-VL-72B-Instruct # you should use a vision supported model for ingestion
   summarization:
     - Qwen/Qwen2.5-72B-Instruct
   chunking:
@@ -101,5 +80,3 @@ pipeline:
 
   lighteval:
     run: true
-  
-  
