@@ -326,7 +326,6 @@ def run(config: dict[str, Any]) -> None:
         None. The function saves the resulting dataset to disk/HF Hub if successful.
     """
     stage_cfg = config.get("pipeline", {}).get("summarization", {})
-    debug_mode: bool = config.get("settings", {}).get("debug", False)
     if not stage_cfg.get("run", False):
         logger.info("Summarization stage is disabled. Skipping.")
         return
