@@ -1,6 +1,12 @@
 [project]
 name = "yourbench"
 version = "0.2.0"
+authors = [
+    { name = "Sumuk Shashidhar", email = "sumuks2@illinois.edu" },
+    { name = "Alina Lozovskaia", email = "alina.lozovskaia@huggingface.co" },
+    { name = "Clémentine Fourrier", email = "clementine@huggingface.co" },
+    { name = "Nathan Habib", email = "nathan.habib@huggingface.co" },
+]
 description = "Dynamic Evaluation Set Generation with Large Language Models"
 readme = "README.md"
 requires-python = ">=3.12, <3.13"
@@ -36,3 +42,26 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["yourbench*"]
+
+[tool.ruff]
+line-length = 119
+exclude = ["**/*.ipynb"]
+
+lint.ignore = ["E501", "C901", "F841"]
+lint.select = ["C", "E", "F", "I", "W"]
+lint.fixable = ["A", "B", "C", "D", "E", "F", "I", "W"]
+preview = true
+
+[tool.ruff.lint.isort]
+length-sort = true
+lines-after-imports = 2
+no-lines-before = ["standard-library", "local-folder"]
+known-local-folder = ["yourbench"]
+known-first-party = ["datasets", "huggingface_hub"]
+split-on-trailing-comma = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
