@@ -64,9 +64,7 @@ def run(
     logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
 
     if not config:
-        logger.error(
-            "Please provide one with --config"
-        )
+        logger.error("Please provide one with --config")
         raise typer.Exit(code=1)
 
     # Ensure we have a valid config path
