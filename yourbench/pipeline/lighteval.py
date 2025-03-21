@@ -84,7 +84,7 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("lighteval stage is disabled. Skipping.")
         return
 
-    logger.info("Starting lighteval stage")
+    logger.info("Saving lighteval compatible dataset")
 
     # ----------------------------------------
     # 2) Load datasets
