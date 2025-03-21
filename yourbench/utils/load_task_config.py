@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 import yaml
 
+
 def get_project_root() -> Path:
     """Get the project root directory (where pyproject.toml is located)"""
     current = Path(__file__).resolve()
