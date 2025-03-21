@@ -98,5 +98,8 @@ pipeline:
       mode: "percentage" # or "count" for a fixed number
       value: 0.3
       random_seed: 42
+
+  lighteval:
+    run: true
   
   
