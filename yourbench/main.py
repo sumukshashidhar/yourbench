@@ -8,7 +8,6 @@ import typer
 from loguru import logger
 
 from yourbench.analysis import run_analysis
-from yourbench.config_cache import get_last_config, save_last_config
 from yourbench.pipeline.handler import run_pipeline
 
 
@@ -58,34 +57,22 @@ def run(
 ) -> None:
     """
     Run the YourBench pipeline using a specified config file.
-
-    If no --config is provided, this command attempts to load the most recent
-    cached config (if any). Use --plot-stage-timing to generate a stage-timing chart.
+    Use --plot-stage-timing to generate a stage-timing chart.
     """
     # Adjust logger according to debug level
     logger.remove()
     logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
 
-    # Use cached config if none specified
     if not config:
-        cached_config: Optional[str] = get_last_config()
-        if cached_config:
-            config = Path(cached_config)
-            logger.info(f"No config specified; using last used config: {config}")
-        else:
-            logger.error(
-                "No config file specified and no cached config found.\n"
-                "Please provide one with --config or create a config."
-            )
-            raise typer.Exit(code=1)
+        logger.error(
+            "Please provide one with --config"
+        )
+        raise typer.Exit(code=1)
 
     # Ensure we have a valid config path
     if not config.exists():
         logger.error(f"Specified config file does not exist: {config}")
         raise typer.Exit(code=1)
-
-    # Save to cache for later
-    save_last_config(str(config))
 
     logger.info(f"Running pipeline with config: {config}")
     try:
