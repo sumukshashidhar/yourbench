@@ -308,8 +308,6 @@ First, thoroughly conduct your analysis within `<document_analysis>` XML tags. T
 """
 
 
-
-
 MULTI_HOP_QUESTION_GENERATION_USER_PROMPT = """<title>
 {title}
 </title>
