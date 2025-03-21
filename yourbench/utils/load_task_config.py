@@ -3,12 +3,6 @@ from typing import Any, Dict
 
 import yaml
 
-
-# TODO: either remove or decide how to use it
-def _get_full_dataset_name_for_questions(config: dict, actual_dataset_name: str) -> str:
-    return config["configurations"]["hf_organization"] + "/" + actual_dataset_name
-
-
 def get_project_root() -> Path:
     """Get the project root directory (where pyproject.toml is located)"""
     current = Path(__file__).resolve()
