@@ -16,9 +16,12 @@ from tqdm.asyncio import tqdm_asyncio
 load_dotenv()
 
 GLOBAL_TIMEOUT = 3600
+
+
 @dataclass
 class Model:
     model_name: str
+    # You can find the list of available providers here: https://huggingface.co/docs/huggingface_hub/guides/inference#supported-providers-and-tasks
     provider: str | None = None
     base_url: str | None = None
     api_key: str | None = None
