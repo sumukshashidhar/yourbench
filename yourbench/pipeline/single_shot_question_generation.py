@@ -113,7 +113,9 @@ def run(config: dict[str, Any]) -> None:
         return
 
     dataset = custom_load_dataset(config=config, subset="chunked")
-    logger.info(f"Loaded chunked subset with {len(dataset)} rows for Single-shot question generation.")
+    logger.info(
+        f"Loaded chunked subset with {len(dataset)} rows for Single-shot question generation."
+    )
 
     inference_calls, call_index_mapping = _build_inference_calls(dataset, stage_config)
     if not inference_calls:
@@ -135,7 +137,9 @@ def run(config: dict[str, Any]) -> None:
         )
         return
 
-    custom_save_dataset(dataset=question_dataset, config=config, subset="single_shot_questions")
+    custom_save_dataset(
+        dataset=question_dataset, config=config, subset="single_shot_questions"
+    )
     logger.success("Single-shot question generation completed successfully.")
 
 
@@ -166,6 +170,7 @@ def _load_stage_config(config: dict[str, Any]) -> SingleShotQuestionGenerationCo
         ),
         chunk_sampling=chunk_sampling,
     )
+
 
 def _sample_chunks_if_needed(
     chunks_list: list[dict[str, Any]], chunk_sampling: ChunkSamplingConfig
@@ -383,4 +388,3 @@ def _force_int_in_range(value: Any, min_val: int, max_val: int) -> int:
     except (ValueError, TypeError):
         ivalue = (min_val + max_val) // 2
     return max(min_val, min(ivalue, max_val))
-

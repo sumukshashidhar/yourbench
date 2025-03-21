@@ -20,11 +20,6 @@ Usage:
    summarization:
      run: true
      timeout_seconds: 300
-     source_dataset_name: yourbench_dataset
-     source_subset: ingested_documents
-     output_dataset_name: yourbench_dataset
-     output_subset: summarized_documents
-     output_split: train
 
 2. When the pipeline runs, it loads the target dataset, calls the summarization
    model(s) to produce summaries, logs intermediate steps, and saves the updated

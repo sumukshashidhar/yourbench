@@ -141,7 +141,9 @@ def run(config: Dict[str, Any]) -> None:
 
     # 1) Dataset Loading
     dataset = custom_load_dataset(config=config, subset="chunked")
-    logger.info(f"Loaded chunked subset with {len(dataset)} rows for Multi-hop question generation.")
+    logger.info(
+        f"Loaded chunked subset with {len(dataset)} rows for Multi-hop question generation."
+    )
 
     # 2) Build Inference Calls (including sampling)
     inference_calls, call_index_map = _multihop_chunk_sampling_and_calls(
@@ -161,7 +163,9 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # 5) Save the result
-    custom_save_dataset(dataset=final_dataset, config=config, subset="multi_hop_questions")
+    custom_save_dataset(
+        dataset=final_dataset, config=config, subset="multi_hop_questions"
+    )
     logger.success("Multi-hop question generation completed successfully.")
 
 

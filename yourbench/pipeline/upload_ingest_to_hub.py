@@ -23,7 +23,6 @@ Usage:
           upload_ingest_to_hub:
             run: true
             source_documents_dir: data/ingested/markdown
-            # (Optional) override output_dataset_name, output_subset, etc.
 
     2. Ensure you have valid Hugging Face Hub credentials set in `hf_configuration.token` if you
        want to push to a private or protected dataset.

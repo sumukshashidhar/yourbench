@@ -60,10 +60,7 @@ from dataclasses import dataclass, asdict
 from loguru import logger
 from transformers import AutoModel, AutoTokenizer
 
-from yourbench.utils.dataset_engine import (
-    custom_load_dataset,
-    custom_save_dataset
-)
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 try:
     import evaluate
@@ -170,9 +167,7 @@ def run(config: Dict[str, Any]) -> None:
 
     # Attempt to load dataset
     dataset = custom_load_dataset(config=config, subset="summarized")
-    logger.info(
-        f"Loaded summarized subset with {len(dataset)} rows for chunking."
-    )
+    logger.info(f"Loaded summarized subset with {len(dataset)} rows for chunking.")
 
     # Retrieve chunking parameters into a dataclass
     params = _parse_chunking_parameters(config)

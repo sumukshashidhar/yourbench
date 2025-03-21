@@ -55,11 +55,11 @@ def custom_save_dataset(
         os.makedirs(local_dataset_dir, exist_ok=True)
         local_dataset.save_to_disk(local_dataset_dir)
         logger.success(f"Dataset successfully saved localy to: '{local_dataset_dir}'")
-    
+
     if config["hf_configuration"].get("concat_if_exist", False):
         existing_dataset = custom_load_dataset(config=config, subset=subset)
         dataset = concatenate_datasets([existing_dataset, dataset])
-        logger.info(f"Concatenated dataset with an existing one")
+        logger.info("Concatenated dataset with an existing one")
 
     if subset:
         config_name = subset
@@ -67,10 +67,14 @@ def custom_save_dataset(
         config_name = "default"
 
     if push_to_hub:
-        logger.info(f"Pushing dataset to HuggingFace Hub with repo_id='{dataset_repo_name}'")
+        logger.info(
+            f"Pushing dataset to HuggingFace Hub with repo_id='{dataset_repo_name}'"
+        )
         dataset.push_to_hub(
             repo_id=dataset_repo_name,
             private=config["hf_configuration"].get("private", True),
             config_name=config_name,
         )
-        logger.success(f"Dataset successfully pushed to HuggingFace Hub with repo_id='{dataset_repo_name}'")
+        logger.success(
+            f"Dataset successfully pushed to HuggingFace Hub with repo_id='{dataset_repo_name}'"
+        )
