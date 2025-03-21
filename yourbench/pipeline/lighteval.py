@@ -5,7 +5,7 @@ Overview:
 ---------
 Combines single-shot and multi-hop question datasets into a unified "light evaluation"
 dataset suitable for quick checking or downstream evaluations. This stage fetches
-the necessary metadata (document text, chunk text, etc.) from the chunked dataset 
+the necessary metadata (document text, chunk text, etc.) from the chunked dataset
 to populate a final dataset with the following columns:
 
 1) question                (str)  - The actual question text.
@@ -34,7 +34,7 @@ Usage:
 ------
 1. Load single-shot and multi-hop question subsets.
 2. Merge them into a single dataset, marking 'kind' as "single_shot" or "multi_hop."
-3. For each question row, look up the relevant chunks in the chunked dataset to 
+3. For each question row, look up the relevant chunks in the chunked dataset to
    populate 'chunks' and the full 'document' text.
 4. Save final dataset to HF or local path as configured.
 """
@@ -53,7 +53,7 @@ def run(config: Dict[str, Any]) -> None:
     """
     Main entry point for the lighteval pipeline stage.
 
-    This stage merges single-shot and multi-hop question datasets with chunked 
+    This stage merges single-shot and multi-hop question datasets with chunked
     document metadata into a unified "light evaluation" dataset containing the columns:
 
       1. question
@@ -91,41 +91,57 @@ def run(config: Dict[str, Any]) -> None:
     # 1) Identify subset names
     # ----------------------------------------
     single_shot_subset = stage_cfg.get("single_shot_subset", "single_shot_questions")
-    multi_hop_subset   = stage_cfg.get("multi_hop_subset",   "multi_hop_questions")
-    chunked_subset     = stage_cfg.get("chunked_subset",     "chunked_documents")
-    output_subset      = stage_cfg.get("output_subset",      "lighteval")
+    multi_hop_subset = stage_cfg.get("multi_hop_subset", "multi_hop_questions")
+    chunked_subset = stage_cfg.get("chunked_subset", "chunked_documents")
+    output_subset = stage_cfg.get("output_subset", "lighteval")
 
     # We'll default to using the global dataset name from HF config if not specified
-    base_dataset_name   = config.get("hf_configuration", {}).get("global_dataset_name", "yourbench_dataset")
+    base_dataset_name = config.get("hf_configuration", {}).get(
+        "global_dataset_name", "yourbench_dataset"
+    )
     output_dataset_name = stage_cfg.get("output_dataset_name", base_dataset_name)
 
-    logger.info(f"Starting lighteval stage. single_shot_subset='{single_shot_subset}', "
-                f"multi_hop_subset='{multi_hop_subset}', chunked_subset='{chunked_subset}', "
-                f"output_subset='{output_subset}'")
+    logger.info(
+        f"Starting lighteval stage. single_shot_subset='{single_shot_subset}', "
+        f"multi_hop_subset='{multi_hop_subset}', chunked_subset='{chunked_subset}', "
+        f"output_subset='{output_subset}'"
+    )
 
     # ----------------------------------------
     # 2) Load datasets
     # ----------------------------------------
     try:
-        single_shot_ds = smart_load_dataset(base_dataset_name, config, single_shot_subset)
-        logger.info(f"Loaded single-shot Q dataset '{single_shot_subset}' with {len(single_shot_ds)} rows.")
+        single_shot_ds = smart_load_dataset(
+            base_dataset_name, config, single_shot_subset
+        )
+        logger.info(
+            f"Loaded single-shot Q dataset '{single_shot_subset}' with {len(single_shot_ds)} rows."
+        )
     except Exception as e:
-        logger.warning(f"Could not load single-shot dataset '{single_shot_subset}': {e}")
+        logger.warning(
+            f"Could not load single-shot dataset '{single_shot_subset}': {e}"
+        )
         single_shot_ds = Dataset.from_dict({})  # empty fallback
 
     try:
         multi_hop_ds = smart_load_dataset(base_dataset_name, config, multi_hop_subset)
-        logger.info(f"Loaded multi-hop Q dataset '{multi_hop_subset}' with {len(multi_hop_ds)} rows.")
+        logger.info(
+            f"Loaded multi-hop Q dataset '{multi_hop_subset}' with {len(multi_hop_ds)} rows."
+        )
     except Exception as e:
         logger.warning(f"Could not load multi-hop dataset '{multi_hop_subset}': {e}")
         multi_hop_ds = Dataset.from_dict({})  # empty fallback
 
     try:
         chunked_ds = smart_load_dataset(base_dataset_name, config, chunked_subset)
-        logger.info(f"Loaded chunked dataset '{chunked_subset}' with {len(chunked_ds)} rows.")
+        logger.info(
+            f"Loaded chunked dataset '{chunked_subset}' with {len(chunked_ds)} rows."
+        )
     except Exception as e:
         logger.error(f"Could not load chunked dataset '{chunked_subset}': {e}")
-        logger.warning("Cannot proceed with chunk text or document text. They will be empty.")
+        logger.warning(
+            "Cannot proceed with chunk text or document text. They will be empty."
+        )
         chunked_ds = Dataset.from_dict({})  # empty fallback
 
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
@@ -151,17 +167,14 @@ def run(config: Dict[str, Any]) -> None:
             cid = chunk_entry.get("chunk_id", "")
             ctext = chunk_entry.get("chunk_text", "")
             chunk_dict[cid] = ctext
-        doc_meta_map[doc_id] = {
-            "document_text": doc_text,
-            "chunks_map": chunk_dict
-        }
+        doc_meta_map[doc_id] = {"document_text": doc_text, "chunks_map": chunk_dict}
 
     # ----------------------------------------
     # 4) Helper functions to transform a row
     # ----------------------------------------
     def make_single_shot_record(row: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Transform a single-shot question row into a standardized dictionary 
+        Transform a single-shot question row into a standardized dictionary
         for the final lighteval dataset.
         """
         doc_id: str = row.get("document_id", "")
@@ -188,12 +201,12 @@ def run(config: Dict[str, Any]) -> None:
             "chunk_ids": [chunk_id] if chunk_id else [],
             "question_generating_model": row.get("generating_model", ""),
             "chunks": [chunk_text] if chunk_text else [],
-            "document": doc_text
+            "document": doc_text,
         }
 
     def make_multi_hop_record(row: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Transform a multi-hop question row into a standardized dictionary 
+        Transform a multi-hop question row into a standardized dictionary
         for the final lighteval dataset.
         """
         doc_id: str = row.get("document_id", "")
@@ -221,7 +234,7 @@ def run(config: Dict[str, Any]) -> None:
             "chunk_ids": chunk_ids,
             "question_generating_model": row.get("generating_model", ""),
             "chunks": chunk_texts,
-            "document": doc_text
+            "document": doc_text,
         }
 
     # ----------------------------------------
@@ -262,13 +275,15 @@ def run(config: Dict[str, Any]) -> None:
     # 7) Save dataset
     # ----------------------------------------
     try:
-        logger.info(f"Saving lighteval dataset to '{output_dataset_name}', subset='{output_subset}'...")
+        logger.info(
+            f"Saving lighteval dataset to '{output_dataset_name}', subset='{output_subset}'..."
+        )
         save_dataset(
             dataset=final_ds,
             step_name="lighteval",
             config=config,
             output_dataset_name=output_dataset_name,
-            output_subset=output_subset
+            output_subset=output_subset,
         )
         logger.success("lighteval dataset saved successfully.")
     except Exception as save_err:
