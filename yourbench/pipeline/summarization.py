@@ -63,7 +63,9 @@ from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
 
 
-def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str, list[Any]]:
+def duplicate_rows(
+    dataset: dict[str, Any], num_duplicates: int = 1
+) -> dict[str, list[Any]]:
     """
     Create a dictionary that repeats each value in the dataset multiple times.
 
@@ -82,8 +84,7 @@ def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str
 
 
 def _load_dataset_for_summarization(
-    config: dict[str, Any],
-    stage_cfg: dict[str, Any]
+    config: dict[str, Any], stage_cfg: dict[str, Any]
 ) -> Dataset | None:
     """
     Load the source dataset specified by the stage configuration.
@@ -96,12 +97,15 @@ def _load_dataset_for_summarization(
         Dataset | None: The loaded Hugging Face Dataset or None if loading failed.
     """
     source_dataset_name = stage_cfg.get(
-        "source_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name")
+        "source_dataset_name",
+        config.get("hf_configuration", {}).get("global_dataset_name"),
     )
     source_subset = stage_cfg.get("source_subset", "ingested_documents")
 
     try:
-        dataset: Dataset = smart_load_dataset(source_dataset_name, config, dataset_subset=source_subset)
+        dataset: Dataset = smart_load_dataset(
+            source_dataset_name, config, dataset_subset=source_subset
+        )
         logger.info(
             "Loaded dataset '{}' with {} documents for summarization.",
             source_dataset_name,
@@ -141,15 +145,16 @@ def _prepare_inference_calls(dataset: Dataset) -> list[InferenceCall]:
     for doc_text in documents:
         user_msg_content = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
         user_msg = {"role": "user", "content": user_msg_content}
-        inference_calls.append(InferenceCall(messages=[user_msg], tags=["summarization"]))
+        inference_calls.append(
+            InferenceCall(messages=[user_msg], tags=["summarization"])
+        )
 
     logger.info("Prepared {} inference calls for summarization.", len(inference_calls))
     return inference_calls
 
 
 def _perform_summarization_inference(
-    config: dict[str, Any],
-    inference_calls: list[InferenceCall]
+    config: dict[str, Any], inference_calls: list[InferenceCall]
 ) -> dict[str, list[str]] | None:
     """
     Perform the actual inference (summarization) calls to the model.
@@ -179,8 +184,7 @@ def _perform_summarization_inference(
 
 
 def _extract_summaries_from_model_output(
-    dataset: Dataset,
-    response_dict: dict[str, list[str]]
+    dataset: Dataset, response_dict: dict[str, list[str]]
 ) -> tuple[str, list[str], list[str]]:
     """
     Take the raw inference responses, parse out the <final_summary>, and
@@ -203,7 +207,10 @@ def _extract_summaries_from_model_output(
         model_raw_summaries: list[str] = response_dict.get(summ_model_name, [])
 
         if not model_raw_summaries:
-            logger.error("Model '{}' returned no summaries. Check your model configuration.", summ_model_name)
+            logger.error(
+                "Model '{}' returned no summaries. Check your model configuration.",
+                summ_model_name,
+            )
             return "", [], []
     except IndexError:
         logger.error("No valid model keys found in the response dictionary.")
@@ -211,7 +218,9 @@ def _extract_summaries_from_model_output(
 
     # Ensure there's a 1:1 match between documents and summaries
     if len(model_raw_summaries) != len(documents):
-        logger.warning("Mismatch in number of summaries vs documents. Adjusting list size.")
+        logger.warning(
+            "Mismatch in number of summaries vs documents. Adjusting list size."
+        )
         while len(model_raw_summaries) < len(documents):
             model_raw_summaries.append("")
         if len(model_raw_summaries) > len(documents):
@@ -240,7 +249,7 @@ def _add_summary_columns_to_dataset(
     dataset: Dataset,
     summ_model_name: str,
     raw_summaries: list[str],
-    extracted_summaries: list[str]
+    extracted_summaries: list[str],
 ) -> Dataset:
     """
     Add the raw and extracted summaries (and model name) as columns to the dataset.
@@ -265,7 +274,9 @@ def _add_summary_columns_to_dataset(
         logger.error("Error adding 'document_summary': {}", str(e))
 
     try:
-        dataset = dataset.add_column("summarization_model", [summ_model_name] * len(dataset))
+        dataset = dataset.add_column(
+            "summarization_model", [summ_model_name] * len(dataset)
+        )
     except Exception as e:
         logger.error("Error adding 'summarization_model': {}", str(e))
 
@@ -273,9 +284,7 @@ def _add_summary_columns_to_dataset(
 
 
 def _save_summarized_dataset(
-    dataset: Dataset,
-    config: dict[str, Any],
-    stage_cfg: dict[str, Any]
+    dataset: Dataset, config: dict[str, Any], stage_cfg: dict[str, Any]
 ) -> None:
     """
     Save the updated dataset with summary columns to disk or HF Hub.
@@ -289,7 +298,8 @@ def _save_summarized_dataset(
         None
     """
     output_dataset_name = stage_cfg.get(
-        "output_dataset_name", config.get("hf_configuration", {}).get("global_dataset_name")
+        "output_dataset_name",
+        config.get("hf_configuration", {}).get("global_dataset_name"),
     )
     output_subset = stage_cfg.get("output_subset", "summarized_documents")
     output_split = stage_cfg.get("output_split", "train")
@@ -349,18 +359,15 @@ def run(config: dict[str, Any]) -> None:
         return
 
     # 4) Gather and parse model responses
-    summ_model_name, model_raw_summaries, extracted_summaries = _extract_summaries_from_model_output(
-        dataset, response_dict
+    summ_model_name, model_raw_summaries, extracted_summaries = (
+        _extract_summaries_from_model_output(dataset, response_dict)
     )
     if not summ_model_name:
         return
 
     # 5) Add new columns to the dataset
     dataset = _add_summary_columns_to_dataset(
-        dataset,
-        summ_model_name,
-        model_raw_summaries,
-        extracted_summaries
+        dataset, summ_model_name, model_raw_summaries, extracted_summaries
     )
 
     # 6) Save updated dataset

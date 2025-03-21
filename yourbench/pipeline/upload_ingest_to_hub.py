@@ -125,19 +125,26 @@ def run(config: dict[str, Any]) -> None:
 
     # Determine the final dataset name and subset from config
     hf_cfg = config.get("hf_configuration", {})
-    output_dataset_name = stage_cfg.get("output_dataset_name", hf_cfg.get("global_dataset_name"))
+    output_dataset_name = stage_cfg.get(
+        "output_dataset_name", hf_cfg.get("global_dataset_name")
+    )
     output_subset = stage_cfg.get("output_subset", stage_name)
 
     # Show key info about Hugging Face Hub config
-    hf_token: Optional[str] = hf_cfg.get("token", None)
     hf_private: bool = hf_cfg.get("private", True)
-    logger.info(f"Starting '{stage_name}' stage: uploading ingested files from '{source_dir}'")
-    logger.debug(f"Hugging Face dataset name: '{output_dataset_name}' (private={hf_private})")
+    logger.info(
+        f"Starting '{stage_name}' stage: uploading ingested files from '{source_dir}'"
+    )
+    logger.debug(
+        f"Hugging Face dataset name: '{output_dataset_name}' (private={hf_private})"
+    )
 
     # Collect .md files
     md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
     if not md_file_paths:
-        logger.warning(f"No .md files found in '{source_dir}'. Stage will end with no output.")
+        logger.warning(
+            f"No .md files found in '{source_dir}'. Stage will end with no output."
+        )
         return
 
     # Read them into Python objects
@@ -150,7 +157,9 @@ def run(config: dict[str, Any]) -> None:
     dataset = _convert_ingested_docs_to_dataset(ingested_documents)
 
     # Save or push the dataset to the configured location
-    logger.info(f"Saving dataset to name='{output_dataset_name}', subset='{output_subset}'")
+    logger.info(
+        f"Saving dataset to name='{output_dataset_name}', subset='{output_subset}'"
+    )
     save_dataset(
         dataset=dataset,
         step_name=stage_name,
@@ -198,7 +207,9 @@ def _collect_markdown_files(md_file_paths: list[str]) -> list[IngestedDocument]:
             logger.debug(f"Loaded markdown file: {file_path} (doc_id={doc_id})")
 
         except Exception as e:
-            logger.error(f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}")
+            logger.error(
+                f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}"
+            )
 
     return ingested_docs
 
@@ -232,5 +243,7 @@ def _convert_ingested_docs_to_dataset(ingested_docs: list[IngestedDocument]) -> 
         records["document_metadata"].append(doc.document_metadata)
 
     dataset = Dataset.from_dict(records)
-    logger.debug(f"Constructed HF Dataset with {len(dataset)} entries from ingested documents.")
+    logger.debug(
+        f"Constructed HF Dataset with {len(dataset)} entries from ingested documents."
+    )
     return dataset
