@@ -41,13 +41,107 @@ Stage-Specific Logging:
 
 import glob
 import os
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from typing import Any, Optional
 from huggingface_hub import InferenceClient
 from loguru import logger
 from markitdown import MarkItDown
 
 
-def run(config: Dict[str, Any]) -> None:
+@dataclass
+class IngestionConfig:
+    """Configuration for the ingestion stage of the pipeline."""
+    run: bool = False
+    source_documents_dir: Optional[str] = None
+    output_dir: Optional[str] = None
+
+
+@dataclass
+class ModelConfig:
+    """Configuration for a model in the model list."""
+    model_name: str = "unknown_model"
+    request_style: str = ""
+    base_url: str = ""
+    api_key: str = ""
+
+
+@dataclass
+class ModelRoles:
+    """Configuration for model roles in the pipeline."""
+    ingestion: list[str] = field(default_factory=list)
+
+
+@dataclass
+class PipelineConfig:
+    """Main configuration for the pipeline."""
+    pipeline: dict[str, Any] = field(default_factory=dict)
+    model_roles: ModelRoles = field(default_factory=ModelRoles)
+    model_list: list[ModelConfig] = field(default_factory=list)
+
+
+def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
+    """
+    Extract ingestion configuration from the main config dictionary.
+    
+    Args:
+        config (dict[str, Any]): The complete configuration dictionary.
+        
+    Returns:
+        IngestionConfig: A typed configuration object for ingestion.
+    """
+    if not isinstance(config.get("pipeline", {}).get("ingestion", {}), dict):
+        return IngestionConfig()
+    
+    stage_config = config.get("pipeline", {}).get("ingestion", {})
+    return IngestionConfig(
+        run=stage_config.get("run", False),
+        source_documents_dir=stage_config.get("source_documents_dir"),
+        output_dir=stage_config.get("output_dir")
+    )
+
+
+def _extract_model_roles(config: dict[str, Any]) -> ModelRoles:
+    """
+    Extract model roles configuration from the main config dictionary.
+    
+    Args:
+        config (dict[str, Any]): The complete configuration dictionary.
+        
+    Returns:
+        ModelRoles: A typed configuration object for model roles.
+    """
+    model_roles_dict = config.get("model_roles", {})
+    return ModelRoles(
+        ingestion=model_roles_dict.get("ingestion", [])
+    )
+
+
+def _extract_model_list(config: dict[str, Any]) -> list[ModelConfig]:
+    """
+    Extract model list configuration from the main config dictionary.
+    
+    Args:
+        config (dict[str, Any]): The complete configuration dictionary.
+        
+    Returns:
+        list[ModelConfig]: A list of typed model configurations.
+    """
+    model_list_dicts = config.get("model_list", [])
+    result = []
+    
+    for model_dict in model_list_dicts:
+        model_config = ModelConfig(
+            model_name=model_dict.get("model_name", "unknown_model"),
+            request_style=model_dict.get("request_style", ""),
+            base_url=model_dict.get("base_url", ""),
+            api_key=model_dict.get("api_key", "")
+        )
+        result.append(model_config)
+    
+    return result
+
+
+def run(config: dict[str, Any]) -> None:
     """
     Execute the ingestion stage of the pipeline.
 
@@ -60,12 +154,12 @@ def run(config: Dict[str, Any]) -> None:
     3. Saves the resulting .md outputs to the directory specified by `config["pipeline"]["ingestion"]["output_dir"]`.
 
     Args:
-        config (Dict[str, Any]): A configuration dictionary with keys:
+        config (dict[str, Any]): A configuration dictionary with keys:
             - config["pipeline"]["ingestion"]["run"] (bool): Whether to run ingestion.
             - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
             - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
-            - config["model_roles"]["ingestion"] (Optional[List[str]]): Model names for LLM ingestion support.
-            - config["model_list"] (Optional[List[Dict[str, str]]]): Detailed LLM model configs.
+            - config["model_roles"]["ingestion"] (Optional[list[str]]): Model names for LLM ingestion support.
+            - config["model_list"] (Optional[list[dict[str, str]]]): Detailed LLM model configs.
 
     Returns:
         None
@@ -74,52 +168,51 @@ def run(config: Dict[str, Any]) -> None:
         Writes detailed logs to logs/ingestion.log describing each step taken
         and any errors encountered during file reading or conversion.
     """
-    stage_config = config.get("pipeline", {}).get("ingestion", {})
-    if not isinstance(stage_config, dict):
-        logger.error("Ingestion config is missing or not a dictionary. Aborting ingestion.")
-        return
-
+    # Extract typed configurations from the dictionary
+    ingestion_config = _extract_ingestion_config(config)
+    
     # Check if ingestion is enabled
-    if not stage_config.get("run", False):
+    if not ingestion_config.run:
         logger.info("Ingestion stage is disabled. No action will be taken.")
         return
 
-    # Extract required directories
-    source_dir: Optional[str] = stage_config.get("source_documents_dir")
-    output_dir: Optional[str] = stage_config.get("output_dir")
-
-    if not source_dir or not output_dir:
+    # Check required directories
+    if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
         logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
         return
 
     # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    logger.debug("Prepared output directory: {}", output_dir)
+    os.makedirs(ingestion_config.output_dir, exist_ok=True)
+    logger.debug("Prepared output directory: {}", ingestion_config.output_dir)
 
     # Initialize MarkItDown processor (may include LLM if configured)
     markdown_processor = _initialize_markdown_processor(config)
 
     # Gather all files in the source directory (recursively if desired)
-    all_source_files = glob.glob(os.path.join(source_dir, "**"), recursive=True)
+    all_source_files = glob.glob(os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True)
     if not all_source_files:
-        logger.warning("No files found in source directory: {}", source_dir)
+        logger.warning("No files found in source directory: {}", ingestion_config.source_documents_dir)
         return
 
-    logger.info("Ingestion stage: Converting files from '{}' to '{}'...", source_dir, output_dir)
+    logger.info("Ingestion stage: Converting files from '{}' to '{}'...", 
+                ingestion_config.source_documents_dir, ingestion_config.output_dir)
 
     # Process each file in the source directory
     for file_path in all_source_files:
         if os.path.isfile(file_path):
             _convert_document_to_markdown(
-                file_path=file_path, output_dir=output_dir, markdown_processor=markdown_processor
+                file_path=file_path, 
+                output_dir=ingestion_config.output_dir, 
+                markdown_processor=markdown_processor
             )
 
     logger.success(
-        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.", source_dir, output_dir
+        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.", 
+        ingestion_config.source_documents_dir, ingestion_config.output_dir
     )
 
 
-def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
+def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
     """
     Initialize a MarkItDown processor with optional LLM support for advanced conversion.
 
@@ -129,7 +222,7 @@ def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
     MarkItDown instance is returned without LLM augmentation.
 
     Args:
-        config (Dict[str, Any]): Global pipeline configuration dictionary.
+        config (dict[str, Any]): Global pipeline configuration dictionary.
 
     Returns:
         MarkItDown: A MarkItDown instance, possibly configured with an LLM client.
@@ -139,34 +232,32 @@ def _initialize_markdown_processor(config: Dict[str, Any]) -> MarkItDown:
         - Info about which model (if any) is used for ingestion.
     """
     try:
-        ingestion_role_models = config.get("model_roles", {}).get("ingestion", [])
-        model_list = config.get("model_list", [])
-
-        if not ingestion_role_models or not model_list:
+        # Extract typed configurations from the dictionary
+        model_roles = _extract_model_roles(config)
+        model_list = _extract_model_list(config)
+        
+        if not model_roles.ingestion or not model_list:
             logger.debug("No LLM ingestion config found. Using default MarkItDown processor.")
             return MarkItDown()
 
-        # Attempt to match the first model in model_list that appears in ingestion_role_models
-        matched_model_info = next((m for m in model_list if m["model_name"] in ingestion_role_models), None)
+        # Attempt to match the first model in model_list that appears in model_roles.ingestion
+        matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
 
-        if not matched_model_info:
-            logger.debug("No matching LLM model found for roles: {}. Using default MarkItDown.", ingestion_role_models)
+        if not matched_model:
+            logger.debug("No matching LLM model found for roles: {}. Using default MarkItDown.", model_roles.ingestion)
             return MarkItDown()
 
-        # Extract relevant info from the matched model config
-        request_style = matched_model_info.get("request_style", "")
-        base_url = matched_model_info.get("base_url", "")
-        api_key = matched_model_info.get("api_key", "")
-        model_name = matched_model_info.get("model_name", "unknown_model")
-
         # Expand environment variables in the api_key, if present
-        api_key = os.path.expandvars(api_key) if api_key else ""
+        api_key = os.path.expandvars(matched_model.api_key) if matched_model.api_key else ""
 
-        logger.info("Initializing MarkItDown with LLM support: request_style='{}', model='{}'.", request_style, model_name)
+        logger.info(
+            "Initializing MarkItDown with LLM support: request_style='{}', model='{}'.", 
+            matched_model.request_style, matched_model.model_name
+        )
 
         # Construct the LLM client (placeholder usage, adjust to real client as needed)
-        llm_client = InferenceClient(api_key=api_key, base_url=base_url)  # Example usage
-        return MarkItDown(llm_client=llm_client, llm_model=model_name)
+        llm_client = InferenceClient(api_key=api_key, base_url=matched_model.base_url)  # Example usage
+        return MarkItDown(llm_client=llm_client, llm_model=matched_model.model_name)
     except Exception as exc:
         logger.error("Failed to initialize MarkItDown with LLM support: {}", str(exc))
         return MarkItDown()
