@@ -175,14 +175,6 @@ def _perform_summarization_inference(
     if response_dict is None:
         logger.error("Inference for summarization returned no data.")
         return None
-
-    if not response_dict:
-        logger.error(
-            "Inference returned an empty dictionary. This could indicate a configuration "
-            "issue with models for the summarization stage."
-        )
-        return None
-
     return response_dict
 
 
