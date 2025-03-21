@@ -45,17 +45,12 @@ import glob
 import os
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from datasets import Dataset
 from loguru import logger
 
 from yourbench.utils.dataset_engine import save_dataset
-
-
-# Log to a stage-specific log file for thorough debugging information.
-# The file rotates weekly to prevent excessive growth.
-logger.add("logs/upload_ingest_to_hub.log", level="DEBUG", rotation="1 week")
 
 
 @dataclass
@@ -70,17 +65,17 @@ class IngestedDocument:
             Raw text content from the markdown file.
         document_filename (str):
             The original filename of the markdown file.
-        document_metadata (Dict[str, Any]):
+        document_metadata (dict[str, Any]):
             Additional metadata, such as file size or arbitrary user-defined fields.
     """
 
     document_id: str
     document_text: str
     document_filename: str
-    document_metadata: Dict[str, Any] = field(default_factory=dict)
+    document_metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def run(config: Dict[str, Any]) -> None:
+def run(config: dict[str, Any]) -> None:
     """
     Primary function to execute the 'upload_ingest_to_hub' stage.
 
@@ -89,7 +84,7 @@ def run(config: Dict[str, Any]) -> None:
     Hugging Face Dataset, which is then saved locally or pushed to the Hub.
 
     Args:
-        config (Dict[str, Any]):
+        config (dict[str, Any]):
             The overall pipeline configuration dictionary. Relevant keys:
 
             - config["pipeline"]["upload_ingest_to_hub"]["run"] (bool):
@@ -166,22 +161,22 @@ def run(config: Dict[str, Any]) -> None:
     logger.success(f"Successfully completed '{stage_name}' stage.")
 
 
-def _collect_markdown_files(md_file_paths: List[str]) -> List[IngestedDocument]:
+def _collect_markdown_files(md_file_paths: list[str]) -> list[IngestedDocument]:
     """
     Gather Markdown documents from the given file paths and store them in data classes.
 
     Args:
-        md_file_paths (List[str]):
+        md_file_paths (list[str]):
             A list of absolute/relative paths to `.md` files.
 
     Returns:
-        List[IngestedDocument]:
+        list[IngestedDocument]:
             A list of `IngestedDocument` objects, one per valid markdown file discovered.
 
     Side Effects:
         Logs a warning for any unreadable or empty markdown files.
     """
-    ingested_docs: List[IngestedDocument] = []
+    ingested_docs: list[IngestedDocument] = []
     for file_path in md_file_paths:
         try:
             with open(file_path, "r", encoding="utf-8") as file_handle:
@@ -208,13 +203,13 @@ def _collect_markdown_files(md_file_paths: List[str]) -> List[IngestedDocument]:
     return ingested_docs
 
 
-def _convert_ingested_docs_to_dataset(ingested_docs: List[IngestedDocument]) -> Dataset:
+def _convert_ingested_docs_to_dataset(ingested_docs: list[IngestedDocument]) -> Dataset:
     """
     Convert a list of ingested markdown documents into a Hugging Face Dataset object.
 
     Args:
-        ingested_docs (List[IngestedDocument]):
-            List of `IngestedDocument` objects to be packaged in a dataset.
+        ingested_docs (list[IngestedDocument]):
+            list of `IngestedDocument` objects to be packaged in a dataset.
 
     Returns:
         Dataset:
