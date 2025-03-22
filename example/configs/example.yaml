@@ -35,9 +35,9 @@ pipeline:
   ingestion:
     run: true
     # set this to where your raw documents are located
-    source_documents_dir: data/example/raw
+    source_documents_dir: example/data/raw
     # .... and this to where you want them to be processed to
-    output_dir: data/example/processed
+    output_dir: example/data/processed
 
   # to convert your documents to a huggingface dataset
   upload_ingest_to_hub:

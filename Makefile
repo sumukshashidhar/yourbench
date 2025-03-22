@@ -4,13 +4,13 @@
 style:
 	@echo "Applying style fixes to $(file)"
 	ruff format $(file)
-	ruff check --fix $(file) --line-length 119
+	ruff check --fix $(file)
 
 # Checks code quality for the specified file or directory without applying fixes
 check:
 	@echo "Checking code quality for $(file) without fixes"
 	ruff format --diff $(file)
-	ruff check $(file) --line-length 119
+	ruff check $(file)
 
 # Applies PEP8 formatting and checks the entire codebase
 all: style
