@@ -57,6 +57,9 @@ from dataclasses import asdict, dataclass
 import torch
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
+from torch.amp import autocast
+
+from dataclasses import dataclass, asdict
 from loguru import logger
 
 from transformers import AutoModel, AutoTokenizer
@@ -338,6 +341,7 @@ def _compute_embeddings(
     texts: list[str],
     device: torch.device,
     max_len: int = 512,
+    batch_size: int = 16,
 ) -> list[torch.Tensor]:
     """
     Computes sentence embeddings by mean pooling the last hidden states,
@@ -349,32 +353,45 @@ def _compute_embeddings(
         texts (list[str]): The list of sentence strings to be embedded.
         device (torch.device): The device on which to run inference (CPU or GPU).
         max_len (int): Max sequence length for tokenization.
-
+        batch_size (int): Batch size.
     Returns:
         list[torch.Tensor]: A list of PyTorch tensors (one per sentence).
     """
-    if texts is None or len(texts) == 0:
-        return []
+    embeddings = []
+    model.eval()
 
-    batch_dict = tokenizer(texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt").to(device)
+    for i in range(0, len(texts), batch_size):
+        batch_texts = texts[i : i + batch_size]
+        batch_dict = tokenizer(
+            batch_texts,
+            max_length=max_len,
+            padding=True,
+            truncation=True,
+            return_tensors="pt"
+        ).to(device)
 
-    with torch.no_grad():
-        outputs = model(**batch_dict)
-        last_hidden_states = outputs.last_hidden_state
-        attention_mask = batch_dict["attention_mask"]
+        with torch.no_grad():
+            with autocast("cuda" if torch.cuda.is_available() else "cpu"):
+                outputs = model(**batch_dict)
+                last_hidden_states = outputs.last_hidden_state
+                attention_mask = batch_dict["attention_mask"]
 
-        # Zero out non-attended tokens
-        last_hidden_states = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
+                # Zero out non-attended tokens
+                last_hidden_states = last_hidden_states.masked_fill(
+                    ~attention_mask[..., None].bool(), 0.0
+                )
 
-        # Mean pooling
-        sum_hidden = last_hidden_states.sum(dim=1)
-        valid_token_counts = attention_mask.sum(dim=1, keepdim=True)
-        embeddings = sum_hidden / valid_token_counts.clamp(min=1e-9)
+                # Mean pooling
+                sum_hidden = last_hidden_states.sum(dim=1)
+                valid_token_counts = attention_mask.sum(dim=1, keepdim=True)
+                batch_embeddings = sum_hidden / valid_token_counts.clamp(min=1e-9)
 
-        # Normalize
-        embeddings = F.normalize(embeddings, p=2, dim=1)
+                # Normalize
+                batch_embeddings = F.normalize(batch_embeddings, p=2, dim=1)
 
-    return list(embeddings.cpu())
+        embeddings.extend(batch_embeddings.cpu())
+
+    return embeddings
 
 
 def _chunk_document(
