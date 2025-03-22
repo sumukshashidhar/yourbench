@@ -4,12 +4,34 @@ from datasets import Dataset, concatenate_datasets, load_dataset, DatasetDict
 from loguru import logger
 
 
-def _get_full_dataset_repo_name(config: Dict[str, Any]):
-    dataset_name = config["hf_configuration"]["hf_dataset_name"]
-    if "/" not in dataset_name:
-        dataset_name = f"{config['hf_configuration']['hf_organization']}/{dataset_name}"
+class ConfigurationError(Exception):
+    """Exception raised for errors in the configuration."""
+    pass
 
-    return dataset_name
+
+def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
+    try:
+        if "hf_configuration" not in config:
+            error_msg = "Missing 'hf_configuration' in config"
+            logger.error(error_msg)
+            raise ConfigurationError(error_msg)
+            
+        hf_config = config["hf_configuration"]
+        if "hf_dataset_name" not in hf_config:
+            error_msg = "Missing 'hf_dataset_name' in hf_configuration"
+            logger.error(error_msg)
+            raise ConfigurationError(error_msg)
+            
+        dataset_name = hf_config["hf_dataset_name"]
+        if "/" not in dataset_name:
+            dataset_name = f"{hf_config['hf_organization']}/{dataset_name}"
+        
+        return dataset_name
+    except ConfigurationError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        raise e
 
 
 def custom_load_dataset(
@@ -20,14 +42,9 @@ def custom_load_dataset(
     """
     dataset_repo_name = _get_full_dataset_repo_name(config)
 
-    # if no step given, load full dataset
+    # TODO: add an optional loading from a local path 
     logger.info(f"Loading dataset HuggingFace Hub with repo_id='{dataset_repo_name}'")
-    if subset:
-        dataset = load_dataset(dataset_repo_name, name=subset, split="train")
-    else:
-        dataset = load_dataset(dataset_repo_name, split="train")
-
-    return dataset
+    return load_dataset(dataset_repo_name, name=subset, split="train")
 
 
 def custom_save_dataset(
