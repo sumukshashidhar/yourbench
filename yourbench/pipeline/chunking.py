@@ -71,7 +71,7 @@ try:
     )
     logger.info("Loaded 'perplexity' metric with model_id='gpt2'.")
 except Exception as perplexity_load_error:
-    logger.warning(
+    logger.info(
         f"Could not load perplexity metric from 'evaluate'. Skipping perplexity. Error: {perplexity_load_error}"
     )
     _perplexity_metric = None
@@ -82,7 +82,7 @@ try:
 
     _use_textstat = True
 except ImportError:
-    logger.warning(
+    logger.info(
         "Package 'textstat' not installed. Readability metrics will be skipped."
     )
     _use_textstat = False
