@@ -36,12 +36,8 @@ from datasets import Dataset
 from loguru import logger
 
 from yourbench.utils.dataset_engine import (
-    save_dataset,
-    smart_get_output_dataset_name,
-    smart_get_output_subset,
-    smart_get_source_dataset_name,
-    smart_get_source_subset,
-    smart_load_dataset,
+    custom_save_dataset,
+    custom_load_dataset,
 )
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
@@ -116,12 +112,10 @@ def run(config: dict[str, Any]) -> None:
         logger.info("single_shot_question_generation stage is disabled. Skipping.")
         return
 
-    source_dataset_name, output_dataset_name, source_subset, output_subset = (
-        _resolve_dataset_info(config)
+    dataset = custom_load_dataset(config=config, subset="chunked")
+    logger.info(
+        f"Loaded chunked subset with {len(dataset)} rows for Single-shot question generation."
     )
-    dataset = _load_input_dataset(source_dataset_name, config, source_subset)
-    if dataset is None:
-        return
 
     inference_calls, call_index_mapping = _build_inference_calls(dataset, stage_config)
     if not inference_calls:
@@ -143,7 +137,9 @@ def run(config: dict[str, Any]) -> None:
         )
         return
 
-    _save_dataset(question_dataset, output_dataset_name, output_subset, config)
+    custom_save_dataset(
+        dataset=question_dataset, config=config, subset="single_shot_questions"
+    )
     logger.success("Single-shot question generation completed successfully.")
 
 
@@ -174,38 +170,6 @@ def _load_stage_config(config: dict[str, Any]) -> SingleShotQuestionGenerationCo
         ),
         chunk_sampling=chunk_sampling,
     )
-
-
-def _resolve_dataset_info(config: dict[str, Any]):
-    """
-    Identify and return the relevant dataset names and subsets from config.
-    """
-    source_dataset_name = smart_get_source_dataset_name(
-        "single_shot_question_generation", config
-    )
-    output_dataset_name = smart_get_output_dataset_name(
-        "single_shot_question_generation", config
-    )
-    source_subset = smart_get_source_subset("single_shot_question_generation", config)
-    output_subset = smart_get_output_subset("single_shot_question_generation", config)
-    return source_dataset_name, output_dataset_name, source_subset, output_subset
-
-
-def _load_input_dataset(dataset_name: str, config: dict[str, Any], subset: str):
-    """
-    Load the input dataset using yourbench's dataset engine utilities.
-    Returns None if loading fails.
-    """
-    logger.info(f"Loading chunked dataset for single-shot QG: {dataset_name}")
-    try:
-        ds = smart_load_dataset(dataset_name, config, dataset_subset=subset)
-        logger.info(f"Loaded dataset with {len(ds)} rows.")
-        return ds
-    except Exception as err:
-        logger.error(
-            f"Failed to load dataset '{dataset_name}' for single_shot_question_generation: {err}"
-        )
-        return None
 
 
 def _sample_chunks_if_needed(
@@ -424,25 +388,3 @@ def _force_int_in_range(value: Any, min_val: int, max_val: int) -> int:
     except (ValueError, TypeError):
         ivalue = (min_val + max_val) // 2
     return max(min_val, min(ivalue, max_val))
-
-
-def _save_dataset(
-    question_dataset: Dataset,
-    output_dataset_name: str,
-    output_subset: str,
-    config: dict[str, Any],
-):
-    """
-    Save the resulting dataset using yourbench's dataset engine utilities.
-    """
-    logger.info(f"Saving single-shot questions to dataset '{output_dataset_name}'.")
-    try:
-        save_dataset(
-            dataset=question_dataset,
-            config=config,
-            step_name="single_shot_question_generation",
-            output_dataset_name=output_dataset_name,
-            output_subset=output_subset,
-        )
-    except Exception as save_err:
-        logger.error(f"Error saving single-shot question dataset: {save_err}")

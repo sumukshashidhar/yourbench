@@ -51,12 +51,8 @@ from datasets import Dataset
 from loguru import logger
 
 from yourbench.utils.dataset_engine import (
-    save_dataset,
-    smart_get_output_dataset_name,
-    smart_get_output_subset,
-    smart_get_source_dataset_name,
-    smart_get_source_subset,
-    smart_load_dataset,
+    custom_load_dataset,
+    custom_save_dataset,
 )
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.prompts import (
@@ -144,7 +140,10 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # 1) Dataset Loading
-    dataset = _multihop_dataset_loading(config)
+    dataset = custom_load_dataset(config=config, subset="chunked")
+    logger.info(
+        f"Loaded chunked subset with {len(dataset)} rows for Multi-hop question generation."
+    )
 
     # 2) Build Inference Calls (including sampling)
     inference_calls, call_index_map = _multihop_chunk_sampling_and_calls(
@@ -164,23 +163,10 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # 5) Save the result
-    _save_final_dataset(final_dataset, config)
-    logger.success("Multi-hop question generation completed successfully.")
-
-
-def _multihop_dataset_loading(config: Dict[str, Any]):
-    """
-    Load the source dataset for multi-hop question generation.
-    """
-    source_dataset_name = smart_get_source_dataset_name(
-        "multi_hop_question_generation", config
+    custom_save_dataset(
+        dataset=final_dataset, config=config, subset="multi_hop_questions"
     )
-    source_subset = smart_get_source_subset("multi_hop_question_generation", config)
-
-    logger.info(f"Loading dataset for multi-hop QG: '{source_dataset_name}'")
-    ds = smart_load_dataset(source_dataset_name, config, source_subset)
-    logger.info(f"Loaded dataset with {len(ds)} rows.")
-    return ds
+    logger.success("Multi-hop question generation completed successfully.")
 
 
 def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
@@ -404,25 +390,6 @@ def _parse_and_build_final(
             f"Failed to create dataset from multi-hop question rows: {ds_error}"
         )
         return None
-
-
-def _save_final_dataset(final_dataset: Dataset, config: Dict[str, Any]):
-    """
-    Save the multi-hop question dataset according to config.
-    """
-    output_dataset_name = smart_get_output_dataset_name(
-        "multi_hop_question_generation", config
-    )
-    output_subset = smart_get_output_subset("multi_hop_question_generation", config)
-
-    logger.info(f"Saving multi-hop question dataset as '{output_dataset_name}'.")
-    save_dataset(
-        dataset=final_dataset,
-        step_name="multi_hop_question_generation",
-        config=config,
-        output_dataset_name=output_dataset_name,
-        output_subset=output_subset,
-    )
 
 
 def _force_int_in_range(value: Any, min_val: int, max_val: int) -> int:

@@ -60,14 +60,7 @@ from dataclasses import dataclass, asdict
 from loguru import logger
 from transformers import AutoModel, AutoTokenizer
 
-from yourbench.utils.dataset_engine import (
-    save_dataset,
-    smart_get_output_dataset_name,
-    smart_get_output_subset,
-    smart_get_source_dataset_name,
-    smart_get_source_subset,
-    smart_load_dataset,
-)
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 try:
     import evaluate
@@ -173,20 +166,8 @@ def run(config: Dict[str, Any]) -> None:
     logger.info("Starting chunking stage...")
 
     # Attempt to load dataset
-    try:
-        source_dataset_name = smart_get_source_dataset_name("chunking", config)
-        source_subset = smart_get_source_subset("chunking", config)
-        output_dataset_name = smart_get_output_dataset_name("chunking", config)
-        output_subset = smart_get_output_subset("chunking", config)
-
-        dataset = smart_load_dataset(source_dataset_name, config, source_subset)
-        logger.debug(
-            f"Loaded dataset '{source_dataset_name}' with {len(dataset)} rows for chunking."
-        )
-    except Exception as ds_error:
-        logger.error(f"Failed to load dataset: {ds_error}")
-        logger.warning("Chunking stage cannot proceed. Exiting.")
-        raise ds_error
+    dataset = custom_load_dataset(config=config, subset="summarized")
+    logger.info(f"Loaded summarized subset with {len(dataset)} rows for chunking.")
 
     # Retrieve chunking parameters into a dataclass
     params = _parse_chunking_parameters(config)
@@ -332,15 +313,8 @@ def run(config: Dict[str, Any]) -> None:
     dataset = dataset.add_column("chunking_model", [model_name] * len(dataset))
 
     # Save updated dataset
-    try:
-        save_dataset(dataset, "chunking", config, output_dataset_name, output_subset)
-        logger.success(
-            f"Chunking stage complete. Dataset saved to '{output_dataset_name}', subset '{output_subset}'."
-        )
-    except Exception as save_error:
-        logger.error(
-            f"Failed to save chunked dataset for doc '{output_dataset_name}': {save_error}"
-        )
+    custom_save_dataset(dataset=dataset, config=config, subset="chunked")
+    logger.success("Chunking stage completed successfully.")
 
 
 def _split_into_sentences(text: str) -> list[str]:

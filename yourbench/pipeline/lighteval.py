@@ -43,10 +43,7 @@ from typing import Dict, Any, List
 from loguru import logger
 from datasets import Dataset
 
-from yourbench.utils.dataset_engine import (
-    smart_load_dataset,
-    save_dataset,
-)
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -87,65 +84,43 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("lighteval stage is disabled. Skipping.")
         return
 
-    # ----------------------------------------
-    # 1) Identify subset names
-    # ----------------------------------------
-    single_shot_subset = stage_cfg.get("single_shot_subset", "single_shot_questions")
-    multi_hop_subset = stage_cfg.get("multi_hop_subset", "multi_hop_questions")
-    chunked_subset = stage_cfg.get("chunked_subset", "chunked_documents")
-    output_subset = stage_cfg.get("output_subset", "lighteval")
-
-    # We'll default to using the global dataset name from HF config if not specified
-    base_dataset_name = config.get("hf_configuration", {}).get(
-        "global_dataset_name", "yourbench_dataset"
-    )
-    output_dataset_name = stage_cfg.get("output_dataset_name", base_dataset_name)
-
-    logger.info(
-        f"Starting lighteval stage. single_shot_subset='{single_shot_subset}', "
-        f"multi_hop_subset='{multi_hop_subset}', chunked_subset='{chunked_subset}', "
-        f"output_subset='{output_subset}'"
-    )
+    logger.info("Saving lighteval compatible dataset")
 
     # ----------------------------------------
     # 2) Load datasets
     # ----------------------------------------
     try:
-        single_shot_ds = smart_load_dataset(
-            base_dataset_name, config, single_shot_subset
+        single_shot_ds = custom_load_dataset(
+            config=config, subset="single_shot_questions"
         )
         logger.info(
-            f"Loaded single-shot Q dataset '{single_shot_subset}' with {len(single_shot_ds)} rows."
+            f"Loaded single-shot Q subset single_shot_questions with {len(single_shot_ds)} rows."
         )
     except Exception as e:
-        logger.warning(
-            f"Could not load single-shot dataset '{single_shot_subset}': {e}"
-        )
+        logger.warning(f"Could not load single-shot subset single_shot_questions: {e}")
         single_shot_ds = Dataset.from_dict({})  # empty fallback
 
     try:
-        multi_hop_ds = smart_load_dataset(base_dataset_name, config, multi_hop_subset)
+        multi_hop_ds = custom_load_dataset(config=config, subset="multi_hop_questions")
         logger.info(
-            f"Loaded multi-hop Q dataset '{multi_hop_subset}' with {len(multi_hop_ds)} rows."
+            f"Loaded multi-hop Q subset multi_hop_subset with {len(multi_hop_ds)} rows."
         )
     except Exception as e:
-        logger.warning(f"Could not load multi-hop dataset '{multi_hop_subset}': {e}")
+        logger.warning(f"Could not load multi-hop subset multi_hop_subset: {e}")
         multi_hop_ds = Dataset.from_dict({})  # empty fallback
 
     try:
-        chunked_ds = smart_load_dataset(base_dataset_name, config, chunked_subset)
-        logger.info(
-            f"Loaded chunked dataset '{chunked_subset}' with {len(chunked_ds)} rows."
-        )
+        chunked_ds = custom_load_dataset(config=config, subset="chunked")
+        logger.info(f"Loaded chunked subset with {len(chunked_ds)} rows.")
     except Exception as e:
-        logger.error(f"Could not load chunked dataset '{chunked_subset}': {e}")
+        logger.error(f"Could not load chunked subset: {e}")
         logger.warning(
             "Cannot proceed with chunk text or document text. They will be empty."
         )
         chunked_ds = Dataset.from_dict({})  # empty fallback
 
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
-        logger.warning("No data in single-shot or multi-hop datasets. Exiting.")
+        logger.error("No data in single-shot or multi-hop datasets. Exiting.")
         return
 
     # ----------------------------------------
@@ -274,18 +249,5 @@ def run(config: Dict[str, Any]) -> None:
     # ----------------------------------------
     # 7) Save dataset
     # ----------------------------------------
-    try:
-        logger.info(
-            f"Saving lighteval dataset to '{output_dataset_name}', subset='{output_subset}'..."
-        )
-        save_dataset(
-            dataset=final_ds,
-            step_name="lighteval",
-            config=config,
-            output_dataset_name=output_dataset_name,
-            output_subset=output_subset,
-        )
-        logger.success("lighteval dataset saved successfully.")
-    except Exception as save_err:
-        logger.error(f"Error saving lighteval dataset: {save_err}")
-        logger.warning("Lighteval stage encountered an error but continuing pipeline.")
+    custom_save_dataset(dataset=final_ds, config=config, subset="lighteval")
+    logger.success("Lighteval dataset saved successfully.")

@@ -20,11 +20,6 @@ Usage:
    summarization:
      run: true
      timeout_seconds: 300
-     source_dataset_name: yourbench_dataset
-     source_subset: ingested_documents
-     output_dataset_name: yourbench_dataset
-     output_subset: summarized_documents
-     output_split: train
 
 2. When the pipeline runs, it loads the target dataset, calls the summarization
    model(s) to produce summaries, logs intermediate steps, and saves the updated
@@ -57,7 +52,7 @@ from typing import Any
 from datasets import Dataset
 from loguru import logger
 
-from yourbench.utils.dataset_engine import save_dataset, smart_load_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
@@ -81,44 +76,6 @@ def duplicate_rows(
     for key, value in dataset.items():
         repeated_data[key] = [val for val in value for _ in range(num_duplicates)]
     return repeated_data
-
-
-def _load_dataset_for_summarization(
-    config: dict[str, Any], stage_cfg: dict[str, Any]
-) -> Dataset | None:
-    """
-    Load the source dataset specified by the stage configuration.
-
-    Args:
-        config (dict[str, Any]): The entire pipeline configuration dictionary.
-        stage_cfg (dict[str, Any]): The configuration specific to the summarization stage.
-
-    Returns:
-        Dataset | None: The loaded Hugging Face Dataset or None if loading failed.
-    """
-    source_dataset_name = stage_cfg.get(
-        "source_dataset_name",
-        config.get("hf_configuration", {}).get("global_dataset_name"),
-    )
-    source_subset = stage_cfg.get("source_subset", "ingested_documents")
-
-    try:
-        dataset: Dataset = smart_load_dataset(
-            source_dataset_name, config, dataset_subset=source_subset
-        )
-        logger.info(
-            "Loaded dataset '{}' with {} documents for summarization.",
-            source_dataset_name,
-            len(dataset),
-        )
-        return dataset
-    except Exception as exc:
-        logger.error(
-            "Failed to load dataset '{}': {}. Summarization stage cannot proceed.",
-            source_dataset_name,
-            str(exc),
-        )
-        return None
 
 
 def _prepare_inference_calls(dataset: Dataset) -> list[InferenceCall]:
@@ -283,42 +240,6 @@ def _add_summary_columns_to_dataset(
     return dataset
 
 
-def _save_summarized_dataset(
-    dataset: Dataset, config: dict[str, Any], stage_cfg: dict[str, Any]
-) -> None:
-    """
-    Save the updated dataset with summary columns to disk or HF Hub.
-
-    Args:
-        dataset (Dataset): The updated dataset to be saved.
-        config (dict[str, Any]): The pipeline configuration.
-        stage_cfg (dict[str, Any]): Summarization stage configuration.
-
-    Returns:
-        None
-    """
-    output_dataset_name = stage_cfg.get(
-        "output_dataset_name",
-        config.get("hf_configuration", {}).get("global_dataset_name"),
-    )
-    output_subset = stage_cfg.get("output_subset", "summarized_documents")
-    output_split = stage_cfg.get("output_split", "train")
-
-    try:
-        save_dataset(
-            dataset=dataset,
-            step_name="summarization",
-            config=config,
-            output_dataset_name=output_dataset_name,
-            output_subset=output_subset,
-            split=output_split,
-        )
-        logger.success("Summarization stage completed successfully.")
-    except Exception as e:
-        logger.error("Error saving summarized dataset: {}", str(e))
-        raise e
-
-
 def run(config: dict[str, Any]) -> None:
     """
     Execute the Summarization Stage of YourBench.
@@ -343,9 +264,8 @@ def run(config: dict[str, Any]) -> None:
     logger.info("Beginning Summarization Stage...")
 
     # 1) Load dataset
-    dataset = _load_dataset_for_summarization(config, stage_cfg)
-    if dataset is None:
-        return
+    dataset = custom_load_dataset(config=config, subset="ingested")
+    logger.info(f"Loaded ingested subset with {len(dataset)} rows for summarization.")
 
     # 2) Prepare calls to summarization model
     inference_calls = _prepare_inference_calls(dataset)
@@ -371,4 +291,5 @@ def run(config: dict[str, Any]) -> None:
     )
 
     # 6) Save updated dataset
-    _save_summarized_dataset(dataset, config, stage_cfg)
+    custom_save_dataset(dataset=dataset, config=config, subset="summarized")
+    logger.success("Summarization stage completed successfully.")
