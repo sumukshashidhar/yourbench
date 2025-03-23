@@ -57,10 +57,8 @@ from dataclasses import asdict, dataclass
 import torch
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
-from torch.amp import autocast
-
-from dataclasses import dataclass, asdict
 from loguru import logger
+from torch.amp import autocast
 
 from transformers import AutoModel, AutoTokenizer
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
@@ -362,13 +360,9 @@ def _compute_embeddings(
 
     for i in range(0, len(texts), batch_size):
         batch_texts = texts[i : i + batch_size]
-        batch_dict = tokenizer(
-            batch_texts,
-            max_length=max_len,
-            padding=True,
-            truncation=True,
-            return_tensors="pt"
-        ).to(device)
+        batch_dict = tokenizer(batch_texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt").to(
+            device
+        )
 
         with torch.no_grad():
             with autocast("cuda" if torch.cuda.is_available() else "cpu"):
@@ -377,9 +371,7 @@ def _compute_embeddings(
                 attention_mask = batch_dict["attention_mask"]
 
                 # Zero out non-attended tokens
-                last_hidden_states = last_hidden_states.masked_fill(
-                    ~attention_mask[..., None].bool(), 0.0
-                )
+                last_hidden_states = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
 
                 # Mean pooling
                 sum_hidden = last_hidden_states.sum(dim=1)
