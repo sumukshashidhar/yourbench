@@ -28,10 +28,9 @@
 # =============================================================================
 
 from __future__ import annotations
-
-import importlib
 import os
 import time
+import importlib
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -114,9 +113,7 @@ def run_pipeline(
 
         # Setup a stage-specific error log file
         error_log_path = os.path.join("logs", f"pipeline_{stage_name}.log")
-        log_id = logger.add(
-            error_log_path, level="ERROR", backtrace=True, diagnose=True, mode="a"
-        )
+        log_id = logger.add(error_log_path, level="ERROR", backtrace=True, diagnose=True, mode="a")
 
         logger.info(f"Starting execution of stage: '{stage_name}'")
         stage_start_time: float = time.time()
@@ -126,9 +123,7 @@ def run_pipeline(
             stage_module = importlib.import_module(f"yourbench.pipeline.{stage_name}")
             stage_module.run(config)
         except Exception as pipeline_error:
-            logger.error(
-                f"Error executing pipeline stage '{stage_name}': {str(pipeline_error)}"
-            )
+            logger.error(f"Error executing pipeline stage '{stage_name}': {str(pipeline_error)}")
             # Remove stage-specific log handler before re-raising
             _remove_log_handler_safely(log_id)
             raise
@@ -137,14 +132,12 @@ def run_pipeline(
 
         stage_end_time: float = time.time()
         elapsed_time: float = stage_end_time - stage_start_time
-        PIPELINE_STAGE_TIMINGS.append(
-            {
-                "stage_name": stage_name,
-                "start": stage_start_time,
-                "end": stage_end_time,
-                "elapsed": elapsed_time,
-            }
-        )
+        PIPELINE_STAGE_TIMINGS.append({
+            "stage_name": stage_name,
+            "start": stage_start_time,
+            "end": stage_end_time,
+            "elapsed": elapsed_time,
+        })
         logger.success(f"Completed stage: '{stage_name}' in {elapsed_time:.3f}s")
 
     # Record overall pipeline end
@@ -172,9 +165,7 @@ def _check_for_unrecognized_stages(pipeline_config: Dict[str, Any]) -> None:
     """
     for stage in pipeline_config.keys():
         if stage not in DEFAULT_STAGE_ORDER:
-            logger.warning(
-                f"Unrecognized stage '{stage}' is present in config but not in DEFAULT_STAGE_ORDER."
-            )
+            logger.warning(f"Unrecognized stage '{stage}' is present in config but not in DEFAULT_STAGE_ORDER.")
 
 
 def _plot_pipeline_stage_timing(

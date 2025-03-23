@@ -57,7 +57,7 @@ length-sort = true
 lines-after-imports = 2
 no-lines-before = ["standard-library", "local-folder"]
 known-local-folder = ["yourbench"]
-known-first-party = ["datasets", "huggingface_hub"]
+known-first-party = ["datasets", "huggingface_hub", "transformers"]
 split-on-trailing-comma = true
 
 [tool.ruff.format]

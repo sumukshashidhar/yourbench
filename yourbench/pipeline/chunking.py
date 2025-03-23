@@ -47,28 +47,27 @@ Error Handling and Logging:
 
 """
 
-import itertools
 import os
-import random
 import re
+import random
+import itertools
 from typing import Any, Dict, Optional
+from dataclasses import asdict, dataclass
 
-import matplotlib.pyplot as plt
 import torch
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
-from dataclasses import dataclass, asdict
 from loguru import logger
-from transformers import AutoModel, AutoTokenizer
 
+from transformers import AutoModel, AutoTokenizer
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+
 
 try:
     import evaluate
 
     # Attempt to load perplexity metric from evaluate
-    _perplexity_metric = evaluate.load(
-        "perplexity", module_type="metric", model_id="gpt2"
-    )
+    _perplexity_metric = evaluate.load("perplexity", module_type="metric", model_id="gpt2")
     logger.info("Loaded 'perplexity' metric with model_id='gpt2'.")
 except Exception as perplexity_load_error:
     logger.info(
@@ -82,9 +81,7 @@ try:
 
     _use_textstat = True
 except ImportError:
-    logger.info(
-        "Package 'textstat' not installed. Readability metrics will be skipped."
-    )
+    logger.info("Package 'textstat' not installed. Readability metrics will be skipped.")
     _use_textstat = False
 
 
@@ -129,9 +126,7 @@ def _parse_chunking_parameters(config: Dict[str, Any]) -> ChunkingParameters:
     Extracts the chunking parameters from the config dictionary, falling back
     to default values if keys are missing.
     """
-    chunking_params = (
-        config.get("pipeline", {}).get("chunking", {}).get("chunking_configuration", {})
-    )
+    chunking_params = config.get("pipeline", {}).get("chunking", {}).get("chunking_configuration", {})
     return ChunkingParameters(
         l_min_tokens=chunking_params.get("l_min_tokens", 64),
         l_max_tokens=chunking_params.get("l_max_tokens", 128),
@@ -224,9 +219,7 @@ def run(config: Dict[str, Any]) -> None:
 
         # If text is empty or missing
         if doc_text is None or not doc_text.strip():
-            logger.warning(
-                f"Document at index {idx} has empty text. Storing empty chunks."
-            )
+            logger.warning(f"Document at index {idx} has empty text. Storing empty chunks.")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
@@ -235,18 +228,14 @@ def run(config: Dict[str, Any]) -> None:
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
         if sentences is None or len(sentences) == 0:
-            logger.warning(
-                f"No valid sentences found for doc at index {idx}, doc_id={doc_id}."
-            )
+            logger.warning(f"No valid sentences found for doc at index {idx}, doc_id={doc_id}.")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
             continue
 
         # Compute embeddings for sentences
-        sentence_embeddings = _compute_embeddings(
-            tokenizer, model, texts=sentences, device=device, max_len=512
-        )
+        sentence_embeddings = _compute_embeddings(tokenizer, model, texts=sentences, device=device, max_len=512)
 
         # Compute consecutive sentence similarities
         consecutive_sims: list[float] = []
@@ -281,9 +270,7 @@ def run(config: Dict[str, Any]) -> None:
         )
 
         # Compute metrics (token_count, perplexity, readability, etc.)
-        chunk_metrics = _compute_info_density_metrics(
-            single_hop_chunks, local_perplexity_metric, local_use_textstat
-        )
+        chunk_metrics = _compute_info_density_metrics(single_hop_chunks, local_perplexity_metric, local_use_textstat)
 
         # Accumulate
         all_single_hop_chunks.append(single_hop_chunks)
@@ -297,10 +284,7 @@ def run(config: Dict[str, Any]) -> None:
     # Convert dataclasses back to dicts for safe addition to the dataset
     dataset = dataset.add_column(
         "chunks",
-        [
-            [asdict(chunk) for chunk in chunk_list]
-            for chunk_list in all_single_hop_chunks
-        ],
+        [[asdict(chunk) for chunk in chunk_list] for chunk_list in all_single_hop_chunks],
     )
     dataset = dataset.add_column(
         "multihop_chunks",
@@ -372,9 +356,7 @@ def _compute_embeddings(
     if texts is None or len(texts) == 0:
         return []
 
-    batch_dict = tokenizer(
-        texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt"
-    ).to(device)
+    batch_dict = tokenizer(texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt").to(device)
 
     with torch.no_grad():
         outputs = model(**batch_dict)
@@ -382,9 +364,7 @@ def _compute_embeddings(
         attention_mask = batch_dict["attention_mask"]
 
         # Zero out non-attended tokens
-        last_hidden_states = last_hidden_states.masked_fill(
-            ~attention_mask[..., None].bool(), 0.0
-        )
+        last_hidden_states = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
 
         # Mean pooling
         sum_hidden = last_hidden_states.sum(dim=1)
@@ -435,18 +415,12 @@ def _chunk_document(
             # Dump the current chunk
             if len(current_chunk) > 0:
                 chunk_str = " ".join(current_chunk)
-                chunks.append(
-                    SingleHopChunk(
-                        chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str
-                    )
-                )
+                chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
                 chunk_index += 1
                 current_chunk = []
                 current_len = 0
             # Store the sentence alone
-            chunks.append(
-                SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=sentence)
-            )
+            chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=sentence))
             chunk_index += 1
             continue
 
@@ -457,9 +431,7 @@ def _chunk_document(
         # If we exceed l_max, close the current chunk and start a new one
         if current_len >= l_max_tokens:
             chunk_str = " ".join(current_chunk)
-            chunks.append(
-                SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str)
-            )
+            chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
             chunk_index += 1
             current_chunk = []
             current_len = 0
@@ -469,11 +441,7 @@ def _chunk_document(
         if (current_len >= l_min_tokens) and (i < len(sentences) - 1):
             if similarities[i] < tau:
                 chunk_str = " ".join(current_chunk)
-                chunks.append(
-                    SingleHopChunk(
-                        chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str
-                    )
-                )
+                chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
                 chunk_index += 1
                 current_chunk = []
                 current_len = 0
@@ -481,9 +449,7 @@ def _chunk_document(
     # Any leftover
     if len(current_chunk) > 0:
         chunk_str = " ".join(current_chunk)
-        chunks.append(
-            SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str)
-        )
+        chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
 
     return chunks
 
@@ -594,9 +560,7 @@ def _compute_info_density_metrics(
         ppl_score: float = 0.0
         if local_perplexity_metric is not None and token_count > 0:
             try:
-                result = local_perplexity_metric.compute(
-                    data=[chunk_text], batch_size=1
-                )
+                result = local_perplexity_metric.compute(data=[chunk_text], batch_size=1)
                 ppl_score = result.get("mean_perplexity", 0.0)
             except Exception as e:
                 logger.warning(f"Could not compute perplexity for chunk. Error: {e}")

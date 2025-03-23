@@ -44,24 +44,24 @@ Module-Level Dependencies:
 """
 
 import random
-from dataclasses import dataclass, field
 from typing import Any, Dict, List
+from dataclasses import field, dataclass
 
-from datasets import Dataset
 from loguru import logger
 
+from datasets import Dataset
+from yourbench.utils.prompts import (
+    MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+)
 from yourbench.utils.dataset_engine import (
     custom_load_dataset,
     custom_save_dataset,
 )
-from yourbench.utils.inference_engine import InferenceCall, run_inference
-from yourbench.utils.prompts import (
-    MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
-    MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
-)
 
 # Import the unified parsing function
 from yourbench.utils.parsing_engine import parse_qa_pairs_from_response
+from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
 @dataclass
@@ -81,9 +81,7 @@ class QuestionAnswerPair:
         # Normalize fields
         self.question = str(self.question).strip()
         self.answer = str(self.answer).strip()
-        self.estimated_difficulty = _force_int_in_range(
-            self.estimated_difficulty, 1, 10
-        )
+        self.estimated_difficulty = _force_int_in_range(self.estimated_difficulty, 1, 10)
         self.question_type = str(self.question_type)
         self.thought_process = str(self.thought_process)
         if not isinstance(self.citations, list):
@@ -141,14 +139,10 @@ def run(config: Dict[str, Any]) -> None:
 
     # 1) Dataset Loading
     dataset = custom_load_dataset(config=config, subset="chunked")
-    logger.info(
-        f"Loaded chunked subset with {len(dataset)} rows for Multi-hop question generation."
-    )
+    logger.info(f"Loaded chunked subset with {len(dataset)} rows for Multi-hop question generation.")
 
     # 2) Build Inference Calls (including sampling)
-    inference_calls, call_index_map = _multihop_chunk_sampling_and_calls(
-        dataset, stage_cfg
-    )
+    inference_calls, call_index_map = _multihop_chunk_sampling_and_calls(dataset, stage_cfg)
 
     # 3) Run Inference
     if not inference_calls:
@@ -163,9 +157,7 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # 5) Save the result
-    custom_save_dataset(
-        dataset=final_dataset, config=config, subset="multi_hop_questions"
-    )
+    custom_save_dataset(dataset=final_dataset, config=config, subset="multi_hop_questions")
     logger.success("Multi-hop question generation completed successfully.")
 
 
@@ -190,23 +182,15 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
 
         multi_hop_chunks = row.get("multihop_chunks", [])
         if not isinstance(multi_hop_chunks, list) or not multi_hop_chunks:
-            logger.debug(
-                f"No multi-hop chunks found in row index={row_idx}, doc_id={doc_id}. Skipping row."
-            )
+            logger.debug(f"No multi-hop chunks found in row index={row_idx}, doc_id={doc_id}. Skipping row.")
             continue
 
-        chosen_multi_hops = _sample_multi_hop_chunks(
-            multi_hop_chunks, stage_cfg.get("chunk_sampling", {})
-        )
+        chosen_multi_hops = _sample_multi_hop_chunks(multi_hop_chunks, stage_cfg.get("chunk_sampling", {}))
         if not chosen_multi_hops:
-            logger.debug(
-                f"Row idx={row_idx} doc_id={doc_id} had multi-hop chunks but none after sampling."
-            )
+            logger.debug(f"Row idx={row_idx} doc_id={doc_id} had multi-hop chunks but none after sampling.")
             continue
 
-        additional_instructions = stage_cfg.get(
-            "additional_instructions", "undergraduate"
-        )
+        additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
 
         for mh_idx, mh_dict in enumerate(chosen_multi_hops):
             if not isinstance(mh_dict, dict):
@@ -215,17 +199,13 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
             subchunk_ids = mh_dict.get("chunk_ids", [])
             subchunk_texts = mh_dict.get("chunks_text", [])
             if not subchunk_texts:
-                logger.debug(
-                    f"Empty multi-hop chunk at row_idx={row_idx}, doc_id={doc_id}. Skipping."
-                )
+                logger.debug(f"Empty multi-hop chunk at row_idx={row_idx}, doc_id={doc_id}. Skipping.")
                 continue
 
             # Build user prompt by enumerating each subchunk
             text_chunks_aggregated = ""
             for i, sc_text in enumerate(subchunk_texts):
-                text_chunks_aggregated += (
-                    f"<text_chunk_{i}>{sc_text}</text_chunk_{i}>\n"
-                )
+                text_chunks_aggregated += f"<text_chunk_{i}>{sc_text}</text_chunk_{i}>\n"
 
             user_prompt_str = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT.format(
                 title=title,
@@ -235,9 +215,7 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
             )
             user_msg = {"role": "user", "content": user_prompt_str}
 
-            inference_call = InferenceCall(
-                messages=[system_msg, user_msg], tags=["multi_hop_qa"]
-            )
+            inference_call = InferenceCall(messages=[system_msg, user_msg], tags=["multi_hop_qa"])
             all_inference_calls.append(inference_call)
             call_index_map.append((row_idx, doc_id, subchunk_ids))
 
@@ -280,9 +258,7 @@ def _sample_multi_hop_chunks(
     return mh_chunks
 
 
-def _multihop_qa_generation(
-    config: Dict[str, Any], inference_calls: List[InferenceCall]
-):
+def _multihop_qa_generation(config: Dict[str, Any], inference_calls: List[InferenceCall]):
     """
     Call the inference engine to get multi-hop Q&A responses.
     """
@@ -305,9 +281,7 @@ def _parse_and_build_final(
     final_multi_hop_questions = []
 
     for model_name, model_responses in responses_dict.items():
-        logger.info(
-            f"Processing {len(model_responses)} responses for model: {model_name}"
-        )
+        logger.info(f"Processing {len(model_responses)} responses for model: {model_name}")
         if len(model_responses) != len(call_index_map):
             logger.error(
                 f"Model '{model_name}' returned {len(model_responses)} responses; expected {len(call_index_map)}. Mismatch."
@@ -353,9 +327,7 @@ def _parse_and_build_final(
                         citations=qap_dict.get("citations", []),
                     )
                     if not pair_obj.question:
-                        logger.debug(
-                            f"Empty question found for row={row_idx}, doc_id={doc_id}, skipping pair."
-                        )
+                        logger.debug(f"Empty question found for row={row_idx}, doc_id={doc_id}, skipping pair.")
                         continue
 
                     row_obj = MultiHopQuestionRow.from_qa_pair(
@@ -368,27 +340,19 @@ def _parse_and_build_final(
                     final_multi_hop_questions.append(row_obj.__dict__)
 
                 except Exception as pair_error:
-                    logger.warning(
-                        f"Error processing QA pair for doc_id={doc_id}, skipping pair: {pair_error}"
-                    )
+                    logger.warning(f"Error processing QA pair for doc_id={doc_id}, skipping pair: {pair_error}")
                     continue
 
     if not final_multi_hop_questions:
         return None
 
-    logger.info(
-        f"Constructing multi-hop question dataset with {len(final_multi_hop_questions)} rows..."
-    )
+    logger.info(f"Constructing multi-hop question dataset with {len(final_multi_hop_questions)} rows...")
     try:
         col_keys = list(final_multi_hop_questions[0].keys())
-        dataset_dict = {
-            k: [row[k] for row in final_multi_hop_questions] for k in col_keys
-        }
+        dataset_dict = {k: [row[k] for row in final_multi_hop_questions] for k in col_keys}
         return Dataset.from_dict(dataset_dict)
     except Exception as ds_error:
-        logger.error(
-            f"Failed to create dataset from multi-hop question rows: {ds_error}"
-        )
+        logger.error(f"Failed to create dataset from multi-hop question rows: {ds_error}")
         return None
 
 

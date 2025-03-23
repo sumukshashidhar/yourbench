@@ -49,18 +49,16 @@ See Also:
 
 from typing import Any
 
-from datasets import Dataset
 from loguru import logger
 
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
-from yourbench.utils.inference_engine import InferenceCall, run_inference
-from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from datasets import Dataset
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
-def duplicate_rows(
-    dataset: dict[str, Any], num_duplicates: int = 1
-) -> dict[str, list[Any]]:
+def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str, list[Any]]:
     """
     Create a dictionary that repeats each value in the dataset multiple times.
 
@@ -102,9 +100,7 @@ def _prepare_inference_calls(dataset: Dataset) -> list[InferenceCall]:
     for doc_text in documents:
         user_msg_content = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
         user_msg = {"role": "user", "content": user_msg_content}
-        inference_calls.append(
-            InferenceCall(messages=[user_msg], tags=["summarization"])
-        )
+        inference_calls.append(InferenceCall(messages=[user_msg], tags=["summarization"]))
 
     logger.info("Prepared {} inference calls for summarization.", len(inference_calls))
     return inference_calls
@@ -175,9 +171,7 @@ def _extract_summaries_from_model_output(
 
     # Ensure there's a 1:1 match between documents and summaries
     if len(model_raw_summaries) != len(documents):
-        logger.warning(
-            "Mismatch in number of summaries vs documents. Adjusting list size."
-        )
+        logger.warning("Mismatch in number of summaries vs documents. Adjusting list size.")
         while len(model_raw_summaries) < len(documents):
             model_raw_summaries.append("")
         if len(model_raw_summaries) > len(documents):
@@ -231,9 +225,7 @@ def _add_summary_columns_to_dataset(
         logger.error("Error adding 'document_summary': {}", str(e))
 
     try:
-        dataset = dataset.add_column(
-            "summarization_model", [summ_model_name] * len(dataset)
-        )
+        dataset = dataset.add_column("summarization_model", [summ_model_name] * len(dataset))
     except Exception as e:
         logger.error("Error adding 'summarization_model': {}", str(e))
 
@@ -279,16 +271,14 @@ def run(config: dict[str, Any]) -> None:
         return
 
     # 4) Gather and parse model responses
-    summ_model_name, model_raw_summaries, extracted_summaries = (
-        _extract_summaries_from_model_output(dataset, response_dict)
+    summ_model_name, model_raw_summaries, extracted_summaries = _extract_summaries_from_model_output(
+        dataset, response_dict
     )
     if not summ_model_name:
         return
 
     # 5) Add new columns to the dataset
-    dataset = _add_summary_columns_to_dataset(
-        dataset, summ_model_name, model_raw_summaries, extracted_summaries
-    )
+    dataset = _add_summary_columns_to_dataset(dataset, summ_model_name, model_raw_summaries, extracted_summaries)
 
     # 6) Save updated dataset
     custom_save_dataset(dataset=dataset, config=config, subset="summarized")

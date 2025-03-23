@@ -1,7 +1,8 @@
 import re
 import json
-from loguru import logger
 from typing import Any
+
+from loguru import logger
 
 
 def extract_content_from_xml_tags(full_content, xml_tag):
@@ -14,16 +15,12 @@ def extract_content_from_xml_tags(full_content, xml_tag):
 
     try:
         # First, try to find matches with both opening and closing tags
-        matches_with_closing = re.findall(
-            pattern_with_closing_tag, full_content, re.DOTALL
-        )
+        matches_with_closing = re.findall(pattern_with_closing_tag, full_content, re.DOTALL)
         if matches_with_closing:
             return matches_with_closing[0].strip()
 
         # If no matches found, try to find content with only opening tag
-        matches_without_closing = re.findall(
-            pattern_without_closing_tag, full_content, re.DOTALL
-        )
+        matches_without_closing = re.findall(pattern_without_closing_tag, full_content, re.DOTALL)
         if matches_without_closing:
             return matches_without_closing[0].strip()
 
@@ -65,9 +62,7 @@ def parse_qa_pairs_from_response(raw_response: str) -> list[dict[str, Any]]:
     # 1) Check for <output_json>...</output_json>
     extracted_json_str = _extract_tag_content(raw_response, "output_json")
     if extracted_json_str.strip():
-        possible_parsed = _attempt_json_parse(
-            _maybe_strip_triple_backticks(extracted_json_str)
-        )
+        possible_parsed = _attempt_json_parse(_maybe_strip_triple_backticks(extracted_json_str))
         if isinstance(possible_parsed, list):
             return possible_parsed
 

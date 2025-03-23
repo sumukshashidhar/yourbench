@@ -2,16 +2,18 @@
 Inference Engine For Yourbench - Now with true concurrency throttling.
 """
 
-import asyncio
 import time
 import uuid
-from dataclasses import dataclass, field
+import asyncio
 from typing import Any, Dict, List, Optional
+from dataclasses import field, dataclass
 
 from dotenv import load_dotenv
-from huggingface_hub import AsyncInferenceClient
 from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
+
+from huggingface_hub import AsyncInferenceClient
+
 
 load_dotenv()
 
@@ -86,9 +88,7 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
 
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
-        logger.warning(
-            "Empty response or missing .choices from model {}", model.model_name
-        )
+        logger.warning("Empty response or missing .choices from model {}", model.model_name)
         return ""
 
     finish_time = time.time()
@@ -106,9 +106,7 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
     return response.choices[0].message.content
 
 
-async def _retry_with_backoff(
-    model: Model, inference_call: InferenceCall, semaphore: asyncio.Semaphore
-) -> str:
+async def _retry_with_backoff(model: Model, inference_call: InferenceCall, semaphore: asyncio.Semaphore) -> str:
     """
     Attempt to get the model's response with a simple exponential backoff,
     while respecting the concurrency limit via 'semaphore'.
@@ -137,9 +135,7 @@ async def _retry_with_backoff(
         # Only sleep if not on the last attempt
         if attempt < inference_call.max_retries - 1:
             backoff_secs = 2 ** (attempt + 2)
-            logger.debug(
-                "Backing off for {} seconds before next attempt...", backoff_secs
-            )
+            logger.debug("Backing off for {} seconds before next attempt...", backoff_secs)
             await asyncio.sleep(backoff_secs)
 
     logger.critical(
@@ -233,9 +229,7 @@ def _load_models(base_config: Dict[str, Any], step_name: str) -> List[Model]:
         return [Model(**all_configured_models[0])]
 
     # Filter out only those with a matching 'model_name'
-    matched = [
-        Model(**m) for m in all_configured_models if m["model_name"] in role_models
-    ]
+    matched = [Model(**m) for m in all_configured_models if m["model_name"] in role_models]
     logger.info(
         "Found {} models in config for step '{}': {}",
         len(matched),
@@ -261,9 +255,7 @@ def run_inference(
     # 1. Load relevant models for the pipeline step
     models = _load_models(config, step_name)
     if not models:
-        logger.warning(
-            "No models found for step '{}'. Returning empty dictionary.", step_name
-        )
+        logger.warning("No models found for step '{}'. Returning empty dictionary.", step_name)
         return {}
 
     # 2. Run the concurrency-enabled async helper

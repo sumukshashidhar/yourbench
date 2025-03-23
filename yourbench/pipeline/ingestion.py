@@ -39,13 +39,15 @@ Stage-Specific Logging:
     All major ingestion activity is logged to "logs/ingestion.log".
 """
 
-import glob
 import os
-from dataclasses import dataclass, field
+import glob
 from typing import Any, Optional
-from huggingface_hub import InferenceClient
+from dataclasses import field, dataclass
+
 from loguru import logger
 from markitdown import MarkItDown
+
+from huggingface_hub import InferenceClient
 
 
 @dataclass
@@ -180,9 +182,7 @@ def run(config: dict[str, Any]) -> None:
 
     # Check required directories
     if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
-        logger.error(
-            "Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed."
-        )
+        logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
         return
 
     # Ensure the output directory exists
@@ -193,9 +193,7 @@ def run(config: dict[str, Any]) -> None:
     markdown_processor = _initialize_markdown_processor(config)
 
     # Gather all files in the source directory (recursively if desired)
-    all_source_files = glob.glob(
-        os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True
-    )
+    all_source_files = glob.glob(os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True)
     if not all_source_files:
         logger.warning(
             "No files found in source directory: {}",
@@ -250,15 +248,11 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
         model_list = _extract_model_list(config)
 
         if not model_roles.ingestion or not model_list:
-            logger.debug(
-                "No LLM ingestion config found. Using default MarkItDown processor."
-            )
+            logger.debug("No LLM ingestion config found. Using default MarkItDown processor.")
             return MarkItDown()
 
         # Attempt to match the first model in model_list that appears in model_roles.ingestion
-        matched_model = next(
-            (m for m in model_list if m.model_name in model_roles.ingestion), None
-        )
+        matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
 
         if not matched_model:
             logger.debug(
@@ -286,9 +280,7 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
         return MarkItDown()
 
 
-def _convert_document_to_markdown(
-    file_path: str, output_dir: str, markdown_processor: MarkItDown
-) -> None:
+def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_processor: MarkItDown) -> None:
     """
     Convert a single source file into Markdown using MarkItDown and save the result.
 

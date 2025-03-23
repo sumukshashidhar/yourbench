@@ -29,24 +29,24 @@ Google-Style Docstrings:
 """
 
 import random
-from dataclasses import dataclass, field
 from typing import Any
+from dataclasses import field, dataclass
 
-from datasets import Dataset
 from loguru import logger
 
-from yourbench.utils.dataset_engine import (
-    custom_save_dataset,
-    custom_load_dataset,
-)
-from yourbench.utils.inference_engine import InferenceCall, run_inference
+from datasets import Dataset
 from yourbench.utils.prompts import (
-    QUESTION_GENERATION_SYSTEM_PROMPT,
     QUESTION_GENERATION_USER_PROMPT,
+    QUESTION_GENERATION_SYSTEM_PROMPT,
+)
+from yourbench.utils.dataset_engine import (
+    custom_load_dataset,
+    custom_save_dataset,
 )
 
 # Import the unified parsing function
 from yourbench.utils.parsing_engine import parse_qa_pairs_from_response
+from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
 @dataclass
@@ -113,33 +113,23 @@ def run(config: dict[str, Any]) -> None:
         return
 
     dataset = custom_load_dataset(config=config, subset="chunked")
-    logger.info(
-        f"Loaded chunked subset with {len(dataset)} rows for Single-shot question generation."
-    )
+    logger.info(f"Loaded chunked subset with {len(dataset)} rows for Single-shot question generation.")
 
     inference_calls, call_index_mapping = _build_inference_calls(dataset, stage_config)
     if not inference_calls:
-        logger.warning(
-            "No inference calls were created for single_shot_question_generation."
-        )
+        logger.warning("No inference calls were created for single_shot_question_generation.")
         return
 
     responses_dict = _execute_inference(inference_calls, config)
     if not responses_dict:
         return
 
-    question_dataset = _process_responses_and_build_dataset(
-        responses_dict, call_index_mapping
-    )
+    question_dataset = _process_responses_and_build_dataset(responses_dict, call_index_mapping)
     if question_dataset is None or len(question_dataset) == 0:
-        logger.warning(
-            "No valid questions produced in single_shot_question_generation."
-        )
+        logger.warning("No valid questions produced in single_shot_question_generation.")
         return
 
-    custom_save_dataset(
-        dataset=question_dataset, config=config, subset="single_shot_questions"
-    )
+    custom_save_dataset(dataset=question_dataset, config=config, subset="single_shot_questions")
     logger.success("Single-shot question generation completed successfully.")
 
 
@@ -165,9 +155,7 @@ def _load_stage_config(config: dict[str, Any]) -> SingleShotQuestionGenerationCo
         run=stage_config_dict.get("run", False),
         source_subset=stage_config_dict.get("source_subset", ""),
         output_subset=stage_config_dict.get("output_subset", ""),
-        additional_instructions=stage_config_dict.get(
-            "additional_instructions", "undergraduate"
-        ),
+        additional_instructions=stage_config_dict.get("additional_instructions", "undergraduate"),
         chunk_sampling=chunk_sampling,
     )
 
@@ -229,14 +217,10 @@ def _build_inference_calls(dataset, stage_config: SingleShotQuestionGenerationCo
 
         single_hop_chunks = doc_row.chunks
         if not isinstance(single_hop_chunks, list) or not single_hop_chunks:
-            logger.debug(
-                f"No chunks found in row index={row_index} for doc_id={doc_row.document_id}. Skipping row."
-            )
+            logger.debug(f"No chunks found in row index={row_index} for doc_id={doc_row.document_id}. Skipping row.")
             continue
 
-        chosen_chunks = _sample_chunks_if_needed(
-            single_hop_chunks, stage_config.chunk_sampling
-        )
+        chosen_chunks = _sample_chunks_if_needed(single_hop_chunks, stage_config.chunk_sampling)
         additional_instructions = stage_config.additional_instructions
 
         # Build user messages for each chunk
@@ -246,9 +230,7 @@ def _build_inference_calls(dataset, stage_config: SingleShotQuestionGenerationCo
                 chunk_id = f"{doc_row.document_id}_{chunk_index}"
             else:
                 chunk_text = chunk_info.get("chunk_text", "")
-                chunk_id = chunk_info.get(
-                    "chunk_id", f"{doc_row.document_id}_{chunk_index}"
-                )
+                chunk_id = chunk_info.get("chunk_id", f"{doc_row.document_id}_{chunk_index}")
 
             user_prompt_str = QUESTION_GENERATION_USER_PROMPT.format(
                 title=doc_row.document_filename,
@@ -258,9 +240,7 @@ def _build_inference_calls(dataset, stage_config: SingleShotQuestionGenerationCo
             )
             user_message = {"role": "user", "content": user_prompt_str}
 
-            inference_call = InferenceCall(
-                messages=[system_message, user_message], tags=["single_shot_qa"]
-            )
+            inference_call = InferenceCall(messages=[system_message, user_message], tags=["single_shot_qa"])
             inference_calls.append(inference_call)
             call_index_mapping.append((row_index, doc_row.document_id, chunk_id))
 
@@ -271,9 +251,7 @@ def _execute_inference(inference_calls, config: dict[str, Any]):
     """
     Sends the prepared inference calls to the LLM(s). Returns a dict of responses.
     """
-    logger.info(
-        f"Sending {len(inference_calls)} calls to inference for single-shot question generation."
-    )
+    logger.info(f"Sending {len(inference_calls)} calls to inference for single-shot question generation.")
     try:
         return run_inference(
             config=config,
@@ -295,9 +273,7 @@ def _process_responses_and_build_dataset(
     question_dataset_rows = []
 
     for model_name, model_responses in responses_dict.items():
-        logger.info(
-            f"Processing {len(model_responses)} responses from model: {model_name}"
-        )
+        logger.info(f"Processing {len(model_responses)} responses from model: {model_name}")
         if len(model_responses) != len(call_index_mapping):
             logger.error(
                 f"Model '{model_name}' returned {len(model_responses)} responses but expected {len(call_index_mapping)}. Mismatch."
@@ -335,9 +311,7 @@ def _process_responses_and_build_dataset(
                 # Safely extract data from pair
                 question_text = str(pair.get("question", "")).strip()
                 answer_text = str(pair.get("answer", "")).strip()
-                difficulty_val = _force_int_in_range(
-                    pair.get("estimated_difficulty", 5), 1, 10
-                )
+                difficulty_val = _force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10)
                 question_type = str(pair.get("question_type", "unknown"))
                 thought_process = str(pair.get("thought_process", ""))
                 citations = pair.get("citations", [])
@@ -345,9 +319,7 @@ def _process_responses_and_build_dataset(
                     citations = []
 
                 if not question_text:
-                    logger.debug(
-                        f"Empty question found; skipping this QA pair (row_index={row_index})."
-                    )
+                    logger.debug(f"Empty question found; skipping this QA pair (row_index={row_index}).")
                     continue
 
                 # Build final row
@@ -368,14 +340,9 @@ def _process_responses_and_build_dataset(
     if not question_dataset_rows:
         return None
 
-    logger.info(
-        f"Constructing final dataset with {len(question_dataset_rows)} single-hop questions."
-    )
+    logger.info(f"Constructing final dataset with {len(question_dataset_rows)} single-hop questions.")
     column_names = list(question_dataset_rows[0].keys())
-    final_data = {
-        column: [row[column] for row in question_dataset_rows]
-        for column in column_names
-    }
+    final_data = {column: [row[column] for row in question_dataset_rows] for column in column_names}
     return Dataset.from_dict(final_data)
 
 

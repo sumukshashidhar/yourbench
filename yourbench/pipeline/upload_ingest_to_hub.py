@@ -40,15 +40,15 @@ Implementation Details:
       (via `loguru`), ensuring clarity for debugging or usage reports.
 """
 
-import glob
 import os
+import glob
 import uuid
-from dataclasses import dataclass, field
 from typing import Any, Optional
+from dataclasses import field, dataclass
 
-from datasets import Dataset
 from loguru import logger
 
+from datasets import Dataset
 from yourbench.utils.dataset_engine import custom_save_dataset
 
 
@@ -125,9 +125,7 @@ def run(config: dict[str, Any]) -> None:
     # Collect .md files
     md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
     if not md_file_paths:
-        logger.warning(
-            f"No .md files found in '{source_dir}'. Stage will end with no output."
-        )
+        logger.warning(f"No .md files found in '{source_dir}'. Stage will end with no output.")
         return
 
     # Read them into Python objects
@@ -181,9 +179,7 @@ def _collect_markdown_files(md_file_paths: list[str]) -> list[IngestedDocument]:
             logger.debug(f"Loaded markdown file: {file_path} (doc_id={doc_id})")
 
         except Exception as e:
-            logger.error(
-                f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}"
-            )
+            logger.error(f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}")
 
     return ingested_docs
 
@@ -217,7 +213,5 @@ def _convert_ingested_docs_to_dataset(ingested_docs: list[IngestedDocument]) -> 
         records["document_metadata"].append(doc.document_metadata)
 
     dataset = Dataset.from_dict(records)
-    logger.debug(
-        f"Constructed HF Dataset with {len(dataset)} entries from ingested documents."
-    )
+    logger.debug(f"Constructed HF Dataset with {len(dataset)} entries from ingested documents.")
     return dataset

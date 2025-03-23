@@ -283,8 +283,8 @@ Present output as JSON objects conforming strictly to the following Pydantic mod
 ```python
 class QuestionAnswerPair(BaseModel):
     thought_process: str # Explanation of integrative reasoning and rationale
-    question_type: Literal["analytical", "application-based", "clarification", 
-                           "counterfactual", "conceptual", "true-false", 
+    question_type: Literal["analytical", "application-based", "clarification",
+                           "counterfactual", "conceptual", "true-false",
                            "factual", "open-ended", "false-premise", "edge-case"]
     question: str
     answer: str

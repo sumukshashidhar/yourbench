@@ -39,10 +39,11 @@ Usage:
 4. Save final dataset to HF or local path as configured.
 """
 
-from typing import Dict, Any, List
-from loguru import logger
-from datasets import Dataset
+from typing import Any, Dict, List
 
+from loguru import logger
+
+from datasets import Dataset
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 
@@ -90,21 +91,15 @@ def run(config: Dict[str, Any]) -> None:
     # 2) Load datasets
     # ----------------------------------------
     try:
-        single_shot_ds = custom_load_dataset(
-            config=config, subset="single_shot_questions"
-        )
-        logger.info(
-            f"Loaded single-shot Q subset single_shot_questions with {len(single_shot_ds)} rows."
-        )
+        single_shot_ds = custom_load_dataset(config=config, subset="single_shot_questions")
+        logger.info(f"Loaded single-shot Q subset single_shot_questions with {len(single_shot_ds)} rows.")
     except Exception as e:
         logger.warning(f"Could not load single-shot subset single_shot_questions: {e}")
         single_shot_ds = Dataset.from_dict({})  # empty fallback
 
     try:
         multi_hop_ds = custom_load_dataset(config=config, subset="multi_hop_questions")
-        logger.info(
-            f"Loaded multi-hop Q subset multi_hop_subset with {len(multi_hop_ds)} rows."
-        )
+        logger.info(f"Loaded multi-hop Q subset multi_hop_subset with {len(multi_hop_ds)} rows.")
     except Exception as e:
         logger.warning(f"Could not load multi-hop subset multi_hop_subset: {e}")
         multi_hop_ds = Dataset.from_dict({})  # empty fallback
@@ -114,9 +109,7 @@ def run(config: Dict[str, Any]) -> None:
         logger.info(f"Loaded chunked subset with {len(chunked_ds)} rows.")
     except Exception as e:
         logger.error(f"Could not load chunked subset: {e}")
-        logger.warning(
-            "Cannot proceed with chunk text or document text. They will be empty."
-        )
+        logger.warning("Cannot proceed with chunk text or document text. They will be empty.")
         chunked_ds = Dataset.from_dict({})  # empty fallback
 
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
