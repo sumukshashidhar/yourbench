@@ -125,14 +125,12 @@ def run(config: dict[str, Any]) -> None:
     # Collect .md files
     md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
     if not md_file_paths:
-        logger.warning(f"No .md files found in '{source_dir}'. Stage will end with no output.")
-        return
+        raise FileNotFoundError(f"No .md files found in '{source_dir}'.")
 
     # Read them into Python objects
     ingested_documents = _collect_markdown_files(md_file_paths)
     if not ingested_documents:
-        logger.warning("No valid markdown documents found. No dataset to upload.")
-        return
+        raise FileNotFoundError(f"No valid markdown documents parsed in '{source_dir}'.")
 
     # Convert the ingested markdown docs to a Hugging Face Dataset
     dataset = _convert_ingested_docs_to_dataset(ingested_documents)

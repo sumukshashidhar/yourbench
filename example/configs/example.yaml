@@ -13,8 +13,13 @@ hf_configuration:
 # === MODEL CONFIGURATION ===
 model_list: 
   # to use the default huggingface inference
+  - model_name: Qwen/Qwen2.5-VL-72B-Instruct
+    provider:  hf-inference # as a default value
+    api_key: $HF_TOKEN
+    max_concurrent_requests: 32
+  # to use the default huggingface inference
   - model_name: Qwen/Qwen2.5-72B-Instruct
-    provider: novita # or hf-inference
+    provider: novita # or another desired provider, the list of available providers is here: https://huggingface.co/docs/huggingface_hub/guides/inference#supported-providers-and-tasks
     api_key: $HF_TOKEN
     max_concurrent_requests: 32
 
@@ -42,7 +47,7 @@ pipeline:
   # to convert your documents to a huggingface dataset
   upload_ingest_to_hub:
     run: true
-    source_documents_dir: data/example/processed
+    source_documents_dir: example/data/processed
 
   # to create a global summary of your documents
   summarization:

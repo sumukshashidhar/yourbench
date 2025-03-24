@@ -48,6 +48,7 @@ from loguru import logger
 from markitdown import MarkItDown
 
 from huggingface_hub import InferenceClient
+from yourbench.utils.inference_engine import Model as ModelConfig
 
 
 @dataclass
@@ -57,16 +58,6 @@ class IngestionConfig:
     run: bool = False
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
-
-
-@dataclass
-class ModelConfig:
-    """Configuration for a model in the model list."""
-
-    model_name: str = "unknown_model"
-    request_style: str = ""
-    base_url: str = ""
-    api_key: str = ""
 
 
 @dataclass
@@ -135,10 +126,10 @@ def _extract_model_list(config: dict[str, Any]) -> list[ModelConfig]:
 
     for model_dict in model_list_dicts:
         model_config = ModelConfig(
-            model_name=model_dict.get("model_name", "unknown_model"),
-            request_style=model_dict.get("request_style", ""),
-            base_url=model_dict.get("base_url", ""),
-            api_key=model_dict.get("api_key", ""),
+            model_name=model_dict.get("model_name"),
+            base_url=model_dict.get("base_url"),
+            api_key=model_dict.get("api_key"),
+            provider=model_dict.get("provider"),
         )
         result.append(model_config)
 
@@ -248,22 +239,21 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
         model_list = _extract_model_list(config)
 
         if not model_roles.ingestion or not model_list:
-            logger.debug("No LLM ingestion config found. Using default MarkItDown processor.")
+            logger.info("No LLM ingestion config found. Using default MarkItDown processor.")
             return MarkItDown()
 
         # Attempt to match the first model in model_list that appears in model_roles.ingestion
         matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
 
         if not matched_model:
-            logger.debug(
+            logger.info(
                 "No matching LLM model found for roles: {}. Using default MarkItDown.",
                 model_roles.ingestion,
             )
             return MarkItDown()
 
         logger.info(
-            "Initializing MarkItDown with LLM support: request_style='{}', model='{}'.",
-            matched_model.request_style,
+            "Initializing MarkItDown with LLM support: model='{}'.",
             matched_model.model_name,
         )
 
@@ -276,7 +266,7 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
 
         return MarkItDown(llm_client=llm_client, llm_model=matched_model.model_name)
     except Exception as exc:
-        logger.error("Failed to initialize MarkItDown with LLM support: {}", str(exc))
+        logger.warning("Failed to initialize MarkItDown with LLM support: {}", str(exc))
         return MarkItDown()
 
 
@@ -310,6 +300,6 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
         with open(output_file, "w", encoding="utf-8") as out_f:
             out_f.write(conversion_result.text_content)
 
-        logger.info("Successfully converted '%s' -> '%s'.", file_path, output_file)
+        logger.info(f"Successfully converted '{file_path}' -> '{output_file}'.")
     except Exception as exc:
-        logger.error("Failed to convert '%s'. Error details: %s", file_path, exc)
+        logger.error(f"Failed to convert '{file_path}'. Error details: {exc}")
