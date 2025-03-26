@@ -164,7 +164,7 @@ def run(config: Dict[str, Any]) -> None:
             "question_category": row.get("self_assessed_question_type", "unknown"),
             "kind": "single_shot",
             "estimated_difficulty": row.get("estimated_difficulty", 5),
-            "citations": [],  # single-shot pipeline typically doesn't store citations
+            "citations": row.get("citations", []),
             "document_id": doc_id,
             "chunk_ids": [chunk_id] if chunk_id else [],
             "question_generating_model": row.get("generating_model", ""),
