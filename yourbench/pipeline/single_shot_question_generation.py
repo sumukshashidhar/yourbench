@@ -291,19 +291,6 @@ def _process_responses_and_build_dataset(
                 logger.warning(
                     f"No parseable JSON found (or empty list) for row_index={row_index}, chunk_id={chunk_id}, model={model_name}. Creating fallback row."
                 )
-                fallback_row = SingleHopQuestionRow(
-                    chunk_id=chunk_id,
-                    document_id=doc_id,
-                    question="No question parsed",
-                    self_answer="No answer parsed",
-                    estimated_difficulty=5,
-                    self_assessed_question_type="unknown",
-                    generating_model=model_name,
-                    thought_process="",
-                    raw_response=raw_response,
-                    citations=[],
-                )
-                question_dataset_rows.append(fallback_row.__dict__)
                 continue
 
             # Otherwise, process each QA pair
