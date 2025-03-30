@@ -308,34 +308,38 @@ def _process_responses_and_build_dataset(
 
             # Otherwise, process each QA pair
             for pair in qa_pairs:
-                # Safely extract data from pair
-                question_text = str(pair.get("question", "")).strip()
-                answer_text = str(pair.get("answer", "")).strip()
-                difficulty_val = _force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10)
-                question_type = str(pair.get("question_type", "unknown"))
-                thought_process = str(pair.get("thought_process", ""))
-                citations = pair.get("citations", [])
-                if not isinstance(citations, list):
-                    citations = []
+                try:
+                    # Safely extract data from pair
+                    question_text = str(pair.get("question", "")).strip()
+                    answer_text = str(pair.get("answer", "")).strip()
+                    difficulty_val = _force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10)
+                    question_type = str(pair.get("question_type", "unknown"))
+                    thought_process = str(pair.get("thought_process", ""))
+                    citations = pair.get("citations", [])
+                    if not isinstance(citations, list):
+                        citations = []
 
-                if not question_text:
-                    logger.debug(f"Empty question found; skipping this QA pair (row_index={row_index}).")
+                    if not question_text:
+                        logger.debug(f"Empty question found; skipping this QA pair (row_index={row_index}).")
+                        continue
+
+                    # Build final row
+                    question_row = SingleHopQuestionRow(
+                        chunk_id=chunk_id,
+                        document_id=doc_id,
+                        question=question_text,
+                        self_answer=answer_text,
+                        estimated_difficulty=difficulty_val,
+                        self_assessed_question_type=question_type,
+                        generating_model=model_name,
+                        thought_process=thought_process,
+                        raw_response=raw_response,
+                        citations=citations,
+                    )
+                    question_dataset_rows.append(question_row.__dict__)
+                except Exception as e:
+                    logger.error(f"Error processing QA pair for row_index={row_index}, chunk_id={chunk_id}: {e}")
                     continue
-
-                # Build final row
-                question_row = SingleHopQuestionRow(
-                    chunk_id=chunk_id,
-                    document_id=doc_id,
-                    question=question_text,
-                    self_answer=answer_text,
-                    estimated_difficulty=difficulty_val,
-                    self_assessed_question_type=question_type,
-                    generating_model=model_name,
-                    thought_process=thought_process,
-                    raw_response=raw_response,
-                    citations=citations,
-                )
-                question_dataset_rows.append(question_row.__dict__)
 
     if not question_dataset_rows:
         return None
