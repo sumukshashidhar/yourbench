@@ -245,9 +245,7 @@ def run(config: Dict[str, Any]) -> None:
         # Depending on the chunking mode:
         if chunking_mode == "semantic_chunking":
             # 1) Compute embeddings for sentences
-            sentence_embeddings = _compute_embeddings(
-                tokenizer, model, texts=sentences, device=device, max_len=512
-            )
+            sentence_embeddings = _compute_embeddings(tokenizer, model, texts=sentences, device=device, max_len=512)
             # 2) Compute consecutive sentence similarities
             consecutive_sims: list[float] = []
             for sentence_index in range(len(sentences) - 1):
@@ -288,9 +286,7 @@ def run(config: Dict[str, Any]) -> None:
         )
 
         # Compute metrics (token_count, perplexity, readability, etc.)
-        chunk_metrics = _compute_info_density_metrics(
-            single_hop_chunks, local_perplexity_metric, local_use_textstat
-        )
+        chunk_metrics = _compute_info_density_metrics(single_hop_chunks, local_perplexity_metric, local_use_textstat)
 
         # Accumulate
         all_single_hop_chunks.append(single_hop_chunks)
