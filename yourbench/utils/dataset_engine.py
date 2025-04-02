@@ -45,7 +45,16 @@ def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) ->
 
     # TODO: add an optional loading from a local path
     logger.info(f"Loading dataset HuggingFace Hub with repo_id='{dataset_repo_name}'")
-    return load_dataset(dataset_repo_name, name=subset, split="train")
+    # If subset name does NOT exist, return an empty dataset to avoid the crash:
+    try:
+        return load_dataset(dataset_repo_name, name=subset, split="train")
+    except ValueError as e:
+        # If the config was not found, we create an empty dataset
+        if "BuilderConfig" in str(e) and "not found" in str(e):
+            logger.warning(f"No existing subset '{subset}'. Returning empty dataset.")
+            return Dataset.from_dict({})
+        else:
+            raise
 
 
 def custom_save_dataset(
