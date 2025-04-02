@@ -74,6 +74,7 @@ uv pip install -e .
 # 3. Get a key from https://openrouter.ai/ and add it to the .env file (or make your own config with a different model!)
 touch .env
 echo "HF_TOKEN=<your_huggingface_token>" >> .env
+echo "HF_ORGANIZATION=<your_HF_username_or_organization>" >> .env
 
 # 4. Run the pipeline with an example config
 yourbench run --config configs/example.yaml
