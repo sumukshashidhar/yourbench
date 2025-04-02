@@ -25,6 +25,8 @@
     [<a href="https://huggingface.co/datasets/sumuks/tempora">Dataset</a>] 
     &middot; 
     [<a href="https://github.com/huggingface/yourbench/tree/main/docs">Documentation</a>]
+    &middot;
+    [<a href="https://github.com/huggingface/yourbench/blob/main/docs/academic/paper.pdf">Paper</a>]
   </strong>
 </p>
 
