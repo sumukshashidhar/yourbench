@@ -25,6 +25,8 @@
     [<a href="https://huggingface.co/datasets/sumuks/tempora">Dataset</a>] 
     &middot; 
     [<a href="https://github.com/huggingface/yourbench/tree/main/docs">Documentation</a>]
+    &middot;
+    [<a href="https://arxiv.org/abs/2504.01833">Paper</a>]
   </strong>
 </p>
 
@@ -168,6 +170,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [LiteLLM](https://github.com/BerriAI/litellm) for model inference
 - [Sentence Transformers](https://www.sbert.net/) for semantic embeddings
 - [Hugging Face](https://huggingface.co/) for dataset infrastructure
+
+## Citation
+
+If YourBench is helpful to you, please cite!:
+
+```
+@misc{shashidhar2025yourbencheasycustomevaluation,
+      title={YourBench: Easy Custom Evaluation Sets for Everyone}, 
+      author={Sumuk Shashidhar and Clémentine Fourrier and Alina Lozovskia and Thomas Wolf and Gokhan Tur and Dilek Hakkani-Tür},
+      year={2025},
+      eprint={2504.01833},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2504.01833}, 
+}
+```
