@@ -26,7 +26,7 @@
     &middot; 
     [<a href="https://github.com/huggingface/yourbench/tree/main/docs">Documentation</a>]
     &middot;
-    [<a href="https://github.com/huggingface/yourbench/blob/main/docs/academic/paper.pdf">Paper</a>]
+    [<a href="https://arxiv.org/abs/2504.01833">Paper</a>]
   </strong>
 </p>
 
