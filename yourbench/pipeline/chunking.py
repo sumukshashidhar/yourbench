@@ -49,36 +49,47 @@ import itertools
 from typing import Any, Dict, Optional
 from dataclasses import asdict, dataclass
 
+from loguru import logger  # type: ignore
+
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+
+
 # Try importing torch-related libraries
 _torch_available = False
 try:
     import torch
     import torch.nn.functional as F
     from torch.amp import autocast
+
     _torch_available = True
     logger.info("PyTorch is available.")
 except ImportError:
     logger.info("PyTorch is not available. Semantic chunking features requiring torch will be disabled.")
+
     # Define dummy autocast if torch not found
     class DummyAutocast:
-        def __enter__(self): pass
-        def __exit__(self, type, value, traceback): pass
-    autocast = lambda device_type: DummyAutocast() # type: ignore
+        def __enter__(self):
+            pass
+
+        def __exit__(self, type, value, traceback):
+            pass
+
+    def autocast(device_type):
+        return DummyAutocast()  # type: ignore
 
 # Try importing transformers
 _transformers_available = False
 try:
     from transformers import AutoModel, AutoTokenizer
+
     _transformers_available = True
     logger.info("Transformers library is available.")
 except ImportError:
-    logger.info("Transformers library is not available. Semantic chunking features requiring transformers will be disabled.")
-    AutoModel = None # type: ignore
-    AutoTokenizer = None # type: ignore
-
-from loguru import logger
-
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+    logger.info(
+        "Transformers library is not available. Semantic chunking features requiring transformers will be disabled."
+    )
+    AutoModel = None  # type: ignore
+    AutoTokenizer = None  # type: ignore
 
 
 try:
@@ -219,7 +230,7 @@ def run(config: Dict[str, Any]) -> None:
                 "Semantic chunking requires 'torch' and 'transformers' libraries. "
                 "Please install them (e.g., pip install yourbench[semantic]) or use 'fast_chunking' mode."
             )
-            return # Exit if dependencies are missing for semantic chunking
+            return  # Exit if dependencies are missing for semantic chunking
 
         try:
             # Extract model name from config if available
@@ -236,8 +247,8 @@ def run(config: Dict[str, Any]) -> None:
             logger.info(f"Using chunking model: '{model_name}'")
             # Determine device only if torch is available
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            tokenizer = AutoTokenizer.from_pretrained(model_name) # type: ignore
-            model = AutoModel.from_pretrained(model_name).to(device).eval() # type: ignore
+            tokenizer = AutoTokenizer.from_pretrained(model_name)  # type: ignore
+            model = AutoModel.from_pretrained(model_name).to(device).eval()  # type: ignore
         except Exception as model_error:
             logger.error(f"Error loading tokenizer/model '{model_name}': {model_error}")
             logger.warning("Chunking stage cannot proceed with semantic_chunking. Exiting.")
@@ -277,12 +288,12 @@ def run(config: Dict[str, Any]) -> None:
         if chunking_mode == "semantic_chunking":
             # Ensure dependencies one last time before computation
             if not _torch_available or not _transformers_available or model is None or tokenizer is None:
-                 logger.error("Cannot perform semantic chunking due to missing dependencies or model loading issues.")
-                 # Add empty lists and continue to avoid crashing the loop for this document
-                 all_single_hop_chunks.append([])
-                 all_multihop_chunks.append([])
-                 all_chunk_info_metrics.append([])
-                 continue
+                logger.error("Cannot perform semantic chunking due to missing dependencies or model loading issues.")
+                # Add empty lists and continue to avoid crashing the loop for this document
+                all_single_hop_chunks.append([])
+                all_multihop_chunks.append([])
+                all_chunk_info_metrics.append([])
+                continue
 
             # 1) Compute embeddings for sentences
             sentence_embeddings = _compute_embeddings(tokenizer, model, texts=sentences, device=device, max_len=512)
@@ -775,9 +786,10 @@ def _plot_aggregated_similarities(all_similarities: list[list[float]]) -> None:
     plot_path: str = os.path.join("plots", "aggregated_similarities.png")
     # Ensure plots directory exists
     os.makedirs("plots", exist_ok=True)
-    plt.savefig(plot_path, dpi=300, bbox_inches="tight") # Changed dpi to 300
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")  # Changed dpi to 300
     plt.close()
     logger.info(f"Saved aggregated similarity plot at '{plot_path}'.")
+
 
 # Make sure main guard exists if this file is runnable directly (optional but good practice)
 if __name__ == "__main__":
@@ -787,12 +799,12 @@ if __name__ == "__main__":
             "chunking": {
                 "run": True,
                 "chunking_configuration": {
-                    "chunking_mode": "fast_chunking" # or "semantic_chunking" if deps installed
-                }
+                    "chunking_mode": "fast_chunking"  # or "semantic_chunking" if deps installed
+                },
                 # Add other necessary config keys like dataset paths etc.
             }
         },
-        "settings": { "debug": True }
+        "settings": {"debug": True},
         # Add dataset config, model roles etc.
     }
     # Basic logger setup for standalone execution
