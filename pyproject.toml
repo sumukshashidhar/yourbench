@@ -27,10 +27,17 @@ dependencies = [
     "ruff>=0.11.1",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
-    "torch>=2.6.0",
     "tqdm>=4.67.1",
-    "transformers>=4.48.3",
     "typer>=0.15.2",
+]
+
+[project.optional-dependencies]
+semantic = [
+    "torch>=2.6.0",
+    "transformers>=4.48.3",
+]
+all = [
+    "yourbench[semantic]",
 ]
 
 [project.scripts]
@@ -57,7 +64,7 @@ length-sort = true
 lines-after-imports = 2
 no-lines-before = ["standard-library", "local-folder"]
 known-local-folder = ["yourbench"]
-known-first-party = ["datasets", "huggingface_hub", "transformers"]
+known-first-party = ["datasets", "huggingface_hub", "transformers", "torch"]
 split-on-trailing-comma = true
 
 [tool.ruff.format]

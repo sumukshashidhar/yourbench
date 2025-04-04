@@ -49,13 +49,35 @@ import itertools
 from typing import Any, Dict, Optional
 from dataclasses import asdict, dataclass
 
-import torch
-import matplotlib.pyplot as plt
-import torch.nn.functional as F
-from loguru import logger
-from torch.amp import autocast
+# Try importing torch-related libraries
+_torch_available = False
+try:
+    import torch
+    import torch.nn.functional as F
+    from torch.amp import autocast
+    _torch_available = True
+    logger.info("PyTorch is available.")
+except ImportError:
+    logger.info("PyTorch is not available. Semantic chunking features requiring torch will be disabled.")
+    # Define dummy autocast if torch not found
+    class DummyAutocast:
+        def __enter__(self): pass
+        def __exit__(self, type, value, traceback): pass
+    autocast = lambda device_type: DummyAutocast() # type: ignore
 
-from transformers import AutoModel, AutoTokenizer
+# Try importing transformers
+_transformers_available = False
+try:
+    from transformers import AutoModel, AutoTokenizer
+    _transformers_available = True
+    logger.info("Transformers library is available.")
+except ImportError:
+    logger.info("Transformers library is not available. Semantic chunking features requiring transformers will be disabled.")
+    AutoModel = None # type: ignore
+    AutoTokenizer = None # type: ignore
+
+from loguru import logger
+
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 
@@ -191,6 +213,14 @@ def run(config: Dict[str, Any]) -> None:
     model_name = "no_model_for_fast_chunking"
 
     if chunking_mode == "semantic_chunking":
+        # Check if required libraries are installed
+        if not _torch_available or not _transformers_available:
+            logger.error(
+                "Semantic chunking requires 'torch' and 'transformers' libraries. "
+                "Please install them (e.g., pip install yourbench[semantic]) or use 'fast_chunking' mode."
+            )
+            return # Exit if dependencies are missing for semantic chunking
+
         try:
             # Extract model name from config if available
             model_name_list = config.get("model_roles", {}).get("chunking", [])
@@ -204,9 +234,10 @@ def run(config: Dict[str, Any]) -> None:
                 model_name = model_name_list[0]
 
             logger.info(f"Using chunking model: '{model_name}'")
+            # Determine device only if torch is available
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = AutoModel.from_pretrained(model_name).to(device).eval()
+            tokenizer = AutoTokenizer.from_pretrained(model_name) # type: ignore
+            model = AutoModel.from_pretrained(model_name).to(device).eval() # type: ignore
         except Exception as model_error:
             logger.error(f"Error loading tokenizer/model '{model_name}': {model_error}")
             logger.warning("Chunking stage cannot proceed with semantic_chunking. Exiting.")
@@ -244,6 +275,15 @@ def run(config: Dict[str, Any]) -> None:
 
         # Depending on the chunking mode:
         if chunking_mode == "semantic_chunking":
+            # Ensure dependencies one last time before computation
+            if not _torch_available or not _transformers_available or model is None or tokenizer is None:
+                 logger.error("Cannot perform semantic chunking due to missing dependencies or model loading issues.")
+                 # Add empty lists and continue to avoid crashing the loop for this document
+                 all_single_hop_chunks.append([])
+                 all_multihop_chunks.append([])
+                 all_chunk_info_metrics.append([])
+                 continue
+
             # 1) Compute embeddings for sentences
             sentence_embeddings = _compute_embeddings(tokenizer, model, texts=sentences, device=device, max_len=512)
             # 2) Compute consecutive sentence similarities
@@ -373,6 +413,9 @@ def _compute_embeddings(
     embeddings = []
     model.eval()
 
+    # Determine autocast device type string
+    autocast_device_type = "cuda" if _torch_available and torch.cuda.is_available() else "cpu"
+
     for i in range(0, len(texts), batch_size):
         batch_texts = texts[i : i + batch_size]
         batch_dict = tokenizer(batch_texts, max_length=max_len, padding=True, truncation=True, return_tensors="pt").to(
@@ -380,7 +423,8 @@ def _compute_embeddings(
         )
 
         with torch.no_grad():
-            with autocast("cuda" if torch.cuda.is_available() else "cpu"):
+            # Use autocast context manager
+            with autocast(autocast_device_type):
                 outputs = model(**batch_dict)
                 last_hidden_states = outputs.last_hidden_state
                 attention_mask = batch_dict["attention_mask"]
@@ -683,6 +727,13 @@ def _plot_aggregated_similarities(all_similarities: list[list[float]]) -> None:
         logger.debug("No similarities to plot. Skipping aggregated similarity plot.")
         return
 
+    # Check if matplotlib is available before trying to plot
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        logger.warning("Matplotlib not found. Skipping similarity plot generation.")
+        return
+
     plt.figure(figsize=(10, 6))
     max_len = max(len(sims) for sims in all_similarities)
 
@@ -722,6 +773,31 @@ def _plot_aggregated_similarities(all_similarities: list[list[float]]) -> None:
     plt.ylabel("Cosine Similarity")
     plt.grid(True)
     plot_path: str = os.path.join("plots", "aggregated_similarities.png")
-    plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+    # Ensure plots directory exists
+    os.makedirs("plots", exist_ok=True)
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight") # Changed dpi to 300
     plt.close()
     logger.info(f"Saved aggregated similarity plot at '{plot_path}'.")
+
+# Make sure main guard exists if this file is runnable directly (optional but good practice)
+if __name__ == "__main__":
+    # Example configuration for testing (replace with actual loading if needed)
+    test_config = {
+        "pipeline": {
+            "chunking": {
+                "run": True,
+                "chunking_configuration": {
+                    "chunking_mode": "fast_chunking" # or "semantic_chunking" if deps installed
+                }
+                # Add other necessary config keys like dataset paths etc.
+            }
+        },
+        "settings": { "debug": True }
+        # Add dataset config, model roles etc.
+    }
+    # Basic logger setup for standalone execution
+    logger.add("logs/chunking_standalone.log", rotation="10 MB")
+    logger.info("Running chunking module standalone (example)...")
+    # Note: You'd need a valid dataset configuration for run() to work fully.
+    # run(test_config)
+    logger.info("Standalone example finished.")
