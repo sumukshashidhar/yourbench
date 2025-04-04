@@ -77,6 +77,7 @@ except ImportError:
     def autocast(device_type):
         return DummyAutocast()  # type: ignore
 
+
 # Try importing transformers
 _transformers_available = False
 try:
