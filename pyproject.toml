@@ -12,7 +12,6 @@ readme = "README.md"
 requires-python = ">=3.12, <3.13"
 dependencies = [
     "asyncio>=3.4.3",
-    "bert-score>=0.3.13",
     "black>=25.1.0",
     "click>=8.1.7",
     "datasets>=3.3.0",
@@ -23,14 +22,22 @@ dependencies = [
     "matplotlib>=3.10.0",
     "python-dotenv>=1.0.1",
     "rich>=13.7.0",
-    "rouge-score>=0.1.2",
     "ruff>=0.11.1",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
-    "torch>=2.6.0",
     "tqdm>=4.67.1",
-    "transformers>=4.48.3",
     "typer>=0.15.2",
+]
+
+[project.optional-dependencies]
+semantic = [
+    "torch>=2.6.0",
+    "transformers>=4.48.3",
+    "bert-score>=0.3.13",
+    "rouge-score>=0.1.2",
+]
+all = [
+    "yourbench[semantic]",
 ]
 
 [project.scripts]
@@ -57,7 +64,7 @@ length-sort = true
 lines-after-imports = 2
 no-lines-before = ["standard-library", "local-folder"]
 known-local-folder = ["yourbench"]
-known-first-party = ["datasets", "huggingface_hub", "transformers"]
+known-first-party = ["datasets", "huggingface_hub", "transformers", "torch"]
 split-on-trailing-comma = true
 
 [tool.ruff.format]
