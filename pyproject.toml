@@ -12,7 +12,6 @@ readme = "README.md"
 requires-python = ">=3.12, <3.13"
 dependencies = [
     "asyncio>=3.4.3",
-    "bert-score>=0.3.13",
     "black>=25.1.0",
     "click>=8.1.7",
     "datasets>=3.3.0",
@@ -23,7 +22,6 @@ dependencies = [
     "matplotlib>=3.10.0",
     "python-dotenv>=1.0.1",
     "rich>=13.7.0",
-    "rouge-score>=0.1.2",
     "ruff>=0.11.1",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
@@ -35,6 +33,8 @@ dependencies = [
 semantic = [
     "torch>=2.6.0",
     "transformers>=4.48.3",
+    "bert-score>=0.3.13",
+    "rouge-score>=0.1.2",
 ]
 all = [
     "yourbench[semantic]",
