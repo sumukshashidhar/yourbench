@@ -404,10 +404,10 @@ def _compute_embeddings(
     tokenizer: AutoTokenizer,
     model: AutoModel,
     texts: list[str],
-    device: 'torch.device',
+    device: "torch.device",
     max_len: int = 512,
     batch_size: int = 16,
-) -> 'list[torch.Tensor]':
+) -> "list[torch.Tensor]":
     """
     Computes sentence embeddings by mean pooling the last hidden states,
     normalized to unit length.
