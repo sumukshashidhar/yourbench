@@ -17,7 +17,7 @@ from huggingface_hub import AsyncInferenceClient
 
 load_dotenv()
 
-GLOBAL_TIMEOUT = 3600
+GLOBAL_TIMEOUT = 300
 
 
 @dataclass
