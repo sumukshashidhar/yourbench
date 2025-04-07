@@ -88,8 +88,8 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
 
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
-        logger.warning("Empty response or missing .choices from model {}", model.model_name)
-        return ""
+        logger.error("Empty response or missing .choices from model {}", model.model_name)
+        raise Exception("Failed Inference")
 
     finish_time = time.time()
     logger.debug(
