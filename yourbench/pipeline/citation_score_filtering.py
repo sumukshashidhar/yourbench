@@ -25,17 +25,17 @@
 # =============================================================================
 
 from typing import Any, Dict, List
-from loguru import logger
 
-from datasets import Dataset
+from loguru import logger
 from thefuzz import fuzz  # pip install thefuzz
+
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 
 def run(config: Dict[str, Any]) -> None:
     """
     Main pipeline entry point for the citation_score_filtering stage.
-    
+
     This stage computes overlap-based 'citation scores' for each row in the
     lighteval dataset, where we measure how similar each citation is
     to the chunk text as well as to the ground truth answer.
@@ -44,7 +44,7 @@ def run(config: Dict[str, Any]) -> None:
         - answer_citation_score
         - chunk_citation_score
         - citation_score
-    
+
     The final dataset is saved under the subset name 'lighteval' (unless
     you change it below).
     """
@@ -74,7 +74,7 @@ def run(config: Dict[str, Any]) -> None:
     # Weighting factors, adjustable to your preference
     # Larger alpha => chunk overlap matters more
     alpha = 0.7  # chunk overlap weight
-    beta = 0.3   # answer overlap weight
+    beta = 0.3  # answer overlap weight
 
     # 3) Iterate through each row and compute the scores
     for idx, row in enumerate(lighteval_ds):
