@@ -295,23 +295,7 @@ def _parse_and_build_final(
             qa_pairs = parse_qa_pairs_from_response(raw_resp)
 
             if not qa_pairs:
-                # Fallback row if no parseable QAs
-                logger.warning(
-                    f"No parseable JSON for row={row_idx}, doc_id={doc_id} (model={model_name}). Creating fallback row."
-                )
-                fallback_row = MultiHopQuestionRow(
-                    document_id=doc_id,
-                    source_chunk_ids=source_chunk_ids,
-                    question="No question parsed",
-                    self_answer="No answer parsed",
-                    estimated_difficulty=5,
-                    self_assessed_question_type="unknown",
-                    generating_model=model_name,
-                    thought_process="",
-                    citations=[],
-                    raw_response=raw_resp,
-                )
-                final_multi_hop_questions.append(fallback_row.__dict__)
+                logger.warning(f"No parseable JSON for row={row_idx}, doc_id={doc_id} (model={model_name}).")
                 continue
 
             # Otherwise, process each QA pair
