@@ -160,6 +160,7 @@ def run(config: Dict[str, Any]) -> None:
 
         return {
             "question": row.get("question", ""),
+            "additional_instructions": row.get("additional_instructions", ""),
             "ground_truth_answer": row.get("self_answer", ""),
             "question_category": row.get("self_assessed_question_type", "unknown"),
             "kind": "single_shot",
@@ -193,6 +194,7 @@ def run(config: Dict[str, Any]) -> None:
 
         return {
             "question": row.get("question", ""),
+            "additional_instructions": row.get("additional_instructions", ""),
             "ground_truth_answer": row.get("self_answer", ""),
             "question_category": row.get("self_assessed_question_type", "unknown"),
             "kind": "multi_hop",
