@@ -155,20 +155,10 @@ We use:
 
 ## 🚀 Try YourBench on Hugging Face
 
-- **[Demo Space (Free 1-Time Run)](https://huggingface.co/spaces/yourbench/demo)**  
-  Minimal interface to try zero-shot benchmark generation.  
-  _Features:_  
-  - Upload your own documents  
-  - Generate a dataset in one click  
-  - No setup required
+To test YourBench on your own documents:
 
-- **[Advanced Space (Configurable)](https://huggingface.co/spaces/yourbench/advanced)**  
-  Customizable interface for custom benchmark creation.  
-  _Features:_  
-  - Upload documents and set Hugging Face org/dataset  
-  - Run the full generation pipeline with logs and previews  
-  - Evaluate top models on your dataset and publish a leaderboard  
-  ⚠️ This space uses your Hugging Face token for inference and uploads
+- Use the [Demo Space](https://huggingface.co/spaces/yourbench/demo) to generate a dataset and leaderboard in one click – entirely free  
+- Use the [Advanced Space](https://huggingface.co/spaces/yourbench/advanced) for full control over the pipeline, with custom configs and your own inference
 
 
 ## 🤝 Contributing
