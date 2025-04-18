@@ -153,6 +153,24 @@ We use:
 - [pytest](https://docs.pytest.org/) for testing
 
 
+## 🚀 Try YourBench on Hugging Face
+
+- **[Demo Space (Free 1-Time Run)](https://huggingface.co/spaces/yourbench/demo)**  
+  Minimal interface to try zero-shot benchmark generation.  
+  _Features:_  
+  - Upload your own documents  
+  - Generate a dataset in one click  
+  - No setup required
+
+- **[Advanced Space (Configurable)](https://huggingface.co/spaces/yourbench/advanced)**  
+  Customizable interface for custom benchmark creation.  
+  _Features:_  
+  - Upload documents and set Hugging Face org/dataset  
+  - Run the full generation pipeline with logs and previews  
+  - Evaluate top models on your dataset and publish a leaderboard  
+  ⚠️ This space uses your Hugging Face token for inference and uploads
+
+
 ## 🤝 Contributing
 
 1. Fork the repository
