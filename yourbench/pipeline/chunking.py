@@ -6,7 +6,7 @@
 @author @sumukshashidhar
 
 This module implements two modes of chunking for the YourBench pipeline:
-1) "fast_chunking" (the new default), which chunks by purely length-based rules.
+1) "fast_chunking" (the default), which chunks by purely length-based rules.
 2) "semantic_chunking" (requires explicit config), which uses sentence embeddings
    and a similarity threshold to decide chunk boundaries.
 
@@ -24,13 +24,15 @@ The run(config) function:
    - semantic_chunking (requires pipeline.chunking.chunking_configuration.chunking_mode="semantic_chunking"):
      Splits each document into single-hop chunks, guided by user-defined token
      length constraints (l_min_tokens, l_max_tokens) and a similarity threshold (tau_threshold).
+     Uses a transformer model specified in config['model_roles']['chunking'], or a default.
 3. Creates multi-hop chunks by sampling subsets of single-hop chunks and concatenating them.
-4. Computes optional readability and perplexity metrics for each chunk if debug mode is enabled.
+4. Computes optional readability and perplexity metrics for each chunk if debug mode is enabled
+   and required packages (textstat, evaluate) are available.
 5. Saves the dataset containing new columns:
    - "chunks" (list of single-hop segments)
    - "multihop_chunks" (list of multi-hop segment groups)
    - "chunk_info_metrics" (various statistics)
-   - "chunking_model" (the model used for embeddings; blank or default if fast_chunking).
+   - "chunking_model" (the model used for embeddings; default string if fast_chunking)
 
 Error Handling and Logging:
 ---------------------------
@@ -40,16 +42,23 @@ Error Handling and Logging:
   logs the exception and attempts a graceful exit without crashing the entire
   pipeline.
 
+Debug Visualization:
+--------------------
+- In semantic_chunking mode, if debug mode is on, the module will generate a plot
+  of average consecutive sentence similarities and save it to plots/aggregated_similarities.png.
 """
 
 import os
 import re
+import time
 from typing import Any, Dict, Optional
 from dataclasses import asdict, dataclass
 
 import numpy as np
 from loguru import logger  # type: ignore
+from tqdm.auto import tqdm
 
+from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 
@@ -130,7 +139,7 @@ class ChunkingParameters:
 
 @dataclass
 class SingleHopChunk:
-    chunk_id: str
+    chunk_id: Any
     chunk_text: str
 
 
@@ -263,20 +272,44 @@ def run(config: Dict[str, Any]) -> None:
     all_similarities: list[list[float]] = []
 
     # Process each document in the dataset
-    for idx, row in enumerate(dataset):
+    start_time = time.time()
+    total_docs = len(dataset)
+    logger.info(f"Starting chunking process for {total_docs} documents")
+
+    for idx, row in enumerate(tqdm(dataset, desc="Chunking documents", ncols=100)):
+        doc_start_time = time.time()
+        logger.info(
+            f"[{idx + 1}/{total_docs}] Processing document ID={row.get('document_id', f'doc_{idx}')} ({len(row.get('document_text', ''))} chars)"
+        )
         doc_text = row.get("document_text", "")
         doc_id = row.get("document_id", f"doc_{idx}")
+        logger.info(f"[{idx}] doc_id={row.get('document_id')} | text_len={len(doc_text)} | preview={doc_text[:100]!r}")
 
         # If text is empty or missing
         if doc_text is None or not doc_text.strip():
             logger.warning(f"Document at index {idx} has empty text. Storing empty chunks.")
+            doc_process_time = time.time() - doc_start_time
+            logger.info(f"Completed document {idx + 1}/{total_docs} in {doc_process_time:.2f}s")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
             continue
 
+        if (idx + 1) % 1 == 0:
+            elapsed_time = time.time() - start_time
+            avg_time_per_doc = elapsed_time / (idx + 1)
+            remaining_docs = total_docs - (idx + 1)
+            estimated_remaining = avg_time_per_doc * remaining_docs
+            progress_pct = (idx + 1) / total_docs * 100
+
+            logger.info(f"Progress: {progress_pct:.1f}% | Completed {idx + 1}/{total_docs} documents")
+            logger.info(
+                f"Avg time per doc: {avg_time_per_doc:.2f}s | Est. remaining: {estimated_remaining / 60:.1f} minutes"
+            )
+
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
+
         if sentences is None or len(sentences) == 0:
             logger.warning(f"No valid sentences found for doc at index {idx}, doc_id={doc_id}.")
             all_single_hop_chunks.append([])
@@ -286,6 +319,11 @@ def run(config: Dict[str, Any]) -> None:
 
         # Depending on the chunking mode:
         if chunking_mode == "semantic_chunking":
+            # Debug log showing current dependency state
+            logger.debug(
+                f"Semantic chunking check: torch={_torch_available}, transformers={_transformers_available}, model_loaded={model is not None}, tokenizer_loaded={tokenizer is not None}"
+            )
+
             # Ensure dependencies one last time before computation
             if not _torch_available or not _transformers_available or model is None or tokenizer is None:
                 logger.error("Cannot perform semantic chunking due to missing dependencies or model loading issues.")
@@ -321,6 +359,11 @@ def run(config: Dict[str, Any]) -> None:
                 doc_id=doc_id,
             )
         else:
+            # Debug line for fast chunking
+            logger.info(
+                f"[{doc_id}] Performing fast_chunking on {len(sentences)} sentences (l_max_tokens={l_max_tokens})"
+            )
+
             # Fast chunking: purely length-based
             single_hop_chunks = _chunk_document_fast(
                 sentences=sentences,
@@ -537,49 +580,24 @@ def _chunk_document_fast(
     sentences: list[str],
     l_max_tokens: int,
     doc_id: str,
+    show_progress: bool = True,
 ) -> list[SingleHopChunk]:
     """
-    Creates chunks based purely on a maximum token length. Each sentence is added
-    to the current chunk if it does not exceed l_max_tokens; otherwise, a new chunk
-    is started.
+    Uses token-based chunking with optional overlap, based on tiktoken.
 
     Args:
-        sentences (list[str]): The list of sentences for a single document.
-        l_max_tokens (int): Maximum tokens per chunk.
+        sentences (list[str]): Sentences of the document.
+        l_max_tokens (int): Max tokens per chunk.
         doc_id (str): Unique identifier for the document.
+        show_progress (bool): Show progress bar (ignored here, kept for API symmetry).
 
     Returns:
-        list[SingleHopChunk]: A list of SingleHopChunk objects.
+        list[SingleHopChunk]: A list of token-based chunks.
     """
-    chunks: list[SingleHopChunk] = []
-    current_chunk: list[str] = []
-    current_len: int = 0
-    chunk_index: int = 0
+    text = " ".join(sentences)
+    chunk_texts = split_into_token_chunks(text, chunk_tokens=l_max_tokens, overlap=0)
 
-    for sentence in sentences:
-        sentence_token_count = len(sentence.split())
-
-        # If adding this sentence would exceed l_max_tokens, finalize current chunk
-        if current_len + sentence_token_count > l_max_tokens:
-            if current_chunk:
-                chunk_str = " ".join(current_chunk)
-                chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
-                chunk_index += 1
-
-            # Start a new chunk with the current sentence
-            current_chunk = [sentence]
-            current_len = sentence_token_count
-        else:
-            # Add sentence to current chunk
-            current_chunk.append(sentence)
-            current_len += sentence_token_count
-
-    # Any leftover chunk
-    if current_chunk:
-        chunk_str = " ".join(current_chunk)
-        chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
-
-    return chunks
+    return [SingleHopChunk(chunk_id=f"{doc_id}_{i}", chunk_text=chunk) for i, chunk in enumerate(chunk_texts)]
 
 
 def _multihop_chunking(
