@@ -51,6 +51,8 @@ Debug Visualization:
 import os
 import re
 import time
+import random
+import itertools
 from typing import Any, Dict, Optional
 from dataclasses import asdict, dataclass
 
@@ -277,7 +279,9 @@ def run(config: Dict[str, Any]) -> None:
 
     for idx, row in enumerate(tqdm(dataset, desc="Chunking documents", ncols=100)):
         doc_start_time = time.time()
-        logger.info(f"[{idx + 1}/{total_docs}] Processing document ID={row.get('document_id', f'doc_{idx}')} ({len(row.get('document_text', ''))} chars)")
+        logger.info(
+            f"[{idx + 1}/{total_docs}] Processing document ID={row.get('document_id', f'doc_{idx}')} ({len(row.get('document_text', ''))} chars)"
+        )
         doc_text = row.get("document_text", "")
         doc_id = row.get("document_id", f"doc_{idx}")
         logger.info(f"[{idx}] doc_id={row.get('document_id')} | text_len={len(doc_text)} | preview={doc_text[:100]!r}")
@@ -300,7 +304,9 @@ def run(config: Dict[str, Any]) -> None:
             progress_pct = (idx + 1) / total_docs * 100
 
             logger.info(f"Progress: {progress_pct:.1f}% | Completed {idx + 1}/{total_docs} documents")
-            logger.info(f"Avg time per doc: {avg_time_per_doc:.2f}s | Est. remaining: {estimated_remaining / 60:.1f} minutes")
+            logger.info(
+                f"Avg time per doc: {avg_time_per_doc:.2f}s | Est. remaining: {estimated_remaining / 60:.1f} minutes"
+            )
 
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
@@ -315,7 +321,9 @@ def run(config: Dict[str, Any]) -> None:
         # Depending on the chunking mode:
         if chunking_mode == "semantic_chunking":
             # Debug log showing current dependency state
-            logger.debug(f"Semantic chunking check: torch={_torch_available}, transformers={_transformers_available}, model_loaded={model is not None}, tokenizer_loaded={tokenizer is not None}")
+            logger.debug(
+                f"Semantic chunking check: torch={_torch_available}, transformers={_transformers_available}, model_loaded={model is not None}, tokenizer_loaded={tokenizer is not None}"
+            )
 
             # Ensure dependencies one last time before computation
             if not _torch_available or not _transformers_available or model is None or tokenizer is None:
@@ -353,7 +361,9 @@ def run(config: Dict[str, Any]) -> None:
             )
         else:
             # Debug line for fast chunking
-            logger.info(f"[{doc_id}] Performing fast_chunking on {len(sentences)} sentences (l_max_tokens={l_max_tokens})")
+            logger.info(
+                f"[{doc_id}] Performing fast_chunking on {len(sentences)} sentences (l_max_tokens={l_max_tokens})"
+            )
 
             # Fast chunking: purely length-based
             single_hop_chunks = _chunk_document_fast(
@@ -588,10 +598,7 @@ def _chunk_document_fast(
     text = " ".join(sentences)
     chunk_texts = split_into_token_chunks(text, chunk_tokens=l_max_tokens, overlap=0)
 
-    return [
-        SingleHopChunk(chunk_id=f"{doc_id}_{i}", chunk_text=chunk)
-        for i, chunk in enumerate(chunk_texts)
-    ]
+    return [SingleHopChunk(chunk_id=f"{doc_id}_{i}", chunk_text=chunk) for i, chunk in enumerate(chunk_texts)]
 
 
 def _multihop_chunking(

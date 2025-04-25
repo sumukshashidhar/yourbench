@@ -79,10 +79,7 @@ def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str
 
 
 def _prepare_inference_calls(
-    dataset: Dataset,
-    max_tokens: int = 1024,
-    overlap: int = 100,
-    encoding_name: str = "cl100k_base"
+    dataset: Dataset, max_tokens: int = 1024, overlap: int = 100, encoding_name: str = "cl100k_base"
 ) -> list[InferenceCall]:
     """
     Prepare model inference calls from a dataset, optionally chunking long documents
@@ -99,11 +96,17 @@ def _prepare_inference_calls(
         enc = tiktoken.get_encoding(encoding_name)
         if len(enc.encode(doc_text)) <= max_tokens:
             prompt = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
-            inference_calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["summarization"]))
+            inference_calls.append(
+                InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["summarization"])
+            )
         else:
-            chunks = split_into_token_chunks(doc_text, chunk_tokens=max_tokens, overlap=overlap, encoding_name=encoding_name)
+            chunks = split_into_token_chunks(
+                doc_text, chunk_tokens=max_tokens, overlap=overlap, encoding_name=encoding_name
+            )
             full_prompt = SUMMARIZATION_USER_PROMPT.format(document="\n\n".join(chunks))
-            inference_calls.append(InferenceCall(messages=[{"role": "user", "content": full_prompt}], tags=["summarization"]))
+            inference_calls.append(
+                InferenceCall(messages=[{"role": "user", "content": full_prompt}], tags=["summarization"])
+            )
     logger.info("Prepared {} inference calls (chunking applied where necessary).", len(inference_calls))
     return inference_calls
 
