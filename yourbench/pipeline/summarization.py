@@ -49,10 +49,12 @@ See Also:
 
 from typing import Any
 
+import tiktoken
 from loguru import logger
 
 from datasets import Dataset
 from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
+from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference_engine import InferenceCall, run_inference
@@ -76,33 +78,33 @@ def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str
     return repeated_data
 
 
-def _prepare_inference_calls(dataset: Dataset) -> list[InferenceCall]:
+def _prepare_inference_calls(
+    dataset: Dataset,
+    max_tokens: int = 1024,
+    overlap: int = 100,
+    encoding_name: str = "cl100k_base"
+) -> list[InferenceCall]:
     """
-    Create InferenceCall objects for each document to be summarized.
+    Prepare model inference calls from a dataset, optionally chunking long documents
 
     Args:
-        dataset (Dataset): The dataset containing the documents to be summarized.
+        dataset (Dataset): The dataset containing documents to summarize.
+        max_tokens (int): Threshold for chunking documents. If exceeded, the document is split.
 
     Returns:
-        list[InferenceCall]: A list of inference calls to be sent to the summarization model.
+        list[InferenceCall]: A list of InferenceCall objects ready for model input.
     """
-    documents: list[str]
-    try:
-        documents = dataset["document_text"]
-    except KeyError:
-        logger.error("Dataset does not contain 'document_text' column. Cannot proceed.")
-        return []
-    except Exception as exc:
-        logger.error("Unexpected error reading 'document_text': {}", str(exc))
-        return []
-
     inference_calls: list[InferenceCall] = []
-    for doc_text in documents:
-        user_msg_content = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
-        user_msg = {"role": "user", "content": user_msg_content}
-        inference_calls.append(InferenceCall(messages=[user_msg], tags=["summarization"]))
-
-    logger.info("Prepared {} inference calls for summarization.", len(inference_calls))
+    for doc_text in dataset["document_text"]:
+        enc = tiktoken.get_encoding(encoding_name)
+        if len(enc.encode(doc_text)) <= max_tokens:
+            prompt = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
+            inference_calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["summarization"]))
+        else:
+            chunks = split_into_token_chunks(doc_text, chunk_tokens=max_tokens, overlap=overlap, encoding_name=encoding_name)
+            full_prompt = SUMMARIZATION_USER_PROMPT.format(document="\n\n".join(chunks))
+            inference_calls.append(InferenceCall(messages=[{"role": "user", "content": full_prompt}], tags=["summarization"]))
+    logger.info("Prepared {} inference calls (chunking applied where necessary).", len(inference_calls))
     return inference_calls
 
 
@@ -249,6 +251,9 @@ def run(config: dict[str, Any]) -> None:
         None. The function saves the resulting dataset to disk/HF Hub if successful.
     """
     stage_cfg = config.get("pipeline", {}).get("summarization", {})
+    chunk_tokens = stage_cfg.get("max_tokens", 1024)
+    overlap = stage_cfg.get("token_overlap", 100)
+    encoding_name = stage_cfg.get("encoding_name", "cl100k_base")
     if not stage_cfg.get("run", False):
         logger.info("Summarization stage is disabled. Skipping.")
         return
@@ -260,7 +265,12 @@ def run(config: dict[str, Any]) -> None:
     logger.info(f"Loaded ingested subset with {len(dataset)} rows for summarization.")
 
     # 2) Prepare calls to summarization model
-    inference_calls = _prepare_inference_calls(dataset)
+    inference_calls = _prepare_inference_calls(
+        dataset,
+        max_tokens=chunk_tokens,
+        overlap=overlap,
+        encoding_name=encoding_name,
+    )
     if not inference_calls:
         # Already logged errors if the dataset is invalid
         return
