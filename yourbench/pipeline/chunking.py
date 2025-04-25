@@ -627,8 +627,8 @@ def _multihop_chunking(
         num_multihops_target = max(1, total_single_hops // num_multihops_factor)
 
     if np.prod((num_multihops_target, effective_h_max)) > total_single_hops:
-            logger.warning(f"Target {num_multihops_target} if too high for given sample size and effective_h_max")
-            num_multihops_target = total_single_hops // effective_h_max
+        logger.warning(f"Target {num_multihops_target} is too high for given sample size and effective_h_max")
+        num_multihops_target = total_single_hops // effective_h_max
 
     logger.info(f"Targeting ~{num_multihops_target} multi-hop chunks, effective h_max: {effective_h_max}, h_min: {h_min}")
 
