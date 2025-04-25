@@ -44,11 +44,10 @@ Error Handling and Logging:
 
 import os
 import re
-import random
-import itertools
 from typing import Any, Dict, Optional
 from dataclasses import asdict, dataclass
 
+import numpy as np
 from loguru import logger  # type: ignore
 
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
@@ -590,52 +589,90 @@ def _multihop_chunking(
     num_multihops_factor: int,
 ) -> list[MultiHopChunk]:
     """
-    Creates multi-hop chunks by generating all valid combinations of single-hop chunks
-    (from size h_min to h_max), then shuffling and picking the desired number. This
-    ensures no repeated multi-hop chunk grouping is created.
+    Creates multi-hop chunks via numpy random sampling.
 
-    The total multi-hop chunks to select is determined by:
-        num_multihops = max(1, total_single_hops // num_multihops_factor).
-
-    If the number of possible unique combinations is less than or equal to num_multihops,
-    we return all. Otherwise, we select a random sample of size num_multihops from those
-    unique combinations.
+    Generates combinations of size effective_h_max, slices them to sizes
+    between h_min and effective_h_max, and collects unique combinations.
+    Target number = max(1, total_single_hops // num_multihops_factor).
+    Actual number may be less due to sampling/de-duplication.
 
     Args:
-        single_hop_chunks (list[SingleHopChunk]): list of single-hop chunk objects.
-        h_min (int): Minimum number of chunks to combine.
-        h_max (int): Maximum number of chunks to combine.
-        num_multihops_factor (int): Determines how many multi-hop chunks to generate,
-                                    typically a fraction of the total single-hop chunks.
+        single_hop_chunks: List of single-hop chunks.
+        h_min: Min single-hops per multi-hop.
+        h_max: Max single-hops per multi-hop.
+        num_multihops_factor: Factor to determine target multi-hop count.
 
     Returns:
-        list[MultiHopChunk]: The resulting multi-hop chunk objects.
+        List of unique MultiHopChunk objects.
     """
-    if single_hop_chunks is None or len(single_hop_chunks) == 0:
+    total_single_hops = len(single_hop_chunks)
+    logger.info(f"Starting multi-hop chunking, total single chunks: {total_single_hops}")
+
+    if not single_hop_chunks:
+        logger.warning("Empty input 'single_hop_chunks'. Returning [].")
+        return []
+    if not (0 < h_min <= h_max):
+        logger.warning(f"Invalid hop range h_min={h_min}, h_max={h_max}. Returning [].")
         return []
 
-    total_single_hops = len(single_hop_chunks)
-    # This is our target count for how many multi-hop combos we want to keep
-    num_multihops = max(1, total_single_hops // num_multihops_factor)
+    effective_h_max = min(h_max, total_single_hops)
+    if h_min > effective_h_max:
+        logger.warning(f"h_min ({h_min}) > effective_h_max ({effective_h_max}). Cannot form chunks. Returning [].")
+        return []
 
-    # Build a list of ALL possible multi-hop combinations from h_min to h_max
-    all_combos: list[MultiHopChunk] = []
-    for size in range(h_min, h_max + 1):
-        if size > total_single_hops:
-            break
-        for combo_indices in itertools.combinations(range(total_single_hops), size):
-            chosen_chunks = [single_hop_chunks[idx] for idx in combo_indices]
-            group_obj = MultiHopChunk(
-                chunk_ids=[c.chunk_id for c in chosen_chunks],
-                chunks_text=[c.chunk_text for c in chosen_chunks],
-            )
-            all_combos.append(group_obj)
-
-    random.shuffle(all_combos)
-    if len(all_combos) <= num_multihops:
-        return all_combos
+    if num_multihops_factor <= 0:
+        logger.info("num_multihops_factor <= 0. Targeting all single hops.")
+        num_multihops_target = total_single_hops
     else:
-        return all_combos[:num_multihops]
+        num_multihops_target = max(1, total_single_hops // num_multihops_factor)
+
+    if np.prod((num_multihops_target, effective_h_max)) > total_single_hops:
+            logger.warning(f"Target {num_multihops_target} if too high for given sample size and effective_h_max")
+            num_multihops_target = total_single_hops // effective_h_max
+
+    logger.info(f"Targeting ~{num_multihops_target} multi-hop chunks, effective h_max: {effective_h_max}, h_min: {h_min}")
+
+    rng = np.random.default_rng()
+
+    # Generate initial index combinations (size effective_h_max)
+    initial_indices = rng.choice(
+        total_single_hops,
+        size=(num_multihops_target, effective_h_max),
+        replace=False  # Unique indices per combination
+    )
+
+    # Generate random slice sizes
+    slice_sizes = rng.integers(
+        low=h_min,
+        high=effective_h_max,
+        size=num_multihops_target,
+        endpoint=True
+    )
+
+    # Slice, sort, tuple for hashing, and collect unique combinations
+    unique_combo_indices_set = {
+        tuple(np.sort(initial_indices[i][:slice_sizes[i]]))
+        for i in range(num_multihops_target)
+    }
+
+    logger.info(f"Generated {len(unique_combo_indices_set)} unique index combinations.")
+
+    if not unique_combo_indices_set:
+        logger.warning("No unique combinations generated.")
+        return []
+
+    # --- Build MultiHopChunk Objects ---
+    final_multihop_chunks = [
+        MultiHopChunk(
+            chunk_ids=[single_hop_chunks[idx].chunk_id for idx in combo_indices],
+            chunks_text=[single_hop_chunks[idx].chunk_text for idx in combo_indices],
+        )
+        for combo_indices in unique_combo_indices_set
+        # combo_indices guaranteed non-empty by h_min >= 1
+    ]
+
+    logger.info(f"Created {len(final_multihop_chunks)} multi-hop chunks.")
+    return final_multihop_chunks
 
 
 def _compute_info_density_metrics(
