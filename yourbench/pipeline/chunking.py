@@ -630,7 +630,9 @@ def _multihop_chunking(
         logger.warning(f"Target {num_multihops_target} is too high for given sample size and effective_h_max")
         num_multihops_target = total_single_hops // effective_h_max
 
-    logger.info(f"Targeting ~{num_multihops_target} multi-hop chunks, effective h_max: {effective_h_max}, h_min: {h_min}")
+    logger.info(
+        f"Targeting ~{num_multihops_target} multi-hop chunks, effective h_max: {effective_h_max}, h_min: {h_min}"
+    )
 
     rng = np.random.default_rng()
 
@@ -638,21 +640,15 @@ def _multihop_chunking(
     initial_indices = rng.choice(
         total_single_hops,
         size=(num_multihops_target, effective_h_max),
-        replace=False  # Unique indices per combination
+        replace=False,  # Unique indices per combination
     )
 
     # Generate random slice sizes
-    slice_sizes = rng.integers(
-        low=h_min,
-        high=effective_h_max,
-        size=num_multihops_target,
-        endpoint=True
-    )
+    slice_sizes = rng.integers(low=h_min, high=effective_h_max, size=num_multihops_target, endpoint=True)
 
     # Slice, sort, tuple for hashing, and collect unique combinations
     unique_combo_indices_set = {
-        tuple(np.sort(initial_indices[i][:slice_sizes[i]]))
-        for i in range(num_multihops_target)
+        tuple(np.sort(initial_indices[i][: slice_sizes[i]])) for i in range(num_multihops_target)
     }
 
     logger.info(f"Generated {len(unique_combo_indices_set)} unique index combinations.")
