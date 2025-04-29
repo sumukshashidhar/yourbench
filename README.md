@@ -79,7 +79,7 @@ echo "HF_TOKEN=<your_huggingface_token>" >> .env
 echo "HF_ORGANIZATION=<your_HF_username_or_organization>" >> .env
 
 # 4. Run the pipeline with an example config
-yourbench run --config configs/example.yaml
+yourbench run --config example/configs/example.yaml
 ```
 
 **Note**: The above instructions are a work-in-progress, and more comprehensive usage info will be provided soon.
