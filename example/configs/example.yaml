@@ -95,3 +95,6 @@ pipeline:
   # this combines your single shot and multi-hop questions into one nice dataset!
   lighteval:
     run: true
+
+  citation_score_filtering:
+    run: true
