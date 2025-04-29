@@ -48,27 +48,26 @@ See Also:
 """
 
 from __future__ import annotations
-
-import itertools
-from collections import defaultdict
 from typing import Any, List, Tuple
 
 import tiktoken
-from datasets import Dataset
 from loguru import logger
 
+from datasets import Dataset
+from yourbench.utils.prompts import (
+    COMBINE_SUMMARIES_USER_PROMPT,
+    CHUNK_SUMMARIZATION_USER_PROMPT,
+)
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
-from yourbench.utils.inference_engine import InferenceCall, run_inference
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from yourbench.utils.prompts import (
-    CHUNK_SUMMARIZATION_USER_PROMPT,
-    COMBINE_SUMMARIES_USER_PROMPT,
-)
+from yourbench.utils.inference_engine import InferenceCall, run_inference
+
 
 ############################
 # Internal helper functions #
 ############################
+
 
 def _build_chunk_calls(
     dataset: Dataset,
@@ -104,9 +103,7 @@ def _build_chunk_calls(
         )
         for chunk_idx, chunk in enumerate(chunks):
             prompt = CHUNK_SUMMARIZATION_USER_PROMPT.format(chunk=chunk)
-            calls.append(
-                InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["chunk_summary"])
-            )
+            calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["chunk_summary"]))
             mapping.append((doc_idx, chunk_idx))
 
     logger.info("Prepared {} chunk‑level inference calls.", len(calls))
@@ -141,7 +138,9 @@ def _collect_chunk_summaries(
 
     for resp, (doc_idx, _chunk_idx) in zip(responses, mapping):
         raw_by_doc[doc_idx].append(resp)
-        summary = extract_content_from_xml_tags(resp, "chunk_summary") or extract_content_from_xml_tags(resp, "final_summary")
+        summary = extract_content_from_xml_tags(resp, "chunk_summary") or extract_content_from_xml_tags(
+            resp, "final_summary"
+        )
         cleaned_by_doc[doc_idx].append(summary.strip() if summary else "")
 
     return model_name, raw_by_doc, cleaned_by_doc
@@ -177,9 +176,11 @@ def _merge_final_summaries(
         final_summaries[doc_idx] = parsed.strip() if parsed else "No summary available."
     return final_summaries
 
+
 #################
 # Stage runner  #
 #################
+
 
 def run(config: dict[str, Any]) -> None:
     stage_cfg = config.get("pipeline", {}).get("summarization", {})
@@ -224,7 +225,9 @@ def run(config: dict[str, Any]) -> None:
     # 4) Add columns & persist
     dataset = dataset.add_column("raw_chunk_summaries", raw_chunk_by_doc)
     dataset = dataset.add_column("chunk_summaries", clean_chunk_by_doc)
-    dataset = dataset.add_column("raw_document_summary", combine_summaries_raw if combine_calls else [""] * len(dataset))
+    dataset = dataset.add_column(
+        "raw_document_summary", combine_summaries_raw if combine_calls else [""] * len(dataset)
+    )
     dataset = dataset.add_column("document_summary", final_summaries)
     dataset = dataset.add_column("summarization_model", [model_name] * len(dataset))
 
