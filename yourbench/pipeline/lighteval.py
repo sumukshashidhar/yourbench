@@ -119,7 +119,6 @@ def run(config: Dict[str, Any]) -> None:
         logger.error(f"Could not load summarized subset: {e}")
         summarized_ds = Dataset.from_dict({})  # empty fallback
 
-
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
         logger.error("No data in single-shot or multi-hop datasets. Exiting.")
         return
@@ -148,7 +147,7 @@ def run(config: Dict[str, Any]) -> None:
     for row in summarized_ds:
         doc_id = row.get("document_id", "")
         if doc_id in doc_meta_map:
-            doc_meta_map[doc_id].update({'document_summary': row.get("document_summary")})
+            doc_meta_map[doc_id].update({"document_summary": row.get("document_summary")})
 
     # ----------------------------------------
     # 4) Helper functions to transform a row
