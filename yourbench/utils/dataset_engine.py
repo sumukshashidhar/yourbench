@@ -26,8 +26,11 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
             raise ConfigurationError(error_msg)
 
         dataset_name = hf_config["hf_dataset_name"]
-        if "/" not in dataset_name:
-            dataset_name = f"{hf_config['hf_organization']}/{dataset_name}"
+        organization = hf_config.get("hf_organization")
+
+        # Prepend organization only if it exists and is not already part of the dataset name
+        if organization and "/" not in dataset_name:
+            dataset_name = f"{organization}/{dataset_name}"
 
         return dataset_name
     except ConfigurationError:
