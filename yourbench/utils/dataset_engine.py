@@ -2,6 +2,8 @@ import os
 from typing import Any, Dict, Optional
 
 from loguru import logger
+from huggingface_hub import whoami, HfApi
+from huggingface_hub.utils import HFValidationError
 
 from datasets import Dataset, DatasetDict, load_dataset, concatenate_datasets
 
@@ -13,6 +15,25 @@ class ConfigurationError(Exception):
 
 
 def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
+    """
+    Determines the full Hugging Face dataset repository name.
+
+    If 'hf_organization' is not provided or refers to an unexpanded environment
+    variable, it attempts to infer the username using the provided 'hf_token'.
+    If 'hf_dataset_name' refers to an unexpanded environment variable, it raises
+    an error.
+
+    Args:
+        config (Dict[str, Any]): The loaded configuration dictionary.
+
+    Returns:
+        str: The full dataset repository name (e.g., 'username/dataset_name' or 'dataset_name').
+
+    Raises:
+        ConfigurationError: If required configuration keys are missing, if
+                            'hf_dataset_name' is unexpanded, or if the final
+                            repo ID is invalid.
+    """
     try:
         if "hf_configuration" not in config:
             error_msg = "Missing 'hf_configuration' in config"
@@ -27,17 +48,84 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
 
         dataset_name = hf_config["hf_dataset_name"]
         organization = hf_config.get("hf_organization")
+        token = hf_config.get("token")
 
-        # Prepend organization only if it exists and is not already part of the dataset name
+        # Attempt to get default username if organization is missing or unexpanded
+        if not organization or (isinstance(organization, str) and organization.startswith("$")):
+            if isinstance(organization, str) and organization.startswith("$"):
+                # Log if it was explicitly set but unexpanded
+                var_name = organization[1:].split('/')[0]
+                logger.warning(
+                    f"Environment variable '{var_name}' used in 'hf_organization' ('{organization}') is not set or expanded."
+                )
+
+            if token:
+                logger.info("'hf_organization' not set or expanded, attempting to fetch default username using provided token.")
+                try:
+                    user_info = whoami(token=token)
+                    default_username = user_info.get("name")
+                    if default_username:
+                        organization = default_username
+                        logger.info(f"Using fetched default username '{organization}' as the organization.")
+                    else:
+                        logger.warning("Could not retrieve username from token information. Proceeding without organization prefix.")
+                        organization = None
+                except HFValidationError as ve:
+                    logger.warning(f"Invalid Hugging Face token provided: {ve}. Proceeding without organization prefix.")
+                    organization = None
+                except Exception as e: # Catch other potential issues like network errors
+                    logger.warning(f"Failed to fetch username via whoami: {e}. Proceeding without organization prefix.")
+                    organization = None
+            else:
+                logger.warning("'hf_organization' not set or expanded, and no 'token' provided in config. Proceeding without organization prefix.")
+                organization = None # Ensure organization is None if logic falls through
+
+        # Dataset name MUST be expanded correctly
+        if isinstance(dataset_name, str) and dataset_name.startswith("$"):
+            var_name = dataset_name[1:].split('/')[0]
+            error_msg = (
+                f"Environment variable '{var_name}' used in required 'hf_dataset_name' ('{dataset_name}') is not set or expanded. "
+                f"Please set the '{var_name}' environment variable or update the configuration."
+            )
+            logger.error(error_msg)
+            raise ConfigurationError(error_msg)
+
+        # Construct the full name
+        full_dataset_name = dataset_name
         if organization and "/" not in dataset_name:
-            dataset_name = f"{organization}/{dataset_name}"
+            full_dataset_name = f"{organization}/{dataset_name}"
+        
+        # Use HfApi for robust validation
+        api = HfApi()
+        try:
+            api.repo_info(repo_id=full_dataset_name, repo_type="dataset", token=token)
+            # If repo exists, validation passed implicitly (though repo_info might fetch info we don't strictly need here)
+            logger.debug(f"Repo ID '{full_dataset_name}' seems valid (checked via repo_info). Existing status not determined here.")
+        except HFValidationError as ve:
+             # This catches validation errors during repo_info call if the name format is wrong
+            error_msg = f"Constructed Hugging Face repo ID '{full_dataset_name}' is invalid: {ve}"
+            logger.error(error_msg)
+            raise ConfigurationError(error_msg) from ve
+        except Exception as e:
+            # Handle cases where repo doesn't exist (which is fine) vs other errors
+            # Note: repo_info raises RepositoryNotFoundError subclass of HfHubHTTPError
+            # We only care about *validation* here, not existence. If it gets past HFValidationError, assume format is okay.
+            # Other exceptions might indicate network issues etc. but not invalid ID format per se.
+            # We'll let push_to_hub handle non-existence later if needed.
+            if "404" in str(e) or "Repository Not Found" in str(e):
+                 logger.debug(f"Repo ID '{full_dataset_name}' format appears valid, but repository does not exist (or access denied). This is acceptable for creation.")
+            else:
+                # Log unexpected errors during validation check but don't necessarily block
+                logger.warning(f"Unexpected issue during repo ID validation check for '{full_dataset_name}': {e}. Proceeding, but push/load might fail.")
+                
 
-        return dataset_name
-    except ConfigurationError:
+        return full_dataset_name
+
+    except ConfigurationError: # Re-raise config errors directly
         raise
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        raise e
+    except Exception as e: # Catch unexpected errors
+        logger.exception(f"Unexpected error in _get_full_dataset_repo_name: {e}")
+        raise ConfigurationError(f"Failed to determine dataset repo name: {e}") from e
 
 
 def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) -> Dataset:
