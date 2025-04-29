@@ -153,6 +153,14 @@ We use:
 - [pytest](https://docs.pytest.org/) for testing
 
 
+## 🚀 Try YourBench on Hugging Face
+
+To test YourBench on your own documents:
+
+- Use the [Demo Space](https://huggingface.co/spaces/yourbench/demo) to generate a dataset and leaderboard in one click – entirely free  
+- Use the [Advanced Space](https://huggingface.co/spaces/yourbench/advanced) for full control over the pipeline, with custom configs and your own inference
+
+
 ## 🤝 Contributing
 
 1. Fork the repository

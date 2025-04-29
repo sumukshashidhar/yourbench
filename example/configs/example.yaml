@@ -52,16 +52,26 @@ pipeline:
   # to create a global summary of your documents
   summarization:
     run: true
+    max_tokens: 4096       # max tokens per chunk
+    token_overlap: 100     # (optional) overlap between chunks
+    encoding_name: cl100k_base  # "cl100k_base" for Qwen/GPT, "gpt2" for others
   
   chunking:
     run: true
     chunking_configuration:
-      l_min_tokens: 64 # how many minimum tokens you want in each chunk
-      l_max_tokens: 128 # how many max tokens in each chunk
-      tau_threshold: 0.8 # what threshold to decide a boundary
-      h_min: 2 # for multi-hop configurations, minimum number of unique chunks to combine
-      h_max: 5 # maximum number of unique chunks to combine to make a multi-hop set
-      num_multihops_factor: 2   # or any integer or float. higher numbers generate a larger number of multi-hops
+      chunking_mode: fast_chunking   # now uses token-based chunking via tiktoken
+      l_max_tokens: 128              # controls chunk size
+      token_overlap: 0               # optional: token overlap for continuity
+      encoding_name: cl100k_base     # "cl100k_base" for GPT/Qwen/DeepSeek/ChatML, "gpt2" for others
+
+      # The following are only used for semantic_chunking
+      l_min_tokens: 64
+      tau_threshold: 0.8
+
+      # Multi-hop chunking settings (used in both modes)
+      h_min: 2
+      h_max: 3
+      num_multihops_factor: 3
   
   single_shot_question_generation:
     run: true

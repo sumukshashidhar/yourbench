@@ -6,7 +6,7 @@
 @author @sumukshashidhar
 
 This module implements two modes of chunking for the YourBench pipeline:
-1) "fast_chunking" (the new default), which chunks by purely length-based rules.
+1) "fast_chunking" (the default), which chunks by purely length-based rules.
 2) "semantic_chunking" (requires explicit config), which uses sentence embeddings
    and a similarity threshold to decide chunk boundaries.
 
@@ -24,13 +24,15 @@ The run(config) function:
    - semantic_chunking (requires pipeline.chunking.chunking_configuration.chunking_mode="semantic_chunking"):
      Splits each document into single-hop chunks, guided by user-defined token
      length constraints (l_min_tokens, l_max_tokens) and a similarity threshold (tau_threshold).
+     Uses a transformer model specified in config['model_roles']['chunking'], or a default.
 3. Creates multi-hop chunks by sampling subsets of single-hop chunks and concatenating them.
-4. Computes optional readability and perplexity metrics for each chunk if debug mode is enabled.
+4. Computes optional readability and perplexity metrics for each chunk if debug mode is enabled
+   and required packages (textstat, evaluate) are available.
 5. Saves the dataset containing new columns:
    - "chunks" (list of single-hop segments)
    - "multihop_chunks" (list of multi-hop segment groups)
    - "chunk_info_metrics" (various statistics)
-   - "chunking_model" (the model used for embeddings; blank or default if fast_chunking).
+   - "chunking_model" (the model used for embeddings; default string if fast_chunking)
 
 Error Handling and Logging:
 ---------------------------
@@ -40,17 +42,23 @@ Error Handling and Logging:
   logs the exception and attempts a graceful exit without crashing the entire
   pipeline.
 
+Debug Visualization:
+--------------------
+- In semantic_chunking mode, if debug mode is on, the module will generate a plot
+  of average consecutive sentence similarities and save it to plots/aggregated_similarities.png.
 """
 
 import os
 import re
-import random
-import itertools
+import time
 from typing import Any, Dict, Optional
 from dataclasses import asdict, dataclass
 
+import numpy as np
 from loguru import logger  # type: ignore
+from tqdm.auto import tqdm
 
+from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 
 
@@ -131,7 +139,7 @@ class ChunkingParameters:
 
 @dataclass
 class SingleHopChunk:
-    chunk_id: str
+    chunk_id: Any
     chunk_text: str
 
 
@@ -264,20 +272,44 @@ def run(config: Dict[str, Any]) -> None:
     all_similarities: list[list[float]] = []
 
     # Process each document in the dataset
-    for idx, row in enumerate(dataset):
+    start_time = time.time()
+    total_docs = len(dataset)
+    logger.info(f"Starting chunking process for {total_docs} documents")
+
+    for idx, row in enumerate(tqdm(dataset, desc="Chunking documents", ncols=100)):
+        doc_start_time = time.time()
+        logger.info(
+            f"[{idx + 1}/{total_docs}] Processing document ID={row.get('document_id', f'doc_{idx}')} ({len(row.get('document_text', ''))} chars)"
+        )
         doc_text = row.get("document_text", "")
         doc_id = row.get("document_id", f"doc_{idx}")
+        logger.info(f"[{idx}] doc_id={row.get('document_id')} | text_len={len(doc_text)} | preview={doc_text[:100]!r}")
 
         # If text is empty or missing
         if doc_text is None or not doc_text.strip():
             logger.warning(f"Document at index {idx} has empty text. Storing empty chunks.")
+            doc_process_time = time.time() - doc_start_time
+            logger.info(f"Completed document {idx + 1}/{total_docs} in {doc_process_time:.2f}s")
             all_single_hop_chunks.append([])
             all_multihop_chunks.append([])
             all_chunk_info_metrics.append([])
             continue
 
+        if (idx + 1) % 1 == 0:
+            elapsed_time = time.time() - start_time
+            avg_time_per_doc = elapsed_time / (idx + 1)
+            remaining_docs = total_docs - (idx + 1)
+            estimated_remaining = avg_time_per_doc * remaining_docs
+            progress_pct = (idx + 1) / total_docs * 100
+
+            logger.info(f"Progress: {progress_pct:.1f}% | Completed {idx + 1}/{total_docs} documents")
+            logger.info(
+                f"Avg time per doc: {avg_time_per_doc:.2f}s | Est. remaining: {estimated_remaining / 60:.1f} minutes"
+            )
+
         # Split the document into sentences
         sentences = _split_into_sentences(doc_text)
+
         if sentences is None or len(sentences) == 0:
             logger.warning(f"No valid sentences found for doc at index {idx}, doc_id={doc_id}.")
             all_single_hop_chunks.append([])
@@ -287,6 +319,11 @@ def run(config: Dict[str, Any]) -> None:
 
         # Depending on the chunking mode:
         if chunking_mode == "semantic_chunking":
+            # Debug log showing current dependency state
+            logger.debug(
+                f"Semantic chunking check: torch={_torch_available}, transformers={_transformers_available}, model_loaded={model is not None}, tokenizer_loaded={tokenizer is not None}"
+            )
+
             # Ensure dependencies one last time before computation
             if not _torch_available or not _transformers_available or model is None or tokenizer is None:
                 logger.error("Cannot perform semantic chunking due to missing dependencies or model loading issues.")
@@ -322,6 +359,11 @@ def run(config: Dict[str, Any]) -> None:
                 doc_id=doc_id,
             )
         else:
+            # Debug line for fast chunking
+            logger.info(
+                f"[{doc_id}] Performing fast_chunking on {len(sentences)} sentences (l_max_tokens={l_max_tokens})"
+            )
+
             # Fast chunking: purely length-based
             single_hop_chunks = _chunk_document_fast(
                 sentences=sentences,
@@ -538,49 +580,24 @@ def _chunk_document_fast(
     sentences: list[str],
     l_max_tokens: int,
     doc_id: str,
+    show_progress: bool = True,
 ) -> list[SingleHopChunk]:
     """
-    Creates chunks based purely on a maximum token length. Each sentence is added
-    to the current chunk if it does not exceed l_max_tokens; otherwise, a new chunk
-    is started.
+    Uses token-based chunking with optional overlap, based on tiktoken.
 
     Args:
-        sentences (list[str]): The list of sentences for a single document.
-        l_max_tokens (int): Maximum tokens per chunk.
+        sentences (list[str]): Sentences of the document.
+        l_max_tokens (int): Max tokens per chunk.
         doc_id (str): Unique identifier for the document.
+        show_progress (bool): Show progress bar (ignored here, kept for API symmetry).
 
     Returns:
-        list[SingleHopChunk]: A list of SingleHopChunk objects.
+        list[SingleHopChunk]: A list of token-based chunks.
     """
-    chunks: list[SingleHopChunk] = []
-    current_chunk: list[str] = []
-    current_len: int = 0
-    chunk_index: int = 0
+    text = " ".join(sentences)
+    chunk_texts = split_into_token_chunks(text, chunk_tokens=l_max_tokens, overlap=0)
 
-    for sentence in sentences:
-        sentence_token_count = len(sentence.split())
-
-        # If adding this sentence would exceed l_max_tokens, finalize current chunk
-        if current_len + sentence_token_count > l_max_tokens:
-            if current_chunk:
-                chunk_str = " ".join(current_chunk)
-                chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
-                chunk_index += 1
-
-            # Start a new chunk with the current sentence
-            current_chunk = [sentence]
-            current_len = sentence_token_count
-        else:
-            # Add sentence to current chunk
-            current_chunk.append(sentence)
-            current_len += sentence_token_count
-
-    # Any leftover chunk
-    if current_chunk:
-        chunk_str = " ".join(current_chunk)
-        chunks.append(SingleHopChunk(chunk_id=f"{doc_id}_{chunk_index}", chunk_text=chunk_str))
-
-    return chunks
+    return [SingleHopChunk(chunk_id=f"{doc_id}_{i}", chunk_text=chunk) for i, chunk in enumerate(chunk_texts)]
 
 
 def _multihop_chunking(
@@ -590,52 +607,86 @@ def _multihop_chunking(
     num_multihops_factor: int,
 ) -> list[MultiHopChunk]:
     """
-    Creates multi-hop chunks by generating all valid combinations of single-hop chunks
-    (from size h_min to h_max), then shuffling and picking the desired number. This
-    ensures no repeated multi-hop chunk grouping is created.
+    Creates multi-hop chunks via numpy random sampling.
 
-    The total multi-hop chunks to select is determined by:
-        num_multihops = max(1, total_single_hops // num_multihops_factor).
-
-    If the number of possible unique combinations is less than or equal to num_multihops,
-    we return all. Otherwise, we select a random sample of size num_multihops from those
-    unique combinations.
+    Generates combinations of size effective_h_max, slices them to sizes
+    between h_min and effective_h_max, and collects unique combinations.
+    Target number = max(1, total_single_hops // num_multihops_factor).
+    Actual number may be less due to sampling/de-duplication.
 
     Args:
-        single_hop_chunks (list[SingleHopChunk]): list of single-hop chunk objects.
-        h_min (int): Minimum number of chunks to combine.
-        h_max (int): Maximum number of chunks to combine.
-        num_multihops_factor (int): Determines how many multi-hop chunks to generate,
-                                    typically a fraction of the total single-hop chunks.
+        single_hop_chunks: List of single-hop chunks.
+        h_min: Min single-hops per multi-hop.
+        h_max: Max single-hops per multi-hop.
+        num_multihops_factor: Factor to determine target multi-hop count.
 
     Returns:
-        list[MultiHopChunk]: The resulting multi-hop chunk objects.
+        List of unique MultiHopChunk objects.
     """
-    if single_hop_chunks is None or len(single_hop_chunks) == 0:
+    total_single_hops = len(single_hop_chunks)
+    logger.info(f"Starting multi-hop chunking, total single chunks: {total_single_hops}")
+
+    if not single_hop_chunks:
+        logger.warning("Empty input 'single_hop_chunks'. Returning [].")
+        return []
+    if not (0 < h_min <= h_max):
+        logger.warning(f"Invalid hop range h_min={h_min}, h_max={h_max}. Returning [].")
         return []
 
-    total_single_hops = len(single_hop_chunks)
-    # This is our target count for how many multi-hop combos we want to keep
-    num_multihops = max(1, total_single_hops // num_multihops_factor)
+    effective_h_max = min(h_max, total_single_hops)
+    if h_min > effective_h_max:
+        logger.warning(f"h_min ({h_min}) > effective_h_max ({effective_h_max}). Cannot form chunks. Returning [].")
+        return []
 
-    # Build a list of ALL possible multi-hop combinations from h_min to h_max
-    all_combos: list[MultiHopChunk] = []
-    for size in range(h_min, h_max + 1):
-        if size > total_single_hops:
-            break
-        for combo_indices in itertools.combinations(range(total_single_hops), size):
-            chosen_chunks = [single_hop_chunks[idx] for idx in combo_indices]
-            group_obj = MultiHopChunk(
-                chunk_ids=[c.chunk_id for c in chosen_chunks],
-                chunks_text=[c.chunk_text for c in chosen_chunks],
-            )
-            all_combos.append(group_obj)
-
-    random.shuffle(all_combos)
-    if len(all_combos) <= num_multihops:
-        return all_combos
+    if num_multihops_factor <= 0:
+        logger.info("num_multihops_factor <= 0. Targeting all single hops.")
+        num_multihops_target = total_single_hops
     else:
-        return all_combos[:num_multihops]
+        num_multihops_target = max(1, total_single_hops // num_multihops_factor)
+
+    if np.prod((num_multihops_target, effective_h_max)) > total_single_hops:
+        logger.warning(f"Target {num_multihops_target} is too high for given sample size and effective_h_max")
+        num_multihops_target = total_single_hops // effective_h_max
+
+    logger.info(
+        f"Targeting ~{num_multihops_target} multi-hop chunks, effective h_max: {effective_h_max}, h_min: {h_min}"
+    )
+
+    rng = np.random.default_rng()
+
+    # Generate initial index combinations (size effective_h_max)
+    initial_indices = rng.choice(
+        total_single_hops,
+        size=(num_multihops_target, effective_h_max),
+        replace=False,  # Unique indices per combination
+    )
+
+    # Generate random slice sizes
+    slice_sizes = rng.integers(low=h_min, high=effective_h_max, size=num_multihops_target, endpoint=True)
+
+    # Slice, sort, tuple for hashing, and collect unique combinations
+    unique_combo_indices_set = {
+        tuple(np.sort(initial_indices[i][: slice_sizes[i]])) for i in range(num_multihops_target)
+    }
+
+    logger.info(f"Generated {len(unique_combo_indices_set)} unique index combinations.")
+
+    if not unique_combo_indices_set:
+        logger.warning("No unique combinations generated.")
+        return []
+
+    # --- Build MultiHopChunk Objects ---
+    final_multihop_chunks = [
+        MultiHopChunk(
+            chunk_ids=[single_hop_chunks[idx].chunk_id for idx in combo_indices],
+            chunks_text=[single_hop_chunks[idx].chunk_text for idx in combo_indices],
+        )
+        for combo_indices in unique_combo_indices_set
+        # combo_indices guaranteed non-empty by h_min >= 1
+    ]
+
+    logger.info(f"Created {len(final_multihop_chunks)} multi-hop chunks.")
+    return final_multihop_chunks
 
 
 def _compute_info_density_metrics(

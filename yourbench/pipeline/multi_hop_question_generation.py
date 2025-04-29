@@ -96,6 +96,7 @@ class MultiHopQuestionRow:
 
     document_id: str
     source_chunk_ids: List[str]
+    additional_instructions: str
     question: str
     self_answer: str
     estimated_difficulty: int
@@ -113,10 +114,12 @@ class MultiHopQuestionRow:
         source_chunk_ids: List[str],
         generating_model: str,
         raw_response: str = "",
+        additional_instructions: str = "",
     ) -> "MultiHopQuestionRow":
         return cls(
             document_id=document_id,
             source_chunk_ids=source_chunk_ids,
+            additional_instructions=additional_instructions,
             question=qa_pair.question,
             self_answer=qa_pair.answer,
             estimated_difficulty=qa_pair.estimated_difficulty,
@@ -151,7 +154,7 @@ def run(config: Dict[str, Any]) -> None:
     responses_dict = _multihop_qa_generation(config, inference_calls)
 
     # 4) Parse and Build Final Dataset
-    final_dataset = _parse_and_build_final(config, responses_dict, call_index_map)
+    final_dataset = _parse_and_build_final(config, responses_dict, call_index_map, stage_cfg)
     if final_dataset is None or len(final_dataset) == 0:
         logger.warning("No valid multi-hop question rows produced. Exiting stage.")
         return
@@ -274,6 +277,7 @@ def _parse_and_build_final(
     config: Dict[str, Any],
     responses_dict: Dict[str, List[str]],
     call_index_map: List[tuple],
+    stage_config: Dict[str, Any],
 ) -> Dataset:
     """
     Parse each model's responses into MultiHopQuestionRow items, then build a final dataset.
@@ -295,23 +299,7 @@ def _parse_and_build_final(
             qa_pairs = parse_qa_pairs_from_response(raw_resp)
 
             if not qa_pairs:
-                # Fallback row if no parseable QAs
-                logger.warning(
-                    f"No parseable JSON for row={row_idx}, doc_id={doc_id} (model={model_name}). Creating fallback row."
-                )
-                fallback_row = MultiHopQuestionRow(
-                    document_id=doc_id,
-                    source_chunk_ids=source_chunk_ids,
-                    question="No question parsed",
-                    self_answer="No answer parsed",
-                    estimated_difficulty=5,
-                    self_assessed_question_type="unknown",
-                    generating_model=model_name,
-                    thought_process="",
-                    citations=[],
-                    raw_response=raw_resp,
-                )
-                final_multi_hop_questions.append(fallback_row.__dict__)
+                logger.warning(f"No parseable JSON for row={row_idx}, doc_id={doc_id} (model={model_name}).")
                 continue
 
             # Otherwise, process each QA pair
@@ -336,6 +324,9 @@ def _parse_and_build_final(
                         source_chunk_ids=source_chunk_ids,
                         generating_model=model_name,
                         raw_response=raw_resp,
+                        additional_instructions=stage_config.get(
+                            "additional_instructions", "Generate questions to test a curious adult"
+                        ),
                     )
                     final_multi_hop_questions.append(row_obj.__dict__)
 

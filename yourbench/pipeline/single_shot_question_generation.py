@@ -69,6 +69,7 @@ class SingleHopQuestionRow:
 
     chunk_id: str
     document_id: str
+    additional_instructions: str
     question: str
     self_answer: str
     estimated_difficulty: int
@@ -124,7 +125,7 @@ def run(config: dict[str, Any]) -> None:
     if not responses_dict:
         return
 
-    question_dataset = _process_responses_and_build_dataset(responses_dict, call_index_mapping)
+    question_dataset = _process_responses_and_build_dataset(responses_dict, call_index_mapping, stage_config)
     if question_dataset is None or len(question_dataset) == 0:
         logger.warning("No valid questions produced in single_shot_question_generation.")
         return
@@ -264,7 +265,9 @@ def _execute_inference(inference_calls, config: dict[str, Any]):
 
 
 def _process_responses_and_build_dataset(
-    responses_dict: dict[str, list[str]], call_index_mapping: list[tuple]
+    responses_dict: dict[str, list[str]],
+    call_index_mapping: list[tuple],
+    stage_config: SingleShotQuestionGenerationConfig,
 ) -> Dataset:
     """
     Take the LLM responses, parse them, and build a Hugging Face Dataset
@@ -314,6 +317,7 @@ def _process_responses_and_build_dataset(
                     question_row = SingleHopQuestionRow(
                         chunk_id=chunk_id,
                         document_id=doc_id,
+                        additional_instructions=stage_config.additional_instructions,
                         question=question_text,
                         self_answer=answer_text,
                         estimated_difficulty=difficulty_val,
