@@ -112,6 +112,14 @@ def run(config: Dict[str, Any]) -> None:
         logger.warning("Cannot proceed with chunk text or document text. They will be empty.")
         chunked_ds = Dataset.from_dict({})  # empty fallback
 
+    try:
+        summarized_ds = custom_load_dataset(config=config, subset="summarized")
+        logger.info(f"Loaded summarized subset with {len(summarized_ds)} rows.")
+    except Exception as e:
+        logger.error(f"Could not load summarized subset: {e}")
+        summarized_ds = Dataset.from_dict({})  # empty fallback
+
+
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
         logger.error("No data in single-shot or multi-hop datasets. Exiting.")
         return
@@ -137,6 +145,11 @@ def run(config: Dict[str, Any]) -> None:
             chunk_dict[cid] = ctext
         doc_meta_map[doc_id] = {"document_text": doc_text, "chunks_map": chunk_dict}
 
+    for row in summarized_ds:
+        doc_id = row.get("document_id", "")
+        if doc_id in doc_meta_map:
+            doc_meta_map[doc_id].update({'document_summary': row.get("document_summary")})
+
     # ----------------------------------------
     # 4) Helper functions to transform a row
     # ----------------------------------------
@@ -154,6 +167,7 @@ def run(config: Dict[str, Any]) -> None:
         # Grab doc meta
         doc_meta = doc_meta_map.get(doc_id, {})
         doc_text = doc_meta.get("document_text", "")
+        doc_summary = doc_meta.get("document_summary", "")
         chunk_text_map = doc_meta.get("chunks_map", {})
         # chunk text is chunk_text_map[chunk_id] if it exists
         chunk_text = chunk_text_map.get(chunk_id, "")
@@ -171,6 +185,7 @@ def run(config: Dict[str, Any]) -> None:
             "question_generating_model": row.get("generating_model", ""),
             "chunks": [chunk_text] if chunk_text else [],
             "document": doc_text,
+            "document_summary": doc_summary,
         }
 
     def make_multi_hop_record(row: Dict[str, Any]) -> Dict[str, Any]:
@@ -183,6 +198,7 @@ def run(config: Dict[str, Any]) -> None:
         chunk_ids: List[str] = row.get("source_chunk_ids", [])
         doc_meta = doc_meta_map.get(doc_id, {})
         doc_text = doc_meta.get("document_text", "")
+        doc_summary = doc_meta.get("document_summary", "")
         chunk_text_map = doc_meta.get("chunks_map", {})
 
         # Gather chunk_text for each chunk_id
@@ -205,6 +221,7 @@ def run(config: Dict[str, Any]) -> None:
             "question_generating_model": row.get("generating_model", ""),
             "chunks": chunk_texts,
             "document": doc_text,
+            "document_summary": doc_summary,
         }
 
     # ----------------------------------------
