@@ -6,7 +6,7 @@ with support for environment variable substitution.
 """
 
 import os
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import yaml
 from dotenv import load_dotenv
