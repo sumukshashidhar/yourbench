@@ -108,7 +108,8 @@ def run_pipeline(
             logger.debug(f"Stage '{stage_name}' is not in the config. Skipping.")
             continue
 
-        if not stage_settings.get("run", True):
+        run_stage = stage_settings.get("run")
+        if run_stage is not None and not run_stage:
             logger.info(f"Skipping stage: '{stage_name}' (run set to False).")
             continue
 
