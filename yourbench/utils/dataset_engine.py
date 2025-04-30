@@ -13,6 +13,47 @@ class ConfigurationError(Exception):
 
     pass
 
+def _safe_get_organization(config: Dict, dataset_name: str, organization: str, token: str) -> str:
+    if not organization or (isinstance(organization, str) and organization.startswith("$")):
+        if isinstance(organization, str) and organization.startswith("$"):
+            # Log if it was explicitly set but unexpanded
+            var_name = organization[1:].split("/")[0]
+            logger.warning(
+                f"Environment variable '{var_name}' used in 'hf_organization' ('{organization}') is not set or expanded."
+            )
+
+        if token:
+            logger.info(
+                "'hf_organization' not set or expanded, attempting to fetch default username using provided token."
+            )
+            try:
+                user_info = whoami(token=token)
+                default_username = user_info.get("name")
+                if default_username:
+                    organization = default_username
+                    logger.info(f"Using fetched default username '{organization}' as the organization.")
+                else:
+                    logger.warning(
+                        "Could not retrieve username from token information. Proceeding without organization prefix."
+                    )
+                    organization = None
+            except HFValidationError as ve:
+                logger.warning(
+                    f"Invalid Hugging Face token provided: {ve}. Proceeding without organization prefix."
+                )
+                organization = None
+            except Exception as e:  # Catch other potential issues like network errors
+                logger.warning(
+                    f"Failed to fetch username via whoami: {e}. Proceeding without organization prefix."
+                )
+                organization = None
+        else:
+            logger.warning(
+                "'hf_organization' not set or expanded, and no 'token' provided in config. Proceeding without organization prefix."
+            )
+            organization = None  # Ensure organization is None if logic falls through
+    return organization
+
 
 def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
     """
@@ -51,44 +92,7 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
         token = hf_config.get("token")
 
         # Attempt to get default username if organization is missing or unexpanded
-        if not organization or (isinstance(organization, str) and organization.startswith("$")):
-            if isinstance(organization, str) and organization.startswith("$"):
-                # Log if it was explicitly set but unexpanded
-                var_name = organization[1:].split("/")[0]
-                logger.warning(
-                    f"Environment variable '{var_name}' used in 'hf_organization' ('{organization}') is not set or expanded."
-                )
-
-            if token:
-                logger.info(
-                    "'hf_organization' not set or expanded, attempting to fetch default username using provided token."
-                )
-                try:
-                    user_info = whoami(token=token)
-                    default_username = user_info.get("name")
-                    if default_username:
-                        organization = default_username
-                        logger.info(f"Using fetched default username '{organization}' as the organization.")
-                    else:
-                        logger.warning(
-                            "Could not retrieve username from token information. Proceeding without organization prefix."
-                        )
-                        organization = None
-                except HFValidationError as ve:
-                    logger.warning(
-                        f"Invalid Hugging Face token provided: {ve}. Proceeding without organization prefix."
-                    )
-                    organization = None
-                except Exception as e:  # Catch other potential issues like network errors
-                    logger.warning(
-                        f"Failed to fetch username via whoami: {e}. Proceeding without organization prefix."
-                    )
-                    organization = None
-            else:
-                logger.warning(
-                    "'hf_organization' not set or expanded, and no 'token' provided in config. Proceeding without organization prefix."
-                )
-                organization = None  # Ensure organization is None if logic falls through
+        organization = _safe_get_organization(config, dataset_name, organization, token)
 
         # Dataset name MUST be expanded correctly
         if isinstance(dataset_name, str) and dataset_name.startswith("$"):
