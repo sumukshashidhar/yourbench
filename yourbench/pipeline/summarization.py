@@ -47,252 +47,207 @@ See Also:
 - yourbench.utils.dataset_engine for loading/saving dataset
 """
 
-from typing import Any
+from __future__ import annotations
+from typing import Any, List, Tuple
 
 import tiktoken
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.prompts import SUMMARIZATION_USER_PROMPT
+from yourbench.utils.prompts import (
+    COMBINE_SUMMARIES_USER_PROMPT,
+    CHUNK_SUMMARIZATION_USER_PROMPT,
+)
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
-def duplicate_rows(dataset: dict[str, Any], num_duplicates: int = 1) -> dict[str, list[Any]]:
+############################
+# Internal helper functions #
+############################
+
+
+def _build_chunk_calls(
+    dataset: Dataset,
+    max_tokens: int,
+    overlap: int,
+    encoding_name: str,
+) -> Tuple[List[InferenceCall], List[Tuple[int, int]]]:
+    """Prepare inference calls for first-level chunk summaries.
+
+    Returns
+    -------
+    (calls, mapping) where *mapping* aligns each call to (doc_idx, chunk_idx).
     """
-    Create a dictionary that repeats each value in the dataset multiple times.
+    calls: List[InferenceCall] = []
+    mapping: List[Tuple[int, int]] = []  # (doc_index, chunk_index)
 
-    Args:
-        dataset (dict[str, Any]): A dictionary representing dataset columns.
-        num_duplicates (int): How many times to duplicate each row.
-
-    Returns:
-        dict[str, list[Any]]: A new dictionary where each key's list is repeated
-        num_duplicates times.
-    """
-    repeated_data = {}
-    for key, value in dataset.items():
-        repeated_data[key] = [val for val in value for _ in range(num_duplicates)]
-    return repeated_data
-
-
-def _prepare_inference_calls(
-    dataset: Dataset, max_tokens: int = 1024, overlap: int = 100, encoding_name: str = "cl100k_base"
-) -> list[InferenceCall]:
-    """
-    Prepare model inference calls from a dataset, optionally chunking long documents
-
-    Args:
-        dataset (Dataset): The dataset containing documents to summarize.
-        max_tokens (int): Threshold for chunking documents. If exceeded, the document is split.
-
-    Returns:
-        list[InferenceCall]: A list of InferenceCall objects ready for model input.
-    """
-    inference_calls: list[InferenceCall] = []
-    for doc_text in dataset["document_text"]:
-        enc = tiktoken.get_encoding(encoding_name)
-        if len(enc.encode(doc_text)) <= max_tokens:
-            prompt = SUMMARIZATION_USER_PROMPT.format(document=doc_text)
-            inference_calls.append(
-                InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["summarization"])
-            )
-        else:
-            chunks = split_into_token_chunks(
-                doc_text, chunk_tokens=max_tokens, overlap=overlap, encoding_name=encoding_name
-            )
-            full_prompt = SUMMARIZATION_USER_PROMPT.format(document="\n\n".join(chunks))
-            inference_calls.append(
-                InferenceCall(messages=[{"role": "user", "content": full_prompt}], tags=["summarization"])
-            )
-    logger.info("Prepared {} inference calls (chunking applied where necessary).", len(inference_calls))
-    return inference_calls
-
-
-def _perform_summarization_inference(
-    config: dict[str, Any], inference_calls: list[InferenceCall]
-) -> dict[str, list[str]] | None:
-    """
-    Perform the actual inference (summarization) calls to the model.
-
-    Args:
-        config (dict[str, Any]): The entire pipeline configuration.
-        inference_calls (list[InferenceCall]): The inference calls to be processed.
-
-    Returns:
-        dict[str, list[str]] | None: A dictionary of model_name -> list of summaries,
-                                     or None if inference fails.
-    """
-    if not inference_calls:
-        logger.error("No inference calls were prepared; skipping summarization.")
-        return None
-
-    response_dict = run_inference(
-        config=config,
-        step_name="summarization",
-        inference_calls=inference_calls,
-    )
-
-    if response_dict is None:
-        logger.error("Inference for summarization returned no data.")
-        return None
-    return response_dict
-
-
-def _extract_summaries_from_model_output(
-    dataset: Dataset, response_dict: dict[str, list[str]]
-) -> tuple[str, list[str], list[str]]:
-    """
-    Take the raw inference responses, parse out the <final_summary>, and
-    return the model name and final summaries.
-
-    Args:
-        dataset (Dataset): The original dataset (to compare lengths).
-        response_dict (dict[str, list[str]]): Inference responses keyed by model name.
-
-    Returns:
-        tuple[str, list[str], list[str]]:
-            - The name of the summarization model,
-            - The list of raw model summaries,
-            - The list of extracted/parsed final summaries.
-    """
-    documents = dataset["document_text"]
+    # ─── NEW: robust encoding fetch with fallback ────────────────────────────
     try:
-        # Typically only one model is used, so take the first key
-        summ_model_name = list(response_dict.keys())[0]
-        model_raw_summaries: list[str] = response_dict.get(summ_model_name, [])
+        enc = tiktoken.get_encoding(encoding_name)
+    except Exception as e:  # KeyError on unknown name, ValueError on bad cache
+        logger.warning(
+            "Unknown / unavailable encoding '{}'.  Falling back to 'cl100k_base' ({})",
+            encoding_name,
+            str(e)[:60] + ("…" if len(str(e)) > 60 else ""),
+        )
+        enc = tiktoken.get_encoding("cl100k_base")
+    # ────────────────────────────────────────────────────────────────────────
 
-        if not model_raw_summaries:
-            logger.error(
-                "Model '{}' returned no summaries. Check your model configuration.",
-                summ_model_name,
-            )
-            return "", [], []
-    except IndexError:
-        logger.error("No valid model keys found in the response dictionary.")
+    for doc_idx, doc_text in enumerate(dataset["document_text"]):
+        token_len = len(enc.encode(doc_text))
+        if token_len <= max_tokens:  # treat as single chunk (chunk_idx = -1)
+            prompt = CHUNK_SUMMARIZATION_USER_PROMPT.format(chunk=doc_text)
+            calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["chunk_summary"]))
+            mapping.append((doc_idx, -1))
+            continue
+
+        # Long doc ⇒ split & create a call per chunk
+        chunks = split_into_token_chunks(
+            doc_text,
+            chunk_tokens=max_tokens,
+            overlap=overlap,
+            encoding_name=encoding_name,
+        )
+        for chunk_idx, chunk in enumerate(chunks):
+            prompt = CHUNK_SUMMARIZATION_USER_PROMPT.format(chunk=chunk)
+            calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["chunk_summary"]))
+            mapping.append((doc_idx, chunk_idx))
+
+    logger.info("Prepared {} chunk-level inference calls.", len(calls))
+    return calls, mapping
+
+
+def _collect_chunk_summaries(
+    response_dict: dict[str, List[str]],
+    mapping: List[Tuple[int, int]],
+    num_docs: int,
+) -> Tuple[str, List[List[str]], List[List[str]]]:
+    """Re-orders raw model responses back into per-document lists.
+
+    Notes
+    -----
+    `model_name` is always `str` (never None) because we early-return if
+    `response_dict` is empty.
+    """
+    if not response_dict:
         return "", [], []
 
-    # Ensure there's a 1:1 match between documents and summaries
-    if len(model_raw_summaries) != len(documents):
-        logger.warning("Mismatch in number of summaries vs documents. Adjusting list size.")
-        while len(model_raw_summaries) < len(documents):
-            model_raw_summaries.append("")
-        if len(model_raw_summaries) > len(documents):
-            model_raw_summaries = model_raw_summaries[: len(documents)]
+    model_name = list(response_dict.keys())[0]
+    responses = response_dict[model_name]
 
-    extracted_summaries: list[str] = []
-    for i, raw_resp in enumerate(model_raw_summaries):
-        logger.debug("Parsing doc index {}, raw response length={}", i, len(raw_resp))
-        try:
-            parsed = extract_content_from_xml_tags(raw_resp, "final_summary")
-        except Exception as parse_exc:
-            logger.error("Error parsing doc index {}: {}", i, str(parse_exc))
-            parsed = ""
-
-        parsed_stripped = parsed.strip()
-        if not parsed_stripped:
-            logger.warning("No <final_summary> content found for doc index {}.", i)
-            extracted_summaries.append("No summary available for this document.")
+    # Ensure response count matches call count
+    if len(responses) != len(mapping):
+        logger.warning("Response count {} ≠ mapping count {} – truncating/min-padding.", len(responses), len(mapping))
+        # pad / trim
+        diff = len(mapping) - len(responses)
+        if diff > 0:
+            responses.extend([""] * diff)
         else:
-            extracted_summaries.append(parsed_stripped)
+            responses = responses[: len(mapping)]
 
-    return summ_model_name, model_raw_summaries, extracted_summaries
+    # bucket by doc
+    raw_by_doc: List[List[str]] = [[] for _ in range(num_docs)]
+    cleaned_by_doc: List[List[str]] = [[] for _ in range(num_docs)]
+
+    for resp, (doc_idx, _chunk_idx) in zip(responses, mapping):
+        raw_by_doc[doc_idx].append(resp)
+        summary = extract_content_from_xml_tags(resp, "chunk_summary") or extract_content_from_xml_tags(
+            resp, "final_summary"
+        )
+        cleaned_by_doc[doc_idx].append(summary.strip() if summary else "")
+
+    return model_name, raw_by_doc, cleaned_by_doc
 
 
-def _add_summary_columns_to_dataset(
-    dataset: Dataset,
-    summ_model_name: str,
-    raw_summaries: list[str],
-    extracted_summaries: list[str],
-) -> Dataset:
-    """
-    Add the raw and extracted summaries (and model name) as columns to the dataset.
+def _build_combine_calls(summaries_by_doc: List[List[str]]) -> Tuple[List[InferenceCall], List[int]]:
+    """Prepare second-stage calls that merge chunk summaries into one summary."""
+    calls: List[InferenceCall] = []
+    doc_indices: List[int] = []
+    skipped = 0  # MOD: track how many docs are trivially short
 
-    Args:
-        dataset (Dataset): The original dataset.
-        summ_model_name (str): The summarization model's name.
-        raw_summaries (list[str]): The unprocessed summaries from the model.
-        extracted_summaries (list[str]): The parsed/extracted final summaries.
+    for doc_idx, chunk_summaries in enumerate(summaries_by_doc):
+        if len(chunk_summaries) <= 1:  # already short ⇒ skip combine
+            skipped += 1
+            continue
+        bullet_list = "\n".join(f"- {s}" for s in chunk_summaries if s)
+        prompt = COMBINE_SUMMARIES_USER_PROMPT.format(chunk_summaries=bullet_list)
+        calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["merge_summary"]))
+        doc_indices.append(doc_idx)
 
-    Returns:
-        Dataset: The dataset with the added columns.
-    """
-    try:
-        dataset = dataset.add_column("raw_document_summary", raw_summaries)
-    except Exception as e:
-        logger.error("Error adding 'raw_document_summary': {}", str(e))
+    logger.info("Prepared {} reducer calls ({} docs skipped – single / empty chunk).", len(calls), skipped)  # NEW line
+    return calls, doc_indices
 
-    try:
-        dataset = dataset.add_column("document_summary", extracted_summaries)
-    except Exception as e:
-        logger.error("Error adding 'document_summary': {}", str(e))
 
-    try:
-        dataset = dataset.add_column("summarization_model", [summ_model_name] * len(dataset))
-    except Exception as e:
-        logger.error("Error adding 'summarization_model': {}", str(e))
+def _merge_final_summaries(
+    existing_singletons: List[str],
+    combine_responses: List[str],
+    doc_indices: List[int],
+) -> List[str]:
+    """Blend reducer results with already-final single-chunk docs."""
+    final_summaries = existing_singletons.copy()
 
-    return dataset
+    for resp, doc_idx in zip(combine_responses, doc_indices):
+        parsed = extract_content_from_xml_tags(resp, "final_summary")
+        final_summaries[doc_idx] = parsed.strip() if parsed else "No summary available."
+    return final_summaries
+
+
+#################
+# Stage runner  #
+#################
 
 
 def run(config: dict[str, Any]) -> None:
-    """
-    Execute the Summarization Stage of YourBench.
-
-    This stage:
-      1. Loads a dataset of documents from the configuration.
-      2. Uses one or more summarization models to generate summaries for each doc.
-      3. Attempts to parse each model's output for <final_summary> tags.
-      4. Logs results and saves updated columns in the dataset.
-
-    Args:
-        config (dict[str, Any]): The entire pipeline configuration dictionary.
-
-    Returns:
-        None. The function saves the resulting dataset to disk/HF Hub if successful.
-    """
     stage_cfg = config.get("pipeline", {}).get("summarization", {})
-    chunk_tokens = stage_cfg.get("max_tokens", 1024)
+    if not stage_cfg.get("run", False):
+        logger.info("Summarization stage disabled – skipping.")
+        return
+
+    max_tokens = stage_cfg.get("max_tokens", 4096)
     overlap = stage_cfg.get("token_overlap", 100)
     encoding_name = stage_cfg.get("encoding_name", "cl100k_base")
-    if not stage_cfg.get("run", False):
-        logger.info("Summarization stage is disabled. Skipping.")
-        return
 
-    logger.info("Beginning Summarization Stage...")
+    logger.info("=== Summarization v2 – map-reduce ===")
 
-    # 1) Load dataset
+    # 1) Load dataset produced by ingestion
     dataset = custom_load_dataset(config=config, subset="ingested")
-    logger.info(f"Loaded ingested subset with {len(dataset)} rows for summarization.")
+    if len(dataset) == 0:
+        logger.warning("Ingested dataset empty – nothing to summarise.")
+        return
+    logger.info("Loaded {} documents for summarisation.", len(dataset))
 
-    # 2) Prepare calls to summarization model
-    inference_calls = _prepare_inference_calls(
-        dataset,
-        max_tokens=chunk_tokens,
-        overlap=overlap,
-        encoding_name=encoding_name,
+    # 2) First pass – chunk summaries
+    chunk_calls, call_map = _build_chunk_calls(dataset, max_tokens, overlap, encoding_name)
+    chunk_resp = run_inference(config=config, step_name="summarization_chunk", inference_calls=chunk_calls)
+    model_name, raw_chunk_by_doc, clean_chunk_by_doc = _collect_chunk_summaries(chunk_resp, call_map, len(dataset))
+
+    # 3) Second pass – combine summaries where needed
+    combine_calls, doc_indices = _build_combine_calls(clean_chunk_by_doc)
+    combine_summaries_raw: List[str] = []
+    if combine_calls:
+        combine_resp = run_inference(config=config, step_name="summarization_combine", inference_calls=combine_calls)
+        combine_model = list(combine_resp.keys())[0] if combine_resp else model_name
+        if combine_model != model_name:
+            logger.warning("Different model used in reducer stage: {} vs {}", combine_model, model_name)
+        combine_summaries_raw = combine_resp.get(combine_model, []) if combine_resp else []
+
+    # produce final list matching dataset order
+    # Start with single-chunk docs: take their sole summary
+    final_summaries = [docs[0] if docs else "" for docs in clean_chunk_by_doc]
+    if combine_calls:
+        final_summaries = _merge_final_summaries(final_summaries, combine_summaries_raw, doc_indices)
+
+    # 4) Add columns & persist
+    dataset = dataset.add_column("raw_chunk_summaries", raw_chunk_by_doc)
+    dataset = dataset.add_column("chunk_summaries", clean_chunk_by_doc)
+    dataset = dataset.add_column(
+        "raw_document_summary", combine_summaries_raw if combine_calls else [""] * len(dataset)
     )
-    if not inference_calls:
-        # Already logged errors if the dataset is invalid
-        return
+    dataset = dataset.add_column("document_summary", final_summaries)
+    dataset = dataset.add_column("summarization_model", [model_name] * len(dataset))
 
-    # 3) Perform summarization
-    response_dict = _perform_summarization_inference(config, inference_calls)
-    if not response_dict:
-        return
-
-    # 4) Gather and parse model responses
-    summ_model_name, model_raw_summaries, extracted_summaries = _extract_summaries_from_model_output(
-        dataset, response_dict
-    )
-    if not summ_model_name:
-        return
-
-    # 5) Add new columns to the dataset
-    dataset = _add_summary_columns_to_dataset(dataset, summ_model_name, model_raw_summaries, extracted_summaries)
-
-    # 6) Save updated dataset
     custom_save_dataset(dataset=dataset, config=config, subset="summarized")
-    logger.success("Summarization stage completed successfully.")
+    logger.success("Hierarchical summarisation completed ({} documents).", len(dataset))

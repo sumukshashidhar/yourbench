@@ -496,3 +496,26 @@ JUDGE_ANSWER_USER_PROMPT = """<document_summary>
 <answer_b>
 {answer_b}
 </answer_b>"""
+
+CHUNK_SUMMARIZATION_USER_PROMPT = """\
+You are an expert note-taker.  Summarise the following document *chunk* in \
+10-12 crisp sentences capturing only the information that will matter for a \
+later global summary.
+
+<chunk>
+{chunk}
+</chunk>
+
+Wrap your output inside <chunk_summary> tags."""
+
+COMBINE_SUMMARIES_USER_PROMPT = """\
+You will receive a bullet-list of chunk-level summaries from the *same* \
+document.  Combine them into a single, well-structured paragraph that reads \
+naturally and eliminates redundancy.  Keep the final answer under 1/3rd of the \
+original combined length.
+
+<chunk_summaries>
+{chunk_summaries}
+</chunk_summaries>
+
+Return ONLY the final text inside <final_summary> tags."""
