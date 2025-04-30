@@ -1,0 +1,283 @@
+# FAQ: Frequently Asked Questions about YourBench
+
+Welcome to the **YourBench** FAQ! This document aims to answer common questions about what YourBench is, how it works, and how you can use it to generate dynamic, document-grounded evaluation sets for Large Language Models. Below, you'll find practical information on installation, configuration, usage, and more.
+
+---
+
+## 1. What Is YourBench?
+
+**YourBench** is an open-source framework designed to **generate new, domain-specific or up-to-date benchmarks** for evaluating Large Language Models (LLMs). Instead of relying on static (and often outdated or contaminated) benchmarks, YourBench takes _your_ custom documents—such as company reports, specialized academic texts, or newly published web content—and **automatically creates fresh question-answer pairs** to test models on relevant content. By doing so, it helps you:
+
+- Avoid contamination with older, widely used datasets.
+- Generate relevant evaluations for specialized or emerging topics.
+- Automatically produce large volumes of questions with minimal human labor or cost.
+
+YourBench also supports advanced pipeline stages like summarization, chunking, multi-hop question generation, citation filtering, and more, as detailed below.
+
+---
+
+## 2. What Does the General Pipeline Look Like?
+
+YourBench’s pipeline typically consists of these stages (in a default order):
+
+1. **Ingestion**  
+   Converts raw documents (PDF, MD, HTML, DOCX, etc.) into a normalized Markdown/text format.
+
+2. **Upload/Save**  
+   Optionally packages ingested documents into a Hugging Face Dataset and pushes it to the Hub (or saves locally).
+
+3. **Summarization**  
+   Creates short summaries of each document or chunk to provide global context.
+
+4. **Chunking**  
+   Splits documents into manageable single-hop segments (e.g., by tokens or semantically) and optionally creates multi-hop groupings.
+
+5. **Single-Shot Question Generation**  
+   Generates questions from individual chunk(s) plus global summary.
+
+6. **Multi-Hop Question Generation**  
+   Generates more complex, integrative questions by referencing multiple chunks.
+
+7. **LightEval**  
+   Assembles those questions into a final “evaluation dataset” that includes question text, ground truth, citations, and relevant chunk text.
+
+8. **Citation Score Filtering**  
+   Performs fuzzy string matching to gauge how well each question’s citations match the source text, optionally filtering low-scoring items.
+
+You can control which stages run by toggling them in your config (e.g., `pipeline.ingestion.run: true` or `false`).
+
+---
+
+## 3. How Do I Install and Set Up YourBench?
+
+1. **Clone the Repository**  
+   ```bash
+   git clone https://github.com/huggingface/yourbench.git
+   cd yourbench
+   ```
+
+2. **Install Dependencies**  
+   We recommend using a virtual environment. Then install with:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   (If you plan to do semantic chunking or advanced tasks, you’ll need PyTorch, Transformers, etc. as indicated in the repository docs.)
+
+3. **Configure Your Environment Variables**  
+   If you plan to push to the Hugging Face Hub, set your Hugging Face token in an `.env` file or as an environment variable (`HF_TOKEN`).
+
+4. **Prepare a Configuration File**  
+   You can start from `example/configs/simple_example.yaml` or `example/configs/advanced_example.yaml`. Adjust it to point at your source documents and specify the models you want to use.
+
+---
+
+## 4. How Do I Run the Pipeline?
+
+1. **Create or Edit a Config File**  
+   - Check out `example/configs/simple_example.yaml` (the minimal version).
+   - Update `source_documents_dir` to the folder containing your raw data.
+   - Optionally specify which model(s) you want for each pipeline stage in `model_list` and `model_roles`.
+
+2. **Call the YourBench CLI**  
+   From within your repository directory, run:
+   ```bash
+   python -m yourbench.main run --config path/to/your_config.yaml
+   ```
+   You can enable debug logging with this flag.
+   ```bash
+   python -m yourbench.main run --config path/to/your_config.yaml --debug
+   ```
+
+3. **View the Outputs**  
+   - By default, intermediate datasets are stored on Hugging Face Hub (if configured) and/or locally, named according to your `hf_configuration`.
+   - Logs (errors, pipeline progress, etc.) are written to the `logs/` folder.
+
+---
+
+## 5. How Should I Structure My Documents?
+
+YourBench is flexible. Typically:
+
+- **Ingestion** converts each raw file (PDF, MD, HTML, DOCX, etc.) into a standardized Markdown.  
+- If your documents are already in plain text or Markdown, just place them in a folder and point `ingestion.source_documents_dir` there.
+
+Multi-document ingestion is handled automatically: each file becomes a separate “document” entry in the resulting dataset.
+
+---
+
+## 6. Can I Use Multiple Models in the Pipeline?
+
+Absolutely. In your config’s `model_list`, define multiple models. For example:
+```yaml
+model_list:
+  - model_name: gpt-4.1
+    base_url: https://api.openai.com/v1
+    api_key: $OPENAI_API_KEY
+  - model_name: Qwen/Qwen3-30B-A3B
+    provider: fireworks-ai
+```
+Then in `model_roles`, assign which model(s) perform each stage:
+```yaml
+model_roles:
+  ingestion:
+    - Qwen/Qwen3-30B-A3B
+  summarization:
+    - gpt-4.1
+    - Qwen/Qwen3-30B-A3B
+  single_shot_question_generation:
+    - gpt-4.1
+```
+YourBench will run inference calls in parallel for each model assigned.
+
+---
+
+## 7. How Do I Generate Multi-Hop Questions?
+
+- Ensure the pipeline’s `multi_hop_question_generation` stage is set to `run: true`.
+- Make sure your chunking stage is also on and includes `multihop_chunks`, or define multi-hop chunking parameters in your config:
+  ```yaml
+  pipeline:
+    chunking:
+      chunking_configuration:
+        chunking_mode: semantic_chunking
+        h_min: 2
+        h_max: 5
+        num_multihops_factor: 5
+    multi_hop_question_generation:
+      run: true
+      # additional instructions or chunk sampling, etc.
+  ```
+- YourBench will then sample multi-chunk sets and call your chosen model(s) to produce questions requiring multiple pieces of context.
+
+---
+
+## 8. How Does Citation Filtering Work?
+
+After generating questions, YourBench can **verify if each question is grounded** in its source chunk(s) by fuzzy matching. The pipeline stage `citation_score_filtering`:
+
+1. Compares the alleged citations to the actual chunk text (and optionally the ground-truth answer).
+2. Computes a “citation_score” by measuring string overlap (using partial ratio from `thefuzz`).
+3. Lets you filter or rank questions by how strongly they’re anchored in the original text.
+
+---
+
+## 9. Can I Replicate Something Like MMLU with YourBench?
+
+Yes! In the paper, we demonstrate replicating the style and relative difficulty of MMLU subsets:
+
+1. Collect a few relevant documents for each subject domain (e.g., a handful of Wikipedia articles).
+2. Run the pipeline to generate multiple-choice questions.
+3. Evaluate your LLMs on these newly generated sets.
+   
+The results strongly correlated with the original MMLU in ranking models, but the newly generated questions are “harder” and are contamination-resistant. Just be sure to adapt your prompt instructions so that the question generation yields multiple-choice style Q&A.
+
+---
+
+## 10. Where Are My Final Questions Stored?
+
+- After single-shot or multi-hop generation, your “raw” question datasets appear under subset names like `single_shot_questions`, `multi_hop_questions`.
+- The pipeline’s `lighteval` stage merges them into a single dataset called `lighteval`, containing columns like `question`, `ground_truth_answer`, `citations`, and the associated chunk(s).
+- By default, these subsets are saved on the HF Hub (under your designated dataset name) and/or locally, depending on your config.
+
+---
+
+## 11. Do I Have to Push Everything to the Hugging Face Hub?
+
+Not necessarily. In your config’s `hf_configuration`, you can disable or enable pushing:
+
+```yaml
+hf_configuration:
+  local_saving: true
+  # private: true
+  # concat_if_exist: false
+  # ...
+```
+You can set `local_dataset_dir` to a path and store your resulting dataset entirely locally. Or you can combine both local saving and hub pushing. The pipeline is flexible to your preference.
+
+---
+
+## 12. What If My Documents Are Very Large?
+
+For large documents, the pipeline automatically:
+
+- Splits (chunking) by token-based thresholds or semantic boundaries.
+- Summarizes each chunk to keep context windows from overflowing your model’s max context length.
+- Optionally merges chunk-level summaries into a single short “document_summary.”
+
+Because chunking is crucial for big inputs, carefully tune the chunking config (e.g., `l_max_tokens`, overlap, or semantic threshold) to ensure coverage without overloading your model.
+
+---
+
+## 13. What If My Model Has a Specific Context Window or Memory Constraint?
+
+Adjust the pipeline config to keep chunk sizes within that limit. For example:
+```yaml
+pipeline:
+  summarization:
+    max_tokens: 16384
+  chunking:
+    chunking_configuration:
+      chunking_mode: fast_chunking
+      l_max_tokens: 128  # or 1024 or 4096, depending on your model
+      token_overlap: 128
+```
+These parameters let you manage how aggressively we split large documents and how much overlap we maintain between splits.
+
+---
+
+## 14. Is YourBench Only for English Text?
+
+No, the pipeline itself is language-agnostic. If your model supports a given language, YourBench can ingest and generate questions for that language. For chunking in semantic mode, ensure you select a suitable multilingual embedding model (e.g., `intfloat/multilingual-e5-large-instruct`) in the config.
+
+---
+
+## 15. How Do I Control the Cost or Limit Inference Calls?
+
+- **Subset your data** using the `chunk_sampling` config to generate fewer questions.  
+- **Reduce multi-model usage** if you only need a single model for question generation.  
+- **Use smaller language models** for some stages (like summarization or ingestion) while using larger ones only for question generation.  
+- **Lower the `multi_hop_question_generation.num_multihops_factor`** to limit the number of multi-chunk combos.
+
+---
+
+## 16. Where Can I Find Further Technical Details?
+
+- The [**Paper**](https://arxiv.org/abs/2504.01833) provides a conceptual overview, demonstration, and thorough validation results.
+- Each pipeline stage’s code is in `yourbench/pipeline/`.  
+- Utility modules (e.g., for inference concurrency, chunking, dataset management) are in `yourbench/utils/`.
+- The top-level CLI is in `yourbench/main.py`.
+
+---
+
+## 17. How Can I Contribute or Raise Issues?
+
+We welcome feedback, feature requests, and bug reports! Feel free to:
+
+- Open an issue on our GitHub repository.
+- Submit a pull request if you have improvements or new features to propose.
+
+---
+
+## 18. Any Ethical Considerations?
+
+YourBench can automate large-scale question generation and potentially replace some annotation tasks, which raises labor considerations. Additionally, if your LLM is biased or inaccurate, those biases can propagate into the generated benchmarks. It’s crucial to:
+
+- Evaluate the outputs with human oversight.
+- Use filtering steps (e.g., citation_score_filtering) or human review to catch low-quality or biased content.
+- Be transparent about how these synthetic benchmarks are created.
+
+---
+
+## 19. What’s Next?
+
+Consider trying these advanced workflows:
+
+- **Creating Domain-Specific Benchmarks**: Provide proprietary or niche documents (e.g., medical guidelines, legal briefs) to assess your model’s real-world domain knowledge.
+- **Temporal Evaluations**: Use newly published documents (like the `Tempora-0325` set from the paper) to see if your model can handle post-training knowledge.
+- **Multi-hop Reasoning**: If your domain’s content requires integrative questions, ensure multi-hop chunk generation is enabled.
+
+Happy benchmarking, and we hope YourBench transforms how you generate and evaluate custom LLM benchmarks!
+
+---
+
+*If you have other questions, please open an Issue or check the repository’s README for the most up-to-date information.*
