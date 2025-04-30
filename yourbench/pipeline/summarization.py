@@ -47,6 +47,7 @@ See Also:
 - yourbench.utils.dataset_engine for loading/saving dataset
 """
 
+
 from __future__ import annotations
 from typing import Any, List, Tuple
 
@@ -75,7 +76,7 @@ def _build_chunk_calls(
     overlap: int,
     encoding_name: str,
 ) -> Tuple[List[InferenceCall], List[Tuple[int, int]]]:
-    """Prepare inference calls for first‑level chunk summaries.
+    """Prepare inference calls for first-level chunk summaries.
 
     Returns
     -------
@@ -84,7 +85,17 @@ def _build_chunk_calls(
     calls: List[InferenceCall] = []
     mapping: List[Tuple[int, int]] = []  # (doc_index, chunk_index)
 
-    enc = tiktoken.get_encoding(encoding_name)
+    # ─── NEW: robust encoding fetch with fallback ────────────────────────────
+    try:
+        enc = tiktoken.get_encoding(encoding_name)
+    except Exception as e:  # KeyError on unknown name, ValueError on bad cache
+        logger.warning(
+            "Unknown / unavailable encoding '{}'.  Falling back to 'cl100k_base' ({})",
+            encoding_name,
+            str(e)[:60] + ("…" if len(str(e)) > 60 else ""),
+        )
+        enc = tiktoken.get_encoding("cl100k_base")
+    # ────────────────────────────────────────────────────────────────────────
 
     for doc_idx, doc_text in enumerate(dataset["document_text"]):
         token_len = len(enc.encode(doc_text))
@@ -106,7 +117,7 @@ def _build_chunk_calls(
             calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["chunk_summary"]))
             mapping.append((doc_idx, chunk_idx))
 
-    logger.info("Prepared {} chunk‑level inference calls.", len(calls))
+    logger.info("Prepared {} chunk-level inference calls.", len(calls))
     return calls, mapping
 
 
@@ -115,7 +126,13 @@ def _collect_chunk_summaries(
     mapping: List[Tuple[int, int]],
     num_docs: int,
 ) -> Tuple[str, List[List[str]], List[List[str]]]:
-    """Re‑orders raw model responses back into per‑document lists."""
+    """Re-orders raw model responses back into per-document lists.
+
+    Notes
+    -----
+    `model_name` is always `str` (never None) because we early-return if
+    `response_dict` is empty.
+    """
     if not response_dict:
         return "", [], []
 
@@ -124,7 +141,7 @@ def _collect_chunk_summaries(
 
     # Ensure response count matches call count
     if len(responses) != len(mapping):
-        logger.warning("Response count {} ≠ mapping count {} – truncating/min‑padding.", len(responses), len(mapping))
+        logger.warning("Response count {} ≠ mapping count {} – truncating/min-padding.", len(responses), len(mapping))
         # pad / trim
         diff = len(mapping) - len(responses)
         if diff > 0:
@@ -147,19 +164,21 @@ def _collect_chunk_summaries(
 
 
 def _build_combine_calls(summaries_by_doc: List[List[str]]) -> Tuple[List[InferenceCall], List[int]]:
-    """Prepare second‑stage calls that merge chunk summaries into one summary."""
+    """Prepare second-stage calls that merge chunk summaries into one summary."""
     calls: List[InferenceCall] = []
     doc_indices: List[int] = []
+    skipped = 0  # MOD: track how many docs are trivially short
 
     for doc_idx, chunk_summaries in enumerate(summaries_by_doc):
         if len(chunk_summaries) <= 1:  # already short ⇒ skip combine
+            skipped += 1
             continue
         bullet_list = "\n".join(f"- {s}" for s in chunk_summaries if s)
         prompt = COMBINE_SUMMARIES_USER_PROMPT.format(chunk_summaries=bullet_list)
         calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["merge_summary"]))
         doc_indices.append(doc_idx)
 
-    logger.info("Prepared {} reducer inference calls.", len(calls))
+    logger.info("Prepared {} reducer calls ({} docs skipped – single / empty chunk).", len(calls), skipped)  # NEW line
     return calls, doc_indices
 
 
@@ -168,7 +187,7 @@ def _merge_final_summaries(
     combine_responses: List[str],
     doc_indices: List[int],
 ) -> List[str]:
-    """Blend reducer results with already‑final single‑chunk docs."""
+    """Blend reducer results with already-final single-chunk docs."""
     final_summaries = existing_singletons.copy()
 
     for resp, doc_idx in zip(combine_responses, doc_indices):
@@ -192,7 +211,7 @@ def run(config: dict[str, Any]) -> None:
     overlap = stage_cfg.get("token_overlap", 100)
     encoding_name = stage_cfg.get("encoding_name", "cl100k_base")
 
-    logger.info("=== Summarization v2 – map‑reduce ===")
+    logger.info("=== Summarization v2 – map-reduce ===")
 
     # 1) Load dataset produced by ingestion
     dataset = custom_load_dataset(config=config, subset="ingested")
@@ -217,7 +236,7 @@ def run(config: dict[str, Any]) -> None:
         combine_summaries_raw = combine_resp.get(combine_model, []) if combine_resp else []
 
     # produce final list matching dataset order
-    # Start with single‑chunk docs: take their sole summary
+    # Start with single-chunk docs: take their sole summary
     final_summaries = [docs[0] if docs else "" for docs in clean_chunk_by_doc]
     if combine_calls:
         final_summaries = _merge_final_summaries(final_summaries, combine_summaries_raw, doc_indices)
@@ -233,3 +252,4 @@ def run(config: dict[str, Any]) -> None:
 
     custom_save_dataset(dataset=dataset, config=config, subset="summarized")
     logger.success("Hierarchical summarisation completed ({} documents).", len(dataset))
+
