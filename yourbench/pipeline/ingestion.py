@@ -55,7 +55,7 @@ from yourbench.utils.inference_engine import Model as ModelConfig
 class IngestionConfig:
     """Configuration for the ingestion stage of the pipeline."""
 
-    run: bool = False
+    run: bool = True
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
 
