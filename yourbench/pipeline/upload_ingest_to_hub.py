@@ -122,6 +122,7 @@ def run(config: dict[str, Any]) -> None:
             f"Attempting to use 'output_dir' from the 'ingestion' stage."
         )
         ingestion_cfg = config.get("pipeline", {}).get("ingestion", {})
+        print(ingestion_cfg)
         source_dir = ingestion_cfg.get("output_dir")
 
     if not source_dir:
