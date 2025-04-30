@@ -114,13 +114,26 @@ def run(config: dict[str, Any]) -> None:
         return
 
     source_dir: Optional[str] = stage_cfg.get("source_documents_dir")
+
+    # If source_dir is not provided, try to get it from the ingestion stage output
+    if not source_dir:
+        logger.info(
+            f"'source_documents_dir' not specified for '{stage_name}'. "
+            f"Attempting to use 'output_dir' from the 'ingestion' stage."
+        )
+        ingestion_cfg = config.get("pipeline", {}).get("ingestion", {})
+        source_dir = ingestion_cfg.get("output_dir")
+
     if not source_dir:
         error_msg = (
-            f"Missing required field 'source_documents_dir' in pipeline.{stage_name}. "
-            f"Cannot proceed with uploading ingested documents."
+            f"Missing required directory configuration. Please specify either "
+            f"'source_documents_dir' in pipeline.{stage_name} or "
+            f"'output_dir' in pipeline.ingestion."
         )
         logger.error(error_msg)
         raise ValueError(error_msg)
+
+    logger.info(f"Using source directory: {source_dir}")
 
     # Collect .md files
     md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
