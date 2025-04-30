@@ -103,13 +103,22 @@ def run_pipeline(
 
     # === Execute pipeline stages in the fixed default order ===
     for stage_name in DEFAULT_STAGE_ORDER:
-        stage_settings = pipeline_config.get(stage_name)
-        if stage_settings is None:
-            logger.debug(f"Stage '{stage_name}' is not in the config. Skipping.")
+        # Check if the stage is mentioned in the pipeline config at all
+        if stage_name not in pipeline_config:
+            logger.debug(f"Stage '{stage_name}' is not mentioned in the config. Skipping.")
             continue
 
-        run_stage = stage_settings.get("run")
-        if run_stage is not None and not run_stage:
+        # Get the settings for the stage. It might be None or a dict.
+        stage_settings = pipeline_config.get(stage_name)
+        if not pipeline_config[stage_name]:
+            pipeline_config[stage_name] = {}
+        pipeline_config[stage_name]["run"] = True
+
+        # Default to running if the stage is mentioned, unless 'run: false' is explicitly set.
+        if isinstance(stage_settings, dict) and stage_settings.get("run") is False:
+            pipeline_config[stage_name]["run"] = False
+
+        if not pipeline_config[stage_name]["run"]:
             logger.info(f"Skipping stage: '{stage_name}' (run set to False).")
             continue
 
@@ -119,6 +128,10 @@ def run_pipeline(
 
         logger.info(f"Starting execution of stage: '{stage_name}'")
         stage_start_time: float = time.time()
+
+        # Ensure the specific stage config is at least an empty dict if it was None
+        if stage_name in config.get("pipeline", {}) and config["pipeline"][stage_name] is None:
+            config["pipeline"][stage_name] = {}
 
         try:
             # Dynamically import the stage module, e.g. yourbench.pipeline.ingestion
