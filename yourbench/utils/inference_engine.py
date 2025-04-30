@@ -32,7 +32,6 @@ class Model:
     max_concurrent_requests: int = 16
 
     def __post_init__(self):
-
         if self.api_key is None:
             self.api_key = os.getenv("HF_TOKEN", None)
 
