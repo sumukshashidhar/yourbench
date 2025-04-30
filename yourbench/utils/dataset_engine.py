@@ -13,6 +13,7 @@ class ConfigurationError(Exception):
 
     pass
 
+
 def _safe_get_organization(config: Dict, dataset_name: str, organization: str, token: str) -> str:
     if not organization or (isinstance(organization, str) and organization.startswith("$")):
         if isinstance(organization, str) and organization.startswith("$"):
@@ -38,14 +39,10 @@ def _safe_get_organization(config: Dict, dataset_name: str, organization: str, t
                     )
                     organization = None
             except HFValidationError as ve:
-                logger.warning(
-                    f"Invalid Hugging Face token provided: {ve}. Proceeding without organization prefix."
-                )
+                logger.warning(f"Invalid Hugging Face token provided: {ve}. Proceeding without organization prefix.")
                 organization = None
             except Exception as e:  # Catch other potential issues like network errors
-                logger.warning(
-                    f"Failed to fetch username via whoami: {e}. Proceeding without organization prefix."
-                )
+                logger.warning(f"Failed to fetch username via whoami: {e}. Proceeding without organization prefix.")
                 organization = None
         else:
             logger.warning(
