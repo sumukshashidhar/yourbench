@@ -2,6 +2,7 @@
 Inference Engine For Yourbench - Now with true concurrency throttling.
 """
 
+import os
 import time
 import uuid
 import asyncio
@@ -11,7 +12,6 @@ from dataclasses import field, dataclass
 from dotenv import load_dotenv
 from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
-import os
 
 from huggingface_hub import AsyncInferenceClient
 
@@ -32,7 +32,7 @@ class Model:
     max_concurrent_requests: int = 16
 
     def __post_init__(self):
-        import os
+
         if self.api_key is None:
             self.api_key = os.getenv("HF_TOKEN", None)
 
