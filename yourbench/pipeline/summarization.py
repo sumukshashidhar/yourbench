@@ -47,7 +47,6 @@ See Also:
 - yourbench.utils.dataset_engine for loading/saving dataset
 """
 
-
 from __future__ import annotations
 from typing import Any, List, Tuple
 
@@ -252,4 +251,3 @@ def run(config: dict[str, Any]) -> None:
 
     custom_save_dataset(dataset=dataset, config=config, subset="summarized")
     logger.success("Hierarchical summarisation completed ({} documents).", len(dataset))
-
