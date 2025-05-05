@@ -168,12 +168,12 @@ def _parse_chunking_parameters(config: Dict[str, Any]) -> ChunkingParameters:
     """
     chunking_params = config.get("pipeline", {}).get("chunking", {}).get("chunking_configuration", {})
     return ChunkingParameters(
-        l_min_tokens=chunking_params.get("l_min_tokens", 64),
-        l_max_tokens=chunking_params.get("l_max_tokens", 128),
-        tau_threshold=chunking_params.get("tau_threshold", 0.3),
+        l_min_tokens=chunking_params.get("l_min_tokens", 128),
+        l_max_tokens=chunking_params.get("l_max_tokens", 256),
+        tau_threshold=chunking_params.get("tau_threshold", 0.7),
         h_min=chunking_params.get("h_min", 2),
-        h_max=chunking_params.get("h_max", 3),
-        num_multihops_factor=chunking_params.get("num_multihops_factor", 2),
+        h_max=chunking_params.get("h_max", 5),
+        num_multihops_factor=chunking_params.get("num_multihops_factor", 1),
         chunking_mode=chunking_params.get("chunking_mode", "fast_chunking"),
     )
 

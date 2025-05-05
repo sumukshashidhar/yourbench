@@ -86,7 +86,7 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
 
         dataset_name = hf_config["hf_dataset_name"]
         organization = hf_config.get("hf_organization")
-        token = hf_config.get("token")
+        token = hf_config.get("token") if "token" in hf_config else os.getenv("HF_TOKEN", None)
 
         # Attempt to get default username if organization is missing or unexpanded
         organization = _safe_get_organization(config, dataset_name, organization, token)
