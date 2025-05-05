@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-from datasets import Dataset, DatasetDict, load_dataset, concatenate_datasets, load_from_disk
+from datasets import Dataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from huggingface_hub import HfApi, whoami
 from huggingface_hub.utils import HFValidationError
 
@@ -86,7 +86,7 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
 
         dataset_name = hf_config["hf_dataset_name"]
         organization = hf_config.get("hf_organization")
-        token = hf_config.get("token")
+        token = hf_config.get("token") if "token" in hf_config else os.getenv("HF_TOKEN", None)
 
         # Attempt to get default username if organization is missing or unexpanded
         organization = _safe_get_organization(config, dataset_name, organization, token)
@@ -151,6 +151,7 @@ def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) ->
     local_dataset_dir = config.get("local_dataset_dir", None)
     if local_dataset_dir:
         import os
+
         if os.path.exists(local_dataset_dir):
             logger.info(f"Loading dataset locally from '{local_dataset_dir}'")
             dataset = load_from_disk(local_dataset_dir)
@@ -163,7 +164,9 @@ def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) ->
                     return Dataset.from_dict({})
             return dataset
         else:
-            logger.warning(f"local_dataset_dir '{local_dataset_dir}' does not exist. Falling back to Hugging Face Hub.")
+            logger.warning(
+                f"local_dataset_dir '{local_dataset_dir}' does not exist. Falling back to Hugging Face Hub."
+            )
     dataset_repo_name = _get_full_dataset_repo_name(config)
     logger.info(f"Loading dataset HuggingFace Hub with repo_id='{dataset_repo_name}'")
     # If subset name does NOT exist, return an empty dataset to avoid the crash:
@@ -187,9 +190,9 @@ def custom_save_dataset(
 ) -> None:
     """
     Save a dataset subset locally and push it to Hugging Face Hub.
-    
+
     When saving locally:
-    - If a subset is specified, it will be added to an existing dataset or 
+    - If a subset is specified, it will be added to an existing dataset or
       create a new DatasetDict containing that subset.
     - All subsets are saved to the same local_dataset_dir.
     """
@@ -199,7 +202,7 @@ def custom_save_dataset(
     local_dataset_dir = config.get("local_dataset_dir", None)
     if local_dataset_dir and save_local:
         logger.info(f"Saving dataset locally to: '{local_dataset_dir}'")
-        
+
         # Check if dataset exists at the specified location
         if os.path.exists(local_dataset_dir):
             try:
@@ -210,12 +213,12 @@ def custom_save_dataset(
                         # To avoid the "dataset can't overwrite itself" error,
                         # create a new dataset dictionary instead of modifying the existing one
                         new_dataset_dict = DatasetDict()
-                        
+
                         # Copy all existing subsets except the one we're updating
                         for key, value in existing_dataset.items():
                             if key != subset:
                                 new_dataset_dict[key] = value
-                        
+
                         # Add the new subset
                         new_dataset_dict[subset] = dataset
                         logger.info(f"Adding/updating subset '{subset}' to existing dataset")
@@ -245,10 +248,10 @@ def custom_save_dataset(
                 local_dataset = DatasetDict({subset: dataset})
             else:
                 local_dataset = dataset
-            
+
             # Create the directory if it doesn't exist
             os.makedirs(local_dataset_dir, exist_ok=True)
-        
+
         try:
             # Save the dataset to disk
             local_dataset.save_to_disk(local_dataset_dir)
@@ -257,21 +260,23 @@ def custom_save_dataset(
             if "dataset can't overwrite itself" in str(e):
                 # Handle the specific error where a dataset can't overwrite itself
                 logger.warning("Dataset can't overwrite itself. Attempting to save with a temporary directory...")
-                import tempfile
                 import shutil
-                
+                import tempfile
+
                 # Create a temporary directory
                 with tempfile.TemporaryDirectory() as temp_dir:
                     # Save to temporary directory first
                     local_dataset.save_to_disk(temp_dir)
-                    
+
                     # Remove the existing dataset directory
                     shutil.rmtree(local_dataset_dir)
-                    
+
                     # Copy from temporary directory to the target directory
                     shutil.copytree(temp_dir, local_dataset_dir)
-                    
-                logger.success(f"Dataset successfully saved locally to: '{local_dataset_dir}' using a temporary directory")
+
+                logger.success(
+                    f"Dataset successfully saved locally to: '{local_dataset_dir}' using a temporary directory"
+                )
             else:
                 # Re-raise if it's a different permission error
                 raise

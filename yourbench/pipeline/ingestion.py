@@ -55,7 +55,7 @@ from yourbench.utils.inference_engine import Model as ModelConfig
 class IngestionConfig:
     """Configuration for the ingestion stage of the pipeline."""
 
-    run: bool = False
+    run: bool = True
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
 
@@ -91,7 +91,7 @@ def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
 
     stage_config = config.get("pipeline", {}).get("ingestion", {})
     return IngestionConfig(
-        run=stage_config.get("run", False),
+        run=stage_config.get("run", True),
         source_documents_dir=stage_config.get("source_documents_dir"),
         output_dir=stage_config.get("output_dir"),
     )

@@ -206,8 +206,8 @@ def run(config: dict[str, Any]) -> None:
         logger.info("Summarization stage disabled – skipping.")
         return
 
-    max_tokens = stage_cfg.get("max_tokens", 4096)
-    overlap = stage_cfg.get("token_overlap", 100)
+    max_tokens = stage_cfg.get("max_tokens", 16384)
+    overlap = stage_cfg.get("token_overlap", 128)
     encoding_name = stage_cfg.get("encoding_name", "cl100k_base")
 
     logger.info("=== Summarization v2 – map-reduce ===")

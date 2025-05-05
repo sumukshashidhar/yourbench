@@ -1,6 +1,6 @@
 [project]
 name = "yourbench"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
     { name = "Sumuk Shashidhar", email = "sumuks2@illinois.edu" },
     { name = "Alina Lozovskaia", email = "alina.lozovskaia@huggingface.co" },
@@ -18,7 +18,7 @@ dependencies = [
     "hf-transfer>=0.1.9",
     "huggingface-hub[inference]==0.30.1",
     "loguru>=0.7.3",
-    "markitdown[docx,pdf,pptx]>=0.0.2",
+    "markitdown[all]>=0.0.2",
     "matplotlib>=3.10.0",
     "python-dotenv>=1.0.1",
     "rich>=13.7.0",
