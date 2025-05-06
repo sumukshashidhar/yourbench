@@ -110,13 +110,10 @@ def run_pipeline(
 
         # Get the settings for the stage. It might be None or a dict.
         stage_settings = pipeline_config.get(stage_name)
-        if not pipeline_config[stage_name]:
-            pipeline_config[stage_name] = {}
-        pipeline_config[stage_name]["run"] = True
-
-        # Default to running if the stage is mentioned, unless 'run: false' is explicitly set.
-        if isinstance(stage_settings, dict) and stage_settings.get("run") is False:
-            pipeline_config[stage_name]["run"] = False
+        if not isinstance(stage_settings, dict):
+            pipeline_config[stage_name] = {"run": True}
+        elif "run" not in stage_settings:
+            pipeline_config[stage_name]["run"] = True
 
         if not pipeline_config[stage_name]["run"]:
             logger.info(f"Skipping stage: '{stage_name}' (run set to False).")
