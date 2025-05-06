@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
 
-from huggingface_hub import AsyncInferenceClient
+from huggingface_hub import AsyncInferenceClient, whoami
 
 
 load_dotenv()
@@ -28,12 +28,16 @@ class Model:
     provider: str | None = None
     base_url: str | None = None
     api_key: str | None = field(default=None, repr=False)
+    bill_to: str | None = None
 
     max_concurrent_requests: int = 16
 
     def __post_init__(self):
         if self.api_key is None:
             self.api_key = os.getenv("HF_TOKEN", None)
+        if self.bill_to is None and self.base_url is None:
+            # assume we are using HF inference providers
+            self.api_key = os.getenv("HF_ORGANIZATION", whoami(token=self.api_key))
 
 
 @dataclass
@@ -80,6 +84,7 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
         base_url=model.base_url,
         api_key=model.api_key,
         provider=model.provider,
+        bill_to=model.bill_to,
         timeout=GLOBAL_TIMEOUT,
         headers={"X-Request-ID": request_id},
     )
