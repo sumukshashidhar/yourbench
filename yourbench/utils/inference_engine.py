@@ -35,9 +35,6 @@ class Model:
     def __post_init__(self):
         if self.api_key is None:
             self.api_key = os.getenv("HF_TOKEN", None)
-        if self.bill_to is None and self.base_url is None:
-            # assume we are using HF inference providers
-            self.api_key = os.getenv("HF_ORGANIZATION", whoami(token=self.api_key))
 
 
 @dataclass
