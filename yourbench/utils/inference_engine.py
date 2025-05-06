@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
 
-from huggingface_hub import AsyncInferenceClient, whoami
+from huggingface_hub import AsyncInferenceClient
 
 
 load_dotenv()
