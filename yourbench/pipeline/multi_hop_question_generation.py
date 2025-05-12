@@ -12,8 +12,8 @@ Purpose:
 --------
 This module implements the multi-hop question generation stage within the YourBench pipeline.
 It processes a dataset of documents—each containing a list of multi-hop chunks—and generates
-multi-hop questions requiring integrative reasoning across those chunks. It uses a large
-language model to produce question-answer pairs in JSON format.
+multi-hop questions requiring integrative reasoning across those chunks. It uses a Large
+Language Model (LLM) to produce question-answer pairs in JSON format.
 
 Usage:
 ------
@@ -26,8 +26,8 @@ This module is typically invoked as part of the overall YourBench pipeline. It e
 
 The module then:
 1. Optionally samples multi-hop chunks from each document.
-2. Prompts a large language model to generate multi-hop question-answer pairs.
-3. Parses and saves the generated questions in a structured dataset.
+2. Prompts a Large Language Model (LLM) to generate multi-hop question-answer pairs.
+3. Parses and saves the generated questions in a structured HuggingFace `Dataset`.
 
 Error Handling and Logging:
 ---------------------------
@@ -38,13 +38,13 @@ Error Handling and Logging:
 
 Module-Level Dependencies:
 --------------------------
+- Requires Python 3.9+ for modern type annotations (`list[...]`, `dict[...]`).
 - Relies on the shared pipeline utilities (e.g., `yourbench.utils.dataset_engine`,
   `yourbench.utils.inference_engine`, `yourbench.utils.prompts`).
 - Preserves the existing signature and functionality for downstream consistency.
 """
-
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict
 from dataclasses import field, dataclass
 
 from loguru import logger
@@ -73,11 +73,11 @@ class QuestionAnswerPair:
 
     question: str
     answer: str
-    choices: List[str]
+    choices: list[str]
     estimated_difficulty: int = 5
     question_type: str = "unknown"
     thought_process: str = ""
-    citations: List[str] = field(default_factory=list)
+    citations: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         # Normalize fields
@@ -90,7 +90,7 @@ class QuestionAnswerPair:
             self.citations = []
 
         if not isinstance(self.choices, list):
-            self.citations = []
+            self.choices = []
 
 
 @dataclass
@@ -100,16 +100,16 @@ class MultiHopQuestionRow:
     """
 
     document_id: str
-    source_chunk_ids: List[str]
+    source_chunk_ids: list[str]
     additional_instructions: str
     question: str
     self_answer: str
-    choices: List[str]
+    choices: list[str]
     estimated_difficulty: int
     self_assessed_question_type: str
     generating_model: str
     thought_process: str
-    citations: List[str] = field(default_factory=list)
+    citations: list[str] = field(default_factory=list)
     raw_response: str = field(default="")
 
     @classmethod
@@ -117,7 +117,7 @@ class MultiHopQuestionRow:
         cls,
         qa_pair: QuestionAnswerPair,
         document_id: str,
-        source_chunk_ids: List[str],
+        source_chunk_ids: list[str],
         generating_model: str,
         raw_response: str = "",
         additional_instructions: str = "",
@@ -239,8 +239,8 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
 
 
 def _sample_multi_hop_chunks(
-    mh_chunks: List[Dict[str, Any]], chunk_sampling_cfg: Dict[str, Any]
-) -> List[Dict[str, Any]]:
+    mh_chunks: list[Dict[str, Any]], chunk_sampling_cfg: Dict[str, Any]
+) -> list[Dict[str, Any]]:
     """
     Sample multi-hop chunks based on the stage configuration.
     """
@@ -274,7 +274,7 @@ def _sample_multi_hop_chunks(
     return mh_chunks
 
 
-def _multihop_qa_generation(config: Dict[str, Any], inference_calls: List[InferenceCall]):
+def _multihop_qa_generation(config: Dict[str, Any], inference_calls: list[InferenceCall]):
     """
     Call the inference engine to get multi-hop Q&A responses.
     """
@@ -288,8 +288,8 @@ def _multihop_qa_generation(config: Dict[str, Any], inference_calls: List[Infere
 
 def _parse_and_build_final(
     config: Dict[str, Any],
-    responses_dict: Dict[str, List[str]],
-    call_index_map: List[tuple],
+    responses_dict: Dict[str, list[str]],
+    call_index_map: list[tuple],
     stage_config: Dict[str, Any],
 ) -> Dataset:
     """
