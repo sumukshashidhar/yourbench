@@ -207,18 +207,23 @@ pipeline:
     # You can add global instructions guiding question style, difficulty, domain specificity:
     # additional_instructions: "Generate factual, short-answer questions at a college level."
 
+    # Control the format of generated questions:
+    # question_type: "open-ended"   # "open-ended" (default): model generates the answer to the question
+    #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
+
     # If your documents are large, you can randomly sample chunks to reduce cost:
     # chunk_sampling:
     #   mode: "count"        # "count" or "percentage" or "all"
     #   value: 5             # e.g. pick 5 random chunks per doc 
     #   random_seed: 123
 
-  # 6) MULTI_HOP_QUESTION_GENERATION
-  # Uses the “multihop_chunks” created by the chunking stage. The model is prompted
-  # to integrate knowledge across multiple chunks, producing more complex questions.
   multi_hop_question_generation:
     run: true
     # additional_instructions: "Try to integrate multiple pieces of evidence across chunks to create deeper questions."
+
+    # Control the format of generated questions:
+    # question_type: "open-ended"   # "open-ended" (default): model generates the answer to the question
+    #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
 
     # Similarly, you can sample the multi-hop chunks to cut down on inference:
     # chunk_sampling:

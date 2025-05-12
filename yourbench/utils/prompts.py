@@ -41,7 +41,7 @@ SUMMARIZATION_USER_PROMPT = """You are an AI assistant tasked with analyzing and
 Remember, your task is to provide a clear, accurate, and concise summary of the document's content, disregarding any web-related artifacts or unnecessary elements. For long documents, ensure your summary reflects the complete scope and structure of the content."""
 
 
-QUESTION_GENERATION_SYSTEM_PROMPT = """## Your Role
+QUESTION_GENERATION_SYSTEM_PROMPT_HEADER = """## Your Role
 
 You are an expert educational content creator specializing in crafting thoughtful, rich, and engaging questions based on provided textual information. Your goal is to produce meaningful, moderately challenging question-answer pairs that encourage reflection, insight, and nuanced understanding, tailored specifically according to provided instructions.
 
@@ -133,9 +133,9 @@ Conduct careful analysis within `<document_analysis>` XML tags, following these 
 - False-premise
 - Edge-case
 
-(You do not need to use every question type, only those naturally fitting the content and instructions.)
+(You do not need to use every question type, only those naturally fitting the content and instructions.)"""
 
-## Output Structure
+QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT = """## Output Structure
 
 Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
 
@@ -153,10 +153,58 @@ class QuestionAnswerPair(BaseModel):
 
 ## Output Format
 
-Begin by thoughtfully analyzing the provided text_chunk within `<document_analysis>` XML tags. Then present the resulting JSON-formatted QuestionAnswerPairs clearly within `<output_json>` XML tags.
+Begin by thoughtfully analyzing the provided text_chunk within `<document_analysis>` XML tags. Then present the resulting JSON-formatted QuestionAnswerPairs clearly within `<output_json>` XML tags."""
 
-## Important Notes
+QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI = """## Output Structure
 
+Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
+
+```python
+class MultipleChoiceQuestion(BaseModel):
+    thought_process: str  # Rationale for the question and distractors
+    question_type: Literal["analytical", "application-based", "clarification",
+                           "counterfactual", "conceptual", "true-false",
+                           "factual", "false-premise", "edge-case"]
+    question: str
+    answer: str  # One of "A", "B", "C", or "D"
+    choices: List[str]  # Must contain exactly 4 items
+    estimated_difficulty: int  # 1-10
+    citations: List[str]  # Direct support from the text_chunk
+```
+
+## Output Format
+
+Begin by thoughtfully analyzing the provided <text_chunk> within <document_analysis> XML tags. Your analysis should identify the key concepts, technical details, and reasoning opportunities found in the text.
+
+Then present the resulting multiple-choice questions as valid JSON objects within <output_json> tags, strictly following this structure:
+
+<document_analysis>
+- Key concept: ...
+- Important facts: ...
+- Reasoning opportunities: ...
+</document_analysis>
+
+<output_json>
+[
+  {
+    "thought_process": "This question targets understanding of how the chunk explains the purpose of semantic chunking in document processing. Distractors are phrased using near-synonyms or subtle distortions of the true concept.",
+    "question_type": "conceptual",
+    "question": "What is the primary reason for using semantic chunking in document preprocessing?",
+    "choices": [
+      "(A) To compress the document into fewer tokens.",
+      "(B) To group content based on semantic similarity and token limits.",
+      "(C) To translate the text into multiple languages.",
+      "(D) To strip metadata and formatting from the input file."
+    ],
+    "answer": "B",
+    "estimated_difficulty": 6,
+    "citations": ["Semantic chunking partitions documents into coherent segments based on semantic similarity and token length constraints."]
+  },
+  ...
+]
+</output_json>"""
+
+QUESTION_GENERATION_SYSTEM_PROMPT_FOOTER = """## Important Notes
 - Strive to generate questions that inspire genuine curiosity, reflection, and thoughtful engagement.
 - Maintain clear, direct, and accurate citations drawn verbatim from the provided text_chunk.
 - Ensure complexity and depth reflect thoughtful moderation as guided by the additional instructions.
@@ -165,6 +213,16 @@ Begin by thoughtfully analyzing the provided text_chunk within `<document_analys
 - When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material
 """
 
+QUESTION_GENERATION_SYSTEM_PROMPT = (
+    QUESTION_GENERATION_SYSTEM_PROMPT_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT
+    + QUESTION_GENERATION_SYSTEM_PROMPT_FOOTER
+)
+QUESTION_GENERATION_SYSTEM_PROMPT_MULTI = (
+    QUESTION_GENERATION_SYSTEM_PROMPT_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI
+    + QUESTION_GENERATION_SYSTEM_PROMPT_FOOTER
+)
 
 QUESTION_GENERATION_USER_PROMPT = """<title>
 {title}
@@ -183,7 +241,7 @@ QUESTION_GENERATION_USER_PROMPT = """<title>
 </additional_instructions>"""
 
 
-MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT = """## Your Role
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER = """## Your Role
 
 You are an expert educational content creator specialized in generating insightful and thoughtfully designed multi-hop questions. Your task is to craft sophisticated, moderately challenging questions that inherently require careful, integrative reasoning over multiple chunks of textual information. Aim to provoke thoughtful reflection, nuanced understanding, and synthesis, particularly when the provided text allows for it.
 
@@ -273,40 +331,28 @@ Perform careful analysis within `<document_analysis>` XML tags:
   - If, upon careful analysis, a chunk does not provide sufficient meaningful context or substantial educational relevance, explicitly note this in the `<document_analysis>` section and refrain from generating questions based on it.
 
 - **Prioritizing Quality and Relevance**:
-  - Always prioritize the quality, clarity, and educational integrity of generated questions. Do not force questions from unsuitable content.
+  - Always prioritize the quality, clarity, and educational integrity of generated questions. Do not force questions from unsuitable content."""
 
 
-## Output Structure
-
-Present output as JSON objects conforming strictly to the following Pydantic model within `<output_json>` XML tags:
-
-```python
-class QuestionAnswerPair(BaseModel):
-    thought_process: str # Explanation of integrative reasoning and rationale
-    question_type: Literal["analytical", "application-based", "clarification",
-                           "counterfactual", "conceptual", "true-false",
-                           "factual", "open-ended", "false-premise", "edge-case"]
-    question: str
-    answer: str
-    estimated_difficulty: int  # 1-10, moderately challenging as per additional instructions
-    citations: List[str]  # Exact supporting quotes from text_chunks
-```
-
-## Output Format
-
-First, thoroughly conduct your analysis within `<document_analysis>` XML tags. Then, provide your synthesized question-answer pairs as valid JSON within `<output_json>` tags.
-
-## Important Notes
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER = """## Important Notes
 - Prioritize depth and thoughtfulness in your reasoning paths.
 - Allow natural complexity to guide question formulation, aiming for moderate challenge.
 - Precisely cite verbatim excerpts from text chunks.
 - Clearly communicate your thought process for integrative reasoning.
 - Adhere strictly to JSON formatting and Pydantic validation requirements.
 - Generate questions that genuinely inspire deeper reflection or meaningful exploration of the provided content.
-- When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material
+- When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material"""
 
-"""
-
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT = (
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT
+    + MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER
+)
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI = (
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI
+    + MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER
+)
 
 MULTI_HOP_QUESTION_GENERATION_USER_PROMPT = """<title>
 {title}

@@ -1,5 +1,7 @@
 import re
 import json
+import random
+import hashlib
 from typing import Any
 
 from loguru import logger
@@ -147,3 +149,40 @@ def _attempt_json_parse(json_str: str) -> Any:
         return json.loads(json_str)
     except Exception:
         return None
+
+
+def shuffle_mcq(question_dict: dict) -> dict:
+    """
+    Shuffles MCQ choices randomly and ensures the correct answer is placed under a random label A-D.
+    The final choices are labeled A., B., C., D. in order, but the correct answer may be under any of them.
+    """
+    labeled_choices = question_dict.get("choices", [])
+    answer_letter = question_dict.get("answer", "").strip().upper()
+
+    if not labeled_choices or not answer_letter:
+        return question_dict
+
+    # Extract raw text (removing A., B., etc.)
+    raw_choices = [choice[3:].strip() for choice in labeled_choices]
+    answer_index = ord(answer_letter) - ord("A")
+    answer_choice_text = raw_choices[answer_index]
+
+    # Shuffle the raw choices randomly
+    seed_input = repr((raw_choices, answer_letter))
+    seed = int(hashlib.sha256(seed_input.encode()).hexdigest(), 16)
+
+    rng = random.Random(seed)
+    rng.shuffle(raw_choices)
+
+    # Find new index of the correct choice
+    new_correct_index = raw_choices.index(answer_choice_text)
+    new_answer_letter = chr(ord("A") + new_correct_index)
+
+    # Re-label as A., B., C., D.
+    labeled_shuffled = [f"({chr(ord('A') + i)}) {text}" for i, text in enumerate(raw_choices)]
+
+    # Update the question dict
+    question_dict["choices"] = labeled_shuffled
+    question_dict["answer"] = new_answer_letter
+
+    return question_dict

@@ -171,10 +171,17 @@ def run(config: Dict[str, Any]) -> None:
         # chunk text is chunk_text_map[chunk_id] if it exists
         chunk_text = chunk_text_map.get(chunk_id, "")
 
+        # if multiple choice question convert to number
+        gold = row.get("self_answer", "")
+        if row.get("choices"):
+            gold = [ord(gold) - ord("A")]
+
         return {
             "question": row.get("question", ""),
             "additional_instructions": row.get("additional_instructions", ""),
             "ground_truth_answer": row.get("self_answer", ""),
+            "gold": gold,
+            "choices": row.get("choices", []),
             "question_category": row.get("self_assessed_question_type", "unknown"),
             "kind": "single_shot",
             "estimated_difficulty": row.get("estimated_difficulty", 5),
@@ -207,10 +214,17 @@ def run(config: Dict[str, Any]) -> None:
             if ctxt:
                 chunk_texts.append(ctxt)
 
+        # if multiple choice question convert to number
+        gold = row.get("self_answer", "")
+        if row.get("choices"):
+            gold = [ord(gold) - ord("A")]
+
         return {
             "question": row.get("question", ""),
             "additional_instructions": row.get("additional_instructions", ""),
             "ground_truth_answer": row.get("self_answer", ""),
+            "gold": gold,
+            "choices": row.get("choices", []),
             "question_category": row.get("self_assessed_question_type", "unknown"),
             "kind": "multi_hop",
             "estimated_difficulty": row.get("estimated_difficulty", 5),

@@ -12,8 +12,8 @@ Purpose:
 --------
 This module implements the multi-hop question generation stage within the YourBench pipeline.
 It processes a dataset of documents—each containing a list of multi-hop chunks—and generates
-multi-hop questions requiring integrative reasoning across those chunks. It uses a large
-language model to produce question-answer pairs in JSON format.
+multi-hop questions requiring integrative reasoning across those chunks. It uses a Large
+Language Model (LLM) to produce question-answer pairs in JSON format.
 
 Usage:
 ------
@@ -26,8 +26,8 @@ This module is typically invoked as part of the overall YourBench pipeline. It e
 
 The module then:
 1. Optionally samples multi-hop chunks from each document.
-2. Prompts a large language model to generate multi-hop question-answer pairs.
-3. Parses and saves the generated questions in a structured dataset.
+2. Prompts a Large Language Model (LLM) to generate multi-hop question-answer pairs.
+3. Parses and saves the generated questions in a structured HuggingFace `Dataset`.
 
 Error Handling and Logging:
 ---------------------------
@@ -38,13 +38,14 @@ Error Handling and Logging:
 
 Module-Level Dependencies:
 --------------------------
+- Requires Python 3.9+ for modern type annotations (`list[...]`, `dict[...]`).
 - Relies on the shared pipeline utilities (e.g., `yourbench.utils.dataset_engine`,
   `yourbench.utils.inference_engine`, `yourbench.utils.prompts`).
 - Preserves the existing signature and functionality for downstream consistency.
 """
 
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict
 from dataclasses import field, dataclass
 
 from loguru import logger
@@ -53,6 +54,7 @@ from datasets import Dataset
 from yourbench.utils.prompts import (
     MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
     MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
 )
 from yourbench.utils.dataset_engine import (
     custom_load_dataset,
@@ -60,7 +62,7 @@ from yourbench.utils.dataset_engine import (
 )
 
 # Import the unified parsing function
-from yourbench.utils.parsing_engine import parse_qa_pairs_from_response
+from yourbench.utils.parsing_engine import shuffle_mcq, parse_qa_pairs_from_response
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
@@ -72,10 +74,11 @@ class QuestionAnswerPair:
 
     question: str
     answer: str
+    choices: list[str]
     estimated_difficulty: int = 5
     question_type: str = "unknown"
     thought_process: str = ""
-    citations: List[str] = field(default_factory=list)
+    citations: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         # Normalize fields
@@ -87,6 +90,9 @@ class QuestionAnswerPair:
         if not isinstance(self.citations, list):
             self.citations = []
 
+        if not isinstance(self.choices, list):
+            self.choices = []
+
 
 @dataclass
 class MultiHopQuestionRow:
@@ -95,15 +101,16 @@ class MultiHopQuestionRow:
     """
 
     document_id: str
-    source_chunk_ids: List[str]
+    source_chunk_ids: list[str]
     additional_instructions: str
     question: str
     self_answer: str
+    choices: list[str]
     estimated_difficulty: int
     self_assessed_question_type: str
     generating_model: str
     thought_process: str
-    citations: List[str] = field(default_factory=list)
+    citations: list[str] = field(default_factory=list)
     raw_response: str = field(default="")
 
     @classmethod
@@ -111,7 +118,7 @@ class MultiHopQuestionRow:
         cls,
         qa_pair: QuestionAnswerPair,
         document_id: str,
-        source_chunk_ids: List[str],
+        source_chunk_ids: list[str],
         generating_model: str,
         raw_response: str = "",
         additional_instructions: str = "",
@@ -122,6 +129,7 @@ class MultiHopQuestionRow:
             additional_instructions=additional_instructions,
             question=qa_pair.question,
             self_answer=qa_pair.answer,
+            choices=qa_pair.choices,
             estimated_difficulty=qa_pair.estimated_difficulty,
             self_assessed_question_type=qa_pair.question_type,
             generating_model=generating_model,
@@ -171,10 +179,16 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
       - inference_calls: list of InferenceCall
       - call_index_map: parallel list of (row_idx, doc_id, source_chunk_ids)
     """
+
+    if stage_cfg.get("question_type") == "multi-choice":
+        system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+    else:
+        system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
     system_msg = {
         "role": "system",
-        "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+        "content": system_prompt,
     }
+
     all_inference_calls = []
     call_index_map = []
 
@@ -185,12 +199,12 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
 
         multi_hop_chunks = row.get("multihop_chunks", [])
         if not isinstance(multi_hop_chunks, list) or not multi_hop_chunks:
-            logger.debug(f"No multi-hop chunks found in row index={row_idx}, doc_id={doc_id}. Skipping row.")
+            logger.warning(f"No multi-hop chunks found in row index={row_idx}, doc_id={doc_id}. Skipping row.")
             continue
 
         chosen_multi_hops = _sample_multi_hop_chunks(multi_hop_chunks, stage_cfg.get("chunk_sampling", {}))
         if not chosen_multi_hops:
-            logger.debug(f"Row idx={row_idx} doc_id={doc_id} had multi-hop chunks but none after sampling.")
+            logger.warning(f"Row idx={row_idx} doc_id={doc_id} had multi-hop chunks but none after sampling.")
             continue
 
         additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
@@ -226,8 +240,8 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
 
 
 def _sample_multi_hop_chunks(
-    mh_chunks: List[Dict[str, Any]], chunk_sampling_cfg: Dict[str, Any]
-) -> List[Dict[str, Any]]:
+    mh_chunks: list[Dict[str, Any]], chunk_sampling_cfg: Dict[str, Any]
+) -> list[Dict[str, Any]]:
     """
     Sample multi-hop chunks based on the stage configuration.
     """
@@ -241,7 +255,7 @@ def _sample_multi_hop_chunks(
     random.seed(rand_seed)
 
     total_multi_hops = len(mh_chunks)
-    if total_multi_hops == 0:
+    if total_multi_hops < 2:  # if 0 or 1 chunk
         return mh_chunks
 
     if mode == "percentage":
@@ -261,7 +275,7 @@ def _sample_multi_hop_chunks(
     return mh_chunks
 
 
-def _multihop_qa_generation(config: Dict[str, Any], inference_calls: List[InferenceCall]):
+def _multihop_qa_generation(config: Dict[str, Any], inference_calls: list[InferenceCall]):
     """
     Call the inference engine to get multi-hop Q&A responses.
     """
@@ -275,8 +289,8 @@ def _multihop_qa_generation(config: Dict[str, Any], inference_calls: List[Infere
 
 def _parse_and_build_final(
     config: Dict[str, Any],
-    responses_dict: Dict[str, List[str]],
-    call_index_map: List[tuple],
+    responses_dict: Dict[str, list[str]],
+    call_index_map: list[tuple],
     stage_config: Dict[str, Any],
 ) -> Dataset:
     """
@@ -305,10 +319,13 @@ def _parse_and_build_final(
             # Otherwise, process each QA pair
             for qap_dict in qa_pairs:
                 try:
+                    # Shuffle before wrapping into dataclass
+                    qap_dict = shuffle_mcq(qap_dict)
                     # Convert dictionary -> QuestionAnswerPair
                     pair_obj = QuestionAnswerPair(
                         question=qap_dict.get("question", ""),
                         answer=qap_dict.get("answer", ""),
+                        choices=qap_dict.get("choices", []),
                         estimated_difficulty=qap_dict.get("estimated_difficulty", 5),
                         question_type=qap_dict.get("question_type", "unknown"),
                         thought_process=qap_dict.get("thought_process", ""),
