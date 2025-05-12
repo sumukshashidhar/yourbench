@@ -288,8 +288,13 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
     """
     logger.debug("Converting file: {}", file_path)
     try:
-        # Perform the file-to-markdown conversion
-        conversion_result = markdown_processor.convert(file_path)
+        # Skipping conversion if file already in markdown
+        if os.path.splitext(file_path)[1] == ".md":
+            with open(file_path, "r") as f:
+                content = f.read()
+        else:
+            # Perform the file-to-markdown conversion
+            content = markdown_processor.convert(file_path).text_content
 
         # Construct an output filename with .md extension
         base_name = os.path.basename(file_path)
@@ -298,7 +303,7 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
 
         # Write the converted Markdown to disk
         with open(output_file, "w", encoding="utf-8") as out_f:
-            out_f.write(conversion_result.text_content)
+            out_f.write(content)
 
         logger.info(f"Successfully converted '{file_path}' -> '{output_file}'.")
     except Exception as exc:
