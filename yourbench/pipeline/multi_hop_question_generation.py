@@ -53,6 +53,7 @@ from datasets import Dataset
 from yourbench.utils.prompts import (
     MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
     MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
 )
 from yourbench.utils.dataset_engine import (
     custom_load_dataset,
@@ -60,7 +61,7 @@ from yourbench.utils.dataset_engine import (
 )
 
 # Import the unified parsing function
-from yourbench.utils.parsing_engine import parse_qa_pairs_from_response
+from yourbench.utils.parsing_engine import shuffle_mcq, parse_qa_pairs_from_response
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
@@ -72,6 +73,7 @@ class QuestionAnswerPair:
 
     question: str
     answer: str
+    choices: List[str]
     estimated_difficulty: int = 5
     question_type: str = "unknown"
     thought_process: str = ""
@@ -87,6 +89,9 @@ class QuestionAnswerPair:
         if not isinstance(self.citations, list):
             self.citations = []
 
+        if not isinstance(self.choices, list):
+            self.citations = []
+
 
 @dataclass
 class MultiHopQuestionRow:
@@ -99,6 +104,7 @@ class MultiHopQuestionRow:
     additional_instructions: str
     question: str
     self_answer: str
+    choices: List[str]
     estimated_difficulty: int
     self_assessed_question_type: str
     generating_model: str
@@ -122,6 +128,7 @@ class MultiHopQuestionRow:
             additional_instructions=additional_instructions,
             question=qa_pair.question,
             self_answer=qa_pair.answer,
+            choices=qa_pair.choices,
             estimated_difficulty=qa_pair.estimated_difficulty,
             self_assessed_question_type=qa_pair.question_type,
             generating_model=generating_model,
@@ -171,10 +178,16 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
       - inference_calls: list of InferenceCall
       - call_index_map: parallel list of (row_idx, doc_id, source_chunk_ids)
     """
+
+    if stage_cfg.get("question_type") == "multi-choice":
+        system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+    else:
+        system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
     system_msg = {
         "role": "system",
-        "content": MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+        "content": system_prompt,
     }
+
     all_inference_calls = []
     call_index_map = []
 
@@ -185,12 +198,12 @@ def _multihop_chunk_sampling_and_calls(dataset, stage_cfg: Dict[str, Any]):
 
         multi_hop_chunks = row.get("multihop_chunks", [])
         if not isinstance(multi_hop_chunks, list) or not multi_hop_chunks:
-            logger.debug(f"No multi-hop chunks found in row index={row_idx}, doc_id={doc_id}. Skipping row.")
+            logger.warning(f"No multi-hop chunks found in row index={row_idx}, doc_id={doc_id}. Skipping row.")
             continue
 
         chosen_multi_hops = _sample_multi_hop_chunks(multi_hop_chunks, stage_cfg.get("chunk_sampling", {}))
         if not chosen_multi_hops:
-            logger.debug(f"Row idx={row_idx} doc_id={doc_id} had multi-hop chunks but none after sampling.")
+            logger.warning(f"Row idx={row_idx} doc_id={doc_id} had multi-hop chunks but none after sampling.")
             continue
 
         additional_instructions = stage_cfg.get("additional_instructions", "undergraduate")
@@ -241,7 +254,7 @@ def _sample_multi_hop_chunks(
     random.seed(rand_seed)
 
     total_multi_hops = len(mh_chunks)
-    if total_multi_hops == 0:
+    if total_multi_hops < 2:  # if 0 or 1 chunk
         return mh_chunks
 
     if mode == "percentage":
@@ -305,10 +318,13 @@ def _parse_and_build_final(
             # Otherwise, process each QA pair
             for qap_dict in qa_pairs:
                 try:
+                    # Shuffle before wrapping into dataclass
+                    qap_dict = shuffle_mcq(qap_dict)
                     # Convert dictionary -> QuestionAnswerPair
                     pair_obj = QuestionAnswerPair(
                         question=qap_dict.get("question", ""),
                         answer=qap_dict.get("answer", ""),
+                        choices=qap_dict.get("choices", []),
                         estimated_difficulty=qap_dict.get("estimated_difficulty", 5),
                         question_type=qap_dict.get("question_type", "unknown"),
                         thought_process=qap_dict.get("thought_process", ""),
