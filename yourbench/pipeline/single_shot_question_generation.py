@@ -38,6 +38,7 @@ from datasets import Dataset
 from yourbench.utils.prompts import (
     QUESTION_GENERATION_USER_PROMPT,
     QUESTION_GENERATION_SYSTEM_PROMPT,
+    QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
 )
 from yourbench.utils.dataset_engine import (
     custom_load_dataset,
@@ -45,7 +46,7 @@ from yourbench.utils.dataset_engine import (
 )
 
 # Import the unified parsing function
-from yourbench.utils.parsing_engine import parse_qa_pairs_from_response
+from yourbench.utils.parsing_engine import shuffle_mcq, parse_qa_pairs_from_response
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
@@ -72,6 +73,7 @@ class SingleHopQuestionRow:
     additional_instructions: str
     question: str
     self_answer: str
+    choices: list[str]
     estimated_difficulty: int
     self_assessed_question_type: str
     generating_model: str
@@ -94,6 +96,7 @@ class SingleShotQuestionGenerationConfig:
     output_subset: str = ""
     additional_instructions: str = "Generate questions to test an undergraduate student"
     chunk_sampling: ChunkSamplingConfig = field(default_factory=ChunkSamplingConfig)
+    question_type: str = "open-ended"
 
 
 @dataclass
@@ -158,6 +161,7 @@ def _load_stage_config(config: dict[str, Any]) -> SingleShotQuestionGenerationCo
         output_subset=stage_config_dict.get("output_subset", ""),
         additional_instructions=stage_config_dict.get("additional_instructions", "undergraduate"),
         chunk_sampling=chunk_sampling,
+        question_type=stage_config_dict.get("question_type", "open-ended"),
     )
 
 
@@ -204,7 +208,13 @@ def _build_inference_calls(dataset, stage_config: SingleShotQuestionGenerationCo
     Create the InferenceCall objects needed for single-shot question generation.
     Returns the list of calls and a parallel mapping of (row_index, doc_id, chunk_id).
     """
-    system_message = {"role": "system", "content": QUESTION_GENERATION_SYSTEM_PROMPT}
+
+    if stage_config.question_type == "multi-choice":
+        system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+    else:
+        system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT
+
+    system_message = {"role": "system", "content": system_prompt}
     inference_calls = []
     call_index_mapping = []
 
@@ -299,9 +309,12 @@ def _process_responses_and_build_dataset(
             # Otherwise, process each QA pair
             for pair in qa_pairs:
                 try:
+                    # Shuffle MCQ before extracting fields
+                    pair = shuffle_mcq(pair)
                     # Safely extract data from pair
                     question_text = str(pair.get("question", "")).strip()
                     answer_text = str(pair.get("answer", "")).strip()
+                    choices = pair.get("choices", [])
                     difficulty_val = _force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10)
                     question_type = str(pair.get("question_type", "unknown"))
                     thought_process = str(pair.get("thought_process", ""))
@@ -320,6 +333,7 @@ def _process_responses_and_build_dataset(
                         additional_instructions=stage_config.additional_instructions,
                         question=question_text,
                         self_answer=answer_text,
+                        choices=choices,
                         estimated_difficulty=difficulty_val,
                         self_assessed_question_type=question_type,
                         generating_model=model_name,
