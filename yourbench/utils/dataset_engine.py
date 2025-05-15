@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from loguru import logger
 
@@ -165,9 +165,13 @@ def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) ->
     In offline mode, only load from local directory.
     """
     local_dataset_dir = config.get("local_dataset_dir", None)
-    if local_dataset_dir is None and "hf_configuration" in config and "local_dataset_dir" in config["hf_configuration"]:
+    if (
+        local_dataset_dir is None
+        and "hf_configuration" in config
+        and "local_dataset_dir" in config["hf_configuration"]
+    ):
         local_dataset_dir = config["hf_configuration"].get("local_dataset_dir")
-    
+
     # First try loading from local path
     if local_dataset_dir:
         if os.path.exists(local_dataset_dir):
@@ -193,11 +197,11 @@ def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) ->
     if _is_offline_mode():
         logger.warning("Offline mode enabled but no local dataset found. Returning empty dataset.")
         return Dataset.from_dict({})
-    
+
     # If we're here, try to get from Hub
     dataset_repo_name = _get_full_dataset_repo_name(config)
     logger.info(f"Loading dataset from HuggingFace Hub with repo_id='{dataset_repo_name}'")
-    
+
     # If subset name does NOT exist, return an empty dataset to avoid the crash:
     try:
         return load_dataset(dataset_repo_name, name=subset, split="train")
@@ -235,7 +239,11 @@ def custom_save_dataset(
     dataset_repo_name = _get_full_dataset_repo_name(config)
 
     local_dataset_dir = config.get("local_dataset_dir", None)
-    if local_dataset_dir is None and "hf_configuration" in config and "local_dataset_dir" in config["hf_configuration"]:
+    if (
+        local_dataset_dir is None
+        and "hf_configuration" in config
+        and "local_dataset_dir" in config["hf_configuration"]
+    ):
         local_dataset_dir = config["hf_configuration"].get("local_dataset_dir")
 
     if local_dataset_dir and save_local:
