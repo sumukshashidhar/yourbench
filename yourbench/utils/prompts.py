@@ -4,7 +4,7 @@ This module contains the prompts for the pipeline stages.
 
 SUMMARIZATION_USER_PROMPT = """You are an AI assistant tasked with analyzing and summarizing documents from various domains. Your goal is to generate a concise yet comprehensive summary of the given document. Follow these steps carefully:
 
-1. You will be provided with a document extracted from a website. This document may contain unnecessary artifacts such as links, HTML tags, or other web-related elements.
+1. You will be provided with a document extracted from a website. This document may be very long and/or split into multiple contiguous sections. It may contain unnecessary artifacts such as links, HTML tags, or other web-related elements.
 
 2. Here is the document to be summarized:
 <document>
@@ -15,15 +15,15 @@ SUMMARIZATION_USER_PROMPT = """You are an AI assistant tasked with analyzing and
 
 <scratchpad>
 - Main topic: [Note the main subject of the document]
-- Key points: [List important information]
-- Structure: [Note how the document is organized]
+- Key points: [List important information across the entire document]
+- Structure: [Note how the document is organized or chunked]
 - Potential artifacts to ignore: [List any web-related elements that should be disregarded]
 </scratchpad>
 
 4. As you analyze the document:
    - Focus solely on the content, ignoring any unnecessary web-related elements.
-   - Identify the main topic and key points.
-   - Note any important details, facts, or arguments presented.
+   - Treat all sections or chunks as part of a single, continuous document.
+   - Identify the main topic and key points from the entire input.
    - Pay attention to the overall structure and flow of the document.
 
 5. After your analysis, generate a final summary that:
@@ -38,10 +38,10 @@ SUMMARIZATION_USER_PROMPT = """You are an AI assistant tasked with analyzing and
 [Your concise and comprehensive summary of the document goes here.]
 </final_summary>
 
-Remember, your task is to provide a clear, accurate, and concise summary of the document's content, disregarding any web-related artifacts or unnecessary elements."""
+Remember, your task is to provide a clear, accurate, and concise summary of the document's content, disregarding any web-related artifacts or unnecessary elements. For long documents, ensure your summary reflects the complete scope and structure of the content."""
 
 
-QUESTION_GENERATION_SYSTEM_PROMPT = """## Your Role
+QUESTION_GENERATION_SYSTEM_PROMPT_HEADER = """## Your Role
 
 You are an expert educational content creator specializing in crafting thoughtful, rich, and engaging questions based on provided textual information. Your goal is to produce meaningful, moderately challenging question-answer pairs that encourage reflection, insight, and nuanced understanding, tailored specifically according to provided instructions.
 
@@ -92,6 +92,24 @@ Conduct careful analysis within `<document_analysis>` XML tags, following these 
 4. **Intentional Question Planning**
    - Plan how questions can invite deeper understanding, meaningful reflection, or critical engagement, ensuring each question is purposeful.
 
+## Additional Instructions for Handling Irrelevant or Bogus Information
+
+### Identification and Ignoring of Irrelevant Information:
+
+- **Irrelevant Elements:** Explicitly disregard hyperlinks, advertisements, headers, footers, navigation menus, disclaimers, social media buttons, or any content clearly irrelevant or external to the core information of the text chunk.
+- **Bogus Information:** Detect and exclude any information that appears nonsensical or disconnected from the primary subject matter.
+
+### Decision Criteria for Question Generation:
+
+- **Meaningful Content Requirement:** Only generate questions if the provided `<text_chunk>` contains meaningful, coherent, and educationally valuable content.
+- **Complete Irrelevance:** If the entire `<text_chunk>` consists exclusively of irrelevant, promotional, web navigation, footer, header, or non-informational text, explicitly state this in your analysis and do NOT produce any question-answer pairs.
+
+### Documentation in Analysis:
+
+- Clearly document the rationale in the `<document_analysis>` tags when identifying irrelevant or bogus content, explaining your reasons for exclusion or inclusion decisions.
+- Briefly justify any decision NOT to generate questions due to irrelevance or poor quality content.
+
+
 ## Question Generation Guidelines
 
 ### Encouraged Question Characteristics:
@@ -115,9 +133,9 @@ Conduct careful analysis within `<document_analysis>` XML tags, following these 
 - False-premise
 - Edge-case
 
-(You do not need to use every question type, only those naturally fitting the content and instructions.)
+(You do not need to use every question type, only those naturally fitting the content and instructions.)"""
 
-## Output Structure
+QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT = """## Output Structure
 
 Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
 
@@ -135,10 +153,58 @@ class QuestionAnswerPair(BaseModel):
 
 ## Output Format
 
-Begin by thoughtfully analyzing the provided text_chunk within `<document_analysis>` XML tags. Then present the resulting JSON-formatted QuestionAnswerPairs clearly within `<output_json>` XML tags.
+Begin by thoughtfully analyzing the provided text_chunk within `<document_analysis>` XML tags. Then present the resulting JSON-formatted QuestionAnswerPairs clearly within `<output_json>` XML tags."""
 
-## Important Notes
+QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI = """## Output Structure
 
+Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
+
+```python
+class MultipleChoiceQuestion(BaseModel):
+    thought_process: str  # Rationale for the question and distractors
+    question_type: Literal["analytical", "application-based", "clarification",
+                           "counterfactual", "conceptual", "true-false",
+                           "factual", "false-premise", "edge-case"]
+    question: str
+    answer: str  # One of "A", "B", "C", or "D"
+    choices: List[str]  # Must contain exactly 4 items
+    estimated_difficulty: int  # 1-10
+    citations: List[str]  # Direct support from the text_chunk
+```
+
+## Output Format
+
+Begin by thoughtfully analyzing the provided <text_chunk> within <document_analysis> XML tags. Your analysis should identify the key concepts, technical details, and reasoning opportunities found in the text.
+
+Then present the resulting multiple-choice questions as valid JSON objects within <output_json> tags, strictly following this structure:
+
+<document_analysis>
+- Key concept: ...
+- Important facts: ...
+- Reasoning opportunities: ...
+</document_analysis>
+
+<output_json>
+[
+  {
+    "thought_process": "This question targets understanding of how the chunk explains the purpose of semantic chunking in document processing. Distractors are phrased using near-synonyms or subtle distortions of the true concept.",
+    "question_type": "conceptual",
+    "question": "What is the primary reason for using semantic chunking in document preprocessing?",
+    "choices": [
+      "(A) To compress the document into fewer tokens.",
+      "(B) To group content based on semantic similarity and token limits.",
+      "(C) To translate the text into multiple languages.",
+      "(D) To strip metadata and formatting from the input file."
+    ],
+    "answer": "B",
+    "estimated_difficulty": 6,
+    "citations": ["Semantic chunking partitions documents into coherent segments based on semantic similarity and token length constraints."]
+  },
+  ...
+]
+</output_json>"""
+
+QUESTION_GENERATION_SYSTEM_PROMPT_FOOTER = """## Important Notes
 - Strive to generate questions that inspire genuine curiosity, reflection, and thoughtful engagement.
 - Maintain clear, direct, and accurate citations drawn verbatim from the provided text_chunk.
 - Ensure complexity and depth reflect thoughtful moderation as guided by the additional instructions.
@@ -147,6 +213,16 @@ Begin by thoughtfully analyzing the provided text_chunk within `<document_analys
 - When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material
 """
 
+QUESTION_GENERATION_SYSTEM_PROMPT = (
+    QUESTION_GENERATION_SYSTEM_PROMPT_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT
+    + QUESTION_GENERATION_SYSTEM_PROMPT_FOOTER
+)
+QUESTION_GENERATION_SYSTEM_PROMPT_MULTI = (
+    QUESTION_GENERATION_SYSTEM_PROMPT_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI
+    + QUESTION_GENERATION_SYSTEM_PROMPT_FOOTER
+)
 
 QUESTION_GENERATION_USER_PROMPT = """<title>
 {title}
@@ -165,7 +241,7 @@ QUESTION_GENERATION_USER_PROMPT = """<title>
 </additional_instructions>"""
 
 
-MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT = """## Your Role
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER = """## Your Role
 
 You are an expert educational content creator specialized in generating insightful and thoughtfully designed multi-hop questions. Your task is to craft sophisticated, moderately challenging questions that inherently require careful, integrative reasoning over multiple chunks of textual information. Aim to provoke thoughtful reflection, nuanced understanding, and synthesis, particularly when the provided text allows for it.
 
@@ -245,27 +321,20 @@ Perform careful analysis within `<document_analysis>` XML tags:
 - False-premise
 - Edge-case
 
-## Output Structure
 
-Present output as JSON objects conforming strictly to the following Pydantic model within `<output_json>` XML tags:
+## **Filtering Irrelevant Content**:
+  - **Ignore completely** any irrelevant, redundant, promotional, or unrelated content, including headers, footers, navigation links, promotional materials, ads, or extraneous hyperlinks frequently found in web extracts.
+  - **Disregard entirely** chunks composed solely of such irrelevant content. Do **not** generate questions from these chunks.
+  - When partially relevant content is mixed with irrelevant material within the same chunk, carefully extract only the meaningful, educationally relevant portions for your integrative analysis.
 
-```python
-class QuestionAnswerPair(BaseModel):
-    thought_process: str # Explanation of integrative reasoning and rationale
-    question_type: Literal["analytical", "application-based", "clarification", 
-                           "counterfactual", "conceptual", "true-false", 
-                           "factual", "open-ended", "false-premise", "edge-case"]
-    question: str
-    answer: str
-    estimated_difficulty: int  # 1-10, moderately challenging as per additional instructions
-    citations: List[str]  # Exact supporting quotes from text_chunks
-```
+- **Evaluating Chunk Quality**:
+  - If, upon careful analysis, a chunk does not provide sufficient meaningful context or substantial educational relevance, explicitly note this in the `<document_analysis>` section and refrain from generating questions based on it.
 
-## Output Format
+- **Prioritizing Quality and Relevance**:
+  - Always prioritize the quality, clarity, and educational integrity of generated questions. Do not force questions from unsuitable content."""
 
-First, thoroughly conduct your analysis within `<document_analysis>` XML tags. Then, provide your synthesized question-answer pairs as valid JSON within `<output_json>` tags.
 
-## Important Notes
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER = """## Important Notes
 - Prioritize depth and thoughtfulness in your reasoning paths.
 - Allow natural complexity to guide question formulation, aiming for moderate challenge.
 - Precisely cite verbatim excerpts from text chunks.
@@ -274,6 +343,16 @@ First, thoroughly conduct your analysis within `<document_analysis>` XML tags. T
 - Generate questions that genuinely inspire deeper reflection or meaningful exploration of the provided content.
 - When generating questions, NEVER include phrases like 'as per the text,' 'according to the document,' or any similar explicit references. Questions should inherently integrate content naturally and stand independently without explicit references to the source material"""
 
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT = (
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT
+    + MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER
+)
+MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI = (
+    MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER
+    + QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI
+    + MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER
+)
 
 MULTI_HOP_QUESTION_GENERATION_USER_PROMPT = """<title>
 {title}
@@ -463,3 +542,26 @@ JUDGE_ANSWER_USER_PROMPT = """<document_summary>
 <answer_b>
 {answer_b}
 </answer_b>"""
+
+CHUNK_SUMMARIZATION_USER_PROMPT = """\
+You are an expert note-taker.  Summarise the following document *chunk* in \
+10-12 crisp sentences capturing only the information that will matter for a \
+later global summary.
+
+<chunk>
+{chunk}
+</chunk>
+
+Wrap your output inside <chunk_summary> tags."""
+
+COMBINE_SUMMARIES_USER_PROMPT = """\
+You will receive a bullet-list of chunk-level summaries from the *same* \
+document.  Combine them into a single, well-structured paragraph that reads \
+naturally and eliminates redundancy.  Keep the final answer under 1/3rd of the \
+original combined length.
+
+<chunk_summaries>
+{chunk_summaries}
+</chunk_summaries>
+
+Return ONLY the final text inside <final_summary> tags."""

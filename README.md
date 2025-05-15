@@ -22,22 +22,34 @@
   <strong>
     [<a href="https://github.com/huggingface/yourbench">GitHub</a>] 
     &middot; 
-    [<a href="https://huggingface.co/datasets/sumuks/yourbench_y1">Dataset</a>] 
+    [<a href="https://huggingface.co/datasets/sumuks/tempora">Dataset</a>] 
     &middot; 
     [<a href="https://github.com/huggingface/yourbench/tree/main/docs">Documentation</a>]
+    &middot;
+    [<a href="https://arxiv.org/abs/2504.01833">Paper</a>]
   </strong>
 </p>
 
 <!-- Example badges -->
-<a href="https://github.com/sumukshashidhar/yourbench/stargazers">
-  <img src="https://img.shields.io/github/stars/sumukshashidhar/yourbench?style=social" alt="GitHub Repo stars">
+<a href="https://github.com/huggingface/yourbench/stargazers">
+  <img src="https://img.shields.io/github/stars/huggingface/yourbench?style=social" alt="GitHub Repo stars">
 </a>
+
+<p align="center">
+  <a href="https://youtu.be/mhszO6kZSbI">
+    <img src="https://img.youtube.com/vi/mhszO6kZSbI/maxresdefault.jpg" alt="YourBench Demo Video" width="600" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+    <br>
+    <img src="https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch Demo on YouTube">
+    <br>
+    <em>Watch our 3-minute demo of the YourBench pipeline</em>
+  </a>
+</p>
 
 </div>
 
 ---
 
-> **YourBench** is an open-source framework for generating domain-specific benchmarks in a zero-shot manner, inspired by modern software testing practices. It aims to keep your large language models on their toes—even as new data sources, domains, and knowledge demands evolve.
+> **YourBench** is an open-source framework for generating domain-specific benchmarks in a zero-shot manner. It aims to keep your large language models on their toes—even as new data sources, domains, and knowledge demands evolve.
 
 **Highlights**:
 - **Dynamic Benchmark Generation**: Produce diverse, up-to-date questions from real-world source documents (PDF, Word, HTML, even multimedia).
@@ -55,43 +67,132 @@ git clone https://github.com/huggingface/yourbench.git
 cd yourbench
 
 # Use uv to install the dependencies
+# pip install uv # if you do not have uv already
 uv venv
 source .venv/bin/activate
 uv sync
+uv pip install -e .
 
 # 3. Get a key from https://openrouter.ai/ and add it to the .env file (or make your own config with a different model!)
 touch .env
-echo "OPENROUTER_API_KEY=<your_openrouter_api_key>" >> .env
+echo "HF_TOKEN=<your_huggingface_token>" >> .env
+echo "HF_ORGANIZATION=<your_HF_username_or_organization>" >> .env
 
 # 4. Run the pipeline with an example config
-yourbench --config configs/example.yaml
+yourbench run --config example/configs/example.yaml
 ```
-
-You can also launch a minimal Gradio UI by including `--gui`. 
-It will let you interactively explore your pipeline stages.
 
 **Note**: The above instructions are a work-in-progress, and more comprehensive usage info will be provided soon.
 
+
+# Process Flow
+
+![Process Flow](docs/assets/process-figure.png)
+
+
+## Key Features
+
+- **Automated Benchmark Generation**  
+  Generate question-answer pairs that test LLMs on specific domains or knowledge slices, derived directly from your raw documents.
+
+- **Flexible Pipeline**  
+  Each stage (ingestion, summarization, chunking, multi-/single-hop QG, deduplication) can be enabled or disabled via YAML config. Fine-grained control allows minimal or comprehensive runs.
+
+- **Robust Config System**  
+  A single YAML config controls model roles, data paths, chunking parameters, question generation instructions, deduplication thresholds, etc.
+
+- **Multi-Model Ensemble Support**  
+  Use different LLMs for ingestion, summarization, question generation, or answering. This fosters broader coverage and question style diversity.
+
+- **Deduplication & Quality Filtering**  
+  Automatic grouping of near-duplicate questions to prune and keep a curated set.
+
+- **Extensive Logging & Analysis**  
+  Built-in modules measure dataset coverage, question distribution, difficulty metrics, and more. 
+
+- **Public or Private**  
+  Optionally push ingested or generated data to the Hugging Face Hub or keep it local.
+
+- **Extensible**  
+  Each pipeline step is modular. Easily add custom question-generation prompts, chunking logic, or domain-specific expansions.
+
 ---
 
-## Repository Structure (Overview)
+## Core Concepts & Workflow
 
-```
-.
-├── yourbench/                   # Core framework modules
-│   ├── pipeline/                # Stages: ingestion, summarization, question generation, etc.
-│   ├── utils/                   # Utility modules (loading, prompts, inference, etc.)
-│   └── main.py                  # CLI and UI entry point
-├── configs/                     # Example YAML configs
-├── docs/                        # Documentation, assets
-├── data/                        # Example data (raw, ingested, HF dataset)
-├── pyproject.toml               # Project metadata
-└── README.md                    # (This File)
-```
+YourBench follows a multi-stage approach:
+
+1. **Document Ingestion**  
+   Convert PDFs, HTML, Word, or text into a standardized Markdown format.
+
+2. **Summarization**  
+   Generate a concise "global summary" for each document, using a designated summarization LLM.
+
+3. **Chunking**  
+   Split or chunk documents (and optionally combine multiple smaller segments) based on text similarity or length constraints.
+
+4. **Question Generation**  
+   - **Single-Shot**: Create straightforward, single-chunk questions.  
+   - **Multi-Hop**: Combine multiple chunks to produce more complex, integrative questions.
+
+5. **Deduplication**  
+   Remove or group near-duplicate questions across your dataset using embedding-based similarity.
+
+6. **Analysis**  
+   Evaluate question distribution, difficulty, coverage, or run custom analyses.
+
+7. **Export**  
+   The resulting question sets can be stored locally or uploaded as a new dataset on the Hugging Face Hub.
 
 ---
 
-<!-- Placeholder for more details! We will add deeper explanations, usage examples, 
-     code references, advanced configuration notes, performance analyses, 
-     and best practices in the next sections. Stay tuned. -->
+## 🧰 Development
+
+We use:
+- [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting
+- [pytest](https://docs.pytest.org/) for testing
+
+
+## 🚀 Try YourBench on Hugging Face
+
+To test YourBench on your own documents:
+
+- Use the [Demo Space](https://huggingface.co/spaces/yourbench/demo) to generate a dataset and leaderboard in one click – entirely free  
+- Use the [Advanced Space](https://huggingface.co/spaces/yourbench/advanced) for full control over the pipeline, with custom configs and your own inference
+
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Install development dependencies
+4. Make your changes
+5. Run tests and ensure code style compliance
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Sentence Transformers](https://www.sbert.net/) for semantic embeddings
+- [Hugging Face](https://huggingface.co/) for dataset infrastructure
+
+## Citation
+
+If YourBench is helpful to you, please cite!:
+
+```
+@misc{shashidhar2025yourbencheasycustomevaluation,
+      title={YourBench: Easy Custom Evaluation Sets for Everyone}, 
+      author={Sumuk Shashidhar and Clémentine Fourrier and Alina Lozovskia and Thomas Wolf and Gokhan Tur and Dilek Hakkani-Tür},
+      year={2025},
+      eprint={2504.01833},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2504.01833}, 
+}
 ```
