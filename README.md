@@ -13,7 +13,7 @@
 
 **THIS REPOSITORY IS NO LONGER MAINTAINED HERE. ALL UPDATES AND SUPPORT ARE NOW PROVIDED AT THE NEW LOCATION.**
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Circle-icons-warning.svg/1024px-Circle-icons-warning.svg.png" alt="Warning Icon" width="100" height="100"/>
+<img src="https://upload.wikimedia.org/wikipedia/commons/1/17/Warning.svg" alt="Warning Icon" width="100" height="100"/>
 <h2>🚨 IMPORTANT NOTICE 🚨</h2>
 <p>For the latest version, updates, and community support, visit <a href="https://github.com/huggingface/yourbench">huggingface/yourbench</a>.</p>
 
