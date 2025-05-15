@@ -1,11 +1,10 @@
 import os
 import shutil
 import tempfile
-from unittest.mock import MagicMock, patch, call
-from dataclasses import asdict
-import json
+from unittest.mock import MagicMock, patch
 
 import pytest
+
 from datasets import Dataset
 
 
@@ -86,7 +85,7 @@ def mock_config(temp_dir):
 def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
     """
     Test the ingestion stage of the YourBench pipeline.
-    
+
     Verifies that the ingestion stage correctly processes source documents.
     """
     # Create test document structure
@@ -94,28 +93,28 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
     output_dir = mock_config["pipeline"]["ingestion"]["output_dir"]
     os.makedirs(raw_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Create a test document only if not testing the no-docs case
     if not mock_no_docs:
         with open(os.path.join(raw_dir, "test_doc.txt"), "w") as f:
             f.write("This is a test document for ingestion.")
-    
+
     # Mock the core functionality instead of just the MarkItDown class
     with (
         patch("yourbench.pipeline.ingestion.MarkItDown") as mock_markitdown,
-        patch("yourbench.pipeline.ingestion._convert_document_to_markdown") as mock_convert
+        patch("yourbench.pipeline.ingestion._convert_document_to_markdown") as mock_convert,
     ):
         # Configure mocks
         mock_markitdown_instance = MagicMock()
         mock_markitdown.return_value = mock_markitdown_instance
         mock_convert.return_value = True
-        
+
         # Import the run function after mocking
         from yourbench.pipeline.ingestion import run
-        
+
         # Run the ingestion stage
         run(mock_config)
-        
+
         # Verify behavior
         if mock_no_docs:
             mock_convert.assert_not_called()
@@ -127,33 +126,42 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
 def test_summarization_stage(mock_config):
     """
     Test the summarization stage of the YourBench pipeline.
-    
+
     Verifies that summarization correctly calls inference and processes the results.
     """
     # Mock Dataset loading and saving
     mock_dataset = Dataset.from_dict({
         "document_id": ["doc1", "doc2"],
         "document_text": ["This is document 1", "This is document 2"],
-        "document_filename": ["doc1.md", "doc2.md"]
+        "document_filename": ["doc1.md", "doc2.md"],
     })
-    
+
     # Setup mocks
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
         patch("yourbench.pipeline.summarization.run_inference") as mock_run_inference,
-        patch("yourbench.pipeline.summarization.extract_content_from_xml_tags") as mock_extract
+        patch("yourbench.pipeline.summarization.extract_content_from_xml_tags") as mock_extract,
     ):
         # Configure mocks
-        mock_run_inference.return_value = {"fake_model": ["<final_summary>Summary for doc1</final_summary>", "<final_summary>Summary for doc2</final_summary>"]}
-        mock_extract.side_effect = lambda text, tag: f"Summary for doc{text.split('doc')[1].split('<')[0]}" if tag == "final_summary" else None
-        
+        mock_run_inference.return_value = {
+            "fake_model": [
+                "<final_summary>Summary for doc1</final_summary>",
+                "<final_summary>Summary for doc2</final_summary>",
+            ]
+        }
+        mock_extract.side_effect = (
+            lambda text, tag: f"Summary for doc{text.split('doc')[1].split('<')[0]}"
+            if tag == "final_summary"
+            else None
+        )
+
         # Import the summarization run function
         from yourbench.pipeline.summarization import run
-        
+
         # Run the summarization stage
         run(mock_config)
-        
+
         # Verify the summarization stage ran as expected
         mock_load.assert_called_once()
         assert mock_run_inference.call_count == 1
@@ -164,33 +172,36 @@ def test_summarization_stage(mock_config):
 def test_chunking_stage(mock_config):
     """
     Test the chunking stage of the YourBench pipeline.
-    
+
     Verifies that documents are properly chunked according to the configuration.
     """
     # Mock Dataset loading and saving
     mock_dataset = Dataset.from_dict({
         "document_id": ["doc1", "doc2"],
-        "document_text": ["This is document 1 with enough text to be chunked properly", "This is document 2 which also has sufficient text for chunking"],
-        "document_summary": ["Summary 1", "Summary 2"]
+        "document_text": [
+            "This is document 1 with enough text to be chunked properly",
+            "This is document 2 which also has sufficient text for chunking",
+        ],
+        "document_summary": ["Summary 1", "Summary 2"],
     })
-    
+
     # Mock functions and dependencies
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
         patch("yourbench.pipeline.chunking._compute_info_density_metrics") as mock_metrics,
-        patch("yourbench.pipeline.chunking.split_into_token_chunks") as mock_split
+        patch("yourbench.pipeline.chunking.split_into_token_chunks") as mock_split,
     ):
         # Configure mock returns
         mock_split.return_value = ["Chunk 1", "Chunk 2"]
         mock_metrics.return_value = []
-        
+
         # Import the chunking run function
         from yourbench.pipeline.chunking import run
-        
+
         # Run the chunking stage
         run(mock_config)
-        
+
         # Verify the chunking stage behavior
         mock_load.assert_called_once()
         assert mock_split.call_count > 0
@@ -201,7 +212,7 @@ def test_chunking_stage(mock_config):
 def test_single_shot_question_generation_stage(mock_config):
     """
     Test the single-shot question generation stage of the YourBench pipeline.
-    
+
     Verifies that questions are generated for single chunks of text.
     """
     # Mock dataset with chunks
@@ -210,15 +221,15 @@ def test_single_shot_question_generation_stage(mock_config):
         "document_id": ["doc1"],
         "document_summary": ["Document 1 summary"],
         "document_filename": ["doc1.md"],
-        "chunks": [chunks]
+        "chunks": [chunks],
     })
-    
+
     # Setup mocks
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
         patch("yourbench.utils.inference_engine.run_inference") as mock_run_inference,
-        patch("yourbench.pipeline.single_shot_question_generation.parse_qa_pairs_from_response") as mock_parse
+        patch("yourbench.pipeline.single_shot_question_generation.parse_qa_pairs_from_response") as mock_parse,
     ):
         # Configure mocks
         mock_run_inference.return_value = {"fake_model": ["Question generation response"]}
@@ -229,16 +240,16 @@ def test_single_shot_question_generation_stage(mock_config):
                 "estimated_difficulty": 5,
                 "question_type": "factual",
                 "thought_process": "Reasoning",
-                "citations": ["citation"]
+                "citations": ["citation"],
             }
         ]
-        
+
         # Import run function
         from yourbench.pipeline.single_shot_question_generation import run
-        
+
         # Run the stage
         run(mock_config)
-        
+
         # Verify behavior
         mock_load.assert_called_once()
         mock_run_inference.assert_called_once()
@@ -250,26 +261,28 @@ def test_single_shot_question_generation_stage(mock_config):
 def test_multi_hop_question_generation_stage(mock_config):
     """
     Test the multi-hop question generation stage of the YourBench pipeline.
-    
+
     Verifies that questions are generated requiring reasoning across multiple chunks.
     """
     # Mock dataset with chunks and valid multihop_chunks format
     chunks = [{"chunk_id": "chunk1", "chunk_text": "This is chunk 1"}]
     # Correct format for multihop_chunks
-    multihop_chunks = [{
-        "multihop_id": "mh1",
-        "source_chunks": [
-            {"chunk_id": "chunk1", "chunk_text": "Text 1"},
-            {"chunk_id": "chunk2", "chunk_text": "Text 2"}
-        ]
-    }]
+    multihop_chunks = [
+        {
+            "multihop_id": "mh1",
+            "source_chunks": [
+                {"chunk_id": "chunk1", "chunk_text": "Text 1"},
+                {"chunk_id": "chunk2", "chunk_text": "Text 2"},
+            ],
+        }
+    ]
     mock_dataset = Dataset.from_dict({
         "document_id": ["doc1"],
         "document_summary": ["Document 1 summary"],
         "chunks": [chunks],
-        "multihop_chunks": [multihop_chunks]
+        "multihop_chunks": [multihop_chunks],
     })
-    
+
     # Setup mocks
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
@@ -277,7 +290,7 @@ def test_multi_hop_question_generation_stage(mock_config):
         patch("yourbench.utils.inference_engine.run_inference") as mock_run_inference,
         patch("yourbench.pipeline.multi_hop_question_generation.parse_qa_pairs_from_response") as mock_parse,
         # Mock the chunk sampling function to bypass the empty multihop check
-        patch("yourbench.pipeline.multi_hop_question_generation._multihop_chunk_sampling_and_calls") as mock_sampling
+        patch("yourbench.pipeline.multi_hop_question_generation._multihop_chunk_sampling_and_calls") as mock_sampling,
     ):
         # Configure mocks
         mock_run_inference.return_value = {"fake_model": ["Multi-hop question generation response"]}
@@ -288,20 +301,20 @@ def test_multi_hop_question_generation_stage(mock_config):
                 "estimated_difficulty": 7,
                 "question_type": "reasoning",
                 "thought_process": "Complex reasoning",
-                "citations": ["citation1", "citation2"]
+                "citations": ["citation1", "citation2"],
             }
         ]
         mock_sampling.return_value = (
             [MagicMock()],  # Mock inference calls list
-            [(0, "doc1", ["chunk1", "chunk2"])]  # Mock call index mapping
+            [(0, "doc1", ["chunk1", "chunk2"])],  # Mock call index mapping
         )
-        
+
         # Import run function
         from yourbench.pipeline.multi_hop_question_generation import run
-        
+
         # Run the stage
         run(mock_config)
-        
+
         # Verify behavior
         mock_load.assert_called_once()
         mock_run_inference.assert_called_once()
@@ -312,7 +325,7 @@ def test_multi_hop_question_generation_stage(mock_config):
 def test_lighteval_stage(mock_config):
     """
     Test the lighteval stage of the YourBench pipeline.
-    
+
     Verifies that the stage combines questions into a unified dataset for evaluation.
     """
     # Mock single-shot and multi-hop datasets
@@ -324,9 +337,9 @@ def test_lighteval_stage(mock_config):
         "estimated_difficulty": [5],
         "self_assessed_question_type": ["factual"],
         "generating_model": ["fake_model"],
-        "additional_instructions": ["Generate questions"]
+        "additional_instructions": ["Generate questions"],
     })
-    
+
     multi_hop_ds = Dataset.from_dict({
         "document_id": ["doc1"],
         "source_chunk_ids": [["chunk1", "chunk2"]],
@@ -335,24 +348,21 @@ def test_lighteval_stage(mock_config):
         "estimated_difficulty": [7],
         "self_assessed_question_type": ["reasoning"],
         "generating_model": ["fake_model"],
-        "additional_instructions": ["Generate questions"]
+        "additional_instructions": ["Generate questions"],
     })
-    
+
     chunked_ds = Dataset.from_dict({
         "document_id": ["doc1"],
         "document_text": ["Full document text"],
-        "chunks": [[{"chunk_id": "chunk1", "chunk_text": "Chunk 1 text"}]]
+        "chunks": [[{"chunk_id": "chunk1", "chunk_text": "Chunk 1 text"}]],
     })
-    
-    summarized_ds = Dataset.from_dict({
-        "document_id": ["doc1"],
-        "document_summary": ["Document 1 summary"]
-    })
-    
+
+    summarized_ds = Dataset.from_dict({"document_id": ["doc1"], "document_summary": ["Document 1 summary"]})
+
     # Setup mocks
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset") as mock_load,
-        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save
+        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
     ):
         # Configure mock to return different datasets based on the subset parameter
         def load_dataset_side_effect(config, subset):
@@ -365,15 +375,15 @@ def test_lighteval_stage(mock_config):
             elif subset == "summarized":
                 return summarized_ds
             return Dataset.from_dict({})
-            
+
         mock_load.side_effect = load_dataset_side_effect
-        
+
         # Import run function
         from yourbench.pipeline.lighteval import run
-        
+
         # Run the stage
         run(mock_config)
-        
+
         # Verify behavior
         assert mock_load.call_count == 4
         mock_save.assert_called_once()

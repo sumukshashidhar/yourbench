@@ -1,14 +1,5 @@
-<!--
-  README.md (Partial Snippet)
-  ===========================
-  This is a work-in-progress README for YourBench. 
-  There is more coming soon—stay tuned!
--->
-
 <div align="center">
 
-<!-- Replace the paths below with your actual SVG logo paths or PNGs 
-     Make sure these files exist in docs/assets or an accessible directory -->
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/yourbench_banner_dark_mode.svg">
@@ -33,6 +24,8 @@
 <!-- Example badges -->
 <a href="https://github.com/huggingface/yourbench/stargazers">
   <img src="https://img.shields.io/github/stars/huggingface/yourbench?style=social" alt="GitHub Repo stars">
+</a> <a href="https://github.com/huggingface/yourbench/actions/workflows/ci.yml">
+  <img src="https://github.com/huggingface/yourbench/actions/workflows/ci.yml/badge.svg" alt="CI Status">
 </a>
 
 <p align="center">
