@@ -1,6 +1,5 @@
 """
 Inference Engine For Yourbench - Now with true concurrency throttling and cost tracking.
-Inference Engine For Yourbench - Now with true concurrency throttling and cost tracking.
 """
 
 import os
