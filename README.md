@@ -7,6 +7,18 @@
 
 <div align="center">
 
+**⚠️ WARNING: THIS REPOSITORY HAS MOVED! ⚠️**
+
+**PLEASE USE THE NEW HOME OF YOURBENCH AT [huggingface/yourbench](https://github.com/huggingface/yourbench).**
+
+**THIS REPOSITORY IS NO LONGER MAINTAINED HERE. ALL UPDATES AND SUPPORT ARE NOW PROVIDED AT THE NEW LOCATION.**
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Circle-icons-warning.svg/1024px-Circle-icons-warning.svg.png" alt="Warning Icon" width="100" height="100"/>
+<h2>🚨 IMPORTANT NOTICE 🚨</h2>
+<p>For the latest version, updates, and community support, visit <a href="https://github.com/huggingface/yourbench">huggingface/yourbench</a>.</p>
+
+<hr>
+
 <!-- Replace the paths below with your actual SVG logo paths or PNGs 
      Make sure these files exist in docs/assets or an accessible directory -->
 
