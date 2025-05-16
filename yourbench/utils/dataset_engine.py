@@ -189,7 +189,7 @@ def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) ->
             logger.warning(f"local_dataset_dir '{local_dataset_dir}' does not exist.")
             if _is_offline_mode():
                 logger.error("Offline mode is enabled but local dataset not found. Returning empty dataset.")
-                return Dataset.from_dict({})
+                raise
             else:
                 logger.warning("Falling back to Hugging Face Hub.")
 
