@@ -1,19 +1,19 @@
 # ==============================================
-# yourbench/pipeline/deduplicate_single_shot_questions.py
+# yourbench/pipeline/deduplicate_single_hop_questions.py
 # ==============================================
 """
-Deduplicate Single-Shot Questions Stage
+Deduplicate Single-Hop Questions Stage
 
 Task:
 -----
-Read the single-shot question dataset, embed (question + answer) pairs,
+Read the single-hop question dataset, embed (question + answer) pairs,
 cluster them using a similarity threshold, and pick cluster centroids to
 remove near-duplicates. Finally, retain only approximately `retain_ratio`
 of the dataset (or fewer) by random sampling if needed.
 
 Approach:
 ---------
-1. Load single-shot question dataset from the configured subset.
+1. Load single-hop question dataset from the configured subset.
 2. Compute embeddings for each row's "question + self_answer" text.
 3. Cluster with DBSCAN, converting "similarity_threshold" to a distance
    threshold eps = 1 - similarity_threshold.
@@ -31,59 +31,58 @@ Notes:
 
 Configuration Example:
 ----------------------
-deduplicate_single_shot_questions:
+deduplicate_single_hop_questions:
   run: true
-  source_subset: single_shot_questions
-  output_subset: single_shot_questions_deduplicated
+  source_subset: single_hop_questions
+  output_subset: single_hop_questions_deduplicated
   similarity_threshold: 0.8   # e.g. items above 0.8 similarity are grouped
   retain_ratio: 0.4          # keep about 40% of total
 """
 
-
-from typing import Dict, Any, List
 import math
 import random
-import torch
+from typing import Any, Dict, List
+
 import numpy as np
 from loguru import logger
-from datasets import Dataset
 from sklearn.cluster import DBSCAN
-import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModel
 
+import torch
+import torch.nn.functional as F
+from transformers import AutoModel, AutoTokenizer
 from yourbench.utils.dataset_engine import (
+    save_dataset,
     smart_load_dataset,
-    smart_get_source_subset,
-    smart_get_output_subset,
-    save_dataset
 )
+
 
 # === Data Loading & Embedding ===
 
+
 def run(config: Dict[str, Any]) -> None:
     """
-    Main entry point for deduplicating single-shot questions.
-    
-    Reads config from config["pipeline"]["deduplicate_single_shot_questions"].
-    If run=True, loads the single-shot question dataset, clusters duplicates,
+    Main entry point for deduplicating single-hop questions.
+
+    Reads config from config["pipeline"]["deduplicate_single_hop_questions"].
+    If run=True, loads the single-hop question dataset, clusters duplicates,
     and saves a deduplicated version.
     """
-    stage_cfg = config.get("pipeline", {}).get("deduplicate_single_shot_questions", {})
+    stage_cfg = config.get("pipeline", {}).get("deduplicate_single_hop_questions", {})
     if not stage_cfg.get("run", False):
-        logger.info("Stage 'deduplicate_single_shot_questions' is disabled. Skipping.")
+        logger.info("Stage 'deduplicate_single_hop_questions' is disabled. Skipping.")
         return
 
-    source_subset = stage_cfg.get("source_subset", "single_shot_questions")
-    output_subset = stage_cfg.get("output_subset", "single_shot_questions_deduplicated")
+    source_subset = stage_cfg.get("source_subset", "single_hop_questions")
+    output_subset = stage_cfg.get("output_subset", "single_hop_questions_deduplicated")
     similarity_threshold: float = stage_cfg.get("similarity_threshold", 0.8)
     retain_ratio: float = stage_cfg.get("retain_ratio", 0.5)
 
-    logger.info("Starting deduplication for single-shot questions. Source subset='{}'", source_subset)
+    logger.info("Starting deduplication for single-hop questions. Source subset='{}'", source_subset)
 
     # 1) Load dataset
     dataset_name = config.get("hf_configuration", {}).get("global_dataset_name", "yourbench_dataset")
     ds = smart_load_dataset(dataset_name, config, source_subset)
-    logger.info("Loaded single-shot question dataset with {} rows.", len(ds))
+    logger.info("Loaded single-hop question dataset with {} rows.", len(ds))
 
     if not len(ds):
         logger.warning("Dataset is empty, nothing to deduplicate.")
@@ -104,7 +103,9 @@ def run(config: Dict[str, Any]) -> None:
     # 3) DBSCAN Clustering
     #    Convert similarity_threshold to eps in distance space => eps = 1 - sim_threshold
     eps_value = 1.0 - similarity_threshold
-    logger.debug("Clustering with DBSCAN: eps={} (derived from similarity_threshold={})", eps_value, similarity_threshold)
+    logger.debug(
+        "Clustering with DBSCAN: eps={} (derived from similarity_threshold={})", eps_value, similarity_threshold
+    )
 
     if eps_value < 0:
         logger.warning("similarity_threshold cannot exceed 1.0; adjusting eps to 0.0")
@@ -146,7 +147,12 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("Centroids (count={}) <= desired_count => keeping them all.", len(final_indices))
     else:
         final_indices = random.sample(chosen_indices, desired_count)
-        logger.info("Randomly sampled {} items from {} centroids to meet ratio {}.", len(final_indices), len(chosen_indices), retain_ratio)
+        logger.info(
+            "Randomly sampled {} items from {} centroids to meet ratio {}.",
+            len(final_indices),
+            len(chosen_indices),
+            retain_ratio,
+        )
 
     final_indices_set = set(final_indices)
     # Reorder them in ascending index for stable results
@@ -157,19 +163,20 @@ def run(config: Dict[str, Any]) -> None:
     # 6) Save
     save_dataset(
         dataset=new_ds,
-        step_name="deduplicate_single_shot_questions",
+        step_name="deduplicate_single_hop_questions",
         config=config,
         output_dataset_name=dataset_name,
-        output_subset=output_subset
+        output_subset=output_subset,
     )
-    logger.success("Deduplication for single-shot questions completed successfully.")
+    logger.success("Deduplication for single-hop questions completed successfully.")
 
 
 # === Helper Functions ===
 
+
 def _compute_embeddings(text_list: List[str]) -> np.ndarray:
     """
-    Embed each string in text_list using 'intfloat/multilingual-e5-large-instruct' 
+    Embed each string in text_list using 'intfloat/multilingual-e5-large-instruct'
     and return a 2D numpy array of shape (n, embedding_dim).
     """
     model_name = "intfloat/multilingual-e5-large-instruct"
@@ -182,7 +189,7 @@ def _compute_embeddings(text_list: List[str]) -> np.ndarray:
     batch_size = 32
 
     for i in range(0, len(text_list), batch_size):
-        batch = text_list[i: i + batch_size]
+        batch = text_list[i : i + batch_size]
         inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(device)
         with torch.no_grad():
             outputs = model(**inputs).last_hidden_state

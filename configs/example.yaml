@@ -34,7 +34,7 @@ model_roles:
     - RekaAI/reka-flash-3
   chunking:
     - intfloat/multilingual-e5-large-instruct # your sentence level chunking model
-  single_shot_question_generation:
+  single_hop_question_generation:
       # use the ensemble to generate questions
     - RekaAI/reka-flash-3
     - gpt-4o-mini
@@ -78,11 +78,11 @@ pipeline:
     # hub_dataset_name: yb_example_chunked_documents
     # local_dataset_path: data/example/processed/chunked_dataset
   
-  single_shot_question_generation:
+  single_hop_question_generation:
     run: false
     concat_existing_dataset: true
     source_subset: chunked_documents
-    output_subset: single_shot_questions
+    output_subset: single_hop_questions
     additional_instructions: "Generate questions to test a curious ponderer"
     # for cost reduction
     chunk_sampling:
@@ -102,10 +102,10 @@ pipeline:
       value: 0.5
       random_seed: 42
   
-  deduplicate_single_shot_questions:
+  deduplicate_single_hop_questions:
     run: true
-    source_subset: single_shot_questions
-    output_subset: single_shot_questions_deduplicated
+    source_subset: single_hop_questions
+    output_subset: single_hop_questions_deduplicated
     similarity_threshold: 0.8   # e.g. items above 0.8 similarity are grouped
     retain_ratio: 0.4          # keep about 40% of total
   

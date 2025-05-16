@@ -110,11 +110,11 @@ model_roles:
   chunking:
     - intfloat/multilingual-e5-large-instruct
 
-  # 'single_shot_question_generation': used for generating straightforward
+  # 'single_hop_question_generation': used for generating straightforward
   # "single-hop" questions from each chunk. Could specify multiple models
   # if you want an ensemble approach for variety. Each model’s outputs
   # will be aggregated together by the pipeline.
-  single_shot_question_generation:
+  single_hop_question_generation:
     - Qwen/Qwen3-30B-A3B
     # - gpt-4.1
     # - gemini-2.5-flash-preview
@@ -198,11 +198,11 @@ pipeline:
       # Tweak these to produce bigger or fewer multi-hop combos or to tighten
       # the chunk boundaries for more finely grained questions.
 
-  # 5) SINGLE_SHOT_QUESTION_GENERATION
+  # 5) SINGLE_HOP_QUESTION_GENERATION
   # Generates single-hop question-answer pairs from each chunk. Typically simpler
   # factual or direct queries. The model is guided to produce “estimated_difficulty”,
   # “citations,” etc. 
-  single_shot_question_generation:
+  single_hop_question_generation:
     run: true
     # You can add global instructions guiding question style, difficulty, domain specificity:
     # additional_instructions: "Generate factual, short-answer questions at a college level."

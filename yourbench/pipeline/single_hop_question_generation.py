@@ -1,10 +1,10 @@
 # ============================================================
-# single_shot_question_generation.py
+# single_hop_question_generation.py
 # ============================================================
 """
 Author: @sumukshashidhar
 
-This module implements the Single-Shot Question Generation stage of the YourBench pipeline.
+This module implements the Single-Hop Question Generation stage of the YourBench pipeline.
 
 Overview:
     - Given a dataset containing document summaries and their associated single-hop chunks,
@@ -14,14 +14,14 @@ Overview:
 
 Usage:
     1) The pipeline will call the `run()` function from this module if the user configures
-       `pipeline.single_shot_question_generation.run = True`.
+       `pipeline.single_hop_question_generation.run = True`.
     2) This function loads the required dataset (specified in the pipeline configuration),
        samples chunks if necessary, and calls an LLM to generate questions.
     3) The output is stored in a new dataset containing each generated question,
        an estimated difficulty rating, and the model's self-provided reasoning.
 
 Stage-Specific Logging:
-    - All errors and relevant log messages are recorded in `logs/single_shot_question_generation.log`.
+    - All errors and relevant log messages are recorded in `logs/single_hop_question_generation.log`.
 
 Google-Style Docstrings:
     - This codebase uses Python type hints and Google-style docstrings for clarity,
@@ -90,7 +90,7 @@ class ChunkSamplingConfig:
 
 
 @dataclass
-class SingleShotQuestionGenerationConfig:
+class SingleHopQuestionGenerationConfig:
     run: bool = False
     source_subset: str = ""
     output_subset: str = ""
@@ -113,15 +113,15 @@ def run(config: dict[str, Any]) -> None:
     """
     stage_config = _load_stage_config(config)
     if not stage_config.run:
-        logger.info("single_shot_question_generation stage is disabled. Skipping.")
+        logger.info("single_hop_question_generation stage is disabled. Skipping.")
         return
 
     dataset = custom_load_dataset(config=config, subset="chunked")
-    logger.info(f"Loaded chunked subset with {len(dataset)} rows for Single-shot question generation.")
+    logger.info(f"Loaded chunked subset with {len(dataset)} rows for Single-hop question generation.")
 
     inference_calls, call_index_mapping = _build_inference_calls(dataset, stage_config)
     if not inference_calls:
-        logger.warning("No inference calls were created for single_shot_question_generation.")
+        logger.warning("No inference calls were created for single_hop_question_generation.")
         return
 
     responses_dict = _execute_inference(inference_calls, config)
@@ -130,19 +130,19 @@ def run(config: dict[str, Any]) -> None:
 
     question_dataset = _process_responses_and_build_dataset(responses_dict, call_index_mapping, stage_config)
     if question_dataset is None or len(question_dataset) == 0:
-        logger.warning("No valid questions produced in single_shot_question_generation.")
+        logger.warning("No valid questions produced in single_hop_question_generation.")
         return
 
-    custom_save_dataset(dataset=question_dataset, config=config, subset="single_shot_questions")
-    logger.success("Single-shot question generation completed successfully.")
+    custom_save_dataset(dataset=question_dataset, config=config, subset="single_hop_questions")
+    logger.success("Single-hop question generation completed successfully.")
 
 
-def _load_stage_config(config: dict[str, Any]) -> SingleShotQuestionGenerationConfig:
+def _load_stage_config(config: dict[str, Any]) -> SingleHopQuestionGenerationConfig:
     """
     Extract the stage-specific configuration from the pipeline config.
     """
     pipeline_config = config.get("pipeline", {})
-    stage_config_dict = pipeline_config.get("single_shot_question_generation", {})
+    stage_config_dict = pipeline_config.get("single_hop_question_generation", {})
     chunk_sampling_cfg = stage_config_dict.get("chunk_sampling", {})
 
     # For readability: if len(chunk_sampling_cfg) == 0
@@ -155,7 +155,7 @@ def _load_stage_config(config: dict[str, Any]) -> SingleShotQuestionGenerationCo
             random_seed=chunk_sampling_cfg.get("random_seed", 42),
         )
 
-    return SingleShotQuestionGenerationConfig(
+    return SingleHopQuestionGenerationConfig(
         run=stage_config_dict.get("run", False),
         source_subset=stage_config_dict.get("source_subset", ""),
         output_subset=stage_config_dict.get("output_subset", ""),
@@ -203,9 +203,9 @@ def _sample_chunks_if_needed(
     return chunks_list
 
 
-def _build_inference_calls(dataset, stage_config: SingleShotQuestionGenerationConfig):
+def _build_inference_calls(dataset, stage_config: SingleHopQuestionGenerationConfig):
     """
-    Create the InferenceCall objects needed for single-shot question generation.
+    Create the InferenceCall objects needed for single-hop question generation.
     Returns the list of calls and a parallel mapping of (row_index, doc_id, chunk_id).
     """
 
@@ -251,7 +251,7 @@ def _build_inference_calls(dataset, stage_config: SingleShotQuestionGenerationCo
             )
             user_message = {"role": "user", "content": user_prompt_str}
 
-            inference_call = InferenceCall(messages=[system_message, user_message], tags=["single_shot_qa"])
+            inference_call = InferenceCall(messages=[system_message, user_message], tags=["single_hop_qa"])
             inference_calls.append(inference_call)
             call_index_mapping.append((row_index, doc_row.document_id, chunk_id))
 
@@ -262,26 +262,26 @@ def _execute_inference(inference_calls, config: dict[str, Any]):
     """
     Sends the prepared inference calls to the LLM(s). Returns a dict of responses.
     """
-    logger.info(f"Sending {len(inference_calls)} calls to inference for single-shot question generation.")
+    logger.info(f"Sending {len(inference_calls)} calls to inference for single-hop question generation.")
     try:
         return run_inference(
             config=config,
-            step_name="single_shot_question_generation",
+            step_name="single_hop_question_generation",
             inference_calls=inference_calls,
         )
     except Exception as err:
-        logger.error(f"Inference failed for single_shot_question_generation: {err}")
+        logger.error(f"Inference failed for single_hop_question_generation: {err}")
         return {}
 
 
 def _process_responses_and_build_dataset(
     responses_dict: dict[str, list[str]],
     call_index_mapping: list[tuple],
-    stage_config: SingleShotQuestionGenerationConfig,
+    stage_config: SingleHopQuestionGenerationConfig,
 ) -> Dataset:
     """
     Take the LLM responses, parse them, and build a Hugging Face Dataset
-    of single-shot question rows.
+    of single-hop question rows.
     """
     question_dataset_rows = []
 
