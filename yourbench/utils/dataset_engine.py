@@ -186,7 +186,7 @@ def custom_save_dataset(
     config: Dict[str, Any],
     subset: Optional[str] = None,
     save_local: bool = True,
-    push_to_hub: bool = False,
+    push_to_hub: bool = True,
 ) -> None:
     """
     Save a dataset subset locally and push it to Hugging Face Hub.
