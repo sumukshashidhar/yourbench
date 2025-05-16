@@ -46,7 +46,7 @@ from yourbench.utils.dataset_engine import (
 )
 
 # Import the unified parsing function
-from yourbench.utils.parsing_engine import shuffle_mcq, parse_qa_pairs_from_response
+from yourbench.utils.parsing_engine import _force_int_in_range, shuffle_mcq, parse_qa_pairs_from_response, _validate_list
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
@@ -314,7 +314,7 @@ def _process_responses_and_build_dataset(
                     # Safely extract data from pair
                     question_text = str(pair.get("question", "")).strip()
                     answer_text = str(pair.get("answer", "")).strip()
-                    choices = pair.get("choices", [])
+                    choices = _validate_list(pair.get("choices", []))
                     difficulty_val = _force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10)
                     question_type = str(pair.get("question_type", "unknown"))
                     thought_process = str(pair.get("thought_process", ""))
@@ -355,12 +355,3 @@ def _process_responses_and_build_dataset(
     return Dataset.from_dict(final_data)
 
 
-def _force_int_in_range(value: Any, min_val: int, max_val: int) -> int:
-    """
-    Convert a value to int and clamp it between min_val and max_val.
-    """
-    try:
-        ivalue = int(value)
-    except (ValueError, TypeError):
-        ivalue = (min_val + max_val) // 2
-    return max(min_val, min(ivalue, max_val))

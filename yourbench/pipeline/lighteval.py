@@ -173,9 +173,18 @@ def run(config: Dict[str, Any]) -> None:
 
         # if multiple choice question convert to number
         gold = row.get("self_answer", "")
-        if row.get("choices"):
-            gold = [ord(gold) - ord("A")]
+        if not gold:
+            logger.warning("Row has empty answer line")
 
+        stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
+        if stage_cfg.get("question_type") == "multi-choice":
+            if not gold:
+                gold = [0]
+            else:
+                gold = [ord(gold) - ord("A")]
+        else:
+            gold = [gold]
+        
         return {
             "question": row.get("question", ""),
             "additional_instructions": row.get("additional_instructions", ""),
@@ -216,9 +225,17 @@ def run(config: Dict[str, Any]) -> None:
 
         # if multiple choice question convert to number
         gold = row.get("self_answer", "")
-        if row.get("choices"):
-            gold = [ord(gold) - ord("A")]
-
+        if not gold:
+            logger.warning("Row has empty answer line")
+        
+        stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
+        if stage_cfg.get("question_type") == "multi-choice":
+            if not gold:
+                gold = [0]
+            else:
+                gold = [ord(gold) - ord("A")]
+        else:
+            gold = [gold]
         return {
             "question": row.get("question", ""),
             "additional_instructions": row.get("additional_instructions", ""),
@@ -259,16 +276,16 @@ def run(config: Dict[str, Any]) -> None:
     # ----------------------------------------
     logger.info(f"Assembling final dataset with {len(combined_records)} rows.")
     try:
-        # Convert to column-wise dict for HF Dataset
-        col_names = list(combined_records[0].keys())
-        final_dict = {c: [] for c in col_names}
-        for rec in combined_records:
-            for c in col_names:
-                final_dict[c].append(rec[c])
-        final_ds = Dataset.from_dict(final_dict)
+        # # Convert to column-wise dict for HF Dataset
+        # col_names = list(combined_records[0].keys())
+        # final_dict = {c: [] for c in col_names}
+        # for rec in combined_records:
+        #     for c in col_names:
+        #         final_dict[c].append(rec[c])
+        final_ds = Dataset.from_list(combined_records)
 
     except Exception as ds_error:
-        logger.error(f"Failed to create final dataset object: {ds_error}")
+        logger.exception("Failed to create final dataset object")
         return
 
     # ----------------------------------------

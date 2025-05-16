@@ -64,11 +64,6 @@ from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
-############################
-# Internal helper functions #
-############################
-
-
 def _build_chunk_calls(
     dataset: Dataset,
     max_tokens: int,
@@ -84,7 +79,6 @@ def _build_chunk_calls(
     calls: List[InferenceCall] = []
     mapping: List[Tuple[int, int]] = []  # (doc_index, chunk_index)
 
-    # ─── NEW: robust encoding fetch with fallback ────────────────────────────
     try:
         enc = tiktoken.get_encoding(encoding_name)
     except Exception as e:  # KeyError on unknown name, ValueError on bad cache
@@ -94,10 +88,10 @@ def _build_chunk_calls(
             str(e)[:60] + ("…" if len(str(e)) > 60 else ""),
         )
         enc = tiktoken.get_encoding("cl100k_base")
-    # ────────────────────────────────────────────────────────────────────────
+
 
     for doc_idx, doc_text in enumerate(dataset["document_text"]):
-        token_len = len(enc.encode(doc_text))
+        token_len = len(enc.encode(doc_text, disallowed_special=()))
         if token_len <= max_tokens:  # treat as single chunk (chunk_idx = -1)
             prompt = CHUNK_SUMMARIZATION_USER_PROMPT.format(chunk=doc_text)
             calls.append(InferenceCall(messages=[{"role": "user", "content": prompt}], tags=["chunk_summary"]))
@@ -127,10 +121,7 @@ def _collect_chunk_summaries(
 ) -> Tuple[str, List[List[str]], List[List[str]]]:
     """Re-orders raw model responses back into per-document lists.
 
-    Notes
-    -----
-    `model_name` is always `str` (never None) because we early-return if
-    `response_dict` is empty.
+    model_name: str is guaranteed to be set, as we return early if response_dict is empty.
     """
     if not response_dict:
         return "", [], []
@@ -195,11 +186,6 @@ def _merge_final_summaries(
     return final_summaries
 
 
-#################
-# Stage runner  #
-#################
-
-
 def run(config: dict[str, Any]) -> None:
     stage_cfg = config.get("pipeline", {}).get("summarization", {})
     if not stage_cfg.get("run", False):
@@ -226,6 +212,10 @@ def run(config: dict[str, Any]) -> None:
 
     # 3) Second pass – combine summaries where needed
     combine_calls, doc_indices = _build_combine_calls(clean_chunk_by_doc)
+
+    if len(doc_indices) == 0:
+        logger.info("All documents were short enough for single-pass summarization.")
+    
     combine_summaries_raw: List[str] = []
     if combine_calls:
         combine_resp = run_inference(config=config, step_name="summarization_combine", inference_calls=combine_calls)
@@ -243,9 +233,15 @@ def run(config: dict[str, Any]) -> None:
     # 4) Add columns & persist
     dataset = dataset.add_column("raw_chunk_summaries", raw_chunk_by_doc)
     dataset = dataset.add_column("chunk_summaries", clean_chunk_by_doc)
-    dataset = dataset.add_column(
-        "raw_document_summary", combine_summaries_raw if combine_calls else [""] * len(dataset)
-    )
+
+    # Fill summaries only for combined docs; others stay empty for alignment.
+    raw_document_summary = [""] * len(dataset)
+    if combine_calls:
+        for idx, doc_idx in enumerate(doc_indices):
+            raw_document_summary[doc_idx] = combine_summaries_raw[idx]
+
+    dataset = dataset.add_column("raw_document_summary", raw_document_summary)
+
     dataset = dataset.add_column("document_summary", final_summaries)
     dataset = dataset.add_column("summarization_model", [model_name] * len(dataset))
 

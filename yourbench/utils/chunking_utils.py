@@ -27,6 +27,6 @@ def split_into_token_chunks(
         text = preprocess(text)
 
     enc = tiktoken.get_encoding(encoding_name)
-    tokens = enc.encode(text)
+    tokens = enc.encode(text, disallowed_special=())
     stride = chunk_tokens - overlap
     return [enc.decode(tokens[i : i + chunk_tokens]) for i in range(0, len(tokens), stride)]
