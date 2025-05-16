@@ -44,9 +44,9 @@ DEFAULT_STAGE_ORDER: List[str] = [
     "upload_ingest_to_hub",
     "summarization",
     "chunking",
-    "single_shot_question_generation",
+    "single_hop_question_generation",
     "multi_hop_question_generation",
-    # "deduplicate_single_shot_questions", #TODO: either remove or uncomment when implemented
+    # "deduplicate_single_hop_questions", #TODO: either remove or uncomment when implemented
     # "deduplicate_multi_hop_questions",
     "lighteval",
     "citation_score_filtering",

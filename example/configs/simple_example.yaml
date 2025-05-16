@@ -13,7 +13,7 @@ pipeline:
   upload_ingest_to_hub:
   summarization:
   chunking:
-  single_shot_question_generation:
+  single_hop_question_generation:
   multi_hop_question_generation:
   lighteval:
   citation_score_filtering:

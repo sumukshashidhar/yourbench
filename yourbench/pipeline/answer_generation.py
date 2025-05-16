@@ -52,20 +52,20 @@ Notes on Implementation:
 - The approach is easily extended to more strategies (RAG, etc.) by editing the config.
 """
 
-import json
 import re
-from typing import Dict, Any, List
-from loguru import logger
-from datasets import Dataset
+from typing import Any, Dict, List
 
-from yourbench.utils.dataset_engine import smart_load_dataset
-from yourbench.utils.dataset_engine import save_dataset
-from yourbench.utils.inference_engine import InferenceCall, run_inference
+from loguru import logger
+
 from yourbench.utils.prompts import (
-    ZEROSHOT_QA_USER_PROMPT,
     GOLD_QA_USER_PROMPT,
+    ZEROSHOT_QA_USER_PROMPT,
 )
+from yourbench.utils.inference_engine import InferenceCall, run_inference
+
+
 # If you have additional prompts for RAG etc., just import them or load them dynamically.
+
 
 def run(config: Dict[str, Any]) -> None:
     """
@@ -91,8 +91,8 @@ def run(config: Dict[str, Any]) -> None:
 
     # 1. Basic config validation
     question_type = stage_cfg.get("question_type")
-    if question_type == "single_shot":
-        question_step_name = "single_shot_question_generation"
+    if question_type == "single_hop":
+        question_step_name = "single_hop_question_generation"
     elif question_type == "multi_hop":
         question_step_name = "multi_hop_question_generation"
     else:
@@ -102,7 +102,7 @@ def run(config: Dict[str, Any]) -> None:
     if not strategies:
         logger.critical("No strategies defined in answer_generation config. Exiting.")
         return
-    
+
     question_dataset = custom_load_dataset(config=config, step_name=question_step_name)
 
     # 2. Build InferenceCalls for each row-strategy pair
@@ -136,14 +136,11 @@ def run(config: Dict[str, Any]) -> None:
             # Load the template
             prompt_template = known_prompts.get(prompt_key, "")
             if not prompt_template:
-                logger.warning(
-                    "No known prompt template found for key='%s'. Using empty prompt.",
-                    prompt_key
-                )
+                logger.warning("No known prompt template found for key='%s'. Using empty prompt.", prompt_key)
                 prompt_template = ""
 
             # Fill the user prompt
-            # For 'gold' we might use doc_summary, or the chunk text, etc. 
+            # For 'gold' we might use doc_summary, or the chunk text, etc.
             # This depends on how your prompt is structured. We'll keep it minimal here.
             if "GOLD_QA_USER_PROMPT" in prompt_key:
                 user_prompt = prompt_template.format(
@@ -158,7 +155,7 @@ def run(config: Dict[str, Any]) -> None:
             user_message = {"role": "user", "content": user_prompt}
             inference_call = InferenceCall(
                 messages=[user_message],  # no system message needed, but you can add if desired
-                tags=[f"answer_generation_{strat_name}"]
+                tags=[f"answer_generation_{strat_name}"],
             )
             all_inference_calls.append(inference_call)
             call_index_to_row_strat.append((row_idx, strat_name, model_name))
@@ -177,12 +174,12 @@ def run(config: Dict[str, Any]) -> None:
     #
     #    But we want each call to be routed to the correct model. The "run_inference" approach typically
     #    calls the same model for all calls. So we do a small hack: we run them in separate "batches" by model,
-    #    or we patch the code to do a custom approach. 
+    #    or we patch the code to do a custom approach.
     #
-    # For simplicity (and to keep code consistent with single_shot_question_generation), we do a "manual" approach:
+    # For simplicity (and to keep code consistent with single_hop_question_generation), we do a "manual" approach:
     #   - Group calls by model_name
-    #   - For each group, run them in parallel. Then store results in a big array in the same order. 
-    #   - We'll unify them after. 
+    #   - For each group, run them in parallel. Then store results in a big array in the same order.
+    #   - We'll unify them after.
     # This is simpler than rewriting the entire inference_engine.
 
     # Let's gather all distinct model_names from strategies
@@ -212,11 +209,7 @@ def run(config: Dict[str, Any]) -> None:
             continue
 
         # We get a dictionary {model_nm: [resp_1, resp_2, ...]} from run_inference
-        responses_dict = run_inference(
-            config=config,
-            step_name="answer_generation",
-            inference_calls=calls_for_model
-        )
+        responses_dict = run_inference(config=config, step_name="answer_generation", inference_calls=calls_for_model)
         # restore roles
         config["model_roles"]["answer_generation"] = original_roles
 
@@ -225,7 +218,9 @@ def run(config: Dict[str, Any]) -> None:
         if len(model_resps) != len(calls_for_model):
             logger.error(
                 "Model '{}' returned {} responses but we expected {}. Some calls missing.",
-                model_nm, len(model_resps), len(calls_for_model)
+                model_nm,
+                len(model_resps),
+                len(calls_for_model),
             )
 
         # Place them into the final raw_responses in correct order
@@ -234,7 +229,7 @@ def run(config: Dict[str, Any]) -> None:
             raw_responses[global_idx] = r_txt
 
     # 4. Now we parse out <answer> from raw_responses, for each row-strategy
-    #    We'll build a structure to store the final answers in memory. 
+    #    We'll build a structure to store the final answers in memory.
     #    For each strategy name, we store a dict row_idx -> answer
     #    Similarly row_idx -> model
     strategy_to_answers = {}
@@ -281,7 +276,7 @@ def run(config: Dict[str, Any]) -> None:
 
 def _extract_answer(raw_response: str) -> str:
     """
-    Extract the text enclosed in <answer>...</answer>. 
+    Extract the text enclosed in <answer>...</answer>.
     Returns an empty string if not found or if raw_response is empty.
     """
     if not raw_response:

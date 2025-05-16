@@ -25,7 +25,7 @@ Approach:
 
 Notes:
 ------
-- Same approach as for single-shot questions, just a different source/target subset.
+- Same approach as for single-hop questions, just a different source/target subset.
 - We embed text with "intfloat/multilingual-e5-large-instruct".
 - Keep minimal changes to the existing pipeline structure.
 
@@ -39,30 +39,30 @@ deduplicate_multi_hop_questions:
   retain_ratio: 0.8
 """
 
-from typing import Dict, Any, List
 import math
 import random
-import torch
+from typing import Any, Dict, List
+
 import numpy as np
 from loguru import logger
-from datasets import Dataset
 from sklearn.cluster import DBSCAN
-import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModel
 
+import torch
+import torch.nn.functional as F
+from transformers import AutoModel, AutoTokenizer
 from yourbench.utils.dataset_engine import (
+    save_dataset,
     smart_load_dataset,
-    smart_get_source_subset,
-    smart_get_output_subset,
-    save_dataset
 )
 
+
 # === Data Loading & Embedding ===
+
 
 def run(config: Dict[str, Any]) -> None:
     """
     Main entry point for deduplicating multi-hop questions.
-    
+
     Reads config from config["pipeline"]["deduplicate_multi_hop_questions"].
     If run=True, loads the multi-hop question dataset, clusters duplicates,
     and saves a deduplicated version.
@@ -102,7 +102,9 @@ def run(config: Dict[str, Any]) -> None:
 
     # 3) DBSCAN Clustering
     eps_value = 1.0 - similarity_threshold
-    logger.debug("Clustering with DBSCAN: eps={} (derived from similarity_threshold={})", eps_value, similarity_threshold)
+    logger.debug(
+        "Clustering with DBSCAN: eps={} (derived from similarity_threshold={})", eps_value, similarity_threshold
+    )
 
     if eps_value < 0:
         logger.warning("similarity_threshold cannot exceed 1.0; adjusting eps to 0.0")
@@ -141,7 +143,12 @@ def run(config: Dict[str, Any]) -> None:
         logger.info("Centroids (count={}) <= desired_count => keeping them all.", len(final_indices))
     else:
         final_indices = random.sample(chosen_indices, desired_count)
-        logger.info("Randomly sampled {} items from {} centroids to meet ratio {}.", len(final_indices), len(chosen_indices), retain_ratio)
+        logger.info(
+            "Randomly sampled {} items from {} centroids to meet ratio {}.",
+            len(final_indices),
+            len(chosen_indices),
+            retain_ratio,
+        )
 
     final_indices_set = set(final_indices)
     sorted_final_indices = sorted(list(final_indices_set))
@@ -154,16 +161,17 @@ def run(config: Dict[str, Any]) -> None:
         step_name="deduplicate_multi_hop_questions",
         config=config,
         output_dataset_name=dataset_name,
-        output_subset=output_subset
+        output_subset=output_subset,
     )
     logger.success("Deduplication for multi-hop questions completed successfully.")
 
 
 # === Helper Functions ===
 
+
 def _compute_embeddings(text_list: List[str]) -> np.ndarray:
     """
-    Embed each string in text_list using 'intfloat/multilingual-e5-large-instruct' 
+    Embed each string in text_list using 'intfloat/multilingual-e5-large-instruct'
     and return a 2D numpy array of shape (n, embedding_dim).
     """
     model_name = "intfloat/multilingual-e5-large-instruct"
@@ -176,7 +184,7 @@ def _compute_embeddings(text_list: List[str]) -> np.ndarray:
     batch_size = 32
 
     for i in range(0, len(text_list), batch_size):
-        batch = text_list[i: i + batch_size]
+        batch = text_list[i : i + batch_size]
         inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(device)
         with torch.no_grad():
             outputs = model(**inputs).last_hidden_state

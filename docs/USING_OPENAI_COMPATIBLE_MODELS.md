@@ -42,7 +42,7 @@ model_roles:
     - claude-3-7-sonnet-20250219
   chunking:
     - intfloat/multilingual-e5-large-instruct
-  single_shot_question_generation:
+  single_hop_question_generation:
     - gpt-4o
   # using multiple models for question generation
   multi_hop_question_generation:

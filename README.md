@@ -144,7 +144,7 @@ YourBench follows a multi-stage approach:
    Split or chunk documents (and optionally combine multiple smaller segments) based on text similarity or length constraints.
 
 4. **Question Generation**  
-   - **Single-Shot**: Create straightforward, single-chunk questions.  
+   - **Single-Hop**: Create straightforward, single-chunk questions.
    - **Multi-Hop**: Combine multiple chunks to produce more complex, integrative questions.
 
 5. **Deduplication**  

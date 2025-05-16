@@ -207,7 +207,7 @@ model_roles:
     - Qwen/Qwen2.5-72B-Instruct
   chunking:
     - intfloat/multilingual-e5-large-instruct  # Embedding model for semantic chunking
-  single_shot_question_generation:
+  single_hop_question_generation:
     - Qwen/Qwen2.5-72B-Instruct
   multi_hop_question_generation:
     - Qwen/Qwen2.5-72B-Instruct
@@ -226,7 +226,7 @@ model_roles:
   - **Description**: Models used for semantic chunking (embedding models).
   - **Recommended**: Sentence embedding models like `intfloat/multilingual-e5-large-instruct`.
 
-- **`single_shot_question_generation`**  
+- **`single_hop_question_generation`**
   - **Description**: Models used to generate questions from individual chunks.
   - **Recommended**: Strong language models with good question generation capabilities.
 
@@ -248,7 +248,7 @@ model_roles:
     - claude-3-opus-20240229
   chunking:
     - intfloat/multilingual-e5-large-instruct
-  single_shot_question_generation:
+  single_hop_question_generation:
     - gpt-4o
   multi_hop_question_generation:
     - claude-3-opus-20240229
@@ -383,14 +383,14 @@ pipeline:
     - **Options**: `"fast_chunking"` or `"semantic_chunking"`  
     - **Description**: Mode for chunking. `"fast_chunking"` uses purely length-based rules, while `"semantic_chunking"` uses sentence embeddings and similarity thresholds.
 
-### Single Shot Question Generation Stage
+### Single Hop Question Generation Stage
 
 This stage generates questions from individual chunks.
 
 #### YAML Syntax
 ```yaml
 pipeline:
-  single_shot_question_generation:
+  single_hop_question_generation:
     run: true
     additional_instructions: "Generate questions to test a curious adult"
     chunk_sampling:
@@ -471,7 +471,7 @@ pipeline:
 
 ### LightEval Stage
 
-This stage combines single-shot and multi-hop questions into a unified dataset for evaluation.
+This stage combines single-hop and multi-hop questions into a unified dataset for evaluation.
 
 #### YAML Syntax
 ```yaml
@@ -518,7 +518,7 @@ model_roles:
     - Qwen/Qwen2.5-72B-Instruct
   chunking:
     - intfloat/multilingual-e5-large-instruct
-  single_shot_question_generation:
+  single_hop_question_generation:
     - Qwen/Qwen2.5-72B-Instruct
   multi_hop_question_generation:
     - Qwen/Qwen2.5-72B-Instruct
@@ -548,7 +548,7 @@ pipeline:
       num_multihops_factor: 2
       chunking_mode: "fast_chunking"
   
-  single_shot_question_generation:
+  single_hop_question_generation:
     run: true
     additional_instructions: "Generate questions to test a curious adult"
     chunk_sampling:

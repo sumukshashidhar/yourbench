@@ -3,7 +3,7 @@ Lightweight Evaluation Dataset Assembly Stage
 
 Overview:
 ---------
-Combines single-shot and multi-hop question datasets into a unified "light evaluation"
+Combines single-hop and multi-hop question datasets into a unified "light evaluation"
 dataset suitable for quick checking or downstream evaluations. This stage fetches
 the necessary metadata (document text, chunk text, etc.) from the chunked dataset
 to populate a final dataset with the following columns:
@@ -11,7 +11,7 @@ to populate a final dataset with the following columns:
 1) question                (str)  - The actual question text.
 2) ground_truth_answer     (str)  - The supposed correct answer to the question.
 3) question_category       (str)  - A label or taxonomy describing the question type.
-4) kind                    (str)  - Either "single_shot" or "multi_hop".
+4) kind                    (str)  - Either "single_hop" or "multi_hop".
 5) estimated_difficulty    (int)  - Estimated difficulty (1-10).
 6) citations               (List[str]) - List of source citations or references.
 7) document_id             (str)  - The ID of the document from which the question is derived.
@@ -25,15 +25,15 @@ Configuration Example:
 pipeline:
   lighteval:
     run: true
-    single_shot_subset: single_shot_questions_deduplicated
+    single_hop_subset: single_hop_questions_deduplicated
     multi_hop_subset: multi_hop_questions_deduplicated
     chunked_subset: chunked_documents
     output_subset: lighteval
 
 Usage:
 ------
-1. Load single-shot and multi-hop question subsets.
-2. Merge them into a single dataset, marking 'kind' as "single_shot" or "multi_hop."
+1. Load single-hop and multi-hop question subsets.
+2. Merge them into a single dataset, marking 'kind' as "single_hop" or "multi_hop."
 3. For each question row, look up the relevant chunks in the chunked dataset to
    populate 'chunks' and the full 'document' text.
 4. Save final dataset to HF or local path as configured.
@@ -51,7 +51,7 @@ def run(config: Dict[str, Any]) -> None:
     """
     Main entry point for the lighteval pipeline stage.
 
-    This stage merges single-shot and multi-hop question datasets with chunked
+    This stage merges single-hop and multi-hop question datasets with chunked
     document metadata into a unified "light evaluation" dataset containing the columns:
 
       1. question
@@ -72,7 +72,7 @@ def run(config: Dict[str, Any]) -> None:
         config (Dict[str, Any]):
             The entire pipeline configuration. Must have the following fields:
             - config["pipeline"]["lighteval"]["run"] (bool): Whether to run this stage.
-            - config["pipeline"]["lighteval"]["single_shot_subset"] (str): Subset containing single-shot questions.
+            - config["pipeline"]["lighteval"]["single_hop_subset"] (str): Subset containing single-hop questions.
             - config["pipeline"]["lighteval"]["multi_hop_subset"]   (str): Subset containing multi-hop questions.
             - config["pipeline"]["lighteval"]["chunked_subset"]     (str): Subset containing chunked documents.
             - config["pipeline"]["lighteval"]["output_subset"]      (str): Subset name for saving final dataset.
@@ -91,11 +91,11 @@ def run(config: Dict[str, Any]) -> None:
     # 2) Load datasets
     # ----------------------------------------
     try:
-        single_shot_ds = custom_load_dataset(config=config, subset="single_shot_questions")
-        logger.info(f"Loaded single-shot Q subset single_shot_questions with {len(single_shot_ds)} rows.")
+        single_hop_ds = custom_load_dataset(config=config, subset="single_hop_questions")
+        logger.info(f"Loaded single-hop Q subset single_hop_questions with {len(single_hop_ds)} rows.")
     except Exception as e:
-        logger.warning(f"Could not load single-shot subset single_shot_questions: {e}")
-        single_shot_ds = Dataset.from_dict({})  # empty fallback
+        logger.warning(f"Could not load single-hop subset single_hop_questions: {e}")
+        single_hop_ds = Dataset.from_dict({})  # empty fallback
 
     try:
         multi_hop_ds = custom_load_dataset(config=config, subset="multi_hop_questions")
@@ -119,8 +119,8 @@ def run(config: Dict[str, Any]) -> None:
         logger.error(f"Could not load summarized subset: {e}")
         summarized_ds = Dataset.from_dict({})  # empty fallback
 
-    if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
-        logger.error("No data in single-shot or multi-hop datasets. Exiting.")
+    if len(single_hop_ds) == 0 and len(multi_hop_ds) == 0:
+        logger.error("No data in single-hop or multi-hop datasets. Exiting.")
         return
 
     # ----------------------------------------
@@ -152,9 +152,9 @@ def run(config: Dict[str, Any]) -> None:
     # ----------------------------------------
     # 4) Helper functions to transform a row
     # ----------------------------------------
-    def make_single_shot_record(row: Dict[str, Any]) -> Dict[str, Any]:
+    def make_single_hop_record(row: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Transform a single-shot question row into a standardized dictionary
+        Transform a single-hop question row into a standardized dictionary
         for the final lighteval dataset.
         """
         doc_id: str = row.get("document_id", "")
@@ -183,7 +183,7 @@ def run(config: Dict[str, Any]) -> None:
             "gold": gold,
             "choices": row.get("choices", []),
             "question_category": row.get("self_assessed_question_type", "unknown"),
-            "kind": "single_shot",
+            "kind": "single_hop",
             "estimated_difficulty": row.get("estimated_difficulty", 5),
             "citations": row.get("citations", []),
             "document_id": doc_id,
@@ -242,8 +242,8 @@ def run(config: Dict[str, Any]) -> None:
     # ----------------------------------------
     combined_records = []
 
-    for row in single_shot_ds:
-        record = make_single_shot_record(row)
+    for row in single_hop_ds:
+        record = make_single_hop_record(row)
         combined_records.append(record)
 
     for row in multi_hop_ds:
