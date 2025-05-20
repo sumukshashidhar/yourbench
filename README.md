@@ -21,12 +21,6 @@
   </strong>
 </p>
 
-<!-- Example badges -->
-<a href="https://github.com/huggingface/yourbench/stargazers">
-  <img src="https://img.shields.io/github/stars/huggingface/yourbench?style=social" alt="GitHub Repo stars">
-</a> <a href="https://github.com/huggingface/yourbench/actions/workflows/ci.yml">
-  <img src="https://github.com/huggingface/yourbench/actions/workflows/ci.yml/badge.svg" alt="CI Status">
-</a>
 
 <p align="center">
   <a href="https://youtu.be/mhszO6kZSbI">
