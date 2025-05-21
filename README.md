@@ -21,23 +21,6 @@
   </strong>
 </p>
 
-<!-- Example badges -->
-<a href="https://github.com/huggingface/yourbench/stargazers">
-  <img src="https://img.shields.io/github/stars/huggingface/yourbench?style=social" alt="GitHub Repo stars">
-</a> <a href="https://github.com/huggingface/yourbench/actions/workflows/ci.yml">
-  <img src="https://github.com/huggingface/yourbench/actions/workflows/ci.yml/badge.svg" alt="CI Status">
-</a>
-
-<p align="center">
-  <a href="https://youtu.be/mhszO6kZSbI">
-    <img src="https://img.youtube.com/vi/mhszO6kZSbI/maxresdefault.jpg" alt="YourBench Demo Video" width="600" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-    <br>
-    <img src="https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch Demo on YouTube">
-    <br>
-    <em>Watch our 3-minute demo of the YourBench pipeline</em>
-  </a>
-</p>
-
 </div>
 
 ---
