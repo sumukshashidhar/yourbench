@@ -89,7 +89,6 @@ def _build_chunk_calls(
         )
         enc = tiktoken.get_encoding("cl100k_base")
 
-
     for doc_idx, doc_text in enumerate(dataset["document_text"]):
         token_len = len(enc.encode(doc_text, disallowed_special=()))
         if token_len <= max_tokens:  # treat as single chunk (chunk_idx = -1)
@@ -215,7 +214,7 @@ def run(config: dict[str, Any]) -> None:
 
     if len(doc_indices) == 0:
         logger.info("All documents were short enough for single-pass summarization.")
-    
+
     combine_summaries_raw: List[str] = []
     if combine_calls:
         combine_resp = run_inference(config=config, step_name="summarization_combine", inference_calls=combine_calls)

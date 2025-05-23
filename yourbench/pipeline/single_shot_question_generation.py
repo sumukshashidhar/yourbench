@@ -46,7 +46,12 @@ from yourbench.utils.dataset_engine import (
 )
 
 # Import the unified parsing function
-from yourbench.utils.parsing_engine import _force_int_in_range, shuffle_mcq, parse_qa_pairs_from_response, _validate_list
+from yourbench.utils.parsing_engine import (
+    shuffle_mcq,
+    _validate_list,
+    _force_int_in_range,
+    parse_qa_pairs_from_response,
+)
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
@@ -353,5 +358,3 @@ def _process_responses_and_build_dataset(
     column_names = list(question_dataset_rows[0].keys())
     final_data = {column: [row[column] for row in question_dataset_rows] for column in column_names}
     return Dataset.from_dict(final_data)
-
-
