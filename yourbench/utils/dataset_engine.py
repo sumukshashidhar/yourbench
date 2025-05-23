@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-from datasets import Dataset, DatasetDict, load_dataset, concatenate_datasets
+from datasets import Dataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from huggingface_hub import HfApi, whoami
 from huggingface_hub.utils import HFValidationError
 
@@ -14,7 +14,17 @@ class ConfigurationError(Exception):
     pass
 
 
+def _is_offline_mode() -> bool:
+    """Check if offline mode is enabled via environment variable."""
+    return os.environ.get("HF_HUB_OFFLINE", "0").lower() in ("1", "true", "yes")
+
+
 def _safe_get_organization(config: Dict, dataset_name: str, organization: str, token: str) -> str:
+    # In offline mode, don't try to fetch organization
+    if _is_offline_mode():
+        logger.info("Offline mode detected. Skipping organization fetch.")
+        return organization
+
     if not organization or (isinstance(organization, str) and organization.startswith("$")):
         if isinstance(organization, str) and organization.startswith("$"):
             # Log if it was explicitly set but unexpanded
@@ -106,6 +116,11 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
         if organization and "/" not in dataset_name:
             full_dataset_name = f"{organization}/{dataset_name}"
 
+        # Skip Hub validation in offline mode
+        if _is_offline_mode():
+            logger.debug(f"Offline mode detected. Skipping Hub validation for repo ID '{full_dataset_name}'")
+            return full_dataset_name
+
         # Use HfApi for robust validation
         api = HfApi()
         try:
@@ -146,12 +161,46 @@ def _get_full_dataset_repo_name(config: Dict[str, Any]) -> str:
 
 def custom_load_dataset(config: Dict[str, Any], subset: Optional[str] = None) -> Dataset:
     """
-    Load a dataset subset from Hugging Face, ensuring that we handle subsets correctly.
+    Load a dataset subset from a local directory if specified, otherwise from Hugging Face.
+    In offline mode, only load from local directory.
     """
-    dataset_repo_name = _get_full_dataset_repo_name(config)
+    local_dataset_dir = config.get("local_dataset_dir", None)
+    if (
+        local_dataset_dir is None
+        and "hf_configuration" in config
+        and "local_dataset_dir" in config["hf_configuration"]
+    ):
+        local_dataset_dir = config["hf_configuration"].get("local_dataset_dir")
 
-    # TODO: add an optional loading from a local path
-    logger.info(f"Loading dataset HuggingFace Hub with repo_id='{dataset_repo_name}'")
+    # First try loading from local path
+    if local_dataset_dir:
+        if os.path.exists(local_dataset_dir):
+            logger.info(f"Loading dataset locally from '{local_dataset_dir}'")
+            dataset = load_from_disk(local_dataset_dir)
+            # If subset is specified and this is a DatasetDict, return only the subset
+            if subset and isinstance(dataset, DatasetDict):
+                if subset in dataset:
+                    return dataset[subset]
+                else:
+                    logger.warning(f"Subset '{subset}' not found in local dataset. Returning empty dataset.")
+                    return Dataset.from_dict({})
+            return dataset
+        else:
+            logger.warning(f"local_dataset_dir '{local_dataset_dir}' does not exist.")
+            if _is_offline_mode():
+                raise ValueError("Offline mode is enabled but local dataset not found")
+            else:
+                logger.warning("Falling back to Hugging Face Hub.")
+
+    # If we're in offline mode and made it here, the local dataset doesn't exist
+    if _is_offline_mode():
+        logger.warning("Offline mode enabled but no local dataset found. Returning empty dataset.")
+        return Dataset.from_dict({})
+
+    # If we're here, try to get from Hub
+    dataset_repo_name = _get_full_dataset_repo_name(config)
+    logger.info(f"Loading dataset from HuggingFace Hub with repo_id='{dataset_repo_name}'")
+
     # If subset name does NOT exist, return an empty dataset to avoid the crash:
     try:
         return load_dataset(dataset_repo_name, name=subset, split="train")
@@ -173,24 +222,111 @@ def custom_save_dataset(
 ) -> None:
     """
     Save a dataset subset locally and push it to Hugging Face Hub.
+
+    When saving locally:
+    - If a subset is specified, it will be added to an existing dataset or
+      create a new DatasetDict containing that subset.
+    - All subsets are saved to the same local_dataset_dir.
     """
+    # In offline mode, force save local and disable push to hub
+    if _is_offline_mode():
+        save_local = True
+        if push_to_hub:
+            logger.warning("Offline mode enabled. Disabling push_to_hub operation.")
+            push_to_hub = False
 
     dataset_repo_name = _get_full_dataset_repo_name(config)
 
     local_dataset_dir = config.get("local_dataset_dir", None)
+    if (
+        local_dataset_dir is None
+        and "hf_configuration" in config
+        and "local_dataset_dir" in config["hf_configuration"]
+    ):
+        local_dataset_dir = config["hf_configuration"].get("local_dataset_dir")
+
     if local_dataset_dir and save_local:
-        logger.info(f"Saving dataset localy to: '{local_dataset_dir}'")
-        if subset:
-            local_dataset = DatasetDict({subset: dataset})
-            local_dataset_dir = os.path.join(local_dataset_dir, subset)
+        logger.info(f"Saving dataset locally to: '{local_dataset_dir}'")
+
+        # Check if dataset exists at the specified location
+        if os.path.exists(local_dataset_dir):
+            try:
+                # Try to load existing dataset
+                existing_dataset = load_from_disk(local_dataset_dir)
+                if subset:
+                    if isinstance(existing_dataset, DatasetDict):
+                        # To avoid the "dataset can't overwrite itself" error,
+                        # create a new dataset dictionary instead of modifying the existing one
+                        new_dataset_dict = DatasetDict()
+
+                        # Copy all existing subsets except the one we're updating
+                        for key, value in existing_dataset.items():
+                            if key != subset:
+                                new_dataset_dict[key] = value
+
+                        # Add the new subset
+                        new_dataset_dict[subset] = dataset
+                        logger.info(f"Adding/updating subset '{subset}' to existing dataset")
+                        local_dataset = new_dataset_dict
+                    else:
+                        # Existing dataset is not a DatasetDict, convert it
+                        logger.info("Converting existing dataset to DatasetDict to add subset")
+                        if subset == "default" or subset == "train":
+                            # If existing dataset is the default subset, convert to DatasetDict
+                            local_dataset = DatasetDict({"default": existing_dataset, subset: dataset})
+                        else:
+                            # If existing dataset is not a DatasetDict, convert it to one with "default" as the key
+                            local_dataset = DatasetDict({"default": existing_dataset, subset: dataset})
+                else:
+                    # No subset specified, simply overwrite the existing dataset
+                    local_dataset = dataset
+            except Exception as e:
+                # If there was an error loading the existing dataset
+                logger.warning(f"Error loading existing dataset: {e}. Creating a new dataset.")
+                if subset:
+                    local_dataset = DatasetDict({subset: dataset})
+                else:
+                    local_dataset = dataset
         else:
-            local_dataset = dataset
+            # No existing dataset, create a new one
+            if subset:
+                local_dataset = DatasetDict({subset: dataset})
+            else:
+                local_dataset = dataset
 
-        os.makedirs(local_dataset_dir, exist_ok=True)
-        local_dataset.save_to_disk(local_dataset_dir)
-        logger.success(f"Dataset successfully saved localy to: '{local_dataset_dir}'")
+            # Create the directory if it doesn't exist
+            os.makedirs(os.path.dirname(local_dataset_dir), exist_ok=True)
 
-    if config["hf_configuration"].get("concat_if_exist", False):
+        try:
+            # Save the dataset to disk
+            local_dataset.save_to_disk(local_dataset_dir)
+            logger.success(f"Dataset successfully saved locally to: '{local_dataset_dir}'")
+        except PermissionError as e:
+            if "dataset can't overwrite itself" in str(e):
+                # Handle the specific error where a dataset can't overwrite itself
+                logger.warning("Dataset can't overwrite itself. Attempting to save with a temporary directory...")
+                import shutil
+                import tempfile
+
+                # Create a temporary directory
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    # Save to temporary directory first
+                    local_dataset.save_to_disk(temp_dir)
+
+                    # Remove the existing dataset directory
+                    shutil.rmtree(local_dataset_dir)
+
+                    # Copy from temporary directory to the target directory
+                    shutil.copytree(temp_dir, local_dataset_dir)
+
+                logger.success(
+                    f"Dataset successfully saved locally to: '{local_dataset_dir}' using a temporary directory"
+                )
+            else:
+                # Re-raise if it's a different permission error
+                raise
+
+    if config["hf_configuration"].get("concat_if_exist", False) and not _is_offline_mode():
         existing_dataset = custom_load_dataset(config=config, subset=subset)
         dataset = concatenate_datasets([existing_dataset, dataset])
         logger.info("Concatenated dataset with an existing one")
@@ -200,7 +336,7 @@ def custom_save_dataset(
     else:
         config_name = "default"
 
-    if push_to_hub:
+    if push_to_hub and not _is_offline_mode():
         logger.info(f"Pushing dataset to HuggingFace Hub with repo_id='{dataset_repo_name}'")
         dataset.push_to_hub(
             repo_id=dataset_repo_name,
