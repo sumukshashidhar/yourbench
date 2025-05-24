@@ -201,7 +201,7 @@ def test_chunking_stage(mock_config):
         mock_load.assert_called_once()
         assert mock_split.call_count == 2  # Called once for each document
         mock_save.assert_called_once()
-        
+
         # Verify that the dataset was saved with the right subset
         saved_args = mock_save.call_args
         assert saved_args[1]["subset"] == "chunked"
