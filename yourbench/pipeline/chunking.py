@@ -847,27 +847,3 @@ def _plot_aggregated_similarities(all_similarities: list[list[float]]) -> None:
     plt.savefig(plot_path, dpi=300, bbox_inches="tight")  # Changed dpi to 300
     plt.close()
     logger.info(f"Saved aggregated similarity plot at '{plot_path}'.")
-
-
-# Make sure main guard exists if this file is runnable directly (optional but good practice)
-if __name__ == "__main__":
-    # Example configuration for testing (replace with actual loading if needed)
-    test_config = {
-        "pipeline": {
-            "chunking": {
-                "run": True,
-                "chunking_configuration": {
-                    "chunking_mode": "fast_chunking"  # or "semantic_chunking" if deps installed
-                },
-                # Add other necessary config keys like dataset paths etc.
-            }
-        },
-        "settings": {"debug": True},
-        # Add dataset config, model roles etc.
-    }
-    # Basic logger setup for standalone execution
-    logger.add("logs/chunking_standalone.log", rotation="10 MB")
-    logger.info("Running chunking module standalone (example)...")
-    # Note: You'd need a valid dataset configuration for run() to work fully.
-    # run(test_config)
-    logger.info("Standalone example finished.")
