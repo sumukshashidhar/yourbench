@@ -130,6 +130,13 @@ def run(config: Dict[str, Any]) -> None:
         all_final_scores.append(final_score)
 
     # 4) Add these new columns to the dataset
+    # First, remove columns if they already exist to prevent duplication errors
+    columns_to_add = ["answer_citation_score", "chunk_citation_score", "citation_score"]
+    existing_columns_to_remove = [col for col in columns_to_add if col in lighteval_ds.column_names]
+    if existing_columns_to_remove:
+        logger.info(f"Removing existing columns before adding new ones: {existing_columns_to_remove}")
+        lighteval_ds = lighteval_ds.remove_columns(existing_columns_to_remove)
+
     lighteval_ds = lighteval_ds.add_column("answer_citation_score", all_answer_citation_scores)
     lighteval_ds = lighteval_ds.add_column("chunk_citation_score", all_chunk_citation_scores)
     lighteval_ds = lighteval_ds.add_column("citation_score", all_final_scores)
