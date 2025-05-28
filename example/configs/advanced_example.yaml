@@ -180,7 +180,8 @@ pipeline:
   chunking:
     run: true
     chunking_configuration:
-      chunking_mode: fast_chunking   # "fast_chunking" or "semantic_chunking"
+      # chunking_mode: fast_chunking   # "fast_chunking" or "semantic_chunking"
+      # WARNING: SEMANTIC CHUNKING IS TEMPORARILY REMOVED AFTER v0.3.1. 
       l_max_tokens: 128              # Each chunk’s maximum token length
       token_overlap: 0               # Overlap between chunks in token-based splitting
       encoding_name: cl100k_base     # Tokenizer name for measuring token lengths
