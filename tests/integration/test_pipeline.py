@@ -56,13 +56,10 @@ def mock_config(temp_dir):
             "chunking": {
                 "run": True,
                 "chunking_configuration": {
-                    "l_min_tokens": 64,
-                    "l_max_tokens": 128,
-                    "tau_threshold": 0.8,
+                    "l_max_tokens": 128,  # Only max_tokens is used now
                     "h_min": 2,
                     "h_max": 5,
                     "num_multihops_factor": 2,
-                    "chunking_mode": "fast_chunking",
                 },
             },
             "single_shot_question_generation": {
@@ -179,8 +176,8 @@ def test_chunking_stage(mock_config):
     mock_dataset = Dataset.from_dict({
         "document_id": ["doc1", "doc2"],
         "document_text": [
-            "This is document 1 with enough text to be chunked properly",
-            "This is document 2 which also has sufficient text for chunking",
+            "This is document 1 with enough text to be chunked properly. " * 10,
+            "This is document 2 which also has sufficient text for chunking. " * 10,
         ],
         "document_summary": ["Summary 1", "Summary 2"],
     })
@@ -189,12 +186,10 @@ def test_chunking_stage(mock_config):
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
-        patch("yourbench.pipeline.chunking._compute_info_density_metrics") as mock_metrics,
-        patch("yourbench.pipeline.chunking.split_into_token_chunks") as mock_split,
+        patch("yourbench.utils.chunking_utils.split_into_token_chunks") as mock_split,
     ):
         # Configure mock returns
         mock_split.return_value = ["Chunk 1", "Chunk 2"]
-        mock_metrics.return_value = []
 
         # Import the chunking run function
         from yourbench.pipeline.chunking import run
@@ -204,8 +199,12 @@ def test_chunking_stage(mock_config):
 
         # Verify the chunking stage behavior
         mock_load.assert_called_once()
-        assert mock_split.call_count > 0
+        assert mock_split.call_count == 2  # Called once for each document
         mock_save.assert_called_once()
+
+        # Verify that the dataset was saved with the right subset
+        saved_args = mock_save.call_args
+        assert saved_args[1]["subset"] == "chunked"
 
 
 # Test for single-shot question generation stage
@@ -266,14 +265,11 @@ def test_multi_hop_question_generation_stage(mock_config):
     """
     # Mock dataset with chunks and valid multihop_chunks format
     chunks = [{"chunk_id": "chunk1", "chunk_text": "This is chunk 1"}]
-    # Correct format for multihop_chunks
+    # Updated format for multihop_chunks based on the refactored code
     multihop_chunks = [
         {
-            "multihop_id": "mh1",
-            "source_chunks": [
-                {"chunk_id": "chunk1", "chunk_text": "Text 1"},
-                {"chunk_id": "chunk2", "chunk_text": "Text 2"},
-            ],
+            "chunk_ids": ["chunk1", "chunk2"],
+            "chunks_text": ["Text 1", "Text 2"],
         }
     ]
     mock_dataset = Dataset.from_dict({
