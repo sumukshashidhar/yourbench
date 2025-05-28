@@ -62,7 +62,12 @@ from yourbench.utils.dataset_engine import (
 )
 
 # Import the unified parsing function
-from yourbench.utils.parsing_engine import shuffle_mcq, parse_qa_pairs_from_response
+from yourbench.utils.parsing_engine import (
+    shuffle_mcq,
+    _validate_list,
+    _force_int_in_range,
+    parse_qa_pairs_from_response,
+)
 from yourbench.utils.inference_engine import InferenceCall, run_inference
 
 
@@ -87,11 +92,16 @@ class QuestionAnswerPair:
         self.estimated_difficulty = _force_int_in_range(self.estimated_difficulty, 1, 10)
         self.question_type = str(self.question_type)
         self.thought_process = str(self.thought_process)
+
         if not isinstance(self.citations, list):
             self.citations = []
+        else:
+            self.citations = _validate_list(self.citations)
 
         if not isinstance(self.choices, list):
             self.choices = []
+        else:
+            self.choices = _validate_list(self.choices)
 
 
 @dataclass
@@ -362,14 +372,3 @@ def _parse_and_build_final(
     except Exception as ds_error:
         logger.error(f"Failed to create dataset from multi-hop question rows: {ds_error}")
         return None
-
-
-def _force_int_in_range(value: Any, min_val: int, max_val: int) -> int:
-    """
-    Convert a value to int and clamp it between min_val and max_val.
-    """
-    try:
-        ivalue = int(value)
-    except (ValueError, TypeError):
-        ivalue = (min_val + max_val) // 2
-    return max(min_val, min(ivalue, max_val))

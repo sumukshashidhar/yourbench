@@ -87,9 +87,7 @@ def run(config: Dict[str, Any]) -> None:
 
     logger.info("Saving lighteval compatible dataset")
 
-    # ----------------------------------------
-    # 2) Load datasets
-    # ----------------------------------------
+    # Load datasets
     try:
         single_shot_ds = custom_load_dataset(config=config, subset="single_shot_questions")
         logger.info(f"Loaded single-shot Q subset single_shot_questions with {len(single_shot_ds)} rows.")
@@ -123,15 +121,7 @@ def run(config: Dict[str, Any]) -> None:
         logger.error("No data in single-shot or multi-hop datasets. Exiting.")
         return
 
-    # ----------------------------------------
-    # 3) Prepare lookups from chunked dataset
-    # ----------------------------------------
-    # We'll store: doc_id -> (document_text, chunk_id -> chunk_text).
-    # chunked_ds typically has the following columns:
-    #  - document_id (str)
-    #  - document_text (str)
-    #  - chunks (list of dicts with {chunk_id, chunk_text})
-    # Possibly also "multihop_chunks" but we only need single-hop "chunks".
+    # Prepare lookups from chunked dataset
     doc_meta_map = {}
     for row in chunked_ds:
         doc_id = row.get("document_id", "")
@@ -149,9 +139,7 @@ def run(config: Dict[str, Any]) -> None:
         if doc_id in doc_meta_map:
             doc_meta_map[doc_id].update({"document_summary": row.get("document_summary")})
 
-    # ----------------------------------------
-    # 4) Helper functions to transform a row
-    # ----------------------------------------
+    # Helper functions to transform a row
     def make_single_shot_record(row: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform a single-shot question row into a standardized dictionary
@@ -159,9 +147,6 @@ def run(config: Dict[str, Any]) -> None:
         """
         doc_id: str = row.get("document_id", "")
         chunk_id: str = row.get("chunk_id", "")
-        # ground_truth is row["self_answer"]
-        # question_category is row["self_assessed_question_type"]
-        # question => row["question"], etc.
 
         # Grab doc meta
         doc_meta = doc_meta_map.get(doc_id, {})
@@ -173,8 +158,17 @@ def run(config: Dict[str, Any]) -> None:
 
         # if multiple choice question convert to number
         gold = row.get("self_answer", "")
-        if row.get("choices"):
-            gold = [ord(gold) - ord("A")]
+        if not gold:
+            logger.warning("Row has empty answer line")
+
+        stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
+        if stage_cfg.get("question_type") == "multi-choice":
+            if not gold:
+                gold = [0]
+            else:
+                gold = [ord(gold) - ord("A")]
+        else:
+            gold = [gold]
 
         return {
             "question": row.get("question", ""),
@@ -216,9 +210,17 @@ def run(config: Dict[str, Any]) -> None:
 
         # if multiple choice question convert to number
         gold = row.get("self_answer", "")
-        if row.get("choices"):
-            gold = [ord(gold) - ord("A")]
+        if not gold:
+            logger.warning("Row has empty answer line")
 
+        stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
+        if stage_cfg.get("question_type") == "multi-choice":
+            if not gold:
+                gold = [0]
+            else:
+                gold = [ord(gold) - ord("A")]
+        else:
+            gold = [gold]
         return {
             "question": row.get("question", ""),
             "additional_instructions": row.get("additional_instructions", ""),
@@ -237,42 +239,25 @@ def run(config: Dict[str, Any]) -> None:
             "document_summary": doc_summary,
         }
 
-    # ----------------------------------------
-    # 5) Convert each dataset to final records
-    # ----------------------------------------
-    combined_records = []
-
-    for row in single_shot_ds:
-        record = make_single_shot_record(row)
-        combined_records.append(record)
-
-    for row in multi_hop_ds:
-        record = make_multi_hop_record(row)
-        combined_records.append(record)
+    # Convert each dataset to final records
+    combined_records = [
+        *[make_single_shot_record(row) for row in single_shot_ds],
+        *[make_multi_hop_record(row) for row in multi_hop_ds],
+    ]
 
     if not combined_records:
         logger.warning("No final records to merge in lighteval. Exiting.")
         return
 
-    # ----------------------------------------
-    # 6) Create a Hugging Face Dataset
-    # ----------------------------------------
+    # Create a Hugging Face Dataset
     logger.info(f"Assembling final dataset with {len(combined_records)} rows.")
     try:
-        # Convert to column-wise dict for HF Dataset
-        col_names = list(combined_records[0].keys())
-        final_dict = {c: [] for c in col_names}
-        for rec in combined_records:
-            for c in col_names:
-                final_dict[c].append(rec[c])
-        final_ds = Dataset.from_dict(final_dict)
+        final_ds = Dataset.from_list(combined_records)
 
     except Exception as ds_error:
-        logger.error(f"Failed to create final dataset object: {ds_error}")
+        logger.exception("Failed to create final dataset object")
         return
 
-    # ----------------------------------------
-    # 7) Save dataset
-    # ----------------------------------------
+    # Save dataset
     custom_save_dataset(dataset=final_ds, config=config, subset="lighteval")
     logger.success("Lighteval dataset saved successfully.")

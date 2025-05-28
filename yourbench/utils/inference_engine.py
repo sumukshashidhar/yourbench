@@ -65,7 +65,7 @@ class InferenceCall:
     messages: List[Dict[str, str]]
     temperature: Optional[float] = None
     tags: List[str] = field(default_factory=lambda: ["dev"])  # Tags will identify the 'stage'
-    max_retries: int = 8
+    max_retries: int = 12
     seed: Optional[int] = None
 
 
@@ -211,7 +211,7 @@ async def _get_response(model: Model, inference_call: InferenceCall) -> str:
 
     # Safe-guarding in case the response is missing .choices
     if not response or not response.choices:
-        logger.error("Empty response or missing .choices from model {}", model.model_name)
+        logger.warning("Empty response or missing .choices from model {}", model.model_name)
         raise Exception("Failed Inference")
 
     output_content = response.choices[0].message.content
@@ -266,7 +266,7 @@ async def _retry_with_backoff(model: Model, inference_call: InferenceCall, semap
                 )
                 return await _get_response(model, inference_call)  # Cost tracking happens inside _get_response
             except Exception as e:
-                logger.error("Error invoking model {}: {}", model.model_name, e)
+                logger.warning("Error invoking model {}: {}", model.model_name, e)
 
         # Only sleep if not on the last attempt
         if attempt < inference_call.max_retries - 1:

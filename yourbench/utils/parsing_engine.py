@@ -186,3 +186,27 @@ def shuffle_mcq(question_dict: dict) -> dict:
     question_dict["answer"] = new_answer_letter
 
     return question_dict
+
+
+def _force_int_in_range(value: Any, min_val: int, max_val: int) -> int:
+    """
+    Convert a value to int and clamp it between min_val and max_val.
+    """
+    try:
+        ivalue = int(value)
+    except (ValueError, TypeError):
+        ivalue = (min_val + max_val) // 2
+    return max(min_val, min(ivalue, max_val))
+
+
+def _validate_list(some_list: list[str]) -> list[str]:
+    """
+    Force possible list of strings to be a list of strings
+    """
+    if not isinstance(some_list, list):
+        return []
+
+    try:
+        return [str(value) for value in some_list]
+    except Exception:
+        return []
