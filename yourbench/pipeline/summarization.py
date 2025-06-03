@@ -166,10 +166,14 @@ def run(config: dict[str, Any]) -> None:
     if not dataset or len(dataset) == 0:
         logger.warning("Ingested dataset is empty or None – nothing to summarise.")
         return
-    logger.info(f"Loaded {len(dataset)} documents for summarisation.")
+    logger.info(f"Loaded {len(dataset)} documents for summarization.")
 
     chunk_calls, call_map = _build_chunk_calls(dataset, max_tokens, overlap, encoding_name)
-    chunk_responses_dict = run_inference(config=config, step_name="summarization_chunk", inference_calls=chunk_calls)
+    chunk_responses_dict = run_inference(
+        config=config,
+        step_name="summarization",
+        inference_calls=chunk_calls
+    )
     model_name, raw_chunk_summaries_by_doc, cleaned_chunk_summaries_by_doc = _collect_chunk_summaries(
         chunk_responses_dict, call_map, len(dataset)
     )
@@ -179,7 +183,9 @@ def run(config: dict[str, Any]) -> None:
     raw_combined_summaries: list[str] = []
     if combine_calls:
         combine_responses_dict = run_inference(
-            config=config, step_name="summarization_combine", inference_calls=combine_calls
+            config=config,
+            step_name="summarization",
+            inference_calls=combine_calls
         )
         if combine_responses_dict:
             combine_model_name = list(combine_responses_dict.keys())[0]
@@ -211,4 +217,4 @@ def run(config: dict[str, Any]) -> None:
     dataset = dataset.add_column("summarization_model", [effective_model_name] * len(dataset))
 
     custom_save_dataset(dataset=dataset, config=config, subset="summarized")
-    logger.success(f"Hierarchical summarisation completed ({len(dataset)} documents).")
+    logger.success(f"Hierarchical summarization completed ({len(dataset)} documents).")
