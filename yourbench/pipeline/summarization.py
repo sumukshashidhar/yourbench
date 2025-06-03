@@ -169,11 +169,7 @@ def run(config: dict[str, Any]) -> None:
     logger.info(f"Loaded {len(dataset)} documents for summarization.")
 
     chunk_calls, call_map = _build_chunk_calls(dataset, max_tokens, overlap, encoding_name)
-    chunk_responses_dict = run_inference(
-        config=config,
-        step_name="summarization",
-        inference_calls=chunk_calls
-    )
+    chunk_responses_dict = run_inference(config=config, step_name="summarization", inference_calls=chunk_calls)
     model_name, raw_chunk_summaries_by_doc, cleaned_chunk_summaries_by_doc = _collect_chunk_summaries(
         chunk_responses_dict, call_map, len(dataset)
     )
@@ -182,11 +178,7 @@ def run(config: dict[str, Any]) -> None:
 
     raw_combined_summaries: list[str] = []
     if combine_calls:
-        combine_responses_dict = run_inference(
-            config=config,
-            step_name="summarization",
-            inference_calls=combine_calls
-        )
+        combine_responses_dict = run_inference(config=config, step_name="summarization", inference_calls=combine_calls)
         if combine_responses_dict:
             combine_model_name = list(combine_responses_dict.keys())[0]
             if combine_model_name != model_name and model_name:
