@@ -228,7 +228,7 @@ def test_single_shot_question_generation_stage(mock_config):
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
         patch("yourbench.utils.inference_engine.run_inference") as mock_run_inference,
-        patch("yourbench.pipeline.single_shot_question_generation.parse_qa_pairs_from_response") as mock_parse,
+        patch("yourbench.pipeline.question_generation.parse_qa_pairs_from_response") as mock_parse,
     ):
         # Configure mocks
         mock_run_inference.return_value = {"fake_model": ["Question generation response"]}
@@ -244,7 +244,7 @@ def test_single_shot_question_generation_stage(mock_config):
         ]
 
         # Import run function
-        from yourbench.pipeline.single_shot_question_generation import run
+        from yourbench.pipeline.question_generation import run_single_shot as run
 
         # Run the stage
         run(mock_config)
@@ -284,9 +284,8 @@ def test_multi_hop_question_generation_stage(mock_config):
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
         patch("yourbench.utils.inference_engine.run_inference") as mock_run_inference,
-        patch("yourbench.pipeline.multi_hop_question_generation.parse_qa_pairs_from_response") as mock_parse,
-        # Mock the chunk sampling function to bypass the empty multihop check
-        patch("yourbench.pipeline.multi_hop_question_generation._multihop_chunk_sampling_and_calls") as mock_sampling,
+        patch("yourbench.pipeline.question_generation.parse_qa_pairs_from_response") as mock_parse,
+        patch("yourbench.pipeline.question_generation.sample_multihop_chunks") as mock_sampling,
     ):
         # Configure mocks
         mock_run_inference.return_value = {"fake_model": ["Multi-hop question generation response"]}
@@ -306,7 +305,7 @@ def test_multi_hop_question_generation_stage(mock_config):
         )
 
         # Import run function
-        from yourbench.pipeline.multi_hop_question_generation import run
+        from yourbench.pipeline.question_generation import run_multi_hop as run
 
         # Run the stage
         run(mock_config)
