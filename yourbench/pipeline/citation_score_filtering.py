@@ -29,7 +29,7 @@ from typing import Any, Dict, List
 from loguru import logger
 from thefuzz import fuzz  # pip install thefuzz
 
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, replace_dataset_columns
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -130,9 +130,16 @@ def run(config: Dict[str, Any]) -> None:
         all_final_scores.append(final_score)
 
     # 4) Add these new columns to the dataset
-    lighteval_ds = lighteval_ds.add_column("answer_citation_score", all_answer_citation_scores)
-    lighteval_ds = lighteval_ds.add_column("chunk_citation_score", all_chunk_citation_scores)
-    lighteval_ds = lighteval_ds.add_column("citation_score", all_final_scores)
+    # Use helper function to replace columns cleanly
+    # Note: This doesn't preserve original column metadata, but for computed float scores
+    # this is acceptable as type inference will correctly identify them as numeric
+    columns_data = {
+        "answer_citation_score": all_answer_citation_scores,
+        "chunk_citation_score": all_chunk_citation_scores,
+        "citation_score": all_final_scores,
+    }
+
+    lighteval_ds = replace_dataset_columns(lighteval_ds, columns_data)
 
     # 5) Save the updated dataset
     #    We reuse the "lighteval" subset name, but you could save it elsewhere if you prefer.
