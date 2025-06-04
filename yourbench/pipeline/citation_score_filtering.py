@@ -136,9 +136,9 @@ def run(config: Dict[str, Any]) -> None:
     columns_data = {
         "answer_citation_score": all_answer_citation_scores,
         "chunk_citation_score": all_chunk_citation_scores,
-        "citation_score": all_final_scores
+        "citation_score": all_final_scores,
     }
-    
+
     lighteval_ds = replace_dataset_columns(lighteval_ds, columns_data)
 
     # 5) Save the updated dataset
