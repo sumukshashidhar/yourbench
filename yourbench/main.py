@@ -4,11 +4,14 @@ from typing import Optional
 from pathlib import Path
 
 import typer
+from dotenv import load_dotenv
 from loguru import logger
 
 from yourbench.analysis import run_analysis
 from yourbench.pipeline.handler import run_pipeline
 
+
+load_dotenv()
 
 app = typer.Typer(
     name="yourbench",
