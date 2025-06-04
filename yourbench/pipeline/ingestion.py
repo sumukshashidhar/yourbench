@@ -292,26 +292,59 @@ def _extract_markdown_from_html(file_path: str) -> str | None:
 
         logger.warning(f"Trafilatura returned no content for HTML file '{file_path}'.")
         return None
-    except ImportError:
-        logger.error(
-            "Trafilatura library is not installed. Please install it (e.g., `pip install trafilatura`) "
-            f"to process HTML files like '{file_path}' effectively. Skipping Trafilatura for this file."
-        )
-        return None
     except Exception as e:
         logger.error(f"Error using Trafilatura for HTML file '{file_path}': {e}. Skipping Trafilatura for this file.")
         return None
 
 
+def _get_markdown_content(file_path: str, markdown_processor: MarkItDown) -> str | None:
+    """
+    Extract or convert file content to Markdown based on file type.
+
+    Args:
+        file_path (str): The path to the source document.
+        markdown_processor (MarkItDown): Configured MarkItDown instance for conversions.
+
+    Returns:
+        str | None: The Markdown content, or None if conversion failed.
+
+    Logs:
+        - Info about the processing method used for each file type.
+        - Warnings for fallback scenarios or failed conversions.
+    """
+    file_ext = os.path.splitext(file_path)[1].lower()
+
+    if file_ext == ".md":
+        # For existing Markdown files, just read the content, ensuring UTF-8
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        logger.info(f"File '{file_path}' is already Markdown. Content read directly.")
+        return content
+
+    elif file_ext in [".html", ".htm"]:
+        logger.info(f"Processing HTML file: {file_path} with Trafilatura.")
+        content = _extract_markdown_from_html(file_path)
+        if content is None:  # Fallback to MarkItDown if Trafilatura failed or returned nothing
+            logger.warning(
+                f"Trafilatura processing failed or yielded no content for HTML '{file_path}'. "
+                "Falling back to MarkItDown for this file."
+            )
+            content = markdown_processor.convert(file_path).text_content
+        return content
+
+    else:  # For other file types, use the MarkItDown processor
+        logger.info(f"Converting non-HTML/Markdown file '{file_path}' using MarkItDown.")
+        return markdown_processor.convert(file_path).text_content
+
+
 def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_processor: MarkItDown) -> None:
     """
     Convert a single source file into Markdown and save the result.
-    Uses Trafilatura for HTML files to strip junk and extract main content as Markdown.
 
     Args:
         file_path (str): The path to the source document.
         output_dir (str): Directory where the converted .md file will be written.
-        markdown_processor (MarkItDown): Configured MarkItDown instance for non-HTML/non-MD conversions or fallback.
+        markdown_processor (MarkItDown): Configured MarkItDown instance for conversions.
 
     Returns:
         None
@@ -319,32 +352,10 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
     Logs:
         - Debug info about the file being processed.
         - Warning if conversion fails or the file is empty.
-        - Info/errors related to Trafilatura processing for HTML files.
     """
     logger.debug("Converting file: {}", file_path)
     try:
-        file_ext = os.path.splitext(file_path)[1].lower()
-        content: str | None = None
-
-        if file_ext == ".md":
-            # For existing Markdown files, just read the content, ensuring UTF-8
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            logger.info(f"File '{file_path}' is already Markdown. Content read directly.")
-
-        elif file_ext in [".html", ".htm"]:
-            logger.info(f"Processing HTML file: {file_path} with Trafilatura.")
-            content = _extract_markdown_from_html(file_path)
-            if content is None:  # Fallback to MarkItDown if Trafilatura failed or returned nothing
-                logger.warning(
-                    f"Trafilatura processing failed or yielded no content for HTML '{file_path}'. "
-                    "Falling back to MarkItDown for this file."
-                )
-                content = markdown_processor.convert(file_path).text_content
-
-        else:  # For other file types, use the MarkItDown processor
-            logger.info(f"Converting non-HTML/Markdown file '{file_path}' using MarkItDown.")
-            content = markdown_processor.convert(file_path).text_content
+        content = _get_markdown_content(file_path, markdown_processor)
 
         if content is None:
             logger.warning(f"No content could be generated for file '{file_path}' after processing. Skipping output.")
