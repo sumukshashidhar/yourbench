@@ -162,7 +162,7 @@ def run(config: Dict[str, Any]) -> None:
             logger.warning("Row has empty answer line")
 
         stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
-        if stage_cfg.get("question_type") == "multi-choice":
+        if stage_cfg.get("question_mode") == "multi-choice":
             if not gold:
                 gold = [0]
             else:
@@ -214,7 +214,7 @@ def run(config: Dict[str, Any]) -> None:
             logger.warning("Row has empty answer line")
 
         stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
-        if stage_cfg.get("question_type") == "multi-choice":
+        if stage_cfg.get("question_mode") == "multi-choice":
             if not gold:
                 gold = [0]
             else:
