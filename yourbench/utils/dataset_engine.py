@@ -277,3 +277,40 @@ def custom_save_dataset(
             config_name=subset or "default",
         )
         logger.success(f"Dataset pushed to Hub: '{settings.repo_id}'")
+
+
+def replace_dataset_columns(
+    dataset: Dataset, columns_data: dict[str, list], preserve_metadata: bool = False
+) -> Dataset:
+    """
+    Replace columns in a dataset by removing existing columns and adding new ones.
+
+    This helper function handles the common pattern of:
+    1. Removing existing columns (if they exist)
+    2. Adding new columns with computed data
+
+    Args:
+        dataset: The input dataset to modify
+        columns_data: Dictionary mapping column names to their data lists
+        preserve_metadata: If True, attempts to preserve column metadata (not implemented)
+
+    Returns:
+        Updated dataset with replaced columns
+
+    Note:
+        Column metadata (types, features) is not preserved in the current implementation.
+        New columns will have types inferred from the provided data.
+    """
+    # Remove existing columns to prevent duplication errors
+    columns_to_replace = list(columns_data.keys())
+    existing_columns_to_remove = [col for col in columns_to_replace if col in dataset.column_names]
+
+    if existing_columns_to_remove:
+        logger.info(f"Removing existing columns before adding new ones: {existing_columns_to_remove}")
+        dataset = dataset.remove_columns(existing_columns_to_remove)
+
+    # Add new columns
+    for column_name, column_data in columns_data.items():
+        dataset = dataset.add_column(column_name, column_data)
+
+    return dataset
