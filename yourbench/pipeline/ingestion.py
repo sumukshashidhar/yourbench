@@ -49,7 +49,7 @@ from loguru import logger
 from markitdown import MarkItDown
 
 from huggingface_hub import InferenceClient
-from yourbench.utils.inference_engine import Model as ModelConfig
+from yourbench.utils.inference.inference_core import Model as ModelConfig
 
 
 @dataclass
