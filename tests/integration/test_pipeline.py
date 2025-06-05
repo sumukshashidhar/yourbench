@@ -51,7 +51,10 @@ def mock_config(temp_dir):
                 "source_documents_dir": os.path.join(temp_dir, "raw"),
                 "output_dir": os.path.join(temp_dir, "processed"),
             },
-            "upload_ingest_to_hub": {"run": False, "source_documents_dir": os.path.join(temp_dir, "processed")},
+            "upload_ingest_to_hub": {
+                "run": False,
+                "source_documents_dir": os.path.join(temp_dir, "processed"),
+            },
             "summarization": {"run": True},
             "chunking": {
                 "run": True,
@@ -64,13 +67,23 @@ def mock_config(temp_dir):
             },
             "single_shot_question_generation": {
                 "run": True,
+                "question_mode": "open-ended",
                 "additional_instructions": "Generate questions to test a curious adult",
-                "chunk_sampling": {"mode": "count", "value": 1, "random_seed": 123},
+                "chunk_sampling": {
+                    "mode": "count",
+                    "value": 1,
+                    "random_seed": 123,
+                },
             },
             "multi_hop_question_generation": {
                 "run": True,
-                "additional_instructions": "Generate questions to test a curious adult",
-                "chunk_sampling": {"mode": "count", "value": 1, "random_seed": 42},
+                "question_mode": "multi-choice",
+                "additional_instructions": "Generate multi-choice questions to test a curious adult",
+                "chunk_sampling": {
+                    "mode": "count",
+                    "value": 1,
+                    "random_seed": 42,
+                },
             },
             "lighteval": {"run": True},
         },
@@ -135,8 +148,8 @@ def test_summarization_stage(mock_config):
 
     # Setup mocks
     with (
-        patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
-        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
+        patch("yourbench.pipeline.summarization.custom_load_dataset", return_value=mock_dataset) as mock_load,
+        patch("yourbench.pipeline.summarization.custom_save_dataset") as mock_save,
         patch("yourbench.pipeline.summarization.run_inference") as mock_run_inference,
         patch("yourbench.pipeline.summarization.extract_content_from_xml_tags") as mock_extract,
     ):
@@ -227,8 +240,8 @@ def test_single_shot_question_generation_stage(mock_config):
     with (
         patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
-        patch("yourbench.utils.inference_engine.run_inference") as mock_run_inference,
-        patch("yourbench.pipeline.question_generation.parse_qa_pairs_from_response") as mock_parse,
+        patch("yourbench.utils.inference.inference_core.run_inference") as mock_run_inference,
+        patch("yourbench.utils.parsing_engine.parse_qa_pairs_from_response") as mock_parse,
     ):
         # Configure mocks
         mock_run_inference.return_value = {"fake_model": ["Question generation response"]}
@@ -238,6 +251,7 @@ def test_single_shot_question_generation_stage(mock_config):
                 "answer": "Test answer",
                 "estimated_difficulty": 5,
                 "question_type": "factual",
+                "question_mode": "open-ended",
                 "thought_process": "Reasoning",
                 "citations": ["citation"],
             }
@@ -263,29 +277,34 @@ def test_multi_hop_question_generation_stage(mock_config):
 
     Verifies that questions are generated requiring reasoning across multiple chunks.
     """
-    # Mock dataset with chunks and valid multihop_chunks format
-    chunks = [{"chunk_id": "chunk1", "chunk_text": "This is chunk 1"}]
-    # Updated format for multihop_chunks based on the refactored code
-    multihop_chunks = [
+    from datasets import Dataset
+    from yourbench.utils.inference.inference_core import InferenceCall
+
+    # Mock dataset with valid multihop_chunks and corresponding chunks
+    mock_dataset = Dataset.from_list([
         {
-            "chunk_ids": ["chunk1", "chunk2"],
-            "chunks_text": ["Text 1", "Text 2"],
+            "document_id": "doc1",
+            "document_summary": "Document 1 summary",
+            "chunks": [
+                {"chunk_id": "chunk1", "chunk_text": "This is chunk 1"},
+                {"chunk_id": "chunk2", "chunk_text": "This is chunk 2"},
+            ],
+            "multihop_chunks": [
+                {
+                    "chunk_ids": ["chunk1", "chunk2"],
+                    "chunks_text": ["This is chunk 1", "This is chunk 2"],
+                }
+            ],
         }
-    ]
-    mock_dataset = Dataset.from_dict({
-        "document_id": ["doc1"],
-        "document_summary": ["Document 1 summary"],
-        "chunks": [chunks],
-        "multihop_chunks": [multihop_chunks],
-    })
+    ])
 
     # Setup mocks
     with (
-        patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset) as mock_load,
-        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
-        patch("yourbench.utils.inference_engine.run_inference") as mock_run_inference,
-        patch("yourbench.pipeline.question_generation.parse_qa_pairs_from_response") as mock_parse,
-        patch("yourbench.pipeline.question_generation.sample_multihop_chunks") as mock_sampling,
+        patch("yourbench.pipeline.question_generation.custom_load_dataset", return_value=mock_dataset) as mock_load,
+        patch("yourbench.pipeline.question_generation.custom_save_dataset") as mock_save,
+        patch("yourbench.pipeline.question_generation.run_inference") as mock_run_inference,
+        patch("yourbench.pipeline.question_generation.parse_multi_hop_responses") as mock_parse,
+        patch("yourbench.pipeline.question_generation.build_multi_hop_inference_calls") as mock_builder,
     ):
         # Configure mocks
         mock_run_inference.return_value = {"fake_model": ["Multi-hop question generation response"]}
@@ -299,9 +318,9 @@ def test_multi_hop_question_generation_stage(mock_config):
                 "citations": ["citation1", "citation2"],
             }
         ]
-        mock_sampling.return_value = (
-            [MagicMock()],  # Mock inference calls list
-            [(0, "doc1", ["chunk1", "chunk2"])],  # Mock call index mapping
+        mock_builder.return_value = (
+            [InferenceCall(messages=[{"role": "user", "content": "Explain chunk1 and chunk2"}])],
+            [(0, "doc1", ["chunk1", "chunk2"])],
         )
 
         # Import run function
@@ -313,6 +332,7 @@ def test_multi_hop_question_generation_stage(mock_config):
         # Verify behavior
         mock_load.assert_called_once()
         mock_run_inference.assert_called_once()
+        mock_parse.assert_called_once()
         mock_save.assert_called_once()
 
 
@@ -331,6 +351,7 @@ def test_lighteval_stage(mock_config):
         "self_answer": ["Single-shot answer"],
         "estimated_difficulty": [5],
         "self_assessed_question_type": ["factual"],
+        "question_mode": ["open-ended"],
         "generating_model": ["fake_model"],
         "additional_instructions": ["Generate questions"],
     })
@@ -342,6 +363,7 @@ def test_lighteval_stage(mock_config):
         "self_answer": ["Multi-hop answer"],
         "estimated_difficulty": [7],
         "self_assessed_question_type": ["reasoning"],
+        "question_mode": ["multi-choice"],
         "generating_model": ["fake_model"],
         "additional_instructions": ["Generate questions"],
     })
@@ -382,3 +404,43 @@ def test_lighteval_stage(mock_config):
         # Verify behavior
         assert mock_load.call_count == 4
         mock_save.assert_called_once()
+
+
+def test_stage_function_overrides(monkeypatch, tmp_path):
+    """
+    Test that STAGE_FUNCTION_OVERRIDES are honored and used instead of dynamic imports
+    """
+    from yourbench.pipeline import handler
+
+    # Track calls to override functions
+    called_stages = []
+
+    def mock_run_single_shot(config):
+        called_stages.append("single_shot_question_generation")
+
+    def mock_run_multi_hop(config):
+        called_stages.append("multi_hop_question_generation")
+
+    # Patch the override map to use mocks
+    monkeypatch.setitem(handler.STAGE_FUNCTION_OVERRIDES, "single_shot_question_generation", mock_run_single_shot)
+    monkeypatch.setitem(handler.STAGE_FUNCTION_OVERRIDES, "multi_hop_question_generation", mock_run_multi_hop)
+
+    # Patch load_config to avoid reading real file
+    def mock_load_config(path):
+        return {
+            "pipeline": {
+                "single_shot_question_generation": {"run": True},
+                "multi_hop_question_generation": {"run": True},
+            }
+        }
+
+    monkeypatch.setattr(handler, "load_config", mock_load_config)
+
+    # Run pipeline
+    config_path = tmp_path / "fake_config.yaml"
+    config_path.write_text("fake: config")
+    handler.run_pipeline(str(config_path))
+
+    # Assert overrides were called
+    assert "single_shot_question_generation" in called_stages
+    assert "multi_hop_question_generation" in called_stages
