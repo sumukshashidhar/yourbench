@@ -1,5 +1,8 @@
 name: Quality
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
