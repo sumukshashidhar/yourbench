@@ -18,6 +18,16 @@ from yourbench.analysis import run_analysis
 from yourbench.pipeline.handler import run_pipeline
 
 
+# Configuration constants
+DEFAULT_CONCURRENT_REQUESTS_HF = 16
+DEFAULT_CONCURRENT_REQUESTS_API = 8
+DEFAULT_CHUNK_TOKENS = 256
+DEFAULT_MAX_TOKENS = 16384
+DEFAULT_TOKEN_OVERLAP = 128
+DEFAULT_H_MIN = 2
+DEFAULT_H_MAX = 5
+DEFAULT_MULTIHOP_FACTOR = 2
+
 app = typer.Typer(
     name="yourbench",
     help="YourBench - Dynamic Evaluation Set Generation with Large Language Models.",
@@ -71,6 +81,62 @@ class ConfigBuilder:
         return config
 
 
+def validate_api_key_format(api_key: str) -> tuple[bool, str]:
+    """Validate API key format - should be env variable or empty."""
+    if not api_key:
+        return True, ""
+
+    if api_key.startswith("$"):
+        return True, api_key
+
+    # Check if it looks like a real API key
+    if len(api_key) > 10 and any(c in api_key for c in ["sk-", "key-", "api-", "hf_"]):
+        return False, "Please use environment variable format (e.g., $OPENAI_API_KEY)"
+
+    return True, api_key
+
+
+def write_env_file(api_keys: dict[str, str]) -> None:
+    """Write API keys to .env file if they don't exist."""
+    env_path = Path(".env")
+    existing_vars = {}
+
+    # Read existing .env if it exists
+    try:
+        if env_path.exists():
+            with open(env_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, value = line.split("=", 1)
+                        existing_vars[key.strip()] = value.strip()
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Could not read .env file: {e}")
+        return
+
+    # Add new keys if they don't exist
+    new_keys = []
+    for var_name, example_value in api_keys.items():
+        if var_name not in existing_vars:
+            new_keys.append((var_name, example_value))
+
+    if new_keys:
+        try:
+            with open(env_path, "a") as f:
+                if existing_vars:  # Add newline if file has content
+                    f.write("\n")
+                f.write("# API Keys added by YourBench\n")
+                for var, val in new_keys:
+                    f.write(f"{var}={val}\n")
+            console.print(f"[green]✓[/green] Added {len(new_keys)} API key(s) to .env file")
+            console.print("[yellow]Remember to update .env with your actual API keys![/yellow]")
+        except (OSError, PermissionError) as e:
+            logger.error(f"Could not write to .env file: {e}")
+            console.print("[red]Warning: Could not create/update .env file. Add these manually:[/red]")
+            for var, val in new_keys:
+                console.print(f"  {var}={val}")
+
+
 def create_model_config(existing_models: list[str]) -> dict:
     """Interactive model configuration with smart provider logic."""
     console.print("\n[bold cyan]Model Configuration[/bold cyan]")
@@ -81,11 +147,14 @@ def create_model_config(existing_models: list[str]) -> dict:
     console.print("\nSelect inference type:")
     console.print("1. Hugging Face Inference (default)")
     console.print("2. OpenAI Compatible API (vLLM, etc.)")
-    console.print("3. Custom API endpoint")
+    console.print("3. OpenAI API")
+    console.print("4. Google Gemini API")
+    console.print("5. Custom API endpoint")
 
     choice = IntPrompt.ask("Choice", default=1)
 
     config = {"model_name": model_name}
+    api_keys_to_env = {}
 
     if choice == 1:  # Hugging Face
         # Only for HF, ask about provider
@@ -100,21 +169,74 @@ def create_model_config(existing_models: list[str]) -> dict:
                 config["provider"] = provider
 
     elif choice == 2:  # OpenAI Compatible
+        config["base_url"] = Prompt.ask("Base URL", default="http://localhost:8000/v1")
+        while True:
+            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$VLLM_API_KEY")
+            valid, msg = validate_api_key_format(api_key)
+            if valid:
+                config["api_key"] = api_key
+                if api_key.startswith("$"):
+                    api_keys_to_env[api_key[1:]] = "your-vllm-api-key-here"
+                break
+            else:
+                console.print(f"[red]Error: {msg}[/red]")
+
+    elif choice == 3:  # OpenAI
         config["base_url"] = "https://api.openai.com/v1"
-        config["api_key"] = Prompt.ask("API key (use $VAR for env)", default="$OPENAI_API_KEY")
-        config["model_name"] = Prompt.ask("Model name", default="gpt-4o")
+        config["model_name"] = Prompt.ask("Model name", default="gpt-4")
+        while True:
+            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$OPENAI_API_KEY")
+            valid, msg = validate_api_key_format(api_key)
+            if valid:
+                config["api_key"] = api_key
+                if api_key.startswith("$"):
+                    api_keys_to_env[api_key[1:]] = "sk-..."
+                break
+            else:
+                console.print(f"[red]Error: {msg}[/red]")
+
+    elif choice == 4:  # Gemini
+        config["base_url"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        config["model_name"] = Prompt.ask("Model name", default="gemini-2.5-flash-preview")
+        while True:
+            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$GEMINI_API_KEY")
+            valid, msg = validate_api_key_format(api_key)
+            if valid:
+                config["api_key"] = api_key
+                if api_key.startswith("$"):
+                    api_keys_to_env[api_key[1:]] = "your-gemini-api-key-here"
+                break
+            else:
+                console.print(f"[red]Error: {msg}[/red]")
 
     else:  # Custom
         config["base_url"] = Prompt.ask("Base URL")
-        config["api_key"] = Prompt.ask("API key (use $VAR for env)", default="$API_KEY")
+        while True:
+            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$API_KEY")
+            valid, msg = validate_api_key_format(api_key)
+            if valid:
+                config["api_key"] = api_key
+                if api_key.startswith("$"):
+                    api_keys_to_env[api_key[1:]] = "your-api-key-here"
+                break
+            else:
+                console.print(f"[red]Error: {msg}[/red]")
+
+    # Write API keys to .env if needed
+    if api_keys_to_env:
+        write_env_file(api_keys_to_env)
 
     # Advanced options
     if Confirm.ask("\nConfigure advanced options?", default=False):
-        config["max_concurrent_requests"] = IntPrompt.ask("Max concurrent requests", default=16)
+        config["max_concurrent_requests"] = IntPrompt.ask(
+            "Max concurrent requests", default=DEFAULT_CONCURRENT_REQUESTS_HF
+        )
         if Confirm.ask("Use custom tokenizer?", default=False):
             config["encoding_name"] = Prompt.ask("Encoding name", default="cl100k_base")
     else:
-        config["max_concurrent_requests"] = 16 if choice == 1 else 8
+        config["max_concurrent_requests"] = (
+            DEFAULT_CONCURRENT_REQUESTS_HF if choice == 1 else DEFAULT_CONCURRENT_REQUESTS_API
+        )
 
     return config
 
@@ -125,12 +247,11 @@ def configure_model_roles(models: list[dict]) -> dict:
         return {}
 
     if len(models) == 1:
-        # Single model - use for everything
+        # Single model - use for everything except chunking
         model_name = models[0]["model_name"]
         return {
             "ingestion": [model_name],
             "summarization": [model_name],
-            "chunking": ["intfloat/multilingual-e5-large-instruct"],
             "single_shot_question_generation": [model_name],
             "multi_hop_question_generation": [model_name],
         }
@@ -163,13 +284,12 @@ def configure_model_roles(models: list[dict]) -> dict:
                 i = int(idx.strip()) - 1
                 if 0 <= i < len(models):
                     selected.append(models[i]["model_name"])
+                else:
+                    logger.warning(f"Model index {idx} is out of range (1-{len(models)})")
             except ValueError:
-                pass
+                logger.warning(f"Invalid model index '{idx}' - expected a number")
         if selected:
             roles[stage] = selected
-
-    # Chunking always uses embedding model
-    roles["chunking"] = ["intfloat/multilingual-e5-large-instruct"]
 
     return roles
 
@@ -199,8 +319,8 @@ def configure_summarization(enabled: bool) -> dict:
         return config
 
     if Confirm.ask("\nConfigure summarization options?", default=False):
-        config["max_tokens"] = IntPrompt.ask("Max tokens per chunk", default=16384)
-        config["token_overlap"] = IntPrompt.ask("Token overlap", default=128)
+        config["max_tokens"] = IntPrompt.ask("Max tokens per chunk", default=DEFAULT_MAX_TOKENS)
+        config["token_overlap"] = IntPrompt.ask("Token overlap", default=DEFAULT_TOKEN_OVERLAP)
         config["encoding_name"] = Prompt.ask("Tokenizer encoding", default="cl100k_base")
 
     return config
@@ -215,25 +335,25 @@ def configure_chunking(enabled: bool) -> dict:
 
     if Confirm.ask("\nConfigure chunking parameters?", default=False):
         chunk_config = {}
-        chunk_config["l_max_tokens"] = IntPrompt.ask("Max tokens per chunk", default=256)
+        chunk_config["l_max_tokens"] = IntPrompt.ask("Max tokens per chunk", default=DEFAULT_CHUNK_TOKENS)
         chunk_config["token_overlap"] = IntPrompt.ask("Token overlap", default=0)
         chunk_config["encoding_name"] = Prompt.ask("Tokenizer encoding", default="cl100k_base")
 
         # Multi-hop configuration
         if Confirm.ask("Configure multi-hop parameters?", default=True):
-            chunk_config["h_min"] = IntPrompt.ask("Min chunks for multi-hop", default=2)
-            chunk_config["h_max"] = IntPrompt.ask("Max chunks for multi-hop", default=5)
-            chunk_config["num_multihops_factor"] = IntPrompt.ask("Multi-hop factor", default=2)
+            chunk_config["h_min"] = IntPrompt.ask("Min chunks for multi-hop", default=DEFAULT_H_MIN)
+            chunk_config["h_max"] = IntPrompt.ask("Max chunks for multi-hop", default=DEFAULT_H_MAX)
+            chunk_config["num_multihops_factor"] = IntPrompt.ask("Multi-hop factor", default=DEFAULT_MULTIHOP_FACTOR)
 
         config["chunking_configuration"] = chunk_config
     else:
         config["chunking_configuration"] = {
-            "l_max_tokens": 256,
+            "l_max_tokens": DEFAULT_CHUNK_TOKENS,
             "token_overlap": 0,
             "encoding_name": "cl100k_base",
-            "h_min": 2,
-            "h_max": 5,
-            "num_multihops_factor": 2,
+            "h_min": DEFAULT_H_MIN,
+            "h_max": DEFAULT_H_MAX,
+            "num_multihops_factor": DEFAULT_MULTIHOP_FACTOR,
         }
 
     return config
@@ -443,12 +563,11 @@ def create(
         if len(builder.models) > 1 and Confirm.ask("\nAssign models to specific stages?", default=True):
             builder.model_roles = configure_model_roles(builder.models)
         elif builder.models:
-            # Single model or default assignment
+            # Single model or default assignment - NO chunking model
             model_name = builder.models[0]["model_name"]
             builder.model_roles = {
                 "ingestion": [model_name],
                 "summarization": [model_name],
-                "chunking": ["intfloat/multilingual-e5-large-instruct"],
                 "single_shot_question_generation": [model_name],
                 "multi_hop_question_generation": [model_name],
             }
@@ -459,12 +578,18 @@ def create(
     # Build and save configuration
     config = builder.build()
 
-    # Write to file
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with open(output, "w") as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False, width=120)
-
-    console.print(f"\n[green]✓[/green] Configuration saved to: {output}")
+    # Write to file with error handling
+    try:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with open(output, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False, width=120)
+        console.print(f"\n[green]✓[/green] Configuration saved to: {output}")
+    except (OSError, PermissionError) as e:
+        logger.error(f"Failed to write configuration file: {e}")
+        console.print(f"[red]Error: Could not write to {output}[/red]")
+        console.print(f"[red]Details: {e}[/red]")
+        console.print("\n[yellow]Please check file permissions or choose a different location.[/yellow]")
+        raise typer.Exit(1)
 
     # Show next steps
     console.print("\n[bold]Next steps:[/bold]")
@@ -472,6 +597,10 @@ def create(
         src_dir = config["pipeline"]["ingestion"].get("source_documents_dir", "data/raw")
         console.print(f"1. Place your documents in: {src_dir}")
     console.print(f"2. Run: [cyan]yourbench run {output}[/cyan]")
+
+    # Remind about .env if API keys were used
+    if any(m.get("api_key", "").startswith("$") for m in builder.models):
+        console.print("\n[yellow]Don't forget to update your .env file with actual API keys![/yellow]")
 
 
 @app.command()
@@ -498,6 +627,63 @@ def gui() -> None:
     """Launch the Gradio UI (not yet implemented)."""
     logger.error("GUI support is not yet implemented")
     raise typer.Exit(1)
+
+
+@app.command()
+def help() -> None:
+    """Show detailed help information for all YourBench commands."""
+    console.print("[bold green]YourBench CLI Help[/bold green]\n")
+
+    console.print("YourBench is a dynamic evaluation set generation tool using Large Language Models.")
+    console.print("It converts documents into comprehensive evaluation datasets with questions and answers.\n")
+
+    # Commands table
+    table = Table(title="Available Commands", show_header=True, header_style="bold magenta")
+    table.add_column("Command", style="cyan", width=12)
+    table.add_column("Description", style="white", width=50)
+    table.add_column("Usage", style="green", width=30)
+
+    commands = [
+        (
+            "run",
+            "Execute the YourBench pipeline with a configuration file. Processes documents through ingestion, summarization, chunking, and question generation stages.",
+            "yourbench run config.yaml",
+        ),
+        (
+            "create",
+            "Interactive configuration file creator. Guides you through setting up models, pipeline stages, and Hugging Face integration.",
+            "yourbench create [--simple]",
+        ),
+        (
+            "analyze",
+            "Run specific analysis scripts on generated datasets. Includes various evaluation and visualization tools.",
+            "yourbench analyze ANALYSIS_NAME",
+        ),
+        ("gui", "Launch the Gradio web interface for YourBench (not yet implemented).", "yourbench gui"),
+        ("help", "Show this detailed help information about all commands.", "yourbench help"),
+    ]
+
+    for cmd, desc, usage in commands:
+        table.add_row(cmd, desc, usage)
+
+    console.print(table)
+
+    # Quick start section
+    console.print("\n[bold cyan]Quick Start:[/bold cyan]")
+    console.print("1. [green]yourbench create[/green] - Create a configuration file")
+    console.print("2. Place documents in [yellow]data/raw/[/yellow] directory")
+    console.print("3. [green]yourbench run config.yaml[/green] - Process documents")
+
+    # Examples section
+    console.print("\n[bold cyan]Examples:[/bold cyan]")
+    console.print("• Create simple config:    [green]yourbench create --simple[/green]")
+    console.print("• Run with debug:          [green]yourbench run config.yaml --debug[/green]")
+    console.print("• Show stage timing:       [green]yourbench run config.yaml --plot-stage-timing[/green]")
+    console.print("• Run citation analysis:   [green]yourbench analyze citation_score[/green]")
+
+    console.print("\n[bold cyan]For More Help:[/bold cyan]")
+    console.print("• Use [green]yourbench COMMAND --help[/green] for command-specific options")
+    console.print("• Visit the documentation for detailed guides and examples")
 
 
 def main() -> None:
