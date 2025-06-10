@@ -11,12 +11,7 @@ from yourbench.utils.prompts import (
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from yourbench.utils.inference_engine import InferenceCall, run_inference
-
-
-############################
-# Internal helper functions #
-############################
+from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
 
 def _build_chunk_calls(
@@ -142,11 +137,6 @@ def _merge_final_summaries(
         parsed_summary = extract_content_from_xml_tags(resp, "final_summary")
         updated_final_summaries[doc_idx] = parsed_summary.strip() if parsed_summary else "No summary available."
     return updated_final_summaries
-
-
-#################
-# Stage runner  #
-#################
 
 
 def run(config: dict[str, Any]) -> None:

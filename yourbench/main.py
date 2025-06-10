@@ -9,6 +9,7 @@ from dataclasses import field, dataclass
 
 import yaml
 import typer
+from dotenv import load_dotenv
 from loguru import logger
 from rich.table import Table
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
@@ -17,6 +18,8 @@ from rich.console import Console
 from yourbench.analysis import run_analysis
 from yourbench.pipeline.handler import run_pipeline
 
+
+load_dotenv()
 
 # Configuration constants
 DEFAULT_CONCURRENT_REQUESTS_HF = 16

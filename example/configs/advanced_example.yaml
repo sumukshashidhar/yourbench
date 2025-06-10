@@ -209,7 +209,7 @@ pipeline:
     # additional_instructions: "Generate factual, short-answer questions at a college level."
 
     # Control the format of generated questions:
-    # question_type: "open-ended"   # "open-ended" (default): model generates the answer to the question
+    # question_mode: "open-ended"   # "open-ended" (default): model generates the answer to the question
     #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
 
     # If your documents are large, you can randomly sample chunks to reduce cost:
@@ -223,7 +223,7 @@ pipeline:
     # additional_instructions: "Try to integrate multiple pieces of evidence across chunks to create deeper questions."
 
     # Control the format of generated questions:
-    # question_type: "open-ended"   # "open-ended" (default): model generates the answer to the question
+    # question_mode: "open-ended"   # "open-ended" (default): model generates the answer to the question
     #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
 
     # Similarly, you can sample the multi-hop chunks to cut down on inference:
