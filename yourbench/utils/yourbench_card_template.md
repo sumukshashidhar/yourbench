@@ -2,6 +2,8 @@
 {{ card_data }}
 {{ config_data }}
 ---
+[<img src="https://raw.githubusercontent.com/huggingface/yourbench/main/docs/assets/yourbench-badge-web.png"
+     alt="Built with YourBench" width="200" height="32" />](https://github.com/huggingface/yourbench)
 
 # {{ pretty_name }}
 
