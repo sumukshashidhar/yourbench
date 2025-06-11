@@ -75,6 +75,7 @@ model_list:
     api_key: $VLLM_API_KEY
     max_concurrent_requests: 128
     # This is good if you want to batch many requests and your system can handle it.
+    # Note, if your local endpoint does not utilize /v1, you need to specify the full url. For example, if your openwebui endpoint uses /api, specify /api/chat/completions. 
 
   # 3) Using an OpenAI model:
   - model_name: gpt-4.1
