@@ -124,9 +124,28 @@ def run(*cli_args: List[str]) -> None:
     display = QuestionDisplay(Console())
 
     # Display single-shot questions
-    single_shot_questions = loader.load_questions("single_shot_questions")
-    display.display_questions(single_shot_questions, "Single-Shot Questions (Detailed)", "bold magenta")
+    try:
+        single_shot_questions = loader.load_questions("single_shot_questions")
+        display.display_questions(single_shot_questions, "Single-Shot Questions (Detailed)", "bold magenta")
+    except Exception as e:
+        logger.error(f"Failed to load single-shot questions: {e}")
 
     # Display multi-hop questions
-    multi_hop_questions = loader.load_questions("multi_hop_questions")
-    display.display_questions(multi_hop_questions, "Multi-Hop Questions (Detailed)", "bold green")
+    try:
+        multi_hop_questions = loader.load_questions("multi_hop_questions")
+        display.display_questions(multi_hop_questions, "Multi-Hop Questions (Detailed)", "bold green")
+    except Exception as e:
+        logger.error(f"Failed to load multi-hop questions: {e}")
+
+    # display rewritten questions
+    try:
+        rewritten_questions = loader.load_questions("single_shot_questions_rewritten")
+        display.display_questions(rewritten_questions, "Rewritten Questions (Detailed)", "bold yellow")
+    except Exception as e:
+        logger.error(f"Failed to load rewritten questions: {e}")
+
+    try:
+        rewritten_questions = loader.load_questions("multi_hop_questions_rewritten")
+        display.display_questions(rewritten_questions, "Rewritten Questions (Detailed)", "bold yellow")
+    except Exception as e:
+        logger.error(f"Failed to load rewritten questions: {e}")
