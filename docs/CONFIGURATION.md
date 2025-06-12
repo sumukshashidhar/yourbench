@@ -469,6 +469,17 @@ pipeline:
     - **Default**: `42`  
     - **Description**: Random seed for reproducible sampling.
 
+### Rewriting Stage
+
+This optional stage takes generated questions and rewrites them using an LLM to create variations while preserving meaning.
+
+#### YAML Syntax
+```yaml
+pipeline:
+  rewriting:
+    run: false
+    additional_instructions: "Make questions more conversational"
+
 ### LightEval Stage
 
 This stage combines single-shot and multi-hop questions into a unified dataset for evaluation.
