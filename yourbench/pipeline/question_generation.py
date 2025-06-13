@@ -32,7 +32,7 @@ from yourbench.utils.prompts import (
     MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
 )
 from yourbench.utils.chunking_utils import get_sampling_cfg
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, _create_cross_document_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import (
     parse_multi_hop_responses,
     parse_single_shot_responses,
@@ -105,8 +105,8 @@ def run_multi_hop(config: dict[str, Any]) -> None:
     run_multi = stage_cfg.get("run", False)
     run_cross = cross_cfg.get("enable", False)
 
-    if not run_multi and not run_cross:
-        logger.info("Both multi-hop and cross-document question generation are disabled.")
+    if not run_multi:
+        logger.info("Multi-hop question generation is disabled.")
         return
 
     question_mode = stage_cfg.get("question_mode", "open-ended")
@@ -124,28 +124,24 @@ def run_multi_hop(config: dict[str, Any]) -> None:
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
     logger.info(f"Loaded {len(chunked_ds)} documents for multi-hop processing.")
 
-    def _run_and_save(dataset, label: str):
-        if not dataset or len(dataset) == 0:
-            logger.warning(f"No valid {label} dataset found. Skipping.")
-            return
-        inference_calls, inference_index_map = build_multi_hop_inference_calls(dataset, system_msg, stage_cfg)
-        if not inference_calls:
-            logger.warning(f"No valid inference calls for {label}.")
-            return
-        responses = run_inference(config=config, step_name=MULTI_HOP_KEY, inference_calls=inference_calls)
-        final_rows = parse_multi_hop_responses(responses, inference_index_map, stage_cfg)
-        if final_rows:
-            logger.info(f"Saving {len(final_rows)} {label} questions.")
-            custom_save_dataset(Dataset.from_list(final_rows), config=config, subset=label)
-        else:
-            logger.info(f"No valid {label} questions parsed.")
-
-    if run_multi:
-        logger.info("Starting regular multi-hop question generation.")
-        _run_and_save(chunked_ds, "multi_hop_questions")
-
     if run_cross:
-        logger.info("Starting cross-document question generation.")
-        cross_ds = _create_cross_document_dataset(chunked_ds, cross_cfg)
-        logger.info(f"Generated {len(cross_ds)} cross-document combinations.")
-        _run_and_save(cross_ds, "cross_document_questions")
+        dataset = chunked_ds
+        label = "multi_hop_cross_document_questions"
+    else:
+        dataset = chunked_ds
+        label = "multi_hop_questions"
+
+    if not dataset or len(dataset) == 0:
+        logger.warning(f"No valid {label} dataset found. Skipping.")
+        return
+    inference_calls, inference_index_map = build_multi_hop_inference_calls(dataset, system_msg, stage_cfg)
+    if not inference_calls:
+        logger.warning(f"No valid inference calls for {label}.")
+        return
+    responses = run_inference(config=config, step_name=MULTI_HOP_KEY, inference_calls=inference_calls)
+    final_rows = parse_multi_hop_responses(responses, inference_index_map, stage_cfg)
+    if final_rows:
+        logger.info(f"Saving {len(final_rows)} {label} questions.")
+        custom_save_dataset(Dataset.from_list(final_rows), config=config, subset=label)
+    else:
+        logger.info(f"No valid {label} questions parsed.")
