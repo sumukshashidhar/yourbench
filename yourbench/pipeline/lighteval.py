@@ -87,23 +87,38 @@ def run(config: Dict[str, Any]) -> None:
 
     logger.info("Saving lighteval compatible dataset")
 
+    # Use configurable subset names with fallbacks
+    single_shot_subset = stage_cfg.get("single_shot_subset", "single_shot_questions")
+    multi_hop_subset = stage_cfg.get("multi_hop_subset", "multi_hop_questions")
+    cross_doc_subset = stage_cfg.get("cross_doc_subset", "cross_document_questions")
+    chunked_subset = stage_cfg.get("chunked_subset", "chunked")
+    summarized_subset = stage_cfg.get("summarized_subset", "summarized")
+    output_subset = stage_cfg.get("output_subset", "lighteval")
+
     # Load datasets
     try:
-        single_shot_ds = custom_load_dataset(config=config, subset="single_shot_questions")
-        logger.info(f"Loaded single-shot Q subset single_shot_questions with {len(single_shot_ds)} rows.")
+        single_shot_ds = custom_load_dataset(config=config, subset=single_shot_subset)
+        logger.info(f"Loaded single-shot Q subset with {len(single_shot_ds)} rows.")
     except Exception as e:
-        logger.warning(f"Could not load single-shot subset single_shot_questions: {e}")
-        single_shot_ds = Dataset.from_dict({})  # empty fallback
+        logger.warning(f"Could not load single-shot subset: {e}")
+        single_shot_ds = Dataset.from_dict({})
 
     try:
-        multi_hop_ds = custom_load_dataset(config=config, subset="multi_hop_questions")
-        logger.info(f"Loaded multi-hop Q subset multi_hop_subset with {len(multi_hop_ds)} rows.")
+        multi_hop_ds = custom_load_dataset(config=config, subset=multi_hop_subset)
+        logger.info(f"Loaded multi-hop Q subset with {len(multi_hop_ds)} rows.")
     except Exception as e:
-        logger.warning(f"Could not load multi-hop subset multi_hop_subset: {e}")
-        multi_hop_ds = Dataset.from_dict({})  # empty fallback
+        logger.warning(f"Could not load multi-hop subset: {e}")
+        multi_hop_ds = Dataset.from_dict({})
 
     try:
-        chunked_ds = custom_load_dataset(config=config, subset="chunked")
+        cross_doc_ds = custom_load_dataset(config=config, subset=cross_doc_subset)
+        logger.info(f"Loaded cross-document Q subset with {len(cross_doc_ds)} rows.")
+    except Exception as e:
+        logger.warning(f"Could not load cross-document subset: {e}")
+        cross_doc_ds = Dataset.from_dict({})  # empty fallback
+
+    try:
+        chunked_ds = custom_load_dataset(config=config, subset=chunked_subset)
         logger.info(f"Loaded chunked subset with {len(chunked_ds)} rows.")
     except Exception as e:
         logger.error(f"Could not load chunked subset: {e}")
@@ -111,14 +126,14 @@ def run(config: Dict[str, Any]) -> None:
         chunked_ds = Dataset.from_dict({})  # empty fallback
 
     try:
-        summarized_ds = custom_load_dataset(config=config, subset="summarized")
+        summarized_ds = custom_load_dataset(config=config, subset=summarized_subset)
         logger.info(f"Loaded summarized subset with {len(summarized_ds)} rows.")
     except Exception as e:
         logger.error(f"Could not load summarized subset: {e}")
-        summarized_ds = Dataset.from_dict({})  # empty fallback
+        summarized_ds = Dataset.from_dict({})
 
-    if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0:
-        logger.error("No data in single-shot or multi-hop datasets. Exiting.")
+    if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0 and len(cross_doc_ds) == 0:
+        logger.error("No data in single-shot, multi-hop, or cross-document datasets. Exiting.")
         return
 
     # Prepare lookups from chunked dataset
@@ -127,11 +142,7 @@ def run(config: Dict[str, Any]) -> None:
         doc_id = row.get("document_id", "")
         doc_text = row.get("document_text", "")
         # Build a map from chunk_id to chunk_text for single-hop lookups
-        chunk_dict = {}
-        for chunk_entry in row.get("chunks", []):
-            cid = chunk_entry.get("chunk_id", "")
-            ctext = chunk_entry.get("chunk_text", "")
-            chunk_dict[cid] = ctext
+        chunk_dict = {chunk.get("chunk_id", ""): chunk.get("chunk_text", "") for chunk in row.get("chunks", [])}
         doc_meta_map[doc_id] = {"document_text": doc_text, "chunks_map": chunk_dict}
 
     for row in summarized_ds:
@@ -141,34 +152,28 @@ def run(config: Dict[str, Any]) -> None:
 
     # Helper functions to transform a row
     def make_single_shot_record(row: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Transform a single-shot question row into a standardized dictionary
-        for the final lighteval dataset.
-        """
-        doc_id: str = row.get("document_id", "")
-        chunk_id: str = row.get("chunk_id", "")
+        doc_id = row.get("document_id", "")
+        chunk_id = row.get("chunk_id", "")
 
         # Grab doc meta
         doc_meta = doc_meta_map.get(doc_id, {})
         doc_text = doc_meta.get("document_text", "")
         doc_summary = doc_meta.get("document_summary", "")
-        chunk_text_map = doc_meta.get("chunks_map", {})
-        # chunk text is chunk_text_map[chunk_id] if it exists
-        chunk_text = chunk_text_map.get(chunk_id, "")
+        chunk_text = doc_meta.get("chunks_map", {}).get(chunk_id, "")
 
         # if multiple choice question convert to number
         gold = row.get("self_answer", "")
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
-        if stage_cfg.get("question_mode") == "multi-choice":
-            if not gold:
-                gold = [0]
-            else:
-                gold = [ord(gold) - ord("A")]
-        else:
-            gold = [gold]
+        stage_cfg_local = config.get("pipeline", {}).get("single_shot_question_generation", {})
+        gold = (
+            [ord(gold) - ord("A")]
+            if stage_cfg_local.get("question_mode") == "multi-choice" and gold
+            else [0]
+            if stage_cfg_local.get("question_mode") == "multi-choice"
+            else [gold]
+        )
 
         return {
             "question": row.get("question", ""),
@@ -199,28 +204,22 @@ def run(config: Dict[str, Any]) -> None:
         doc_meta = doc_meta_map.get(doc_id, {})
         doc_text = doc_meta.get("document_text", "")
         doc_summary = doc_meta.get("document_summary", "")
-        chunk_text_map = doc_meta.get("chunks_map", {})
-
-        # Gather chunk_text for each chunk_id
-        chunk_texts = []
-        for cid in chunk_ids:
-            ctxt = chunk_text_map.get(cid, "")
-            if ctxt:
-                chunk_texts.append(ctxt)
+        chunk_texts = [doc_meta.get("chunks_map", {}).get(cid, "") for cid in chunk_ids if cid]
 
         # if multiple choice question convert to number
         gold = row.get("self_answer", "")
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg = config.get("pipeline", {}).get("single_shot_question_generation", {})
-        if stage_cfg.get("question_mode") == "multi-choice":
-            if not gold:
-                gold = [0]
-            else:
-                gold = [ord(gold) - ord("A")]
-        else:
-            gold = [gold]
+        stage_cfg_local = config.get("pipeline", {}).get("multi_hop_question_generation", {})
+        gold = (
+            [ord(gold) - ord("A")]
+            if stage_cfg_local.get("question_mode") == "multi-choice" and gold
+            else [0]
+            if stage_cfg_local.get("question_mode") == "multi-choice"
+            else [gold]
+        )
+
         return {
             "question": row.get("question", ""),
             "additional_instructions": row.get("additional_instructions", ""),
@@ -239,11 +238,51 @@ def run(config: Dict[str, Any]) -> None:
             "document_summary": doc_summary,
         }
 
-    # Convert each dataset to final records
-    combined_records = [
-        *[make_single_shot_record(row) for row in single_shot_ds],
-        *[make_multi_hop_record(row) for row in multi_hop_ds],
-    ]
+    def make_cross_document_record(row: Dict[str, Any]) -> Dict[str, Any]:
+        doc_id = row.get("document_id", "")
+        chunk_ids = row.get("source_chunk_ids", [])
+        doc_meta = doc_meta_map.get(doc_id, {})
+        doc_text = doc_meta.get("document_text", "")
+        doc_summary = doc_meta.get("document_summary", "")
+        chunk_texts = [doc_meta.get("chunks_map", {}).get(cid, "") for cid in chunk_ids if cid]
+
+        gold = row.get("self_answer", "")
+        if not gold:
+            logger.warning("Row has empty answer line")
+
+        stage_cfg_local = config.get("pipeline", {}).get("multi_hop_question_generation", {})
+        gold = (
+            [ord(gold) - ord("A")]
+            if stage_cfg_local.get("question_mode") == "multi-choice" and gold
+            else [0]
+            if stage_cfg_local.get("question_mode") == "multi-choice"
+            else [gold]
+        )
+
+        return {
+            "question": row.get("question", ""),
+            "additional_instructions": row.get("additional_instructions", ""),
+            "ground_truth_answer": row.get("self_answer", ""),
+            "gold": gold,
+            "choices": row.get("choices", []),
+            "question_category": row.get("self_assessed_question_type", "unknown"),
+            "kind": "cross_document",
+            "estimated_difficulty": row.get("estimated_difficulty", 5),
+            "citations": row.get("citations", []),
+            "document_id": doc_id,
+            "chunk_ids": chunk_ids,
+            "question_generating_model": row.get("generating_model", ""),
+            "chunks": chunk_texts,
+            "document": doc_text,
+            "document_summary": doc_summary,
+        }
+
+    # Final combination
+    combined_records = (
+        [make_single_shot_record(row) for row in single_shot_ds]
+        + [make_multi_hop_record(row) for row in multi_hop_ds]
+        + [make_cross_document_record(row) for row in cross_doc_ds]
+    )
 
     if not combined_records:
         logger.warning("No final records to merge in lighteval. Exiting.")
@@ -253,11 +292,10 @@ def run(config: Dict[str, Any]) -> None:
     logger.info(f"Assembling final dataset with {len(combined_records)} rows.")
     try:
         final_ds = Dataset.from_list(combined_records)
-
     except Exception as ds_error:
         logger.exception("Failed to create final dataset object")
         return
 
     # Save dataset
-    custom_save_dataset(dataset=final_ds, config=config, subset="lighteval")
+    custom_save_dataset(dataset=final_ds, config=config, subset=output_subset)
     logger.success("Lighteval dataset saved successfully.")
