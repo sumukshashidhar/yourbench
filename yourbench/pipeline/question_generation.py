@@ -126,7 +126,7 @@ def run_multi_hop(config: dict[str, Any]) -> None:
 
     if run_cross:
         dataset = chunked_ds
-        label = "multi_hop_cross_document_questions"
+        label = "cross_document_questions"
     else:
         dataset = chunked_ds
         label = "multi_hop_questions"
