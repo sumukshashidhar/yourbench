@@ -313,9 +313,11 @@ def test_run_multi_hop_only_basic_case(mock_config):
         )
 
         from yourbench.pipeline.question_generation import run_multi_hop
+
         run_multi_hop(mock_config)
 
         mock_save.assert_called_once()
+
 
 @pytest.mark.parametrize(
     "run_flag, cross_flag, expected_label",
@@ -323,7 +325,7 @@ def test_run_multi_hop_only_basic_case(mock_config):
         (True, True, "cross_document_questions"),
         (True, False, "multi_hop_questions"),
         (False, True, None),  # Should skip entirely
-    ]
+    ],
 )
 def test_multi_hop_variants(mock_config, run_flag, cross_flag, expected_label):
     """
@@ -400,6 +402,7 @@ def test_multi_hop_variants(mock_config, run_flag, cross_flag, expected_label):
         )
 
         from yourbench.pipeline.question_generation import run_multi_hop
+
         run_multi_hop(mock_config)
 
         if expected_label:
@@ -407,7 +410,7 @@ def test_multi_hop_variants(mock_config, run_flag, cross_flag, expected_label):
             # When cross_flag=True, expect 2 save calls for both multi_hop_questions and cross_document_questions
             expected_calls = 2 if cross_flag else 1
             assert mock_save.call_count == expected_calls
-            
+
             subsets = [kwargs["subset"] for _, kwargs in mock_save.call_args_list]
             assert expected_label in subsets
             if cross_flag:
@@ -415,6 +418,7 @@ def test_multi_hop_variants(mock_config, run_flag, cross_flag, expected_label):
                 assert "cross_document_questions" in subsets
         else:
             mock_save.assert_not_called()
+
 
 def test_lighteval_stage(mock_config):
     """
@@ -452,10 +456,12 @@ def test_lighteval_stage(mock_config):
     chunked_ds = Dataset.from_dict({
         "document_id": ["doc1"],
         "document_text": ["Full document text"],
-        "chunks": [[
-            {"chunk_id": "chunk1", "chunk_text": "Chunk 1 text"},
-            {"chunk_id": "chunk2", "chunk_text": "Chunk 2 text"},
-        ]],
+        "chunks": [
+            [
+                {"chunk_id": "chunk1", "chunk_text": "Chunk 1 text"},
+                {"chunk_id": "chunk2", "chunk_text": "Chunk 2 text"},
+            ]
+        ],
     })
 
     summarized_ds = Dataset.from_dict({
@@ -469,6 +475,7 @@ def test_lighteval_stage(mock_config):
         patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
         patch("datasets.Dataset.from_list") as mock_from_list,
     ):
+
         def load_dataset_side_effect(config, subset):
             if subset == "single_shot_questions":
                 return single_shot_ds
@@ -483,7 +490,7 @@ def test_lighteval_stage(mock_config):
             return Dataset.from_dict({})
 
         mock_load.side_effect = load_dataset_side_effect
-        
+
         # Mock successful dataset creation
         mock_final_dataset = Dataset.from_dict({
             "question": ["Combined question 1", "Combined question 2"],
@@ -493,6 +500,7 @@ def test_lighteval_stage(mock_config):
 
         # Import and run lighteval stage
         from yourbench.pipeline.lighteval import run
+
         run(mock_config)
 
         # Verifications
@@ -501,6 +509,7 @@ def test_lighteval_stage(mock_config):
         mock_from_list.assert_called_once()
         # Verify that save was called once with the final dataset
         mock_save.assert_called_once()
+
 
 def test_stage_function_overrides(monkeypatch, tmp_path):
     """
