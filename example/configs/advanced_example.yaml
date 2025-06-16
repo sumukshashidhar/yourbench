@@ -201,8 +201,8 @@ pipeline:
 
   # 5) SINGLE_SHOT_QUESTION_GENERATION
   # Generates single-hop question-answer pairs from each chunk. Typically simpler
-  # factual or direct queries. The model is guided to produce “estimated_difficulty”,
-  # “citations,” etc. 
+  # factual or direct queries. The model is guided to produce "estimated_difficulty",
+  # "citations," etc. 
   single_shot_question_generation:
     run: true
     # You can add global instructions guiding question style, difficulty, domain specificity:
@@ -218,6 +218,10 @@ pipeline:
     #   value: 5             # e.g. pick 5 random chunks per doc 
     #   random_seed: 123
 
+  # 6) MULTI_HOP_QUESTION_GENERATION
+  # Generates complex questions that require reasoning across multiple chunks
+  # of a single document — or across different documents if cross-document
+  # is enabled. Useful for evaluating deeper understanding and integration.
   multi_hop_question_generation:
     run: true
     # additional_instructions: "Try to integrate multiple pieces of evidence across chunks to create deeper questions."
@@ -225,6 +229,13 @@ pipeline:
     # Control the format of generated questions:
     # question_mode: "open-ended"   # "open-ended" (default): model generates the answer to the question
     #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
+
+    # Cross-document question generation:
+    # If enabled, questions can be generated from chunks taken across different documents, not just within one.
+    # cross_document:
+    #   enable: true                  # Whether to generate cross-document questions (default: false)
+    #   max_combinations: 5           # Max number of cross-document chunk combinations to use
+    #   chunks_per_document: 1        # Number of chunks to sample from each document
 
     # Similarly, you can sample the multi-hop chunks to cut down on inference:
     # chunk_sampling:
