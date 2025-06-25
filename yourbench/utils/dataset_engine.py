@@ -4,7 +4,6 @@ import shutil
 import tempfile
 from typing import Any
 from pathlib import Path
-from itertools import combinations
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -320,7 +319,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             break
 
         k = rng.randint(min_docs, min(max_docs, len(docs)))
-        
+
         doc_group = rng.sample(docs, k)
 
         sampled_chunks_from_group = []
@@ -335,7 +334,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
         if len(sampled_chunks_from_group) < k:
             logger.warning("Could not sample enough valid chunks for the group. Skipping this combination.")
             continue
-            
+
         # Combine the chunks from the sampled group
         combined_ids = []
         combined_texts = []
@@ -347,10 +346,10 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             "chunk_ids": combined_ids,
             "chunks_text": combined_texts,
         }
-        
+
         # --- CHANGE 4: Aggregate summaries with the requested header ---
         doc_summaries = [doc["document_summary"] for doc in doc_group if doc["document_summary"].strip()]
-        
+
         combined_summary = ""
         if doc_summaries:
             header = "Here are the summaries from the various documents involved in the chunking:"
@@ -369,6 +368,6 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
     if not cross_rows:
         logger.warning("No cross-document combinations were generated.")
         return Dataset.from_list([])
-        
+
     logger.info(f"Successfully generated {len(cross_rows)} cross-document combinations.")
     return Dataset.from_list(cross_rows)
