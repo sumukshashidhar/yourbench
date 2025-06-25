@@ -273,18 +273,26 @@ def replace_dataset_columns(
     return dataset
 
 
-def _create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]) -> Dataset:
+def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]) -> Dataset:
     """Creates a cross-document Dataset by combining multi-hop chunks from different documents.
 
+    This improved version dynamically combines chunks from a random number of documents (2-5 by default)
+    and aggregates their summaries into a single context field.
+
     Args:
-        dataset: A HuggingFace Dataset where each row may contain a 'multihop_chunks' list.
-        stage_cfg: Stage-specific config containing 'max_combinations' and 'chunks_per_document'.
+        dataset: A HuggingFace Dataset where each row may contain a 'multihop_chunks' list and 'document_summary'.
+        stage_cfg: Stage-specific config containing:
+            - 'max_combinations' (int): The maximum number of cross-document combinations to generate.
+            - 'chunks_per_document' (int): The number of chunks to sample from each document.
+            - 'num_docs_per_combination' (List[int]): A list [min, max] specifying the range of documents to combine.
 
     Returns:
-        A new Dataset with cross-document combinations, preserving the same schema.
+        A new Dataset with cross-document combinations, preserving a similar schema but with an aggregated summary.
     """
     max_combinations = int(stage_cfg.get("max_combinations", 100))
     chunks_per_document = int(stage_cfg.get("chunks_per_document", 1))
+    num_docs_range = stage_cfg.get("num_docs_per_combination", [2, 5])
+    min_docs, max_docs = num_docs_range[0], num_docs_range[1]
 
     if "multihop_chunks" not in dataset.column_names:
         logger.warning("Dataset is missing 'multihop_chunks'. Cross-document generation aborted.")
@@ -296,43 +304,71 @@ def _create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object
         if isinstance(multihop_chunks, list) and multihop_chunks:
             docs.append({
                 "document_id": row.get("document_id", f"doc_{idx}"),
+                "document_summary": row.get("document_summary", ""),
                 "multihop_chunks": multihop_chunks,
             })
 
-    if len(docs) < 2:
-        logger.warning(f"Found only {len(docs)} document(s) with 'multihop_chunks'. Need at least 2.")
+    if len(docs) < min_docs:
+        logger.warning(f"Found only {len(docs)} document(s) with 'multihop_chunks'. Need at least {min_docs}.")
         return Dataset.from_list([])
 
     rng = random.Random(42)
-    rng.shuffle(docs)
-
     cross_rows = []
-    for doc1, doc2 in combinations(docs, 2):
-        samp1 = rng.sample(doc1["multihop_chunks"], min(len(doc1["multihop_chunks"]), chunks_per_document))
-        samp2 = rng.sample(doc2["multihop_chunks"], min(len(doc2["multihop_chunks"]), chunks_per_document))
 
-        for chunk1 in samp1:
-            for chunk2 in samp2:
-                if not all(k in chunk1 for k in ("chunk_ids", "chunks_text")):
-                    logger.warning(f"Skipping malformed chunk in doc {doc1['document_id']}: {chunk1}")
-                    continue
-                if not all(k in chunk2 for k in ("chunk_ids", "chunks_text")):
-                    logger.warning(f"Skipping malformed chunk in doc {doc2['document_id']}: {chunk2}")
-                    continue
+    for _ in range(max_combinations):
+        if len(cross_rows) >= max_combinations:
+            break
 
-                combined = {
-                    "chunk_ids": chunk1["chunk_ids"] + chunk2["chunk_ids"],
-                    "chunks_text": chunk1["chunks_text"] + chunk2["chunks_text"],
-                }
+        k = rng.randint(min_docs, min(max_docs, len(docs)))
+        
+        doc_group = rng.sample(docs, k)
 
-                cross_rows.append({
-                    "document_id": f"cross_{doc1['document_id']}_{doc2['document_id']}",
-                    "chunks": [],
-                    "multihop_chunks": [combined],
-                })
+        sampled_chunks_from_group = []
+        for doc in doc_group:
+            if doc["multihop_chunks"]:
+                sampled_chunk = rng.choice(doc["multihop_chunks"])
+                if all(key in sampled_chunk for key in ("chunk_ids", "chunks_text")):
+                    sampled_chunks_from_group.append(sampled_chunk)
+                else:
+                    logger.warning(f"Skipping malformed chunk in doc {doc['document_id']}: {sampled_chunk}")
 
-                if len(cross_rows) >= max_combinations:
-                    logger.debug(f"Reached max_combinations: {max_combinations}")
-                    return Dataset.from_list(cross_rows)
+        if len(sampled_chunks_from_group) < k:
+            logger.warning("Could not sample enough valid chunks for the group. Skipping this combination.")
+            continue
+            
+        # Combine the chunks from the sampled group
+        combined_ids = []
+        combined_texts = []
+        for chunk in sampled_chunks_from_group:
+            combined_ids.extend(chunk["chunk_ids"])
+            combined_texts.extend(chunk["chunks_text"])
 
+        combined_multihop_chunk = {
+            "chunk_ids": combined_ids,
+            "chunks_text": combined_texts,
+        }
+        
+        # --- CHANGE 4: Aggregate summaries with the requested header ---
+        doc_summaries = [doc["document_summary"] for doc in doc_group if doc["document_summary"].strip()]
+        
+        combined_summary = ""
+        if doc_summaries:
+            header = "Here are the summaries from the various documents involved in the chunking:"
+            summary_bullets = "\n".join(f"- {s}" for s in doc_summaries)
+            combined_summary = f"{header}\n\n{summary_bullets}"
+
+        cross_doc_id = f"cross_{'_'.join(d['document_id'][:8] for d in doc_group)}"
+
+        cross_rows.append({
+            "document_id": cross_doc_id,
+            "document_summary": combined_summary,
+            "chunks": [],
+            "multihop_chunks": [combined_multihop_chunk],
+        })
+
+    if not cross_rows:
+        logger.warning("No cross-document combinations were generated.")
+        return Dataset.from_list([])
+        
+    logger.info(f"Successfully generated {len(cross_rows)} cross-document combinations.")
     return Dataset.from_list(cross_rows)
