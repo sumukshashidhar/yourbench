@@ -385,3 +385,35 @@ def shuffle_mcq(question_dict: dict) -> dict:
     question_dict["answer"] = new_answer_letter
 
     return question_dict
+
+
+def _remove_duplicate_questions(rows: list[dict]) -> list[dict]:
+    """
+    Removes duplicate question entries based on normalized question text.
+
+    This function compares questions by stripping extra whitespace and lowercasing,
+    but retains the original question formatting in the returned results.
+    Only exact duplicates after normalization are removed.
+    """
+    seen_questions = set()
+    deduped_rows = []
+
+    for row in rows:
+        question = row.get("question")
+        if question is None:
+            deduped_rows.append(row)
+            continue
+
+        # Normalize only for comparison
+        norm_question = " ".join(question.split()).strip().lower()
+
+        if norm_question not in seen_questions:
+            seen_questions.add(norm_question)
+            deduped_rows.append(row)
+
+    removed = len(rows) - len(deduped_rows)
+    if removed > 0:
+        logger.info(f"Removed {removed} duplicate questions. Final count: {len(deduped_rows)}")
+    else:
+        logger.info(f"No duplicate questions detected. Final count: {len(deduped_rows)}")
+    return deduped_rows
