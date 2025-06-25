@@ -17,11 +17,9 @@ def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bo
         debug: Whether to enable debug logging
     """
     try:
-        # Import the analysis module dynamically
         module_name = f"yourbench.analysis.{analysis_name}"
         module = __import__(module_name, fromlist=["run"])
 
-        # Run the analysis with the provided arguments
         if hasattr(module, "run"):
             module.run(*(args or []))
         else:
@@ -31,6 +29,7 @@ def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bo
         if debug:
             logger.exception(e)
     except Exception as e:
-        logger.error(f"Error running analysis {analysis_name}")
+        logger.error(f"Error running analysis {analysis_name}: {e}")
         if debug:
             logger.exception(e)
+        raise e

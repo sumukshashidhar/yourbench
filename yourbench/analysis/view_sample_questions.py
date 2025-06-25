@@ -6,7 +6,7 @@ from loguru import logger
 from rich.table import Table
 from rich.console import Console
 
-from yourbench.utils.dataset_engine import custom_load_dataset
+from yourbench.utils.dataset_engine import ConfigurationError, custom_load_dataset
 from yourbench.utils.loading_engine import load_config
 
 
@@ -77,7 +77,12 @@ class QuestionLoader:
         self.sample_size = sample_size
 
     def load_questions(self, subset: Literal["single_shot_questions", "multi_hop_questions"]) -> List[Question]:
-        dataset = custom_load_dataset(config=self.config, subset=subset)
+        try:
+            dataset = custom_load_dataset(config=self.config, subset=subset)
+        except (KeyError, ConfigurationError):
+            logger.warning(f"Could not load subset '{subset}'. Skipping.")
+            return []
+
         if not dataset:
             return []
 
