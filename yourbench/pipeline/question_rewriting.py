@@ -167,6 +167,54 @@ def _process_question_rewriting_responses(
     return rewritten_rows
 
 
+def _process_question_type(
+    config: Dict[str, Any],
+    question_type: str,
+    load_subset: str,
+    save_subset: str,
+    additional_instructions: str,
+) -> None:
+    """
+    Loads, rewrites, and saves a specific type of questions.
+
+    Args:
+        config: The main configuration dictionary.
+        question_type: A string describing the question type for logging (e.g., "single-hop").
+        load_subset: The dataset subset to load questions from.
+        save_subset: The dataset subset to save rewritten questions to.
+        additional_instructions: Instructions for the rewriting model.
+    """
+    try:
+        logger.info(f"Processing {question_type} questions...")
+        dataset = custom_load_dataset(config=config, subset=load_subset)
+
+        if not dataset or len(dataset) == 0:
+            logger.warning(f"No {question_type} questions found or dataset is empty.")
+            return
+
+        calls, indices = _build_question_rewriting_calls(
+            dataset, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions
+        )
+
+        if not calls:
+            logger.warning(f"No valid {question_type} questions to rewrite.")
+            return
+
+        responses = run_inference(config=config, step_name="question_rewriting", inference_calls=calls)
+        rewritten_rows = _process_question_rewriting_responses(responses, indices, dataset)
+
+        if not rewritten_rows:
+            logger.warning(f"No {question_type} questions were successfully rewritten.")
+            return
+
+        rewritten_ds = Dataset.from_list(rewritten_rows)
+        custom_save_dataset(dataset=rewritten_ds, config=config, subset=save_subset)
+        logger.success(f"Saved {len(rewritten_rows)} rewritten {question_type} questions.")
+
+    except Exception as e:
+        logger.error(f"Error processing {question_type} questions: {e}")
+
+
 def run(config: Dict[str, Any]) -> None:
     """
     Main entry point for the question_rewriting pipeline stage.
@@ -184,64 +232,23 @@ def run(config: Dict[str, Any]) -> None:
 
     logger.info("Starting question question_rewriting stage...")
 
-    # Get configuration
     additional_instructions = stage_cfg.get(
         "additional_instructions",
         "Rewrite the question to sound more natural and conversational while preserving the exact meaning.",
     )
 
-    # Process single-hop questions
-    try:
-        logger.info("Processing single-hop questions...")
-        single_hop_ds = custom_load_dataset(config=config, subset="single_shot_questions")
+    question_types_to_process = {
+        "single-hop": ("single_shot_questions", "single_shot_questions_rewritten"),
+        "multi-hop": ("multi_hop_questions", "multi_hop_questions_rewritten"),
+    }
 
-        if single_hop_ds and len(single_hop_ds) > 0:
-            calls, indices = _build_question_rewriting_calls(
-                single_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions
-            )
-
-            if calls:
-                responses = run_inference(config=config, step_name="question_rewriting", inference_calls=calls)
-
-                rewritten_rows = _process_question_rewriting_responses(responses, indices, single_hop_ds)
-
-                if rewritten_rows:
-                    rewritten_ds = Dataset.from_list(rewritten_rows)
-                    custom_save_dataset(dataset=rewritten_ds, config=config, subset="single_shot_questions_rewritten")
-                    logger.success(f"Saved {len(rewritten_rows)} rewritten single-hop questions")
-            else:
-                logger.warning("No valid single-hop questions to rewrite")
-        else:
-            logger.warning("No single-hop questions found")
-
-    except Exception as e:
-        logger.error(f"Error processing single-hop questions: {e}")
-
-    # Process multi-hop questions
-    try:
-        logger.info("Processing multi-hop questions...")
-        multi_hop_ds = custom_load_dataset(config=config, subset="multi_hop_questions")
-
-        if multi_hop_ds and len(multi_hop_ds) > 0:
-            calls, indices = _build_question_rewriting_calls(
-                multi_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions
-            )
-
-            if calls:
-                responses = run_inference(config=config, step_name="question_rewriting", inference_calls=calls)
-
-                rewritten_rows = _process_question_rewriting_responses(responses, indices, multi_hop_ds)
-
-                if rewritten_rows:
-                    rewritten_ds = Dataset.from_list(rewritten_rows)
-                    custom_save_dataset(dataset=rewritten_ds, config=config, subset="multi_hop_questions_rewritten")
-                    logger.success(f"Saved {len(rewritten_rows)} rewritten multi-hop questions")
-            else:
-                logger.warning("No valid multi-hop questions to rewrite")
-        else:
-            logger.warning("No multi-hop questions found")
-
-    except Exception as e:
-        logger.error(f"Error processing multi-hop questions: {e}")
+    for question_type, (load_subset, save_subset) in question_types_to_process.items():
+        _process_question_type(
+            config=config,
+            question_type=question_type,
+            load_subset=load_subset,
+            save_subset=save_subset,
+            additional_instructions=additional_instructions,
+        )
 
     logger.success("Question question_rewriting stage completed")
