@@ -137,66 +137,97 @@ Conduct careful analysis within `<document_analysis>` XML tags, following these 
 
 QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT = """## Output Structure
 
-Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
+This prompt is used exclusively for generating **open-ended** questions.
+
+Present your final output as a list of JSON objects strictly adhering to this Pydantic model, wrapped within `<output_json>` XML tags:
 
 ```python
-class QuestionAnswerPair(BaseModel):
+class QuestionRow(BaseModel):
     thought_process: str # Clear, detailed rationale for selecting question and analysis approach
     question_type: Literal["analytical", "application-based", "clarification",
                            "counterfactual", "conceptual", "true-false",
                            "factual", "open-ended", "false-premise", "edge-case"]
-    question: str
-    answer: str
-    estimated_difficulty: int  # 1-10, calibrated according to additional instructions
+    question: str  # The generated question
+    answer: str  # Full answer to the question
+    estimated_difficulty: int  # Difficulty level from 1 (easy) to 10 (very difficult), calibrated according to additional instructions
     citations: List[str]  # Direct quotes from the text_chunk supporting the answer
 ```
 
 ## Output Format
 
-Begin by thoughtfully analyzing the provided text_chunk within `<document_analysis>` XML tags. Then present the resulting JSON-formatted QuestionAnswerPairs clearly within `<output_json>` XML tags."""
+Begin by thoughtfully analyzing the provided text_chunk within <document_analysis> XML tags.
+Then present the resulting list of QuestionRow objects in proper JSON format inside <output_json> XML tags.
 
-QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI = """## Output Structure
-
-Present your final output as JSON objects strictly adhering to this Pydantic model within `<output_json>` XML tags:
-
-```python
-class MultipleChoiceQuestion(BaseModel):
-    thought_process: str  # Rationale for the question and distractors
-    question_type: Literal["analytical", "application-based", "clarification",
-                           "counterfactual", "conceptual", "true-false",
-                           "factual", "false-premise", "edge-case"]
-    question: str
-    answer: str  # One of "A", "B", "C", or "D"
-    choices: List[str]  # Must contain exactly 4 items
-    estimated_difficulty: int  # 1-10
-    citations: List[str]  # Direct support from the text_chunk
-```
-
-## Output Format
-
-Begin by thoughtfully analyzing the provided <text_chunk> within <document_analysis> XML tags. Your analysis should identify the key concepts, technical details, and reasoning opportunities found in the text.
-
-Then present the resulting multiple-choice questions as valid JSON objects within <output_json> tags, strictly following this structure:
+## Example:
 
 <document_analysis>
-- Key concept: ...
-- Important facts: ...
-- Reasoning opportunities: ...
+Key concept: Semantic chunking and its effect on information retrieval
+Facts: Semantic chunking groups semantically similar sentences within token limits
+Reasoning cues: Relevance of chunk boundaries for downstream QA tasks
 </document_analysis>
 
 <output_json>
 [
   {
-    "thought_process": "This question targets understanding of how the chunk explains the purpose of semantic chunking in document processing. Distractors are phrased using near-synonyms or subtle distortions of the true concept.",
-    "question_type": "conceptual",
-    "question": "What is the primary reason for using semantic chunking in document preprocessing?",
-    "choices": [
-      "(A) To compress the document into fewer tokens.",
-      "(B) To group content based on semantic similarity and token limits.",
-      "(C) To translate the text into multiple languages.",
-      "(D) To strip metadata and formatting from the input file."
+    "thought_process": "The question evaluates whether the model understands how semantic chunking contributes to retrieval quality. It encourages reflection on how coherence impacts model outputs.",
+    "question_type": "open-ended",
+    "question": "How does semantic chunking improve information retrieval performance in large document processing?",
+    "answer": "Semantic chunking improves retrieval by preserving contextual coherence, allowing models to access more relevant and interpretable chunks during downstream tasks like question answering.",
+    "estimated_difficulty": 6,
+    "citations": [
+      "Semantic chunking groups related sentences within token boundaries.",
+      "Coherent chunks help downstream tasks focus on relevant context."
     ],
+  },
+  ...
+]
+</output_json>
+"""
+
+QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT_MULTI = """## Output Structure
+
+Present your final output as JSON objects strictly adhering to this schema, enclosed within `<output_json>` XML tags. This structure supports both open-ended and multiple-choice questions.
+
+```python
+class QuestionRow(BaseModel):
+   thought_process: str  # Explanation for why this question was generated, including reasoning or distractor logic
+   question_type: Literal["analytical", "application-based", "clarification",
+                           "counterfactual", "conceptual", "true-false",
+                           "factual", "false-premise", "edge-case"]
+   question: str  # The question text
+   answer: str  # One of "A", "B", "C", or "D"
+   choices: List[str]  # Must contain exactly 4 items
+   estimated_difficulty: int  # Integer between 1 (easy) and 10 (difficult)
+   citations: List[str]  # Supporting quotes or phrases from the text
+```
+
+## Output Format
+
+Start with a thoughtful analysis of the <text_chunk> wrapped inside <document_analysis> tags. Identify key concepts, reasoning paths, and challenging content.
+
+Then output a list of well-structured questions in valid JSON syntax inside <output_json> tags.
+
+## Example:
+
+<document_analysis>
+Key concept: Semantic chunking and its role in preprocessing
+Facts: Chunking maintains coherence based on token and semantic similarity
+Reasoning cues: Trade-offs in chunk size and overlap
+</document_analysis>
+
+<output_json>
+[
+  {
+    "thought_process": "This question targets a conceptual understanding of why semantic chunking is needed. Distractors reflect common misconceptions.",
+    "question_type": "conceptual",
+    "question": "What is the primary benefit of using semantic chunking in document processing?",
     "answer": "B",
+    "choices": [
+      "(A) It compresses documents by removing white space.",
+      "(B) It groups related content within token constraints for coherence.",
+      "(C) It translates the document into a semantic graph.",
+      "(D) It removes all non-ASCII characters for parsing."
+    ],
     "estimated_difficulty": 6,
     "citations": ["Semantic chunking partitions documents into coherent segments based on semantic similarity and token length constraints."]
   },
@@ -543,22 +574,10 @@ JUDGE_ANSWER_USER_PROMPT = """<document_summary>
 {answer_b}
 </answer_b>"""
 
-CHUNK_SUMMARIZATION_USER_PROMPT = """\
-You are an expert note-taker.  Summarise the following document *chunk* in \
-10-12 crisp sentences capturing only the information that will matter for a \
-later global summary.
-
-<chunk>
-{chunk}
-</chunk>
-
-Wrap your output inside <chunk_summary> tags."""
-
 COMBINE_SUMMARIES_USER_PROMPT = """\
-You will receive a bullet-list of chunk-level summaries from the *same* \
+You will receive a list of chunk-level summaries from the *same* \
 document.  Combine them into a single, well-structured paragraph that reads \
-naturally and eliminates redundancy.  Keep the final answer under 1/3rd of the \
-original combined length.
+naturally and eliminates redundancy.
 
 <chunk_summaries>
 {chunk_summaries}

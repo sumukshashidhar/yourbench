@@ -2,9 +2,78 @@ import re
 import json
 import random
 import hashlib
-from typing import Any
+from typing import Any, Optional
 
 from loguru import logger
+
+from yourbench.utils.question_models import QuestionRow, validate_list, force_int_in_range
+
+
+# JSON parsing functions
+
+
+def _attempt_json_parse(json_str: str) -> Any:
+    """
+    Attempt to parse a JSON string. Return parsed object if success,
+    or None if parsing fails.
+    """
+    try:
+        return json.loads(json_str)
+    except Exception:
+        return None
+
+
+def _maybe_strip_triple_backticks(text_in: str) -> str:
+    """
+    Removes triple backticks (``` or ```json) from the beginning
+    and end of a string, if present.
+    """
+    if not text_in or not isinstance(text_in, str):
+        return ""
+    try:
+        pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
+        match = re.match(pattern, text_in)
+        if match:
+            return match.group(1)
+    except Exception as e:
+        logger.debug(f"Error stripping backticks: {e}")
+    return text_in
+
+
+def _best_effort_json_extract(full_text: str) -> list[str]:
+    """
+    Collect bracket-delimited substrings that might be valid JSON.
+    Returns a list of candidates (which may be empty).
+    """
+    if not full_text or not isinstance(full_text, str):
+        return []
+    candidates = []
+    try:
+        pattern = r"([\[{].*?[\]}])"
+        matches = re.findall(pattern, full_text, flags=re.DOTALL)
+        for match_text in matches:
+            if (match_text.startswith("[") and match_text.endswith("]")) or (
+                match_text.startswith("{") and match_text.endswith("}")
+            ):
+                candidates.append(match_text.strip())
+    except Exception as e:
+        logger.debug(f"Error in best-effort JSON extraction: {e}")
+    return candidates
+
+
+def _extract_tag_content(text: str, tag: str) -> str:
+    """
+    Extract text enclosed in <tag>...</tag> from the given string.
+    Returns an empty string if the tag is not found.
+    """
+    try:
+        pattern = rf"<{tag}\s*>([\s\S]*?)</{tag}>"
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1).strip()
+    except Exception as e:
+        logger.debug(f"Error extracting tag content for '{tag}': {e}")
+    return ""
 
 
 def extract_content_from_xml_tags(full_content, xml_tag):
@@ -87,68 +156,198 @@ def parse_qa_pairs_from_response(raw_response: str) -> list[dict[str, Any]]:
     return []
 
 
-def _extract_tag_content(text: str, tag: str) -> str:
-    """
-    Extract text enclosed in <tag>...</tag> from the given string.
-    Returns an empty string if the tag is not found.
-    """
-    try:
-        pattern = rf"<{tag}\s*>([\s\S]*?)</{tag}>"
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1).strip()
-    except Exception as e:
-        logger.debug(f"Error extracting tag content for '{tag}': {e}")
-    return ""
+# QA response parsing utils
+
+OPEN_ENDED_TYPES = {
+    "analytical",
+    "application-based",
+    "clarification",
+    "counterfactual",
+    "conceptual",
+    "true-false",
+    "factual",
+    "open-ended",
+    "false-premise",
+    "edge-case",
+}
+
+MULTI_CHOICE_TYPES = {
+    "analytical",
+    "application-based",
+    "clarification",
+    "counterfactual",
+    "conceptual",
+    "true-false",
+    "factual",
+    "false-premise",
+    "edge-case",
+}
 
 
-def _maybe_strip_triple_backticks(text_in: str) -> str:
+def normalize_open_ended(pair: dict[str, Any]) -> Optional[dict[str, Any]]:
     """
-    Removes triple backticks (``` or ```json) from the beginning
-    and end of a string, if present.
+    Ensures open-ended questions are valid.
+    Returns None if the entry should be skipped.
     """
-    if not text_in or not isinstance(text_in, str):
-        return ""
-    try:
-        pattern = r"^\s*```(?:json)?\s*([\s\S]*?)\s*```$"
-        match = re.match(pattern, text_in)
-        if match:
-            return match.group(1)
-    except Exception as e:
-        logger.debug(f"Error stripping backticks: {e}")
-    return text_in
+    pair = dict(pair)  # defensive copy
+    mode = pair.get("question_mode", "").strip().lower()
+    q_type = pair.get("question_type", "").strip().lower()
 
+    if mode != "open-ended":
+        return pair
 
-def _best_effort_json_extract(full_text: str) -> list[str]:
-    """
-    Collect bracket-delimited substrings that might be valid JSON.
-    Returns a list of candidates (which may be empty).
-    """
-    if not full_text or not isinstance(full_text, str):
-        return []
-    candidates = []
-    try:
-        pattern = r"([\[{].*?[\]}])"
-        matches = re.findall(pattern, full_text, flags=re.DOTALL)
-        for match_text in matches:
-            if (match_text.startswith("[") and match_text.endswith("]")) or (
-                match_text.startswith("{") and match_text.endswith("}")
-            ):
-                candidates.append(match_text.strip())
-    except Exception as e:
-        logger.debug(f"Error in best-effort JSON extraction: {e}")
-    return candidates
-
-
-def _attempt_json_parse(json_str: str) -> Any:
-    """
-    Attempt to parse a JSON string. Return parsed object if success,
-    or None if parsing fails.
-    """
-    try:
-        return json.loads(json_str)
-    except Exception:
+    if q_type not in OPEN_ENDED_TYPES:
+        logger.warning(f"Inconsistent open-ended question_type: '{q_type}'")
         return None
+
+    # No choices for open-ended
+    pair["choices"] = []
+
+    answer = pair.get("answer", "").strip()
+    if len(answer) == 1 and answer.upper() in {"A", "B", "C", "D"}:
+        # Misclassified multiple choice
+        return None
+
+    return pair
+
+
+def normalize_multi_choice(pair: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """
+    Ensures multiple-choice questions are valid.
+    Returns None if the entry should be skipped.
+    """
+    pair = dict(pair)
+    mode = pair.get("question_mode", "").strip().lower()
+    q_type = pair.get("question_type", "").strip().lower()
+
+    if mode != "multi-choice":
+        return pair
+
+    if q_type not in MULTI_CHOICE_TYPES:
+        logger.warning(f"Inconsistent multiple-choice question_type: '{q_type}'")
+        return None
+
+    choices = validate_list(pair.get("choices", []))
+    if len(choices) != 4:
+        logger.warning("MCQ must have exactly 4 choices.")
+        return None
+
+    pair["choices"] = choices
+    return pair
+
+
+def parse_single_shot_responses(responses, index_map, stage_cfg):
+    rows = []
+    question_mode = str(stage_cfg.get("question_mode", "open-ended")).strip().lower()
+
+    for model, replies in responses.items():
+        if len(replies) != len(index_map):
+            logger.error(f"Mismatch: model '{model}' replies={len(replies)}, expected={len(index_map)}")
+            continue
+
+        for i, reply in enumerate(replies):
+            parsed_qa_pairs = parse_qa_pairs_from_response(reply)
+            if not parsed_qa_pairs:
+                logger.warning(f"No parseable QA pairs at index {i}.")
+                continue
+
+            for pair in parsed_qa_pairs:
+                try:
+                    pair = shuffle_mcq(pair)
+                    pair["question_mode"] = question_mode
+
+                    if question_mode == "open-ended":
+                        pair = normalize_open_ended(pair)
+                        if pair is None:
+                            continue
+                        choices = []
+                    elif question_mode == "multi-choice":
+                        pair = normalize_multi_choice(pair)
+                        if pair is None:
+                            continue
+                        choices = pair["choices"]
+                    else:
+                        logger.warning(f"Unsupported question_mode: {question_mode}")
+                        continue
+
+                    citations = validate_list(pair.get("citations", []))
+
+                    rows.append(
+                        QuestionRow(
+                            chunk_id=index_map[i][2],
+                            source_chunk_ids=None,
+                            document_id=index_map[i][1],
+                            additional_instructions=stage_cfg.get("additional_instructions", ""),
+                            question=str(pair.get("question", "")).strip(),
+                            self_answer=str(pair.get("answer", "")).strip(),
+                            choices=choices,
+                            estimated_difficulty=force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10),
+                            self_assessed_question_type=str(pair.get("question_type", "")).strip(),
+                            question_mode=pair["question_mode"],
+                            generating_model=model,
+                            thought_process=str(pair.get("thought_process", "")),
+                            raw_response=reply,
+                            citations=citations,
+                        ).to_dict(format="single-hop")
+                    )
+                except Exception as e:
+                    logger.error(f"Error parsing QA pair at index {i}: {e}")
+                    continue
+
+    return rows
+
+
+def parse_multi_hop_responses(responses, index_map, stage_cfg):
+    rows = []
+    question_mode = str(stage_cfg.get("question_mode", "open-ended")).strip().lower()
+
+    for model, replies in responses.items():
+        for i, raw in enumerate(replies):
+            parsed = parse_qa_pairs_from_response(raw)
+            for pair in parsed:
+                try:
+                    pair = shuffle_mcq(pair)
+                    pair["question_mode"] = question_mode
+
+                    if question_mode == "open-ended":
+                        pair = normalize_open_ended(pair)
+                        if pair is None:
+                            continue
+                        choices = []
+                    elif question_mode == "multi-choice":
+                        pair = normalize_multi_choice(pair)
+                        if pair is None:
+                            continue
+                        choices = pair["choices"]
+                    else:
+                        logger.warning(f"Unsupported question_mode: {question_mode}")
+                        continue
+
+                    citations = validate_list(pair.get("citations", []))
+
+                    rows.append(
+                        QuestionRow(
+                            chunk_id=None,
+                            source_chunk_ids=index_map[i][2],
+                            document_id=index_map[i][1],
+                            additional_instructions=stage_cfg.get("additional_instructions", ""),
+                            question=str(pair.get("question", "")).strip(),
+                            self_answer=str(pair.get("answer", "")).strip(),
+                            choices=choices,
+                            estimated_difficulty=force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10),
+                            self_assessed_question_type=str(pair.get("question_type", "")).strip(),
+                            question_mode=pair["question_mode"],
+                            generating_model=model,
+                            thought_process=str(pair.get("thought_process", "")),
+                            raw_response=raw,
+                            citations=citations,
+                        ).to_dict(format="multi-hop")
+                    )
+                except Exception as e:
+                    logger.warning(f"Parse error in multi-hop QA for doc {index_map[i][1]}: {e}")
+                    continue
+
+    return rows
 
 
 def shuffle_mcq(question_dict: dict) -> dict:

@@ -78,7 +78,6 @@ def run(config: dict[str, Any]) -> None:
         all_answer_citation_scores.append(ans_score)
         all_chunk_citation_scores.append(chunk_score)
         all_final_scores.append(final_score)
-
     # Use helper function to replace columns cleanly
     # Note: This doesn't preserve original column metadata, but for computed float scores
     # this is acceptable as type inference will correctly identify them as numeric

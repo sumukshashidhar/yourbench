@@ -75,6 +75,7 @@ model_list:
     api_key: $VLLM_API_KEY
     max_concurrent_requests: 128
     # This is good if you want to batch many requests and your system can handle it.
+    # Note, if your local endpoint does not utilize /v1, you need to specify the full url. For example, if your openwebui endpoint uses /api, specify /api/chat/completions. 
 
   # 3) Using an OpenAI model:
   - model_name: gpt-4.1
@@ -180,7 +181,8 @@ pipeline:
   chunking:
     run: true
     chunking_configuration:
-      chunking_mode: fast_chunking   # "fast_chunking" or "semantic_chunking"
+      # chunking_mode: fast_chunking   # "fast_chunking" or "semantic_chunking"
+      # WARNING: SEMANTIC CHUNKING IS TEMPORARILY REMOVED AFTER v0.3.1. 
       l_max_tokens: 128              # Each chunk’s maximum token length
       token_overlap: 0               # Overlap between chunks in token-based splitting
       encoding_name: cl100k_base     # Tokenizer name for measuring token lengths
@@ -200,15 +202,15 @@ pipeline:
 
   # 5) SINGLE_SHOT_QUESTION_GENERATION
   # Generates single-hop question-answer pairs from each chunk. Typically simpler
-  # factual or direct queries. The model is guided to produce “estimated_difficulty”,
-  # “citations,” etc. 
+  # factual or direct queries. The model is guided to produce "estimated_difficulty",
+  # "citations," etc. 
   single_shot_question_generation:
     run: true
     # You can add global instructions guiding question style, difficulty, domain specificity:
     # additional_instructions: "Generate factual, short-answer questions at a college level."
 
     # Control the format of generated questions:
-    # question_type: "open-ended"   # "open-ended" (default): model generates the answer to the question
+    # question_mode: "open-ended"   # "open-ended" (default): model generates the answer to the question
     #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
 
     # If your documents are large, you can randomly sample chunks to reduce cost:
@@ -217,13 +219,24 @@ pipeline:
     #   value: 5             # e.g. pick 5 random chunks per doc 
     #   random_seed: 123
 
+  # 6) MULTI_HOP_QUESTION_GENERATION
+  # Generates complex questions that require reasoning across multiple chunks
+  # of a single document — or across different documents if cross-document
+  # is enabled. Useful for evaluating deeper understanding and integration.
   multi_hop_question_generation:
     run: true
     # additional_instructions: "Try to integrate multiple pieces of evidence across chunks to create deeper questions."
 
     # Control the format of generated questions:
-    # question_type: "open-ended"   # "open-ended" (default): model generates the answer to the question
+    # question_mode: "open-ended"   # "open-ended" (default): model generates the answer to the question
     #                               # "multi-choice": model creates options (A), (B), (C), (D) and selects the correct one
+
+    # Cross-document question generation:
+    # If enabled, questions can be generated from chunks taken across different documents, not just within one.
+    # cross_document:
+    #   enable: true                  # Whether to generate cross-document questions (default: false)
+    #   max_combinations: 5           # Max number of cross-document chunk combinations to use
+    #   chunks_per_document: 1        # Number of chunks to sample from each document
 
     # Similarly, you can sample the multi-hop chunks to cut down on inference:
     # chunk_sampling:
