@@ -6,9 +6,9 @@ import yaml
 from loguru import logger
 from rich.table import Table
 from rich.console import Console
-from datasets import exceptions as ds_exceptions
 
-from yourbench.utils.dataset_engine import custom_load_dataset, ConfigurationError
+from datasets import exceptions as ds_exceptions
+from yourbench.utils.dataset_engine import ConfigurationError, custom_load_dataset
 from yourbench.utils.loading_engine import load_config
 
 
