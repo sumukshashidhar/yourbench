@@ -54,7 +54,7 @@ from pathlib import Path
 import base64
 
 from huggingface_hub import InferenceClient
-from yourbench.utils.inference.inference_core import Model as ModelConfig
+from yourbench.utils.inference.inference_core import Model as ModelConfig, InferenceCall, run_inference
 
 
 @dataclass
@@ -162,83 +162,90 @@ def _image_to_base64(image: Image.Image) -> str:
     image.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
+def _build_pdf_inference_calls(
+    pdf_path: Path, 
+    images: list[Image.Image]
+) -> tuple[list[InferenceCall], list[int]]:
+    """Build inference calls for PDF pages."""
+    calls = []
+    page_numbers = []
+    
+    for page_num, image in enumerate(images, start=1):
+        image_b64 = _image_to_base64(image)
+        
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Convert this document page to clean, well-formatted Markdown. "
+                            "Preserve all text, structure, tables, and important formatting. "
+                            "Do not add any commentary or metadata - just the content in Markdown."
+                        )
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_b64}"
+                        }
+                    }
+                ]
+            }
+        ]
+        
+        calls.append(InferenceCall(
+            messages=messages,
+            tags=["pdf_ingestion", f"page_{page_num}", pdf_path.name]
+        ))
+        page_numbers.append(page_num)
+        
+    logger.info(f"Created {len(calls)} inference calls for PDF {pdf_path.name}")
+    return calls, page_numbers
 
-def run(config: dict[str, Any]) -> None:
-    """
-    Execute the ingestion stage of the pipeline.
-
-    This function checks whether the ingestion stage is enabled in the pipeline
-    configuration. If enabled, it performs the following actions:
-
-    1. Reads all files from the directory specified by `config["pipeline"]["ingestion"]["source_documents_dir"]`.
-    2. Converts each file to Markdown using the MarkItDown library.
-       Optionally, an LLM can be leveraged for advanced conversions (e.g., image descriptions).
-    3. Saves the resulting .md outputs to the directory specified by `config["pipeline"]["ingestion"]["output_dir"]`.
-
-    Args:
-        config (dict[str, Any]): A configuration dictionary with keys:
-            - config["pipeline"]["ingestion"]["run"] (bool): Whether to run ingestion.
-            - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
-            - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
-            - config["model_roles"]["ingestion"] (Optional[list[str]]): Model names for LLM ingestion support.
-            - config["model_list"] (Optional[list[dict[str, str]]]): Detailed LLM model configs.
-
-    Returns:
-        None
-
-    Logs:
-        Writes detailed logs to logs/ingestion.log describing each step taken
-        and any errors encountered during file reading or conversion.
-    """
-    # Extract typed configurations from the dictionary
-    ingestion_config = _extract_ingestion_config(config)
-
-    # Check if ingestion is enabled
-    if not ingestion_config.run:
-        logger.info("Ingestion stage is disabled. No action will be taken.")
-        return
-
-    # Check required directories
-    if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
-        logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
-        return
-
-    # Ensure the output directory exists
-    os.makedirs(ingestion_config.output_dir, exist_ok=True)
-    logger.debug("Prepared output directory: {}", ingestion_config.output_dir)
-
-    # Initialize MarkItDown processor (may include LLM if configured)
-    markdown_processor = _initialize_markdown_processor(config)
-
-    # Gather all files in the source directory (recursively if desired)
-    all_source_files = glob.glob(os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True)
-    if not all_source_files:
-        logger.warning(
-            "No files found in source directory: {}",
-            ingestion_config.source_documents_dir,
-        )
-        return
-
-    logger.info(
-        "Ingestion stage: Converting files from '{}' to '{}'...",
-        ingestion_config.source_documents_dir,
-        ingestion_config.output_dir,
+def _process_pdf_with_llm(
+    pdf_path: Path,
+    config: dict[str, Any],
+    ingestion_config: IngestionConfig
+) -> str:
+    """Process entire PDF through LLM using the inference engine."""
+    logger.info(f"Processing PDF with LLM: {pdf_path.name}")
+    
+    # Convert PDF to images
+    images = _pdf_to_images(pdf_path, ingestion_config.pdf_dpi)
+    if not images:
+        return ""
+    
+    # Build inference calls
+    inference_calls, page_numbers = _build_pdf_inference_calls(pdf_path, images)
+    
+    # Run inference using the engine
+    responses = run_inference(
+        config=config,
+        step_name="ingestion",
+        inference_calls=inference_calls
     )
-
-    # Process each file in the source directory
-    for file_path in all_source_files:
-        if os.path.isfile(file_path):
-            _convert_document_to_markdown(
-                file_path=file_path,
-                output_dir=ingestion_config.output_dir,
-                markdown_processor=markdown_processor,
-            )
-
-    logger.success(
-        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.",
-        ingestion_config.source_documents_dir,
-        ingestion_config.output_dir,
-    )
+    
+    # Process responses
+    if not responses:
+        logger.error(f"No responses received for PDF {pdf_path.name}")
+        return ""
+    
+    # Get the first (and likely only) model's responses
+    model_name = list(responses.keys())[0]
+    page_contents = responses[model_name]
+    
+    # Sort and combine pages
+    pages_with_numbers = list(zip(page_numbers, page_contents))
+    pages_with_numbers.sort(key=lambda x: x[0])
+    
+    # Concatenate with page breaks
+    markdown_pages = [content for _, content in pages_with_numbers if content]
+    full_markdown = "\n\n---\n\n".join(markdown_pages)
+    
+    logger.success(f"Successfully processed {len(images)} pages from {pdf_path.name}")
+    return full_markdown
 
 
 def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
@@ -399,3 +406,81 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
         logger.info(f"Successfully processed '{file_path}' and saved as '{output_file}'.")
     except Exception as exc:
         logger.error(f"Failed to convert '{file_path}'. Error details: {exc}")
+
+
+def run(config: dict[str, Any]) -> None:
+    """
+    Execute the ingestion stage of the pipeline.
+
+    This function checks whether the ingestion stage is enabled in the pipeline
+    configuration. If enabled, it performs the following actions:
+
+    1. Reads all files from the directory specified by `config["pipeline"]["ingestion"]["source_documents_dir"]`.
+    2. Converts each file to Markdown using the MarkItDown library.
+       Optionally, an LLM can be leveraged for advanced conversions (e.g., image descriptions).
+    3. Saves the resulting .md outputs to the directory specified by `config["pipeline"]["ingestion"]["output_dir"]`.
+
+    Args:
+        config (dict[str, Any]): A configuration dictionary with keys:
+            - config["pipeline"]["ingestion"]["run"] (bool): Whether to run ingestion.
+            - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
+            - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
+            - config["model_roles"]["ingestion"] (Optional[list[str]]): Model names for LLM ingestion support.
+            - config["model_list"] (Optional[list[dict[str, str]]]): Detailed LLM model configs.
+
+    Returns:
+        None
+
+    Logs:
+        Writes detailed logs to logs/ingestion.log describing each step taken
+        and any errors encountered during file reading or conversion.
+    """
+    # Extract typed configurations from the dictionary
+    ingestion_config = _extract_ingestion_config(config)
+
+    # Check if ingestion is enabled
+    if not ingestion_config.run:
+        logger.info("Ingestion stage is disabled. No action will be taken.")
+        return
+
+    # Check required directories
+    if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
+        logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
+        return
+
+    # Ensure the output directory exists
+    os.makedirs(ingestion_config.output_dir, exist_ok=True)
+    logger.debug("Prepared output directory: {}", ingestion_config.output_dir)
+
+    # Initialize MarkItDown processor (may include LLM if configured)
+    markdown_processor = _initialize_markdown_processor(config)
+
+    # Gather all files in the source directory (recursively if desired)
+    all_source_files = glob.glob(os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True)
+    if not all_source_files:
+        logger.warning(
+            "No files found in source directory: {}",
+            ingestion_config.source_documents_dir,
+        )
+        return
+
+    logger.info(
+        "Ingestion stage: Converting files from '{}' to '{}'...",
+        ingestion_config.source_documents_dir,
+        ingestion_config.output_dir,
+    )
+
+    # Process each file in the source directory
+    for file_path in all_source_files:
+        if os.path.isfile(file_path):
+            _convert_document_to_markdown(
+                file_path=file_path,
+                output_dir=ingestion_config.output_dir,
+                markdown_processor=markdown_processor,
+            )
+
+    logger.success(
+        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.",
+        ingestion_config.source_documents_dir,
+        ingestion_config.output_dir,
+    )
