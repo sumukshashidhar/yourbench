@@ -134,6 +134,7 @@ def run_pipeline(
     # Upload the dataset card
     try:
         from yourbench.utils.dataset_engine import upload_dataset_card
+
         logger.info("Uploading final dataset card with all pipeline stages information")
         upload_dataset_card(config)
     except Exception as e:

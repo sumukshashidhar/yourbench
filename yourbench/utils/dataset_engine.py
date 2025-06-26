@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from datasets import Dataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
-from huggingface_hub import HfApi, whoami, DatasetCardData, DatasetCard
+from huggingface_hub import HfApi, DatasetCard, DatasetCardData, whoami
 from huggingface_hub.utils import HFValidationError
 
 
@@ -340,6 +340,7 @@ def _create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object
 
 # Dataset card generation functions from feature branch
 
+
 def extract_readme_metadata(repo_id: str, token: str | None = None) -> str:
     """Extracts the metadata from the README.md file of the dataset repository.
     We have to download the previous README.md file in the repo, extract the metadata from it.
@@ -350,13 +351,12 @@ def extract_readme_metadata(repo_id: str, token: str | None = None) -> str:
         The metadata extracted from the README.md file of the dataset repository as a str.
     """
     try:
-        from pathlib import Path
         import re
+        from pathlib import Path
+
         from huggingface_hub.file_download import hf_hub_download
 
-        readme_path = Path(
-            hf_hub_download(repo_id, "README.md", repo_type="dataset", token=token)
-        )
+        readme_path = Path(hf_hub_download(repo_id, "README.md", repo_type="dataset", token=token))
         # Extract the content between the '---' markers
         metadata_match = re.findall(r"---\n(.*?)\n---", readme_path.read_text(), re.DOTALL)
 
@@ -374,14 +374,14 @@ def extract_readme_metadata(repo_id: str, token: str | None = None) -> str:
 def extract_dataset_info(repo_id: str, token: str | None = None) -> str:
     """
     Extract dataset_info section from README metadata.
-    
+
     Args:
         repo_id: The dataset repository ID
         token: Optional HuggingFace token for authentication
-        
+
     Returns:
         The dataset_info section as a string, or empty string if not found
-    """       
+    """
     readme_metadata = extract_readme_metadata(repo_id=repo_id, token=token)
     if not readme_metadata:
         return ""
@@ -442,16 +442,16 @@ def _get_pipeline_subset_info(config: dict[str, Any]) -> str:
     Generate a formatted markdown list of enabled pipeline stages with descriptions.
     The resulting markdown is used in the dataset card to document
     which processing steps were included in the pipeline.
-    
+
     Args:
         config: The complete pipeline configuration dictionary containing
                the 'pipeline' section with enabled stages
-    
+
     Returns:
         str: A markdown-formatted string with bullet points for each enabled pipeline stage,
              or an empty string if no stages are enabled
     """
-    
+
     mapping = {
         "ingestion": "Read raw source documents, convert them to normalized markdown and save for downstream steps",
         "upload_ingest_to_hub": "Package and push ingested markdown dataset to the Hugging Face Hub or save locally with standardized fields",
@@ -471,62 +471,59 @@ def _get_pipeline_subset_info(config: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _generate_and_upload_dataset_card(
-    config: dict[str, Any], 
-    template_path: str | None = None
-) -> None:
+def _generate_and_upload_dataset_card(config: dict[str, Any], template_path: str | None = None) -> None:
     """
     Internal implementation that generates and uploads a dataset card to Hugging Face Hub.
-    
+
     This is the core implementation function called by the public upload_dataset_card() function.
     It handles the actual card generation and uploading without performing configuration checks.
-    
+
     The dataset card includes:
     1. Pipeline subset descriptions based on enabled stages
     2. Full sanitized configuration for reproducibility
     3. YourBench version and other metadata
     4. Preserved dataset_info from the existing card for proper configuration display
-    
+
     Args:
         config: Configuration dictionary containing HF settings
         template_path: Optional custom template path
     """
     logger.info("Starting dataset card upload process")
-    
+
     if _is_offline():
         logger.warning("Offline mode enabled. Skipping dataset card upload.")
         return
-    
+
     try:
         # Get dataset repo name
         settings = _extract_settings(config)
         dataset_repo_name = settings.repo_id
         logger.info(f"Uploading card for dataset: {dataset_repo_name}")
-        
+
         # Load template
         if not template_path:
             # Try to find template in utils directory
             current_dir = os.path.dirname(__file__)
             template_path = os.path.join(current_dir, "yourbench_card_template.md")
-        
+
         logger.info(f"Loading template from: {template_path}")
-        
+
         if not os.path.exists(template_path):
             logger.error(f"Template file not found: {template_path}")
             return
-            
+
         with open(template_path, "r", encoding="utf-8") as f:
             template_str = f.read()
-            
+
         logger.debug(f"Template loaded successfully, length: {len(template_str)} characters")
-        
+
         # Get HF token
         token = settings.token
-        
+
         # Extract dataset_info section from existing README if available
         config_data = extract_dataset_info(repo_id=dataset_repo_name, token=token)
         logger.info(f"Extracted dataset_info section, length: {len(config_data) if config_data else 0} characters")
-        
+
         # Use explicitly configured pretty_name or generate one from the dataset name
         hf_config = config.get("hf_configuration", {})
         if "pretty_name" in hf_config:
@@ -534,24 +531,22 @@ def _generate_and_upload_dataset_card(
         else:
             dataset_name = dataset_repo_name.split("/")[-1]
             pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
-            
-        card_data_kwargs = {
-            "pretty_name": pretty_name
-        }
-        
+
+        card_data_kwargs = {"pretty_name": pretty_name}
+
         # Create DatasetCardData with our metadata
         card_data = DatasetCardData(**card_data_kwargs)
         logger.info(f"Created card data with pretty_name: {card_data.pretty_name}")
-        
+
         # Get YourBench version
-        from importlib.metadata import version, PackageNotFoundError
-        
+        from importlib.metadata import PackageNotFoundError, version
+
         try:
             version_str = version("yourbench")
         except PackageNotFoundError:
             # Fallback for development installs
             version_str = "dev"
-        
+
         # Prepare template variables
         template_vars = {
             "pretty_name": card_data.pretty_name,
@@ -559,28 +554,24 @@ def _generate_and_upload_dataset_card(
             "config_yaml": _serialize_config_for_card(config),
             "pipeline_subsets": _get_pipeline_subset_info(config),
             "config_data": config_data,  # Use the extracted dataset_info section
-            "footer": hf_config.get("footer", "*(This dataset card was automatically generated by YourBench)*")
+            "footer": hf_config.get("footer", "*(This dataset card was automatically generated by YourBench)*"),
         }
-        
+
         logger.info("Rendering dataset card from template")
         logger.debug(f"Template variables: {list(template_vars.keys())}")
-        
-        # Render card with our template and variables 
-        card = DatasetCard.from_template(
-            card_data=card_data,
-            template_str=template_str,
-            **template_vars
-        )
-        
+
+        # Render card with our template and variables
+        card = DatasetCard.from_template(card_data=card_data, template_str=template_str, **template_vars)
+
         logger.info("Template rendered successfully")
         logger.debug(f"Rendered card content length: {len(str(card))} characters")
-        
+
         # Push to hub
         logger.info(f"Pushing dataset card to hub: {dataset_repo_name}")
         card.push_to_hub(dataset_repo_name, token=token)
-        
+
         logger.success(f"Dataset card successfully uploaded to: https://huggingface.co/datasets/{dataset_repo_name}")
-        
+
     except Exception as e:
         logger.error(f"Failed to upload dataset card: {e}")
         logger.exception("Full traceback:")
@@ -589,11 +580,11 @@ def _generate_and_upload_dataset_card(
 def upload_dataset_card(config: dict[str, Any]) -> None:
     """
     Public interface to generate and upload a dataset card to Hugging Face Hub.
-    
+
     This function performs configuration checks (like upload_card setting and offline mode)
     and then delegates to the internal _generate_and_upload_dataset_card() implementation.
     It should be called at the end of the pipeline when all subsets are available.
-    
+
     Args:
         config: Pipeline configuration dictionary containing 'hf_configuration'
                with settings like 'upload_card' flag
@@ -602,17 +593,17 @@ def upload_dataset_card(config: dict[str, Any]) -> None:
         # Check if card upload is enabled in config
         hf_config = config.get("hf_configuration", {})
         upload_card = hf_config.get("upload_card", True)
-        
+
         if not upload_card:
             logger.info("Dataset card upload disabled in configuration. Skipping card upload.")
             return
-            
+
         if _is_offline():
             logger.info("Offline mode enabled. Skipping dataset card upload.")
             return
-            
+
         logger.info("Uploading dataset card with complete pipeline information")
         _generate_and_upload_dataset_card(config)
-        
+
     except Exception as e:
         logger.error(f"Error uploading dataset card: {e}")
