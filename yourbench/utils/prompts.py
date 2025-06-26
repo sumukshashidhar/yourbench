@@ -558,7 +558,7 @@ naturally and eliminates redundancy.
 
 Return ONLY the final text inside <final_summary> tags."""
 
-QUESTION_question_rewriting_SYSTEM_PROMPT = """You are an expert at question_rewriting questions to improve their clarity, naturalness, and engagement while preserving their exact meaning and answerability.
+QUESTION_REWRITING_SYSTEM_PROMPT = """You are an expert at question_rewriting questions to improve their clarity, naturalness, and engagement while preserving their exact meaning and answerability.
 
 ## Your Task
 

@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.prompts import QUESTION_question_rewriting_USER_PROMPT, QUESTION_question_rewriting_SYSTEM_PROMPT
+from yourbench.utils.prompts import QUESTION_question_rewriting_USER_PROMPT, QUESTION_REWRITING_SYSTEM_PROMPT
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
@@ -180,7 +180,7 @@ def run(config: Dict[str, Any]) -> None:
 
         if single_hop_ds and len(single_hop_ds) > 0:
             calls, indices = _build_question_rewriting_calls(
-                single_hop_ds, QUESTION_question_rewriting_SYSTEM_PROMPT, additional_instructions, is_multihop=False
+                single_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions, is_multihop=False
             )
 
             if calls:
@@ -207,7 +207,7 @@ def run(config: Dict[str, Any]) -> None:
 
         if multi_hop_ds and len(multi_hop_ds) > 0:
             calls, indices = _build_question_rewriting_calls(
-                multi_hop_ds, QUESTION_question_rewriting_SYSTEM_PROMPT, additional_instructions, is_multihop=True
+                multi_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions, is_multihop=True
             )
 
             if calls:
