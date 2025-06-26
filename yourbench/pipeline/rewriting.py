@@ -63,7 +63,7 @@ def _parse_question_rewriting_response(response: str) -> Optional[RewrittenQuest
 
 
 def _build_question_rewriting_calls(
-    dataset: Dataset, system_prompt: str, additional_instructions: str, is_multihop: bool = False
+    dataset: Dataset, system_prompt: str, additional_instructions: str
 ) -> tuple[List[InferenceCall], List[int]]:
     """
     Build inference calls for question_rewriting questions.
@@ -82,16 +82,16 @@ def _build_question_rewriting_calls(
             continue
 
         # Get chunks based on question type
-        if is_multihop:
-            chunks = row.get("chunks", [])
-            chunk_text = "\n\n".join(chunks) if chunks else ""
+        chunks_data = row.get("chunks", "")
+        if isinstance(chunks_data, list):
+            # For both multihop and single-hop, if chunks are a list, join them.
+            # This correctly handles empty, single-item, and multi-item lists.
+            # We use map(str, ...) to safely handle any non-string elements.
+            chunk_text = "\n\n".join(map(str, chunks_data))
         else:
-            # For single-hop, chunks might be a single string or list
-            chunks_data = row.get("chunks", [])
-            if isinstance(chunks_data, list) and chunks_data:
-                chunk_text = chunks_data[0] if len(chunks_data) == 1 else "\n\n".join(chunks_data)
-            else:
-                chunk_text = str(chunks_data) if chunks_data else ""
+            # For single-hop, chunks might be a single item (e.g., a string).
+            # We convert it to a string. Falsy values (like None or empty string) will result in an empty string.
+            chunk_text = str(chunks_data) if chunks_data else ""
 
         summary = row.get("document_summary", "")
         answer = row.get("self_answer", "")
@@ -180,7 +180,7 @@ def run(config: Dict[str, Any]) -> None:
 
         if single_hop_ds and len(single_hop_ds) > 0:
             calls, indices = _build_question_rewriting_calls(
-                single_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions, is_multihop=False
+                single_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions
             )
 
             if calls:
@@ -207,7 +207,7 @@ def run(config: Dict[str, Any]) -> None:
 
         if multi_hop_ds and len(multi_hop_ds) > 0:
             calls, indices = _build_question_rewriting_calls(
-                multi_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions, is_multihop=True
+                multi_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions
             )
 
             if calls:
