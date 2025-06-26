@@ -1,5 +1,4 @@
 """Compute overlap based citation scores for the lighteval dataset."""
-
 from typing import Any, Sequence
 from dataclasses import dataclass
 
@@ -18,13 +17,7 @@ class StageConfig:
 
 
 def _get_stage_config(config: dict[str, Any]) -> StageConfig:
-    cfg = config.get("pipeline", {}).get("citation_score_filtering", {})
-    return StageConfig(
-        run=cfg.get("run", False),
-        subset=cfg.get("subset", "lighteval"),
-        alpha=cfg.get("alpha", 0.7),
-        beta=cfg.get("beta", 0.3),
-    )
+    return StageConfig(**config.get("pipeline", {}).get("citation_score_filtering", {}))
 
 
 @dataclass(slots=True)
@@ -40,19 +33,18 @@ class CitationScoreCalculator:
             return 0.0, 0.0, 0.0
 
         citation_count = len(citations)
-
         chunk_scores = [max((self._ratio(c, ch) for ch in chunks), default=0) for c in citations]
         ans_scores = [self._ratio(c, answer) for c in citations]
 
         avg_chunk = sum(chunk_scores) / citation_count
         avg_ans = sum(ans_scores) / citation_count
         final = self.alpha * avg_chunk + self.beta * avg_ans
+
         return avg_ans, avg_chunk, final
 
 
 def run(config: dict[str, Any]) -> None:
     """Entry point for the citation score filtering stage."""
-
     stage_cfg = _get_stage_config(config)
     if not stage_cfg.run:
         logger.info("citation_score_filtering stage is disabled. Skipping.")
