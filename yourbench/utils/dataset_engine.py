@@ -159,16 +159,26 @@ def _load_hub(repo_id: str, subset: str | None, token: str | None) -> Dataset:
 
 
 def _merge_datasets(existing: Dataset | DatasetDict, new: Dataset, subset: str | None) -> Dataset | DatasetDict:
-    """Merge new dataset with existing, creating fresh object."""
+    """Merge new dataset with existing. If subset exists, new data is concatenated."""
     if subset is None:
+        if isinstance(existing, Dataset):
+            return concatenate_datasets([existing, new])
         return new
 
     if not isinstance(existing, DatasetDict):
         existing = DatasetDict({"default": existing})
 
-    merged = DatasetDict({k: v for k, v in existing.items() if k != subset})
-    merged[subset] = new
-    return merged
+    if subset in existing:
+        try:
+            # Concatenate new data with the existing subset
+            new = concatenate_datasets([existing[subset], new])
+        except Exception as e:
+            logger.warning(
+                f"Could not concatenate for subset '{subset}' (e.g., schema mismatch). Overwriting. Error: {e}"
+            )
+
+    existing[subset] = new
+    return existing
 
 
 def _safe_save(dataset: Dataset | DatasetDict, path: Path) -> None:
@@ -221,7 +231,7 @@ def custom_save_dataset(
         logger.info(f"Saving to {settings.local_dir}")
 
         existing = None
-        if settings.local_dir.exists():
+        if settings.concat_if_exist and settings.local_dir.exists():
             try:
                 existing = load_from_disk(str(settings.local_dir))
             except (ConnectionError, TimeoutError) as e:
