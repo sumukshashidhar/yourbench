@@ -47,6 +47,8 @@ from dataclasses import field, dataclass
 import trafilatura
 from loguru import logger
 from markitdown import MarkItDown
+from pdf2image import convert_from_path
+from PIL import Image
 
 from huggingface_hub import InferenceClient
 from yourbench.utils.inference.inference_core import Model as ModelConfig
@@ -59,6 +61,8 @@ class IngestionConfig:
     run: bool = True
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
+    pdf_batch_size: int = 5
+    pdf_dpi: int = 300
 
 
 @dataclass
