@@ -21,6 +21,7 @@ from yourbench.utils.prompts import QUESTION_question_rewriting_USER_PROMPT, QUE
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
+from yourbench.utils.question_models import QuestionRow
 
 
 @dataclass
@@ -130,7 +131,7 @@ def _process_question_rewriting_responses(
                 "Processing the responses that were returned."
             )
 
-        for resp_idx, (response, dataset_idx) in enumerate(zip(model_responses, indices)):
+        for response, dataset_idx in zip(model_responses, indices):
             if not response:
                 logger.warning(f"Skipping failed or empty response for original dataset row {dataset_idx}")
                 continue
@@ -144,8 +145,8 @@ def _process_question_rewriting_responses(
                 continue
 
             # Create new row with all original data plus question_rewriting info
-            new_row = dict(original_row)
-            new_row.update(
+            new_row_dict = dict(original_row)
+            new_row_dict.update(
                 {
                     "original_question": original_row["question"],
                     "question": rewritten.rewritten_question,
@@ -155,7 +156,13 @@ def _process_question_rewriting_responses(
                 }
             )
 
-            rewritten_rows.append(new_row)
+            try:
+                # Validate and structure the data using QuestionRow
+                question_row = QuestionRow(**new_row_dict)
+                rewritten_rows.append(question_row.to_dict())
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Skipping row {dataset_idx} due to validation error: {e}")
+                logger.debug(f"Row data: {new_row_dict}")
 
     return rewritten_rows
 
