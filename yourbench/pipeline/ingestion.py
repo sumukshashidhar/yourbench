@@ -20,6 +20,7 @@ Configuration Requirements (in `config["pipeline"]["ingestion"]`):
       "run": bool,  # Whether to enable the ingestion stage
       "source_documents_dir": str,  # Directory containing raw source documents
       "output_dir": str,           # Directory where converted .md files are saved
+      "upload_to_hub": bool,        # Whether to upload the ingested documents to HF Hub
       "llm_ingestion": bool,       # Whether to use LLM for PDF ingestion
       "pdf_batch_size": int,       # Number of PDF pages to process in parallel
       "pdf_dpi": int,              # DPI for PDF to image conversion
@@ -46,6 +47,7 @@ import io
 import os
 import glob
 import base64
+import uuid
 from typing import Any, Optional
 from pathlib import Path
 from dataclasses import field, dataclass
@@ -56,7 +58,9 @@ from PIL import Image
 from loguru import logger
 from markitdown import MarkItDown
 
+from datasets import Dataset
 from huggingface_hub import InferenceClient
+from yourbench.utils.dataset_engine import custom_save_dataset
 from yourbench.utils.inference.inference_core import Model as ModelConfig
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference, _load_models
 
@@ -68,8 +72,26 @@ class IngestionConfig:
     run: bool = True
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
-    llm_ingestion: bool = False  # Toggle for LLM-based PDF ingestion
+    upload_to_hub: bool = True  # Whether to upload the ingested documents to HF Hub. Turn this off if you don't want this.
+    llm_ingestion: bool = False  # Toggle for LLM-based PDF ingestion. Expensive, but can be extremely powerful for PDFs with images.
     pdf_dpi: int = 300
+
+
+@dataclass
+class IngestedDocument:
+    """
+    Data model representing a single ingested Markdown document.
+    Attributes:
+        document_id (str): Unique ID for the document (typically a UUID4 string).
+        document_text (str): Raw text content from the markdown file.
+        document_filename (str): The original filename of the markdown file.
+        document_metadata (dict[str, Any]): Additional metadata, such as file size.
+    """
+
+    document_id: str
+    document_text: str
+    document_filename: str
+    document_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -106,6 +128,7 @@ def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
         run=stage_config.get("run", True),
         source_documents_dir=stage_config.get("source_documents_dir"),
         output_dir=stage_config.get("output_dir"),
+        upload_to_hub=stage_config.get("upload_to_hub", True),
         llm_ingestion=stage_config.get("llm_ingestion", False),
         pdf_dpi=stage_config.get("pdf_dpi", 300),
     )
@@ -478,6 +501,96 @@ def _validate_llm_ingestion_config(config: dict[str, Any], ingestion_config: Ing
     return True
 
 
+def _collect_markdown_files(md_file_paths: list[str]) -> list[IngestedDocument]:
+    """
+    Gather Markdown documents from the given file paths and store them in data classes.
+    Args:
+        md_file_paths (list[str]): A list of paths to `.md` files.
+    Returns:
+        list[IngestedDocument]: A list of `IngestedDocument` objects.
+    """
+    ingested_docs: list[IngestedDocument] = []
+    for file_path in md_file_paths:
+        try:
+            with open(file_path, "r", encoding="utf-8") as file_handle:
+                content = file_handle.read().strip()
+
+            if not content:
+                logger.warning(f"Skipping empty markdown file: {file_path}")
+                continue
+
+            doc_id = str(uuid.uuid4())
+            ingested_docs.append(
+                IngestedDocument(
+                    document_id=doc_id,
+                    document_text=content,
+                    document_filename=os.path.basename(file_path),
+                    document_metadata={"file_size": os.path.getsize(file_path)},
+                )
+            )
+            logger.debug(f"Loaded markdown file: {file_path} (doc_id={doc_id})")
+
+        except Exception as e:
+            logger.error(f"Error reading file '{file_path}'. Skipping. Reason: {str(e)}")
+
+    return ingested_docs
+
+
+def _convert_ingested_docs_to_dataset(ingested_docs: list[IngestedDocument]) -> Dataset:
+    """
+    Convert a list of ingested markdown documents into a Hugging Face Dataset object.
+    Args:
+        ingested_docs (list[IngestedDocument]): list of `IngestedDocument` objects.
+    Returns:
+        Dataset: A Hugging Face Dataset constructed from the provided documents.
+    """
+    records = {
+        "document_id": [],
+        "document_text": [],
+        "document_filename": [],
+        "document_metadata": [],
+    }
+
+    for doc in ingested_docs:
+        records["document_id"].append(doc.document_id)
+        records["document_text"].append(doc.document_text)
+        records["document_filename"].append(doc.document_filename)
+        records["document_metadata"].append(doc.document_metadata)
+
+    dataset = Dataset.from_dict(records)
+    logger.debug(f"Constructed HF Dataset with {len(dataset)} entries from ingested documents.")
+    return dataset
+
+
+def _upload_ingested_to_hub(config: dict[str, Any], source_dir: str):
+    """
+    Package and upload ingested markdown documents to the Hugging Face Hub.
+    Args:
+        config (dict[str, Any]): The overall pipeline configuration dictionary.
+        source_dir (str): The directory containing the ingested markdown files.
+    """
+    logger.info(f"Starting upload of ingested documents from: {source_dir}")
+
+    # Collect .md files
+    md_file_paths = glob.glob(os.path.join(source_dir, "*.md"))
+    if not md_file_paths:
+        logger.warning(f"No .md files found in '{source_dir}' to upload.")
+        return
+
+    # Read them into Python objects
+    ingested_documents = _collect_markdown_files(md_file_paths)
+    if not ingested_documents:
+        logger.warning(f"No valid markdown documents parsed in '{source_dir}'. Cannot upload.")
+        return
+
+    # Convert the ingested markdown docs to a Hugging Face Dataset
+    dataset = _convert_ingested_docs_to_dataset(ingested_documents)
+
+    # Save or push the dataset to the configured location
+    custom_save_dataset(dataset=dataset, config=config, subset="ingested")
+    logger.success(f"Successfully uploaded ingested documents to the Hub.")
+
+
 def run(config: dict[str, Any]) -> None:
     """
     Execute the ingestion stage of the pipeline.
@@ -496,6 +609,7 @@ def run(config: dict[str, Any]) -> None:
             - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
             - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
             - config["pipeline"]["ingestion"]["llm_ingestion"] (bool): Whether to use LLM for PDF ingestion.
+            - config["pipeline"]["ingestion"]["upload_to_hub"] (bool): Whether to upload dataset to Hub.
             - config["model_roles"]["ingestion"] (Optional[list[str]]): Model names for LLM ingestion support.
             - config["model_list"] (Optional[list[dict[str, str]]]): Detailed LLM model configs.
 
@@ -560,3 +674,7 @@ def run(config: dict[str, Any]) -> None:
     logger.success(
         f"Ingestion stage complete: Processed files from '{ingestion_config.source_documents_dir}' and saved Markdown to '{ingestion_config.output_dir}'."
     )
+
+    # After ingestion, optionally upload to Hub
+    if ingestion_config.upload_to_hub:
+        _upload_ingested_to_hub(config, ingestion_config.output_dir)
