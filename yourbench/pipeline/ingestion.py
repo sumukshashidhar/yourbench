@@ -58,7 +58,7 @@ from markitdown import MarkItDown
 
 from huggingface_hub import InferenceClient
 from yourbench.utils.inference.inference_core import Model as ModelConfig
-from yourbench.utils.inference.inference_core import InferenceCall, run_inference
+from yourbench.utils.inference.inference_core import InferenceCall, run_inference, _load_models
 
 
 @dataclass
@@ -69,7 +69,6 @@ class IngestionConfig:
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
     llm_ingestion: bool = False  # Toggle for LLM-based PDF ingestion
-    pdf_batch_size: int = 5
     pdf_dpi: int = 300
 
 
@@ -108,7 +107,6 @@ def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
         source_documents_dir=stage_config.get("source_documents_dir"),
         output_dir=stage_config.get("output_dir"),
         llm_ingestion=stage_config.get("llm_ingestion", False),
-        pdf_batch_size=stage_config.get("pdf_batch_size", 5),
         pdf_dpi=stage_config.get("pdf_dpi", 300),
     )
 
@@ -223,7 +221,14 @@ def _process_pdf_with_llm(pdf_path: Path, config: dict[str, Any], ingestion_conf
     if not images:
         return ""
 
-    batch_size = ingestion_config.pdf_batch_size
+    models = _load_models(config, "ingestion")
+    if not models:
+        logger.error(f"No models configured for 'ingestion' step. Cannot process PDF {pdf_path.name} with LLM.")
+        return ""
+
+    batch_size = models[0].max_concurrent_requests
+    logger.info(f"Using batch size of {batch_size} (from model '{models[0].model_name}') for PDF processing.")
+
     all_pages_with_numbers = []
 
     for i in range(0, len(images), batch_size):
