@@ -1,5 +1,5 @@
 """
-Question Rewriting Pipeline Stage
+Question question_rewriting Pipeline Stage
 
 This module implements a stage that takes generated questions (both single-hop and multi-hop)
 and rewrites them using an LLM while preserving their meaning and answerability.
@@ -8,7 +8,7 @@ Features:
 - Preserves question meaning and answerability
 - Maintains all metadata from original questions
 - Works with both single-hop and multi-hop questions
-- Configurable rewriting instructions
+- Configurable question_rewriting instructions
 """
 
 from typing import Any, Dict, List, Optional
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.prompts import QUESTION_REWRITING_USER_PROMPT, QUESTION_REWRITING_SYSTEM_PROMPT
+from yourbench.utils.prompts import QUESTION_question_rewriting_USER_PROMPT, QUESTION_question_rewriting_SYSTEM_PROMPT
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
@@ -29,13 +29,13 @@ class RewrittenQuestion:
 
     original_question: str
     rewritten_question: str
-    rewriting_model: str
-    rewriting_rationale: str
+    question_rewriting_model: str
+    question_rewriting_rationale: str
 
 
-def _parse_rewriting_response(response: str) -> Optional[RewrittenQuestion]:
+def _parse_question_rewriting_response(response: str) -> Optional[RewrittenQuestion]:
     """
-    Parse the model's rewriting response to extract the rewritten question and rationale.
+    Parse the model's question_rewriting response to extract the rewritten question and rationale.
 
     Args:
         response: Raw model response
@@ -45,7 +45,7 @@ def _parse_rewriting_response(response: str) -> Optional[RewrittenQuestion]:
     """
     try:
         rewritten_q = extract_content_from_xml_tags(response, "rewritten_question")
-        rationale = extract_content_from_xml_tags(response, "rewriting_rationale")
+        rationale = extract_content_from_xml_tags(response, "question_rewriting_rationale")
 
         if not rewritten_q:
             logger.warning("No rewritten question found in response")
@@ -54,19 +54,19 @@ def _parse_rewriting_response(response: str) -> Optional[RewrittenQuestion]:
         return RewrittenQuestion(
             original_question="",  # Will be filled by caller
             rewritten_question=rewritten_q.strip(),
-            rewriting_model="",  # Will be filled by caller
-            rewriting_rationale=rationale.strip() if rationale else "",
+            question_rewriting_model="",  # Will be filled by caller
+            question_rewriting_rationale=rationale.strip() if rationale else "",
         )
     except Exception as e:
-        logger.error(f"Error parsing rewriting response: {e}")
+        logger.error(f"Error parsing question_rewriting response: {e}")
         return None
 
 
-def _build_rewriting_calls(
+def _build_question_rewriting_calls(
     dataset: Dataset, system_prompt: str, additional_instructions: str, is_multihop: bool = False
 ) -> tuple[List[InferenceCall], List[int]]:
     """
-    Build inference calls for rewriting questions.
+    Build inference calls for question_rewriting questions.
 
     Returns:
         Tuple of (inference_calls, row_indices)
@@ -97,7 +97,7 @@ def _build_rewriting_calls(
         answer = row.get("self_answer", "")
 
         # Build user prompt
-        user_prompt = QUESTION_REWRITING_USER_PROMPT.format(
+        user_prompt = QUESTION_question_rewriting_USER_PROMPT.format(
             original_question=question,
             answer=answer,
             chunk_text=chunk_text,
@@ -107,13 +107,13 @@ def _build_rewriting_calls(
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
-        calls.append(InferenceCall(messages=messages, tags=["rewriting"]))
+        calls.append(InferenceCall(messages=messages, tags=["question_rewriting"]))
         indices.append(idx)
 
     return calls, indices
 
 
-def _process_rewriting_responses(
+def _process_question_rewriting_responses(
     responses: Dict[str, List[str]], indices: List[int], original_dataset: Dataset
 ) -> List[Dict[str, Any]]:
     """
@@ -129,20 +129,20 @@ def _process_rewriting_responses(
         for resp_idx, (response, dataset_idx) in enumerate(zip(model_responses, indices)):
             original_row = original_dataset[dataset_idx]
 
-            # Parse the rewriting response
-            rewritten = _parse_rewriting_response(response)
+            # Parse the question_rewriting response
+            rewritten = _parse_question_rewriting_response(response)
             if not rewritten:
                 logger.warning(f"Failed to parse response for row {dataset_idx} - skipping this row")
                 continue
 
-            # Create new row with all original data plus rewriting info
+            # Create new row with all original data plus question_rewriting info
             new_row = dict(original_row)
             new_row.update({
                 "original_question": original_row["question"],
                 "question": rewritten.rewritten_question,
-                "rewriting_model": model_name,
-                "rewriting_rationale": rewritten.rewriting_rationale,
-                "raw_rewriting_response": response,
+                "question_rewriting_model": model_name,
+                "question_rewriting_rationale": rewritten.question_rewriting_rationale,
+                "raw_question_rewriting_response": response,
             })
 
             rewritten_rows.append(new_row)
@@ -152,20 +152,20 @@ def _process_rewriting_responses(
 
 def run(config: Dict[str, Any]) -> None:
     """
-    Main entry point for the rewriting pipeline stage.
+    Main entry point for the question_rewriting pipeline stage.
 
     This stage:
     1. Loads single-hop and multi-hop question datasets
-    2. Sends each question to an LLM for rewriting
+    2. Sends each question to an LLM for question_rewriting
     3. Parses the rewritten questions
     4. Saves new datasets with rewritten questions
     """
-    stage_cfg = config.get("pipeline", {}).get("rewriting", {})
+    stage_cfg = config.get("pipeline", {}).get("question_rewriting", {})
     if not stage_cfg.get("run", False):
-        logger.info("Rewriting stage is disabled. Skipping.")
+        logger.info("question_rewriting stage is disabled. Skipping.")
         return
 
-    logger.info("Starting question rewriting stage...")
+    logger.info("Starting question question_rewriting stage...")
 
     # Get configuration
     additional_instructions = stage_cfg.get(
@@ -179,14 +179,14 @@ def run(config: Dict[str, Any]) -> None:
         single_hop_ds = custom_load_dataset(config=config, subset="single_shot_questions")
 
         if single_hop_ds and len(single_hop_ds) > 0:
-            calls, indices = _build_rewriting_calls(
-                single_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions, is_multihop=False
+            calls, indices = _build_question_rewriting_calls(
+                single_hop_ds, QUESTION_question_rewriting_SYSTEM_PROMPT, additional_instructions, is_multihop=False
             )
 
             if calls:
-                responses = run_inference(config=config, step_name="rewriting", inference_calls=calls)
+                responses = run_inference(config=config, step_name="question_rewriting", inference_calls=calls)
 
-                rewritten_rows = _process_rewriting_responses(responses, indices, single_hop_ds)
+                rewritten_rows = _process_question_rewriting_responses(responses, indices, single_hop_ds)
 
                 if rewritten_rows:
                     rewritten_ds = Dataset.from_list(rewritten_rows)
@@ -206,14 +206,14 @@ def run(config: Dict[str, Any]) -> None:
         multi_hop_ds = custom_load_dataset(config=config, subset="multi_hop_questions")
 
         if multi_hop_ds and len(multi_hop_ds) > 0:
-            calls, indices = _build_rewriting_calls(
-                multi_hop_ds, QUESTION_REWRITING_SYSTEM_PROMPT, additional_instructions, is_multihop=True
+            calls, indices = _build_question_rewriting_calls(
+                multi_hop_ds, QUESTION_question_rewriting_SYSTEM_PROMPT, additional_instructions, is_multihop=True
             )
 
             if calls:
-                responses = run_inference(config=config, step_name="rewriting", inference_calls=calls)
+                responses = run_inference(config=config, step_name="question_rewriting", inference_calls=calls)
 
-                rewritten_rows = _process_rewriting_responses(responses, indices, multi_hop_ds)
+                rewritten_rows = _process_question_rewriting_responses(responses, indices, multi_hop_ds)
 
                 if rewritten_rows:
                     rewritten_ds = Dataset.from_list(rewritten_rows)
@@ -227,4 +227,4 @@ def run(config: Dict[str, Any]) -> None:
     except Exception as e:
         logger.error(f"Error processing multi-hop questions: {e}")
 
-    logger.success("Question rewriting stage completed")
+    logger.success("Question question_rewriting stage completed")

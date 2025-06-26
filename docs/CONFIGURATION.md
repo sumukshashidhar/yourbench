@@ -469,14 +469,14 @@ pipeline:
     - **Default**: `42`  
     - **Description**: Random seed for reproducible sampling.
 
-### Rewriting Stage
+### question_rewriting Stage
 
 This optional stage takes generated questions and rewrites them using an LLM to create variations while preserving meaning.
 
 #### YAML Syntax
 ```yaml
 pipeline:
-  rewriting:
+  question_rewriting:
     run: false
     additional_instructions: "Make questions more conversational"
 

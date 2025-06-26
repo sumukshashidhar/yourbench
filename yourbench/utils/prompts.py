@@ -558,7 +558,7 @@ naturally and eliminates redundancy.
 
 Return ONLY the final text inside <final_summary> tags."""
 
-QUESTION_REWRITING_SYSTEM_PROMPT = """You are an expert at rewriting questions to improve their clarity, naturalness, and engagement while preserving their exact meaning and answerability.
+QUESTION_question_rewriting_SYSTEM_PROMPT = """You are an expert at question_rewriting questions to improve their clarity, naturalness, and engagement while preserving their exact meaning and answerability.
 
 ## Your Task
 
@@ -583,18 +583,18 @@ Given an original question along with its answer, source text chunks, and docume
 
 ## Output Format
 
-Provide your rewritten question within <rewritten_question> tags and a brief explanation of your rewriting approach within <rewriting_rationale> tags.
+Provide your rewritten question within <rewritten_question> tags and a brief explanation of your question_rewriting approach within <question_rewriting_rationale> tags.
 
 Example:
-<rewriting_rationale>
+<question_rewriting_rationale>
 Changed passive voice to active voice and replaced technical jargon with clearer terms while maintaining the specific focus on causal relationships.
-</rewriting_rationale>
+</question_rewriting_rationale>
 
 <rewritten_question>
 [Your rewritten question here]
 </rewritten_question>"""
 
-QUESTION_REWRITING_USER_PROMPT = """Please rewrite the following question while preserving its exact meaning and answerability.
+QUESTION_question_rewriting_USER_PROMPT = """Please rewrite the following question while preserving its exact meaning and answerability.
 
 <original_question>
 {original_question}
@@ -621,4 +621,4 @@ Remember to:
 2. Ensure the rewritten question can be answered with the same source material
 3. Make the question sound more natural and engaging
 4. Provide your rewritten question in <rewritten_question> tags
-5. Explain your rewriting approach in <rewriting_rationale> tags"""
+5. Explain your question_rewriting approach in <question_rewriting_rationale> tags"""

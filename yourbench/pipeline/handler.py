@@ -47,7 +47,7 @@ DEFAULT_STAGE_ORDER: List[str] = [
     "chunking",
     "single_shot_question_generation",
     "multi_hop_question_generation",
-    "rewriting",
+    "question_rewriting",
     # "deduplicate_single_shot_questions", #TODO
     # "deduplicate_multi_hop_questions",
     "lighteval",
