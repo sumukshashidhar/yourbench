@@ -109,6 +109,7 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
     with (
         patch("yourbench.pipeline.ingestion.InferenceClient"),
         patch("yourbench.pipeline.ingestion._convert_file") as mock_convert,
+        patch("yourbench.pipeline.ingestion.custom_save_dataset") as mock_save,
     ):
         # Configure mocks
         mock_convert.return_value = "mocked content"
@@ -122,8 +123,10 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
         # Verify behavior
         if mock_no_docs:
             mock_convert.assert_not_called()
+            mock_save.assert_not_called()
         else:
             mock_convert.assert_called()
+            mock_save.assert_called_once()
 
 
 # Test for summarization stage
