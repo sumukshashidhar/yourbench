@@ -1,4 +1,5 @@
 """Compute overlap based citation scores for the lighteval dataset."""
+
 from typing import Any, Sequence
 from dataclasses import dataclass
 
