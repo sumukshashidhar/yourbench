@@ -43,14 +43,11 @@ Stage-Specific Logging:
     All major ingestion activity is logged to "logs/ingestion.log".
 """
 
-#!/usr/bin/env python3
-"""Document ingestion pipeline - converts various formats to markdown."""
-
-import base64
 import io
 import uuid
-from pathlib import Path
+import base64
 from typing import Any
+from pathlib import Path
 
 import fitz
 import trafilatura
@@ -61,30 +58,34 @@ from markitdown import MarkItDown
 from datasets import Dataset
 from huggingface_hub import InferenceClient
 from yourbench.utils.dataset_engine import custom_save_dataset
-from yourbench.utils.inference.inference_core import InferenceCall, _load_models, run_inference
+from yourbench.utils.inference.inference_core import (
+    InferenceCall,
+    _load_models,
+    run_inference,
+)
 
 
 def run(config: dict[str, Any]) -> None:
     """Convert documents to markdown and optionally upload to Hub."""
     ingestion = config.get("pipeline", {}).get("ingestion", {})
-    
+
     if not ingestion.get("run", True):
         logger.info("Ingestion disabled")
         return
-    
+
     source_dir = Path(ingestion.get("source_documents_dir", ""))
     output_dir = Path(ingestion.get("output_dir", ""))
-    
+
     if not source_dir or not output_dir:
         logger.error("Missing source or output directory")
         return
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Process files
     processor = _get_processor(config)
     files_processed = 0
-    
+
     for file_path in source_dir.rglob("*"):
         if file_path.is_file():
             if content := _convert_file(file_path, config, processor):
@@ -92,9 +93,9 @@ def run(config: dict[str, Any]) -> None:
                 output_path.write_text(content, encoding="utf-8")
                 logger.debug(f"Converted {file_path.name} → {output_path.name}")
                 files_processed += 1
-    
+
     logger.info(f"Processed {files_processed} files")
-    
+
     # Upload to hub if configured
     if ingestion.get("upload_to_hub", True) and files_processed > 0:
         _upload_to_hub(config, output_dir)
@@ -104,25 +105,20 @@ def _get_processor(config: dict[str, Any]) -> MarkItDown:
     """Initialize markdown processor with optional LLM support."""
     model_roles = config.get("model_roles", {}).get("ingestion", [])
     model_list = config.get("model_list", [])
-    
+
     if not model_list:
         return MarkItDown()
-    
+
     # Find matching model or use first one
     model = next(
-        (m for m in model_list if m.get("model_name") in model_roles),
-        model_list[0] if not model_roles else None
+        (m for m in model_list if m.get("model_name") in model_roles), model_list[0] if not model_roles else None
     )
-    
+
     if not model:
         return MarkItDown()
-    
+
     try:
-        client = InferenceClient(
-            base_url=model["base_url"],
-            api_key=model["api_key"],
-            provider=model.get("provider")
-        )
+        client = InferenceClient(base_url=model["base_url"], api_key=model["api_key"], provider=model.get("provider"))
         logger.debug(f"Using LLM: {model['model_name']}")
         return MarkItDown(llm_client=client, llm_model=model["model_name"])
     except Exception as e:
@@ -135,16 +131,16 @@ def _convert_file(file_path: Path, config: dict[str, Any], processor: MarkItDown
     match file_path.suffix.lower():
         case ".md":
             return file_path.read_text(encoding="utf-8")
-        
+
         case ".html" | ".htm":
             if content := _extract_html(file_path):
                 return content
             # Fallback to MarkItDown
             return processor.convert(str(file_path)).text_content
-        
+
         case ".pdf" if config.get("pipeline", {}).get("ingestion", {}).get("llm_ingestion"):
             return _process_pdf_llm(file_path, config)
-        
+
         case _:
             return processor.convert(str(file_path)).text_content
 
@@ -153,12 +149,7 @@ def _extract_html(path: Path) -> str | None:
     """Extract markdown from HTML using trafilatura."""
     try:
         html = path.read_text(encoding="utf-8")
-        return trafilatura.extract(
-            html,
-            output_format="markdown",
-            include_comments=False,
-            include_tables=True
-        )
+        return trafilatura.extract(html, output_format="markdown", include_comments=False, include_tables=True)
     except Exception as e:
         logger.debug(f"Trafilatura failed for {path.name}: {e}")
         return None
@@ -170,44 +161,43 @@ def _process_pdf_llm(pdf_path: Path, config: dict[str, Any]) -> str:
     if not models:
         logger.warning(f"No LLM models for PDF ingestion of {pdf_path.name}")
         return ""
-    
+
     dpi = config.get("pipeline", {}).get("ingestion", {}).get("pdf_dpi", 300)
     images = _pdf_to_images(pdf_path, dpi)
     if not images:
         return ""
-    
+
     batch_size = models[0].max_concurrent_requests
     pages = []
-    
+
     for i in range(0, len(images), batch_size):
-        batch = images[i:i + batch_size]
+        batch = images[i : i + batch_size]
         calls = [
             InferenceCall(
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Convert this document page to clean Markdown. "
-                                   "Preserve all text, structure, tables, and formatting. "
-                                   "Output only the content in Markdown."
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{_img_to_b64(img)}"}
-                        }
-                    ]
-                }],
-                tags=["pdf_ingestion", f"page_{i+j+1}", pdf_path.name]
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Convert this document page to clean Markdown. "
+                                "Preserve all text, structure, tables, and formatting. "
+                                "Output only the content in Markdown.",
+                            },
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_img_to_b64(img)}"}},
+                        ],
+                    }
+                ],
+                tags=["pdf_ingestion", f"page_{i + j + 1}", pdf_path.name],
             )
             for j, img in enumerate(batch)
         ]
-        
+
         responses = run_inference(config, "ingestion", calls)
         if responses:
             model_name = next(iter(responses))
             pages.extend(responses[model_name])
-    
+
     return "\n\n---\n\n".join(filter(None, pages))
 
 
@@ -240,7 +230,7 @@ def _upload_to_hub(config: dict[str, Any], output_dir: Path):
     if not md_files:
         logger.warning("No markdown files to upload")
         return
-    
+
     docs = []
     for path in md_files:
         if content := path.read_text(encoding="utf-8").strip():
@@ -248,12 +238,12 @@ def _upload_to_hub(config: dict[str, Any], output_dir: Path):
                 "document_id": str(uuid.uuid4()),
                 "document_text": content,
                 "document_filename": path.name,
-                "document_metadata": {"file_size": path.stat().st_size}
+                "document_metadata": {"file_size": path.stat().st_size},
             })
-    
+
     if not docs:
         return
-    
+
     dataset = Dataset.from_list(docs)
     custom_save_dataset(dataset, config, subset="ingested")
     logger.info(f"Uploaded {len(docs)} documents to Hub")
