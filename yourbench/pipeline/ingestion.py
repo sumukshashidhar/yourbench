@@ -46,14 +46,14 @@ Stage-Specific Logging:
 import io
 import os
 import glob
-import base64
 import uuid
+import base64
 from typing import Any, Optional
 from pathlib import Path
 from dataclasses import field, dataclass
 
-import trafilatura
 import fitz  # PyMuPDF
+import trafilatura
 from PIL import Image
 from loguru import logger
 from markitdown import MarkItDown
@@ -62,7 +62,7 @@ from datasets import Dataset
 from huggingface_hub import InferenceClient
 from yourbench.utils.dataset_engine import custom_save_dataset
 from yourbench.utils.inference.inference_core import Model as ModelConfig
-from yourbench.utils.inference.inference_core import InferenceCall, run_inference, _load_models
+from yourbench.utils.inference.inference_core import InferenceCall, _load_models, run_inference
 
 
 @dataclass
@@ -72,8 +72,12 @@ class IngestionConfig:
     run: bool = True
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
-    upload_to_hub: bool = True  # Whether to upload the ingested documents to HF Hub. Turn this off if you don't want this.
-    llm_ingestion: bool = False  # Toggle for LLM-based PDF ingestion. Expensive, but can be extremely powerful for PDFs with images.
+    upload_to_hub: bool = (
+        True  # Whether to upload the ingested documents to HF Hub. Turn this off if you don't want this.
+    )
+    llm_ingestion: bool = (
+        False  # Toggle for LLM-based PDF ingestion. Expensive, but can be extremely powerful for PDFs with images.
+    )
     pdf_dpi: int = 300
 
 
@@ -259,9 +263,7 @@ def _process_pdf_with_llm(pdf_path: Path, config: dict[str, Any], ingestion_conf
         start_page = i + 1
         logger.info(f"Processing pages {start_page} to {start_page + len(batch_images) - 1} of {pdf_path.name}")
 
-        inference_calls, page_numbers = _build_pdf_inference_calls(
-            pdf_path, batch_images, start_page=start_page
-        )
+        inference_calls, page_numbers = _build_pdf_inference_calls(pdf_path, batch_images, start_page=start_page)
 
         responses = run_inference(config=config, step_name="ingestion", inference_calls=inference_calls)
 
@@ -318,7 +320,9 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
         # If no models are assigned to ingestion, use the first model in model_list
         if not model_roles.ingestion:
             matched_model = model_list[0]
-            logger.info(f"No models assigned to 'ingestion' role. Using first model in model_list: '{matched_model.model_name}'.")
+            logger.info(
+                f"No models assigned to 'ingestion' role. Using first model in model_list: '{matched_model.model_name}'."
+            )
         else:
             # Attempt to match the first model in model_list that appears in model_roles.ingestion
             matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
@@ -369,10 +373,10 @@ def _extract_markdown_from_html(file_path: str) -> str | None:
 
 
 def _get_markdown_content(
-    file_path: str, 
+    file_path: str,
     markdown_processor: MarkItDown,
     config: dict[str, Any] = None,
-    ingestion_config: IngestionConfig = None
+    ingestion_config: IngestionConfig = None,
 ) -> str | None:
     """
     Extract or convert file content to Markdown based on file type.
@@ -424,11 +428,11 @@ def _get_markdown_content(
 
 
 def _convert_document_to_markdown(
-    file_path: str, 
-    output_dir: str, 
+    file_path: str,
+    output_dir: str,
     markdown_processor: MarkItDown,
     config: dict[str, Any] = None,
-    ingestion_config: IngestionConfig = None
+    ingestion_config: IngestionConfig = None,
 ) -> None:
     """
     Convert a single source file into Markdown and save the result.
@@ -472,20 +476,20 @@ def _convert_document_to_markdown(
 def _validate_llm_ingestion_config(config: dict[str, Any], ingestion_config: IngestionConfig) -> bool:
     """
     Validate that LLM ingestion is properly configured when enabled.
-    
+
     Returns:
         bool: True if configuration is valid, False otherwise.
     """
     if not ingestion_config.llm_ingestion:
         return True  # No validation needed if disabled
-    
+
     model_roles = _extract_model_roles(config)
     model_list = _extract_model_list(config)
-    
+
     if not model_list:
         logger.error("LLM ingestion is enabled but no models are defined in model_list.")
         return False
-    
+
     # If no models are assigned to ingestion role, use the first model in model_list
     if not model_roles.ingestion:
         logger.info("No models assigned to 'ingestion' role. Will use first model from model_list.")
@@ -494,9 +498,11 @@ def _validate_llm_ingestion_config(config: dict[str, Any], ingestion_config: Ing
         # Check if at least one ingestion model exists in model_list
         matched_models = [m for m in model_list if m.model_name in model_roles.ingestion]
         if not matched_models:
-            logger.error(f"LLM ingestion is enabled but none of the models in model_roles.ingestion {model_roles.ingestion} are found in model_list.")
+            logger.error(
+                f"LLM ingestion is enabled but none of the models in model_roles.ingestion {model_roles.ingestion} are found in model_list."
+            )
             return False
-    
+
     logger.info(f"LLM ingestion validated. Found {len(matched_models)} model(s) for ingestion.")
     return True
 
@@ -588,7 +594,7 @@ def _upload_ingested_to_hub(config: dict[str, Any], source_dir: str):
 
     # Save or push the dataset to the configured location
     custom_save_dataset(dataset=dataset, config=config, subset="ingested")
-    logger.success(f"Successfully uploaded ingested documents to the Hub.")
+    logger.success("Successfully uploaded ingested documents to the Hub.")
 
 
 def run(config: dict[str, Any]) -> None:
@@ -632,7 +638,7 @@ def run(config: dict[str, Any]) -> None:
     if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
         logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
         return
-    
+
     # Validate LLM configuration if LLM ingestion is enabled
     if not _validate_llm_ingestion_config(config, ingestion_config):
         logger.error("LLM ingestion validation failed. Please check your configuration.")
@@ -654,7 +660,7 @@ def run(config: dict[str, Any]) -> None:
     logger.info(
         f"Ingestion stage: Converting files from '{ingestion_config.source_documents_dir}' to '{ingestion_config.output_dir}'..."
     )
-    
+
     if ingestion_config.llm_ingestion:
         logger.info("LLM ingestion mode is ENABLED for PDF files.")
     else:
