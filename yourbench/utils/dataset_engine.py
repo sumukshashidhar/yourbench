@@ -347,7 +347,6 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             "chunks_text": combined_texts,
         }
 
-        # --- CHANGE 4: Aggregate summaries with the requested header ---
         doc_summaries = [doc["document_summary"] for doc in doc_group if doc["document_summary"].strip()]
 
         combined_summary = ""
