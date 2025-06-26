@@ -40,6 +40,7 @@ Stage-Specific Logging:
 """
 
 import os
+import io
 import glob
 from typing import Any, Optional
 from dataclasses import field, dataclass
@@ -49,6 +50,8 @@ from loguru import logger
 from markitdown import MarkItDown
 from pdf2image import convert_from_path
 from PIL import Image
+from pathlib import Path
+import base64
 
 from huggingface_hub import InferenceClient
 from yourbench.utils.inference.inference_core import Model as ModelConfig
@@ -99,6 +102,8 @@ def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
         run=stage_config.get("run", True),
         source_documents_dir=stage_config.get("source_documents_dir"),
         output_dir=stage_config.get("output_dir"),
+        pdf_batch_size=stage_config.get("pdf_batch_size", 5),
+        pdf_dpi=stage_config.get("pdf_dpi", 300),
     )
 
 
@@ -139,6 +144,23 @@ def _extract_model_list(config: dict[str, Any]) -> list[ModelConfig]:
         result.append(model_config)
 
     return result
+
+def _pdf_to_images(pdf_path: Path, dpi: int = 200) -> list[Image.Image]:
+    """Convert PDF to list of PIL images."""
+    try:
+        images = convert_from_path(pdf_path, dpi=dpi)
+        logger.info(f"Converted {pdf_path.name} to {len(images)} images")
+        return images
+    except Exception as e:
+        logger.error(f"Failed to convert PDF {pdf_path}: {e}")
+        return []
+
+def _image_to_base64(image: Image.Image) -> str:
+    """Convert PIL image to base64 string."""
+    
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode()
 
 
 def run(config: dict[str, Any]) -> None:
