@@ -38,7 +38,7 @@ class ConfigLoader:
             raise FileNotFoundError(self.path)
 
         try:
-            text = self.path.read_text()
+            text = self.path.read_text(encoding="utf-8")
             logger.debug(f"Read configuration from {self.path}")
             expanded = os.path.expandvars(text)
             config = yaml.safe_load(expanded) or {}
