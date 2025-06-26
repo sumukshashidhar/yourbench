@@ -17,11 +17,11 @@ from dataclasses import dataclass
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.prompts import QUESTION_question_rewriting_USER_PROMPT, QUESTION_REWRITING_SYSTEM_PROMPT
+from yourbench.utils.prompts import QUESTION_REWRITING_SYSTEM_PROMPT, QUESTION_question_rewriting_USER_PROMPT
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 from yourbench.utils.question_models import QuestionRow
+from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
 
 @dataclass
@@ -146,15 +146,13 @@ def _process_question_rewriting_responses(
 
             # Create new row with all original data plus question_rewriting info
             new_row_dict = dict(original_row)
-            new_row_dict.update(
-                {
-                    "original_question": original_row["question"],
-                    "question": rewritten.rewritten_question,
-                    "question_rewriting_model": model_name,
-                    "question_rewriting_rationale": rewritten.question_rewriting_rationale,
-                    "raw_question_rewriting_response": response,
-                }
-            )
+            new_row_dict.update({
+                "original_question": original_row["question"],
+                "question": rewritten.rewritten_question,
+                "question_rewriting_model": model_name,
+                "question_rewriting_rationale": rewritten.question_rewriting_rationale,
+                "raw_question_rewriting_response": response,
+            })
 
             try:
                 # Validate and structure the data using QuestionRow
