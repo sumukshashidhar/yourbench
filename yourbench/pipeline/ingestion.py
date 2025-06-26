@@ -51,9 +51,9 @@ from pathlib import Path
 from dataclasses import field, dataclass
 
 import trafilatura
+import fitz  # PyMuPDF
 from PIL import Image
 from loguru import logger
-from pdf2image import convert_from_path
 from markitdown import MarkItDown
 
 from huggingface_hub import InferenceClient
@@ -153,13 +153,23 @@ def _extract_model_list(config: dict[str, Any]) -> list[ModelConfig]:
 
 
 def _pdf_to_images(pdf_path: Path, dpi: int = 200) -> list[Image.Image]:
-    """Convert PDF to list of PIL images."""
+    """Convert PDF to list of PIL images using PyMuPDF."""
     try:
-        images = convert_from_path(pdf_path, dpi=dpi)
-        logger.info(f"Converted {pdf_path.name} to {len(images)} images")
+        doc = fitz.open(pdf_path)
+        images = []
+        for page in doc:
+            pix = page.get_pixmap(dpi=dpi)
+            if pix.alpha:
+                img = Image.frombytes("RGBA", (pix.width, pix.height), pix.samples)
+            else:
+                img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            images.append(img)
+        doc.close()
+
+        logger.info(f"Converted {pdf_path.name} to {len(images)} images using PyMuPDF.")
         return images
     except Exception as e:
-        logger.error(f"Failed to convert PDF {pdf_path}: {e}")
+        logger.error(f"Failed to convert PDF {pdf_path} with PyMuPDF: {e}")
         return []
 
 
@@ -171,12 +181,14 @@ def _image_to_base64(image: Image.Image) -> str:
     return base64.b64encode(buffer.getvalue()).decode()
 
 
-def _build_pdf_inference_calls(pdf_path: Path, images: list[Image.Image]) -> tuple[list[InferenceCall], list[int]]:
+def _build_pdf_inference_calls(
+    pdf_path: Path, images: list[Image.Image], start_page: int = 1
+) -> tuple[list[InferenceCall], list[int]]:
     """Build inference calls for PDF pages."""
     calls = []
     page_numbers = []
 
-    for page_num, image in enumerate(images, start=1):
+    for page_num, image in enumerate(images, start=start_page):
         image_b64 = _image_to_base64(image)
 
         messages = [
@@ -199,43 +211,51 @@ def _build_pdf_inference_calls(pdf_path: Path, images: list[Image.Image]) -> tup
         calls.append(InferenceCall(messages=messages, tags=["pdf_ingestion", f"page_{page_num}", pdf_path.name]))
         page_numbers.append(page_num)
 
-    logger.info(f"Created {len(calls)} inference calls for PDF {pdf_path.name}")
+    logger.info(f"Created {len(calls)} inference calls for PDF {pdf_path.name} starting from page {start_page}")
     return calls, page_numbers
 
 
 def _process_pdf_with_llm(pdf_path: Path, config: dict[str, Any], ingestion_config: IngestionConfig) -> str:
-    """Process entire PDF through LLM using the inference engine."""
+    """Process entire PDF through LLM using the inference engine in batches."""
     logger.info(f"Processing PDF with LLM: {pdf_path.name}")
 
-    # Convert PDF to images
     images = _pdf_to_images(pdf_path, ingestion_config.pdf_dpi)
     if not images:
         return ""
 
-    # Build inference calls
-    inference_calls, page_numbers = _build_pdf_inference_calls(pdf_path, images)
+    batch_size = ingestion_config.pdf_batch_size
+    all_pages_with_numbers = []
 
-    # Run inference using the engine
-    responses = run_inference(config=config, step_name="ingestion", inference_calls=inference_calls)
+    for i in range(0, len(images), batch_size):
+        batch_images = images[i : i + batch_size]
+        start_page = i + 1
+        logger.info(f"Processing pages {start_page} to {start_page + len(batch_images) - 1} of {pdf_path.name}")
 
-    # Process responses
-    if not responses:
-        logger.error(f"No responses received for PDF {pdf_path.name}")
+        inference_calls, page_numbers = _build_pdf_inference_calls(
+            pdf_path, batch_images, start_page=start_page
+        )
+
+        responses = run_inference(config=config, step_name="ingestion", inference_calls=inference_calls)
+
+        if not responses:
+            logger.error(f"No responses received for batch starting at page {start_page} for PDF {pdf_path.name}")
+            continue
+
+        model_name = list(responses.keys())[0]
+        page_contents = responses[model_name]
+
+        all_pages_with_numbers.extend(list(zip(page_numbers, page_contents)))
+
+    if not all_pages_with_numbers:
+        logger.error(f"Failed to process any pages for PDF {pdf_path.name}")
         return ""
 
-    # Get the first (and likely only) model's responses
-    model_name = list(responses.keys())[0]
-    page_contents = responses[model_name]
+    all_pages_with_numbers.sort(key=lambda x: x[0])
 
-    # Sort and combine pages
-    pages_with_numbers = list(zip(page_numbers, page_contents))
-    pages_with_numbers.sort(key=lambda x: x[0])
-
-    # Concatenate with page breaks
-    markdown_pages = [content for _, content in pages_with_numbers if content]
+    markdown_pages = [content for _, content in all_pages_with_numbers if content]
     full_markdown = "\n\n---\n\n".join(markdown_pages)
 
-    logger.success(f"Successfully processed {len(images)} pages from {pdf_path.name}")
+    logger.success(f"Successfully processed {len(all_pages_with_numbers)} pages from {pdf_path.name}")
     return full_markdown
 
 
@@ -263,12 +283,17 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
         model_roles = _extract_model_roles(config)
         model_list = _extract_model_list(config)
 
-        if not model_roles.ingestion or not model_list:
-            logger.info("No LLM ingestion config found. Using default MarkItDown processor.")
+        if not model_list:
+            logger.info("No LLM models found in model_list. Using default MarkItDown processor.")
             return MarkItDown()
 
-        # Attempt to match the first model in model_list that appears in model_roles.ingestion
-        matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
+        # If no models are assigned to ingestion, use the first model in model_list
+        if not model_roles.ingestion:
+            matched_model = model_list[0]
+            logger.info(f"No models assigned to 'ingestion' role. Using first model in model_list: '{matched_model.model_name}'.")
+        else:
+            # Attempt to match the first model in model_list that appears in model_roles.ingestion
+            matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
 
         if not matched_model:
             logger.info(f"No matching LLM model found for roles: {model_roles.ingestion}. Using default MarkItDown.")
@@ -429,19 +454,20 @@ def _validate_llm_ingestion_config(config: dict[str, Any], ingestion_config: Ing
     model_roles = _extract_model_roles(config)
     model_list = _extract_model_list(config)
     
-    if not model_roles.ingestion:
-        logger.error("LLM ingestion is enabled but no models are assigned to 'ingestion' role in model_roles.")
-        return False
-    
     if not model_list:
         logger.error("LLM ingestion is enabled but no models are defined in model_list.")
         return False
     
-    # Check if at least one ingestion model exists in model_list
-    matched_models = [m for m in model_list if m.model_name in model_roles.ingestion]
-    if not matched_models:
-        logger.error(f"LLM ingestion is enabled but none of the models in model_roles.ingestion {model_roles.ingestion} are found in model_list.")
-        return False
+    # If no models are assigned to ingestion role, use the first model in model_list
+    if not model_roles.ingestion:
+        logger.info("No models assigned to 'ingestion' role. Will use first model from model_list.")
+        matched_models = [model_list[0]]
+    else:
+        # Check if at least one ingestion model exists in model_list
+        matched_models = [m for m in model_list if m.model_name in model_roles.ingestion]
+        if not matched_models:
+            logger.error(f"LLM ingestion is enabled but none of the models in model_roles.ingestion {model_roles.ingestion} are found in model_list.")
+            return False
     
     logger.info(f"LLM ingestion validated. Found {len(matched_models)} model(s) for ingestion.")
     return True
