@@ -20,6 +20,9 @@ Configuration Requirements (in `config["pipeline"]["ingestion"]`):
       "run": bool,  # Whether to enable the ingestion stage
       "source_documents_dir": str,  # Directory containing raw source documents
       "output_dir": str,           # Directory where converted .md files are saved
+      "llm_ingestion": bool,       # Whether to use LLM for PDF ingestion
+      "pdf_batch_size": int,       # Number of PDF pages to process in parallel
+      "pdf_dpi": int,              # DPI for PDF to image conversion
     }
 
     Additionally, LLM details can be defined in:
@@ -65,6 +68,7 @@ class IngestionConfig:
     run: bool = True
     source_documents_dir: Optional[str] = None
     output_dir: Optional[str] = None
+    llm_ingestion: bool = False  # Toggle for LLM-based PDF ingestion
     pdf_batch_size: int = 5
     pdf_dpi: int = 300
 
@@ -103,6 +107,7 @@ def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
         run=stage_config.get("run", True),
         source_documents_dir=stage_config.get("source_documents_dir"),
         output_dir=stage_config.get("output_dir"),
+        llm_ingestion=stage_config.get("llm_ingestion", False),
         pdf_batch_size=stage_config.get("pdf_batch_size", 5),
         pdf_dpi=stage_config.get("pdf_dpi", 300),
     )
@@ -310,13 +315,20 @@ def _extract_markdown_from_html(file_path: str) -> str | None:
         return None
 
 
-def _get_markdown_content(file_path: str, markdown_processor: MarkItDown) -> str | None:
+def _get_markdown_content(
+    file_path: str, 
+    markdown_processor: MarkItDown,
+    config: dict[str, Any] = None,
+    ingestion_config: IngestionConfig = None
+) -> str | None:
     """
     Extract or convert file content to Markdown based on file type.
 
     Args:
         file_path (str): The path to the source document.
         markdown_processor (MarkItDown): Configured MarkItDown instance for conversions.
+        config (dict[str, Any]): Full pipeline config (needed for LLM PDF processing).
+        ingestion_config (IngestionConfig): Ingestion configuration.
 
     Returns:
         str | None: The Markdown content, or None if conversion failed.
@@ -344,12 +356,27 @@ def _get_markdown_content(file_path: str, markdown_processor: MarkItDown) -> str
             content = markdown_processor.convert(file_path).text_content
         return content
 
+    elif file_ext == ".pdf":
+        # Check if LLM ingestion is enabled and configured
+        if ingestion_config and ingestion_config.llm_ingestion and config:
+            logger.info(f"Processing PDF '{file_path}' with LLM ingestion.")
+            return _process_pdf_with_llm(Path(file_path), config, ingestion_config)
+        else:
+            logger.info(f"Processing PDF '{file_path}' with MarkItDown (LLM ingestion disabled).")
+            return markdown_processor.convert(file_path).text_content
+
     else:  # For other file types, use the MarkItDown processor
         logger.info(f"Converting non-HTML/Markdown file '{file_path}' using MarkItDown.")
         return markdown_processor.convert(file_path).text_content
 
 
-def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_processor: MarkItDown) -> None:
+def _convert_document_to_markdown(
+    file_path: str, 
+    output_dir: str, 
+    markdown_processor: MarkItDown,
+    config: dict[str, Any] = None,
+    ingestion_config: IngestionConfig = None
+) -> None:
     """
     Convert a single source file into Markdown and save the result.
 
@@ -357,6 +384,8 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
         file_path (str): The path to the source document.
         output_dir (str): Directory where the converted .md file will be written.
         markdown_processor (MarkItDown): Configured MarkItDown instance for conversions.
+        config (dict[str, Any]): Full pipeline config (needed for LLM PDF processing).
+        ingestion_config (IngestionConfig): Ingestion configuration.
 
     Returns:
         None
@@ -367,7 +396,7 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
     """
     logger.debug(f"Converting file: {file_path}")
     try:
-        content = _get_markdown_content(file_path, markdown_processor)
+        content = _get_markdown_content(file_path, markdown_processor, config, ingestion_config)
 
         if content is None:
             logger.warning(f"No content could be generated for file '{file_path}' after processing. Skipping output.")
@@ -387,6 +416,37 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
         logger.error(f"Failed to convert '{file_path}'. Error details: {exc}")
 
 
+def _validate_llm_ingestion_config(config: dict[str, Any], ingestion_config: IngestionConfig) -> bool:
+    """
+    Validate that LLM ingestion is properly configured when enabled.
+    
+    Returns:
+        bool: True if configuration is valid, False otherwise.
+    """
+    if not ingestion_config.llm_ingestion:
+        return True  # No validation needed if disabled
+    
+    model_roles = _extract_model_roles(config)
+    model_list = _extract_model_list(config)
+    
+    if not model_roles.ingestion:
+        logger.error("LLM ingestion is enabled but no models are assigned to 'ingestion' role in model_roles.")
+        return False
+    
+    if not model_list:
+        logger.error("LLM ingestion is enabled but no models are defined in model_list.")
+        return False
+    
+    # Check if at least one ingestion model exists in model_list
+    matched_models = [m for m in model_list if m.model_name in model_roles.ingestion]
+    if not matched_models:
+        logger.error(f"LLM ingestion is enabled but none of the models in model_roles.ingestion {model_roles.ingestion} are found in model_list.")
+        return False
+    
+    logger.info(f"LLM ingestion validated. Found {len(matched_models)} model(s) for ingestion.")
+    return True
+
+
 def run(config: dict[str, Any]) -> None:
     """
     Execute the ingestion stage of the pipeline.
@@ -404,6 +464,7 @@ def run(config: dict[str, Any]) -> None:
             - config["pipeline"]["ingestion"]["run"] (bool): Whether to run ingestion.
             - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
             - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
+            - config["pipeline"]["ingestion"]["llm_ingestion"] (bool): Whether to use LLM for PDF ingestion.
             - config["model_roles"]["ingestion"] (Optional[list[str]]): Model names for LLM ingestion support.
             - config["model_list"] (Optional[list[dict[str, str]]]): Detailed LLM model configs.
 
@@ -426,6 +487,11 @@ def run(config: dict[str, Any]) -> None:
     if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
         logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
         return
+    
+    # Validate LLM configuration if LLM ingestion is enabled
+    if not _validate_llm_ingestion_config(config, ingestion_config):
+        logger.error("LLM ingestion validation failed. Please check your configuration.")
+        return
 
     # Ensure the output directory exists
     os.makedirs(ingestion_config.output_dir, exist_ok=True)
@@ -443,6 +509,11 @@ def run(config: dict[str, Any]) -> None:
     logger.info(
         f"Ingestion stage: Converting files from '{ingestion_config.source_documents_dir}' to '{ingestion_config.output_dir}'..."
     )
+    
+    if ingestion_config.llm_ingestion:
+        logger.info("LLM ingestion mode is ENABLED for PDF files.")
+    else:
+        logger.info("LLM ingestion mode is DISABLED. PDFs will be processed with MarkItDown.")
 
     # Process each file in the source directory
     for file_path in all_source_files:
@@ -451,6 +522,8 @@ def run(config: dict[str, Any]) -> None:
                 file_path=file_path,
                 output_dir=ingestion_config.output_dir,
                 markdown_processor=markdown_processor,
+                config=config,
+                ingestion_config=ingestion_config,
             )
 
     logger.success(
