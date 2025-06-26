@@ -1,12 +1,12 @@
 """Compute overlap based citation scores for the lighteval dataset."""
 
-from typing import Any, Sequence
+from typing import Any, List, Sequence
 from dataclasses import dataclass
 
 from loguru import logger
 from thefuzz import fuzz
 
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, replace_dataset_columns
 
 
 @dataclass(slots=True)
@@ -53,36 +53,43 @@ def run(config: dict[str, Any]) -> None:
 
     logger.info(f"Loading '{stage_cfg.subset}' subset for citation score filtering...")
     try:
-        dataset = custom_load_dataset(config=config, subset=stage_cfg.subset)
+        lighteval_ds = custom_load_dataset(config=config, subset=stage_cfg.subset)
     except Exception as e:
         logger.exception(f"Could not load subset '{stage_cfg.subset}': {e}")
         return
 
-    if len(dataset) == 0:
+    if len(lighteval_ds) == 0:
         logger.warning("Dataset is empty; nothing to process.")
         return
 
-    logger.debug(f"Computing citation scores for {len(dataset)} rows")
+    logger.debug(f"Computing citation scores for {len(lighteval_ds)} rows")
     scorer = CitationScoreCalculator(stage_cfg.alpha, stage_cfg.beta)
 
-    answer_scores: list[float] = []
-    chunk_scores: list[float] = []
-    final_scores: list[float] = []
+    all_answer_citation_scores = []
+    all_chunk_citation_scores = []
+    all_final_scores = []
 
-    for row in dataset:
-        ans, chunk, final = scorer.compute(
+    for row in lighteval_ds:
+        ans_score, chunk_score, final_score = scorer.compute(
             citations=row.get("citations", []),
             chunks=row.get("chunks", []),
             answer=row.get("ground_truth_answer", ""),
         )
-        answer_scores.append(ans)
-        chunk_scores.append(chunk)
-        final_scores.append(final)
+        all_answer_citation_scores.append(ans_score)
+        all_chunk_citation_scores.append(chunk_score)
+        all_final_scores.append(final_score)
 
-    dataset = dataset.add_column("answer_citation_score", answer_scores)
-    dataset = dataset.add_column("chunk_citation_score", chunk_scores)
-    dataset = dataset.add_column("citation_score", final_scores)
+    # Use helper function to replace columns cleanly
+    # Note: This doesn't preserve original column metadata, but for computed float scores
+    # this is acceptable as type inference will correctly identify them as numeric
+    columns_data = {
+        "answer_citation_score": all_answer_citation_scores,
+        "chunk_citation_score": all_chunk_citation_scores,
+        "citation_score": all_final_scores,
+    }
+
+    lighteval_ds = replace_dataset_columns(lighteval_ds, columns_data)
 
     logger.info("Saving updated dataset with new citation score columns...")
-    custom_save_dataset(dataset=dataset, config=config, subset=stage_cfg.subset)
+    custom_save_dataset(dataset=lighteval_ds, config=config, subset=stage_cfg.subset)
     logger.success("citation_score_filtering stage completed successfully.")
