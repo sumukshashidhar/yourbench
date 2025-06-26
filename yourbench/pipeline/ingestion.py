@@ -39,22 +39,23 @@ Stage-Specific Logging:
     All major ingestion activity is logged to "logs/ingestion.log".
 """
 
-import os
 import io
+import os
 import glob
+import base64
 from typing import Any, Optional
+from pathlib import Path
 from dataclasses import field, dataclass
 
 import trafilatura
-from loguru import logger
-from markitdown import MarkItDown
-from pdf2image import convert_from_path
 from PIL import Image
-from pathlib import Path
-import base64
+from loguru import logger
+from pdf2image import convert_from_path
+from markitdown import MarkItDown
 
 from huggingface_hub import InferenceClient
-from yourbench.utils.inference.inference_core import Model as ModelConfig, InferenceCall, run_inference
+from yourbench.utils.inference.inference_core import Model as ModelConfig
+from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
 
 @dataclass
@@ -145,6 +146,7 @@ def _extract_model_list(config: dict[str, Any]) -> list[ModelConfig]:
 
     return result
 
+
 def _pdf_to_images(pdf_path: Path, dpi: int = 200) -> list[Image.Image]:
     """Convert PDF to list of PIL images."""
     try:
@@ -155,24 +157,23 @@ def _pdf_to_images(pdf_path: Path, dpi: int = 200) -> list[Image.Image]:
         logger.error(f"Failed to convert PDF {pdf_path}: {e}")
         return []
 
+
 def _image_to_base64(image: Image.Image) -> str:
     """Convert PIL image to base64 string."""
-    
+
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
-def _build_pdf_inference_calls(
-    pdf_path: Path, 
-    images: list[Image.Image]
-) -> tuple[list[InferenceCall], list[int]]:
+
+def _build_pdf_inference_calls(pdf_path: Path, images: list[Image.Image]) -> tuple[list[InferenceCall], list[int]]:
     """Build inference calls for PDF pages."""
     calls = []
     page_numbers = []
-    
+
     for page_num, image in enumerate(images, start=1):
         image_b64 = _image_to_base64(image)
-        
+
         messages = [
             {
                 "role": "user",
@@ -183,67 +184,52 @@ def _build_pdf_inference_calls(
                             "Convert this document page to clean, well-formatted Markdown. "
                             "Preserve all text, structure, tables, and important formatting. "
                             "Do not add any commentary or metadata - just the content in Markdown."
-                        )
+                        ),
                     },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{image_b64}"
-                        }
-                    }
-                ]
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}},
+                ],
             }
         ]
-        
-        calls.append(InferenceCall(
-            messages=messages,
-            tags=["pdf_ingestion", f"page_{page_num}", pdf_path.name]
-        ))
+
+        calls.append(InferenceCall(messages=messages, tags=["pdf_ingestion", f"page_{page_num}", pdf_path.name]))
         page_numbers.append(page_num)
-        
+
     logger.info(f"Created {len(calls)} inference calls for PDF {pdf_path.name}")
     return calls, page_numbers
 
-def _process_pdf_with_llm(
-    pdf_path: Path,
-    config: dict[str, Any],
-    ingestion_config: IngestionConfig
-) -> str:
+
+def _process_pdf_with_llm(pdf_path: Path, config: dict[str, Any], ingestion_config: IngestionConfig) -> str:
     """Process entire PDF through LLM using the inference engine."""
     logger.info(f"Processing PDF with LLM: {pdf_path.name}")
-    
+
     # Convert PDF to images
     images = _pdf_to_images(pdf_path, ingestion_config.pdf_dpi)
     if not images:
         return ""
-    
+
     # Build inference calls
     inference_calls, page_numbers = _build_pdf_inference_calls(pdf_path, images)
-    
+
     # Run inference using the engine
-    responses = run_inference(
-        config=config,
-        step_name="ingestion",
-        inference_calls=inference_calls
-    )
-    
+    responses = run_inference(config=config, step_name="ingestion", inference_calls=inference_calls)
+
     # Process responses
     if not responses:
         logger.error(f"No responses received for PDF {pdf_path.name}")
         return ""
-    
+
     # Get the first (and likely only) model's responses
     model_name = list(responses.keys())[0]
     page_contents = responses[model_name]
-    
+
     # Sort and combine pages
     pages_with_numbers = list(zip(page_numbers, page_contents))
     pages_with_numbers.sort(key=lambda x: x[0])
-    
+
     # Concatenate with page breaks
     markdown_pages = [content for _, content in pages_with_numbers if content]
     full_markdown = "\n\n---\n\n".join(markdown_pages)
-    
+
     logger.success(f"Successfully processed {len(images)} pages from {pdf_path.name}")
     return full_markdown
 
@@ -280,16 +266,10 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
         matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
 
         if not matched_model:
-            logger.info(
-                "No matching LLM model found for roles: {}. Using default MarkItDown.",
-                model_roles.ingestion,
-            )
+            logger.info(f"No matching LLM model found for roles: {model_roles.ingestion}. Using default MarkItDown.")
             return MarkItDown()
 
-        logger.info(
-            "Initializing MarkItDown with LLM support: model='{}'.",
-            matched_model.model_name,
-        )
+        logger.info(f"Initializing MarkItDown with LLM support: model='{matched_model.model_name}'.")
 
         # Construct the InferenceClient client (as OpenAI replacement)
         llm_client = InferenceClient(
@@ -300,7 +280,7 @@ def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
 
         return MarkItDown(llm_client=llm_client, llm_model=matched_model.model_name)
     except Exception as exc:
-        logger.warning("Failed to initialize MarkItDown with LLM support: {}", str(exc))
+        logger.warning(f"Failed to initialize MarkItDown with LLM support: {str(exc)}")
         return MarkItDown()
 
 
@@ -359,8 +339,7 @@ def _get_markdown_content(file_path: str, markdown_processor: MarkItDown) -> str
         content = _extract_markdown_from_html(file_path)
         if content is None:  # Fallback to MarkItDown if Trafilatura failed or returned nothing
             logger.warning(
-                f"Trafilatura processing failed or yielded no content for HTML '{file_path}'. "
-                "Falling back to MarkItDown for this file."
+                f"Trafilatura processing failed or yielded no content for HTML '{file_path}'. Falling back to MarkItDown for this file."
             )
             content = markdown_processor.convert(file_path).text_content
         return content
@@ -386,7 +365,7 @@ def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_proc
         - Debug info about the file being processed.
         - Warning if conversion fails or the file is empty.
     """
-    logger.debug("Converting file: {}", file_path)
+    logger.debug(f"Converting file: {file_path}")
     try:
         content = _get_markdown_content(file_path, markdown_processor)
 
@@ -450,7 +429,7 @@ def run(config: dict[str, Any]) -> None:
 
     # Ensure the output directory exists
     os.makedirs(ingestion_config.output_dir, exist_ok=True)
-    logger.debug("Prepared output directory: {}", ingestion_config.output_dir)
+    logger.debug(f"Prepared output directory: {ingestion_config.output_dir}")
 
     # Initialize MarkItDown processor (may include LLM if configured)
     markdown_processor = _initialize_markdown_processor(config)
@@ -458,16 +437,11 @@ def run(config: dict[str, Any]) -> None:
     # Gather all files in the source directory (recursively if desired)
     all_source_files = glob.glob(os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True)
     if not all_source_files:
-        logger.warning(
-            "No files found in source directory: {}",
-            ingestion_config.source_documents_dir,
-        )
+        logger.warning(f"No files found in source directory: {ingestion_config.source_documents_dir}")
         return
 
     logger.info(
-        "Ingestion stage: Converting files from '{}' to '{}'...",
-        ingestion_config.source_documents_dir,
-        ingestion_config.output_dir,
+        f"Ingestion stage: Converting files from '{ingestion_config.source_documents_dir}' to '{ingestion_config.output_dir}'..."
     )
 
     # Process each file in the source directory
@@ -480,7 +454,5 @@ def run(config: dict[str, Any]) -> None:
             )
 
     logger.success(
-        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.",
-        ingestion_config.source_documents_dir,
-        ingestion_config.output_dir,
+        f"Ingestion stage complete: Processed files from '{ingestion_config.source_documents_dir}' and saved Markdown to '{ingestion_config.output_dir}'."
     )
