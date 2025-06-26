@@ -48,7 +48,7 @@ DEFAULT_STAGE_ORDER: List[str] = [
     "single_shot_question_generation",
     "multi_hop_question_generation",
     "question_rewriting",
-    # "deduplicate_single_shot_questions", #TODO
+    # "deduplicate_single_shot_questions", #TODO: either remove or uncomment when implemented
     # "deduplicate_multi_hop_questions",
     "lighteval",
     "citation_score_filtering",
