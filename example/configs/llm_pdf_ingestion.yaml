@@ -1,0 +1,14 @@
+hf_configuration:
+  hf_dataset_name: 
+  private: true
+
+model_list:
+  - model_name: google/gemini-2.5-flash-lite-preview-06-17
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+
+pipeline:
+  ingestion:
+    llm_ingestion: true
+    source_documents_dir: example/data/raw
+    output_dir: example/data/processed
