@@ -123,10 +123,18 @@ def _process_question_rewriting_responses(
 
     for model_name, model_responses in responses.items():
         if len(model_responses) != len(indices):
-            logger.error(f"Response count mismatch for {model_name}")
-            continue
+            logger.warning(
+                f"Response count mismatch for model {model_name}. "
+                f"Expected {len(indices)} but got {len(model_responses)}. "
+                "This can happen if some inference calls failed. "
+                "Processing the responses that were returned."
+            )
 
         for resp_idx, (response, dataset_idx) in enumerate(zip(model_responses, indices)):
+            if not response:
+                logger.warning(f"Skipping failed or empty response for original dataset row {dataset_idx}")
+                continue
+
             original_row = original_dataset[dataset_idx]
 
             # Parse the question_rewriting response
@@ -137,13 +145,15 @@ def _process_question_rewriting_responses(
 
             # Create new row with all original data plus question_rewriting info
             new_row = dict(original_row)
-            new_row.update({
-                "original_question": original_row["question"],
-                "question": rewritten.rewritten_question,
-                "question_rewriting_model": model_name,
-                "question_rewriting_rationale": rewritten.question_rewriting_rationale,
-                "raw_question_rewriting_response": response,
-            })
+            new_row.update(
+                {
+                    "original_question": original_row["question"],
+                    "question": rewritten.rewritten_question,
+                    "question_rewriting_model": model_name,
+                    "question_rewriting_rationale": rewritten.question_rewriting_rationale,
+                    "raw_question_rewriting_response": response,
+                }
+            )
 
             rewritten_rows.append(new_row)
 
