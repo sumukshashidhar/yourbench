@@ -284,6 +284,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             - 'max_combinations' (int): The maximum number of cross-document combinations to generate.
             - 'chunks_per_document' (int): The number of chunks to sample from each document.
             - 'num_docs_per_combination' (List[int]): A list [min, max] specifying the range of documents to combine.
+            - 'random_seed' (int): Seed for the random number generator.
 
     Returns:
         A new Dataset with cross-document combinations, preserving a similar schema but with an aggregated summary.
@@ -292,6 +293,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
     chunks_per_document = int(stage_cfg.get("chunks_per_document", 1))
     num_docs_range = stage_cfg.get("num_docs_per_combination", [2, 5])
     min_docs, max_docs = num_docs_range[0], num_docs_range[1]
+    random_seed = int(stage_cfg.get("random_seed", 42))
 
     if "multihop_chunks" not in dataset.column_names:
         logger.warning("Dataset is missing 'multihop_chunks'. Cross-document generation aborted.")
@@ -301,37 +303,47 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
     for idx, row in enumerate(dataset):
         multihop_chunks = row.get("multihop_chunks", [])
         if isinstance(multihop_chunks, list) and multihop_chunks:
-            docs.append({
-                "document_id": row.get("document_id", f"doc_{idx}"),
-                "document_summary": row.get("document_summary", ""),
-                "multihop_chunks": multihop_chunks,
-            })
+            valid_chunks = [
+                chunk
+                for chunk in multihop_chunks
+                if all(key in chunk for key in ("chunk_ids", "chunks_text"))
+            ]
+            if valid_chunks:
+                docs.append({
+                    "document_id": row.get("document_id", f"doc_{idx}"),
+                    "document_summary": row.get("document_summary"),
+                    "multihop_chunks": valid_chunks,
+                })
 
     if len(docs) < min_docs:
-        logger.warning(f"Found only {len(docs)} document(s) with 'multihop_chunks'. Need at least {min_docs}.")
+        logger.warning(f"Found only {len(docs)} document(s) with valid 'multihop_chunks'. Need at least {min_docs}.")
         return Dataset.from_list([])
 
-    rng = random.Random(42)
+    rng = random.Random(random_seed)
     cross_rows = []
+    used_doc_combinations = set()
+    attempts = 0
+    max_attempts = max_combinations * 3
 
-    for _ in range(max_combinations):
-        if len(cross_rows) >= max_combinations:
-            break
+    while len(cross_rows) < max_combinations and attempts < max_attempts:
+        attempts += 1
 
-        k = rng.randint(min_docs, min(max_docs, len(docs)))
+        num_docs_to_combine = rng.randint(min_docs, min(max_docs, len(docs)))
+        doc_group = rng.sample(docs, num_docs_to_combine)
 
-        doc_group = rng.sample(docs, k)
+        # Ensure unique combination of documents
+        doc_ids = tuple(sorted([d["document_id"] for d in doc_group]))
+        if doc_ids in used_doc_combinations:
+            continue
+        used_doc_combinations.add(doc_ids)
 
         sampled_chunks_from_group = []
         for doc in doc_group:
             if doc["multihop_chunks"]:
-                sampled_chunk = rng.choice(doc["multihop_chunks"])
-                if all(key in sampled_chunk for key in ("chunk_ids", "chunks_text")):
-                    sampled_chunks_from_group.append(sampled_chunk)
-                else:
-                    logger.warning(f"Skipping malformed chunk in doc {doc['document_id']}: {sampled_chunk}")
+                sampled_chunks = rng.sample(doc["multihop_chunks"], min(chunks_per_document, len(doc["multihop_chunks"])))
+                sampled_chunks_from_group.extend(sampled_chunks)
 
-        if len(sampled_chunks_from_group) < k:
+        if len(sampled_chunks_from_group) < num_docs_to_combine:
             logger.warning("Could not sample enough valid chunks for the group. Skipping this combination.")
             continue
 
@@ -347,7 +359,11 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             "chunks_text": combined_texts,
         }
 
-        doc_summaries = [doc["document_summary"] for doc in doc_group if doc["document_summary"].strip()]
+        doc_summaries = [
+            doc["document_summary"]
+            for doc in doc_group
+            if doc.get("document_summary") and doc["document_summary"].strip()
+        ]
 
         combined_summary = ""
         if doc_summaries:
@@ -367,6 +383,9 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
     if not cross_rows:
         logger.warning("No cross-document combinations were generated.")
         return Dataset.from_list([])
+
+    if len(cross_rows) < max_combinations:
+        logger.warning(f"Generated only {len(cross_rows)} out of {max_combinations} requested combinations.")
 
     logger.info(f"Successfully generated {len(cross_rows)} cross-document combinations.")
     return Dataset.from_list(cross_rows)
