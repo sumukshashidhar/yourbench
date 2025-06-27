@@ -1,3 +1,4 @@
+import hashlib
 import os
 import random
 import shutil
@@ -371,7 +372,8 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             summary_bullets = "\n".join(f"- {s}" for s in doc_summaries)
             combined_summary = f"{header}\n\n{summary_bullets}"
 
-        cross_doc_id = f"cross_{'_'.join(d['document_id'][:8] for d in doc_group)}"
+        doc_ids_str = "_".join(sorted(d['document_id'] for d in doc_group))
+        cross_doc_id = f"cross_{hashlib.sha1(doc_ids_str.encode()).hexdigest()[:16]}"
 
         cross_rows.append({
             "document_id": cross_doc_id,
