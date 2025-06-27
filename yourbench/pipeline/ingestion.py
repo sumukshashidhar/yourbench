@@ -22,7 +22,6 @@ Configuration Requirements (in `config["pipeline"]["ingestion"]`):
       "output_dir": str,           # Directory where converted .md files are saved
       "upload_to_hub": bool,        # Whether to upload the ingested documents to HF Hub
       "llm_ingestion": bool,       # Whether to use LLM for PDF ingestion
-      "pdf_batch_size": int,       # Number of PDF pages to process in parallel
       "pdf_dpi": int,              # DPI for PDF to image conversion
     }
 
