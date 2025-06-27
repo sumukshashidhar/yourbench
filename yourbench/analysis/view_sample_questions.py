@@ -79,11 +79,18 @@ class QuestionLoader:
     def load_questions(self, subset: Literal["single_shot_questions", "multi_hop_questions"]) -> List[Question]:
         try:
             dataset = custom_load_dataset(config=self.config, subset=subset)
-        except (KeyError, ConfigurationError):
-            logger.warning(f"Could not load subset '{subset}'. Skipping.")
-            return []
+        except ConfigurationError as e:
+            logger.error(f"Configuration error loading subset '{subset}': {e}")
+            raise
+        except KeyError as e:
+            logger.error(f"Missing required key in config for subset '{subset}': {e}")
+            raise
 
-        if not dataset:
+        if dataset is None:
+            raise ValueError(f"Dataset loading returned None for subset '{subset}'")
+        
+        if len(dataset) == 0:
+            logger.warning(f"Dataset '{subset}' is empty")
             return []
 
         indices = random.sample(range(len(dataset)), min(self.sample_size, len(dataset)))
