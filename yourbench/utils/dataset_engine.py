@@ -1,7 +1,7 @@
-import hashlib
 import os
 import random
 import shutil
+import hashlib
 import tempfile
 from typing import Any
 from pathlib import Path
@@ -305,9 +305,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
         multihop_chunks = row.get("multihop_chunks", [])
         if isinstance(multihop_chunks, list) and multihop_chunks:
             valid_chunks = [
-                chunk
-                for chunk in multihop_chunks
-                if all(key in chunk for key in ("chunk_ids", "chunks_text"))
+                chunk for chunk in multihop_chunks if all(key in chunk for key in ("chunk_ids", "chunks_text"))
             ]
             if valid_chunks:
                 docs.append({
@@ -341,7 +339,9 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
         sampled_chunks_from_group = []
         for doc in doc_group:
             if doc["multihop_chunks"]:
-                sampled_chunks = rng.sample(doc["multihop_chunks"], min(chunks_per_document, len(doc["multihop_chunks"])))
+                sampled_chunks = rng.sample(
+                    doc["multihop_chunks"], min(chunks_per_document, len(doc["multihop_chunks"]))
+                )
                 sampled_chunks_from_group.extend(sampled_chunks)
 
         if len(sampled_chunks_from_group) < num_docs_to_combine:
@@ -372,7 +372,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]
             summary_bullets = "\n".join(f"- {s}" for s in doc_summaries)
             combined_summary = f"{header}\n\n{summary_bullets}"
 
-        doc_ids_str = "_".join(sorted(d['document_id'] for d in doc_group))
+        doc_ids_str = "_".join(sorted(d["document_id"] for d in doc_group))
         cross_doc_id = f"cross_{hashlib.sha1(doc_ids_str.encode()).hexdigest()[:16]}"
 
         cross_rows.append({
