@@ -172,7 +172,7 @@ def _merge_datasets(existing: Dataset | DatasetDict, new: Dataset, subset: str |
         try:
             # Concatenate new data with the existing subset
             new = concatenate_datasets([existing[subset], new])
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             logger.warning(
                 f"Could not concatenate for subset '{subset}' (e.g., schema mismatch). Overwriting. Error: {e}"
             )
@@ -234,10 +234,10 @@ def custom_save_dataset(
         if settings.concat_if_exist and settings.local_dir.exists():
             try:
                 existing = load_from_disk(str(settings.local_dir))
-            except (ConnectionError, TimeoutError) as e:
-                logger.warning(f"Network error loading existing: {e}")
+            except (FileNotFoundError, PermissionError, OSError) as e:
+                logger.warning(f"Error loading existing dataset from disk: {e}")
             except Exception as e:
-                logger.error(f"Error loading existing dataset: {e}")
+                logger.error(f"Unexpected error loading existing dataset: {e}")
                 raise
 
         merged = (
