@@ -28,8 +28,9 @@ def run_analysis(analysis_name: str, args: Optional[List[str]] = None, debug: bo
         logger.error(f"Could not find analysis module: {analysis_name}")
         if debug:
             logger.exception(e)
-    except Exception as e:
+        raise
+    except (AttributeError, TypeError) as e:
         logger.error(f"Error running analysis {analysis_name}: {e}")
         if debug:
             logger.exception(e)
-        raise e
+        raise
