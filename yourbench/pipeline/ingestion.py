@@ -78,11 +78,11 @@ def run(config: dict[str, Any]) -> None:
     if not source_dir or not output_dir:
         logger.error("Missing source or output directory")
         return
-    
+
     if not source_dir.exists():
         logger.error(f"Source directory does not exist: {source_dir}")
         return
-    
+
     if not source_dir.is_dir():
         logger.error(f"Source path is not a directory: {source_dir}")
         return
@@ -145,16 +145,27 @@ def _get_processor(config: dict[str, Any]) -> MarkItDown:
 def _convert_file(file_path: Path, config: dict[str, Any], processor: MarkItDown) -> str | None:
     """Convert file to markdown based on type."""
     supported_extensions = {
-        ".md", ".txt", ".html", ".htm", ".pdf", ".docx", ".doc", 
-        ".pptx", ".ppt", ".xlsx", ".xls", ".rtf", ".odt"
+        ".md",
+        ".txt",
+        ".html",
+        ".htm",
+        ".pdf",
+        ".docx",
+        ".doc",
+        ".pptx",
+        ".ppt",
+        ".xlsx",
+        ".xls",
+        ".rtf",
+        ".odt",
     }
-    
+
     file_ext = file_path.suffix.lower()
-    
+
     if file_ext not in supported_extensions:
         logger.warning(f"Unsupported file type: {file_ext} for file {file_path.name}")
         return None
-    
+
     match file_ext:
         case ".md":
             return file_path.read_text(encoding="utf-8")
