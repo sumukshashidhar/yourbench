@@ -42,6 +42,14 @@ hf_configuration:
   concat_if_exist: false
 
   # ----------------------------------------------------------
+  # 'upload_card': Whether to automatically generate and upload README dataset cards
+  # to the Hugging Face Hub. The cards are generated using a Jinja2 template and
+  # include dataset metadata like number of rows, columns, data types, etc.
+  #   true  => Automatically upload dataset cards (recommended)
+  #   false => Skip dataset card uploading
+  upload_card: true
+
+  # ----------------------------------------------------------
   # 'local_dataset_dir' and 'local_saving': (optional)
   #   local_dataset_dir: path for saving the dataset locally
   #   local_saving: whether to actually store locally in addition to pushing
