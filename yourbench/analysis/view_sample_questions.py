@@ -2,6 +2,7 @@ import random
 from typing import List, Literal
 from dataclasses import dataclass
 
+import yaml
 from loguru import logger
 from rich.table import Table
 from rich.console import Console
@@ -90,8 +91,7 @@ class QuestionLoader:
             raise ValueError(f"Dataset loading returned None for subset '{subset}'")
 
         if len(dataset) == 0:
-            logger.warning(f"Dataset '{subset}' is empty")
-            return []
+            raise ValueError(f"Dataset '{subset}' is empty - no questions available")
 
         indices = random.sample(range(len(dataset)), min(self.sample_size, len(dataset)))
         return [Question.from_dataset_row(dataset[i], i) for i in indices]
@@ -128,7 +128,7 @@ def run(*cli_args: List[str]) -> None:
     except FileNotFoundError:
         logger.error(f"Configuration file not found at '{config_path}'. Aborting.")
         return
-    except Exception as e:
+    except (yaml.YAMLError, PermissionError) as e:
         logger.error(f"Failed to load config from '{config_path}': {e}")
         return
 
@@ -136,9 +136,17 @@ def run(*cli_args: List[str]) -> None:
     display = QuestionDisplay(Console())
 
     # Display single-shot questions
-    single_shot_questions = loader.load_questions("single_shot_questions")
-    display.display_questions(single_shot_questions, "Single-Shot Questions (Detailed)", "bold magenta")
+    try:
+        single_shot_questions = loader.load_questions("single_shot_questions")
+        display.display_questions(single_shot_questions, "Single-Shot Questions (Detailed)", "bold magenta")
+    except (ConfigurationError, KeyError, ValueError) as e:
+        logger.error(f"Failed to load single-shot questions: {e}")
+        display.display_questions([], "Single-Shot Questions (Detailed)", "bold magenta")
 
     # Display multi-hop questions
-    multi_hop_questions = loader.load_questions("multi_hop_questions")
-    display.display_questions(multi_hop_questions, "Multi-Hop Questions (Detailed)", "bold green")
+    try:
+        multi_hop_questions = loader.load_questions("multi_hop_questions")
+        display.display_questions(multi_hop_questions, "Multi-Hop Questions (Detailed)", "bold green")
+    except (ConfigurationError, KeyError, ValueError) as e:
+        logger.error(f"Failed to load multi-hop questions: {e}")
+        display.display_questions([], "Multi-Hop Questions (Detailed)", "bold green")
