@@ -197,10 +197,7 @@ def _process_pdf_llm(pdf_path: Path, config: dict[str, Any]) -> str:
     """Convert every page of a PDF to Markdown using an LLM."""
     models = _load_models(config, "ingestion")
     if not models:
-        logger.warning(
-            f"No LLM models configured for PDF ingestion of {pdf_path.name}, "
-            "falling back to MarkItDown"
-        )
+        logger.warning(f"No LLM models configured for PDF ingestion of {pdf_path.name}, falling back to MarkItDown")
         try:
             return MarkItDown().convert(str(pdf_path)).text_content
         except Exception as exc:
