@@ -194,15 +194,17 @@ def _extract_html(path: Path) -> str | None:
 
 
 def _process_pdf_llm(pdf_path: Path, config: dict[str, Any]) -> str:
-    """Convert PDF pages to markdown using LLM."""
+    """Convert every page of a PDF to Markdown using an LLM."""
     models = _load_models(config, "ingestion")
     if not models:
-        logger.warning(f"No LLM models configured for PDF ingestion of {pdf_path.name}, falling back to MarkItDown")
-        processor = MarkItDown()
+        logger.warning(
+            f"No LLM models configured for PDF ingestion of {pdf_path.name}, "
+            "falling back to MarkItDown"
+        )
         try:
-            return processor.convert(str(pdf_path)).text_content
-        except Exception as e:
-            logger.error(f"Fallback conversion failed for {pdf_path.name}: {e}")
+            return MarkItDown().convert(str(pdf_path)).text_content
+        except Exception as exc:
+            logger.error(f"Fallback conversion failed for {pdf_path.name}: {exc}")
             return ""
 
     dpi = config.get("pipeline", {}).get("ingestion", {}).get("pdf_dpi", 300)
@@ -210,36 +212,37 @@ def _process_pdf_llm(pdf_path: Path, config: dict[str, Any]) -> str:
     if not images:
         return ""
 
-    batch_size = config.get("pipeline", {}).get("ingestion", {}).get("pdf_batch_size", 5)
-    pages = []
-
-    for i in range(0, len(images), batch_size):
-        batch = images[i : i + batch_size]
-        calls = [
-            InferenceCall(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "Convert this document page to clean Markdown. "
+    calls = [
+        InferenceCall(
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "Convert this document page to clean Markdown. "
                                 "Preserve all text, structure, tables, and formatting. "
-                                "Output only the content in Markdown.",
-                            },
-                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{_img_to_b64(img)}"}},
-                        ],
-                    }
-                ],
-                tags=["pdf_ingestion", f"page_{i + j + 1}", pdf_path.name],
-            )
-            for j, img in enumerate(batch)
-        ]
+                                "Output only the content in Markdown."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{_img_to_b64(img)}"},
+                        },
+                    ],
+                }
+            ],
+            tags=["pdf_ingestion", f"page_{idx + 1}", pdf_path.name],
+        )
+        for idx, img in enumerate(images)
+    ]
 
-        responses = run_inference(config, "ingestion", calls)
-        if responses:
-            model_name = next(iter(responses))
-            pages.extend(responses[model_name])
+    pages: list[str] = []
+    responses = run_inference(config, "ingestion", calls)
+    if responses:
+        model_name = next(iter(responses))
+        pages.extend(responses[model_name])
 
     return "\n\n---\n\n".join(filter(None, pages))
 
