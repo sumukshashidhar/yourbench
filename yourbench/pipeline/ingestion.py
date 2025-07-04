@@ -20,6 +20,9 @@ Configuration Requirements (in `config["pipeline"]["ingestion"]`):
       "run": bool,  # Whether to enable the ingestion stage
       "source_documents_dir": str,  # Directory containing raw source documents
       "output_dir": str,           # Directory where converted .md files are saved
+      "upload_to_hub": bool,        # Whether to upload the ingested documents to HF Hub
+      "llm_ingestion": bool,       # Whether to use LLM for PDF ingestion
+      "pdf_dpi": int,              # DPI for PDF to image conversion
     }
 
     Additionally, LLM details can be defined in:
@@ -39,337 +42,255 @@ Stage-Specific Logging:
     All major ingestion activity is logged to "logs/ingestion.log".
 """
 
-import os
-import glob
-from typing import Any, Optional
-from dataclasses import field, dataclass
+import io
+import uuid
+import base64
+from typing import Any
+from pathlib import Path
 
+import fitz
 import trafilatura
+from PIL import Image
 from loguru import logger
 from markitdown import MarkItDown
 
+from datasets import Dataset
 from huggingface_hub import InferenceClient
-from yourbench.utils.inference.inference_core import Model as ModelConfig
-
-
-@dataclass
-class IngestionConfig:
-    """Configuration for the ingestion stage of the pipeline."""
-
-    run: bool = True
-    source_documents_dir: Optional[str] = None
-    output_dir: Optional[str] = None
-
-
-@dataclass
-class ModelRoles:
-    """Configuration for model roles in the pipeline."""
-
-    ingestion: list[str] = field(default_factory=list)
-
-
-@dataclass
-class PipelineConfig:
-    """Main configuration for the pipeline."""
-
-    pipeline: dict[str, Any] = field(default_factory=dict)
-    model_roles: ModelRoles = field(default_factory=ModelRoles)
-    model_list: list[ModelConfig] = field(default_factory=list)
-
-
-def _extract_ingestion_config(config: dict[str, Any]) -> IngestionConfig:
-    """
-    Extract ingestion configuration from the main config dictionary.
-
-    Args:
-        config (dict[str, Any]): The complete configuration dictionary.
-
-    Returns:
-        IngestionConfig: A typed configuration object for ingestion.
-    """
-    if not isinstance(config.get("pipeline", {}).get("ingestion", {}), dict):
-        return IngestionConfig()
-
-    stage_config = config.get("pipeline", {}).get("ingestion", {})
-    return IngestionConfig(
-        run=stage_config.get("run", True),
-        source_documents_dir=stage_config.get("source_documents_dir"),
-        output_dir=stage_config.get("output_dir"),
-    )
-
-
-def _extract_model_roles(config: dict[str, Any]) -> ModelRoles:
-    """
-    Extract model roles configuration from the main config dictionary.
-
-    Args:
-        config (dict[str, Any]): The complete configuration dictionary.
-
-    Returns:
-        ModelRoles: A typed configuration object for model roles.
-    """
-    model_roles_dict = config.get("model_roles", {})
-    return ModelRoles(ingestion=model_roles_dict.get("ingestion", []))
-
-
-def _extract_model_list(config: dict[str, Any]) -> list[ModelConfig]:
-    """
-    Extract model list configuration from the main config dictionary.
-
-    Args:
-        config (dict[str, Any]): The complete configuration dictionary.
-
-    Returns:
-        list[ModelConfig]: A list of typed model configurations.
-    """
-    model_list_dicts = config.get("model_list", [])
-    result = []
-
-    for model_dict in model_list_dicts:
-        model_config = ModelConfig(
-            model_name=model_dict.get("model_name"),
-            base_url=model_dict.get("base_url"),
-            api_key=model_dict.get("api_key"),
-            provider=model_dict.get("provider"),
-        )
-        result.append(model_config)
-
-    return result
+from yourbench.utils.dataset_engine import custom_save_dataset
+from yourbench.utils.inference.inference_core import (
+    InferenceCall,
+    _load_models,
+    run_inference,
+)
 
 
 def run(config: dict[str, Any]) -> None:
-    """
-    Execute the ingestion stage of the pipeline.
+    """Convert documents to markdown and optionally upload to Hub."""
+    ingestion = config.get("pipeline", {}).get("ingestion", {})
 
-    This function checks whether the ingestion stage is enabled in the pipeline
-    configuration. If enabled, it performs the following actions:
-
-    1. Reads all files from the directory specified by `config["pipeline"]["ingestion"]["source_documents_dir"]`.
-    2. Converts each file to Markdown using the MarkItDown library.
-       Optionally, an LLM can be leveraged for advanced conversions (e.g., image descriptions).
-    3. Saves the resulting .md outputs to the directory specified by `config["pipeline"]["ingestion"]["output_dir"]`.
-
-    Args:
-        config (dict[str, Any]): A configuration dictionary with keys:
-            - config["pipeline"]["ingestion"]["run"] (bool): Whether to run ingestion.
-            - config["pipeline"]["ingestion"]["source_documents_dir"] (str): Directory containing source documents.
-            - config["pipeline"]["ingestion"]["output_dir"] (str): Directory where .md files will be saved.
-            - config["model_roles"]["ingestion"] (Optional[list[str]]): Model names for LLM ingestion support.
-            - config["model_list"] (Optional[list[dict[str, str]]]): Detailed LLM model configs.
-
-    Returns:
-        None
-
-    Logs:
-        Writes detailed logs to logs/ingestion.log describing each step taken
-        and any errors encountered during file reading or conversion.
-    """
-    # Extract typed configurations from the dictionary
-    ingestion_config = _extract_ingestion_config(config)
-
-    # Check if ingestion is enabled
-    if not ingestion_config.run:
-        logger.info("Ingestion stage is disabled. No action will be taken.")
+    if not ingestion.get("run", True):
+        logger.info("Ingestion disabled")
         return
 
-    # Check required directories
-    if not ingestion_config.source_documents_dir or not ingestion_config.output_dir:
-        logger.error("Missing 'source_documents_dir' or 'output_dir' in ingestion config. Cannot proceed.")
+    source_dir = Path(ingestion.get("source_documents_dir", ""))
+    output_dir = Path(ingestion.get("output_dir", ""))
+
+    if not source_dir or not output_dir:
+        logger.error("Missing source or output directory")
         return
 
-    # Ensure the output directory exists
-    os.makedirs(ingestion_config.output_dir, exist_ok=True)
-    logger.debug("Prepared output directory: {}", ingestion_config.output_dir)
-
-    # Initialize MarkItDown processor (may include LLM if configured)
-    markdown_processor = _initialize_markdown_processor(config)
-
-    # Gather all files in the source directory (recursively if desired)
-    all_source_files = glob.glob(os.path.join(ingestion_config.source_documents_dir, "**"), recursive=True)
-    if not all_source_files:
-        logger.warning(
-            "No files found in source directory: {}",
-            ingestion_config.source_documents_dir,
-        )
+    if not source_dir.exists():
+        logger.error(f"Source directory does not exist: {source_dir}")
         return
 
-    logger.info(
-        "Ingestion stage: Converting files from '{}' to '{}'...",
-        ingestion_config.source_documents_dir,
-        ingestion_config.output_dir,
+    if not source_dir.is_dir():
+        logger.error(f"Source path is not a directory: {source_dir}")
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Process files
+    processor = _get_processor(config)
+    files_processed = 0
+    successful_outputs = []
+
+    for file_path in source_dir.rglob("*"):
+        if file_path.is_file():
+            try:
+                if content := _convert_file(file_path, config, processor):
+                    # Preserve relative path to avoid filename collisions
+                    relative_path = file_path.relative_to(source_dir)
+                    output_path = output_dir / f"{relative_path.with_suffix('.md')}"
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    output_path.write_text(content, encoding="utf-8")
+                    logger.debug(f"Converted {file_path.name} → {output_path.name}")
+                    successful_outputs.append(output_path)
+                    files_processed += 1
+            except Exception as e:
+                logger.error(f"Failed to process {file_path.name}: {e}")
+                continue
+
+    logger.info(f"Processed {files_processed} files")
+
+    # Upload to hub if configured - only upload successfully converted files
+    if ingestion.get("upload_to_hub", True) and successful_outputs:
+        _upload_to_hub(config, successful_outputs)
+
+
+def _get_processor(config: dict[str, Any]) -> MarkItDown:
+    """Initialize markdown processor with optional LLM support."""
+    model_roles = config.get("model_roles", {}).get("ingestion", [])
+    model_list = config.get("model_list", [])
+
+    if not model_list:
+        return MarkItDown()
+
+    # Find matching model or use first one
+    model = next(
+        (m for m in model_list if m.get("model_name") in model_roles), model_list[0] if not model_roles else None
     )
 
-    # Process each file in the source directory
-    for file_path in all_source_files:
-        if os.path.isfile(file_path):
-            _convert_document_to_markdown(
-                file_path=file_path,
-                output_dir=ingestion_config.output_dir,
-                markdown_processor=markdown_processor,
-            )
+    if not model:
+        return MarkItDown()
 
-    logger.success(
-        "Ingestion stage complete: Processed files from '{}' and saved Markdown to '{}'.",
-        ingestion_config.source_documents_dir,
-        ingestion_config.output_dir,
-    )
-
-
-def _initialize_markdown_processor(config: dict[str, Any]) -> MarkItDown:
-    """
-    Initialize a MarkItDown processor with optional LLM support for advanced conversion.
-
-    This function looks up model details under `config["model_roles"]["ingestion"]`
-    and `config["model_list"]` to see if an LLM is defined for ingestion tasks.
-    If no suitable model is found or if necessary libraries are missing, a standard
-    MarkItDown instance is returned without LLM augmentation.
-
-    Args:
-        config (dict[str, Any]): Global pipeline configuration dictionary.
-
-    Returns:
-        MarkItDown: A MarkItDown instance, possibly configured with an LLM client.
-
-    Logs:
-        - Warnings if an LLM model is specified but cannot be initialized.
-        - Info about which model (if any) is used for ingestion.
-    """
     try:
-        # Extract typed configurations from the dictionary
-        model_roles = _extract_model_roles(config)
-        model_list = _extract_model_list(config)
-
-        if not model_roles.ingestion or not model_list:
-            logger.info("No LLM ingestion config found. Using default MarkItDown processor.")
-            return MarkItDown()
-
-        # Attempt to match the first model in model_list that appears in model_roles.ingestion
-        matched_model = next((m for m in model_list if m.model_name in model_roles.ingestion), None)
-
-        if not matched_model:
-            logger.info(
-                "No matching LLM model found for roles: {}. Using default MarkItDown.",
-                model_roles.ingestion,
-            )
-            return MarkItDown()
-
-        logger.info(
-            "Initializing MarkItDown with LLM support: model='{}'.",
-            matched_model.model_name,
-        )
-
-        # Construct the InferenceClient client (as OpenAI replacement)
-        llm_client = InferenceClient(
-            base_url=matched_model.base_url,
-            api_key=matched_model.api_key,
-            provider=matched_model.provider,
-        )
-
-        return MarkItDown(llm_client=llm_client, llm_model=matched_model.model_name)
-    except Exception as exc:
-        logger.warning("Failed to initialize MarkItDown with LLM support: {}", str(exc))
+        client = InferenceClient(base_url=model["base_url"], api_key=model["api_key"], provider=model.get("provider"))
+        logger.debug(f"Using LLM: {model['model_name']}")
+        return MarkItDown(llm_client=client, llm_model=model["model_name"])
+    except Exception as e:
+        logger.warning(f"Failed to init LLM processor: {e}")
         return MarkItDown()
 
 
-def _extract_markdown_from_html(file_path: str) -> str | None:
-    """Attempts to extract markdown content from an HTML file using Trafilatura."""
-    logger.debug(f"Attempting to extract Markdown from HTML file: {file_path} using Trafilatura.")
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
+def _convert_file(file_path: Path, config: dict[str, Any], processor: MarkItDown) -> str | None:
+    """Convert file to markdown based on type."""
+    supported_extensions = {
+        ".md",
+        ".txt",
+        ".html",
+        ".htm",
+        ".pdf",
+        ".docx",
+        ".doc",
+        ".pptx",
+        ".ppt",
+        ".xlsx",
+        ".xls",
+        ".rtf",
+        ".odt",
+    }
 
-        # output_format='markdown' is key for direct Markdown conversion
-        extracted_markdown = trafilatura.extract(
-            html_content,
-            output_format="markdown",
-            include_comments=False,  # Do not include HTML comments
-            include_tables=True,  # Try to include table data
-        )
+    file_ext = file_path.suffix.lower()
 
-        if extracted_markdown:
-            logger.info(f"Successfully extracted Markdown from '{file_path}' using Trafilatura.")
-            return extracted_markdown
-
-        logger.warning(f"Trafilatura returned no content for HTML file '{file_path}'.")
+    if file_ext not in supported_extensions:
+        logger.warning(f"Unsupported file type: {file_ext} for file {file_path.name}")
         return None
+
+    match file_ext:
+        case ".md":
+            return file_path.read_text(encoding="utf-8")
+
+        case ".html" | ".htm":
+            if content := _extract_html(file_path):
+                return content
+            # Fallback to MarkItDown
+            return processor.convert(str(file_path)).text_content
+
+        case ".pdf" if config.get("pipeline", {}).get("ingestion", {}).get("llm_ingestion"):
+            return _process_pdf_llm(file_path, config)
+
+        case _:
+            return processor.convert(str(file_path)).text_content
+
+
+def _extract_html(path: Path) -> str | None:
+    """Extract markdown from HTML using trafilatura."""
+    try:
+        html = path.read_text(encoding="utf-8")
+        return trafilatura.extract(html, output_format="markdown", include_comments=False, include_tables=True)
     except Exception as e:
-        logger.error(f"Error using Trafilatura for HTML file '{file_path}': {e}. Skipping Trafilatura for this file.")
+        logger.debug(f"Trafilatura failed for {path.name}: {e}")
         return None
 
 
-def _get_markdown_content(file_path: str, markdown_processor: MarkItDown) -> str | None:
-    """
-    Extract or convert file content to Markdown based on file type.
+def _process_pdf_llm(pdf_path: Path, config: dict[str, Any]) -> str:
+    """Convert every page of a PDF to Markdown using an LLM."""
+    models = _load_models(config, "ingestion")
+    if not models:
+        logger.warning(f"No LLM models configured for PDF ingestion of {pdf_path.name}, falling back to MarkItDown")
+        try:
+            return MarkItDown().convert(str(pdf_path)).text_content
+        except Exception as exc:
+            logger.error(f"Fallback conversion failed for {pdf_path.name}: {exc}")
+            return ""
 
-    Args:
-        file_path (str): The path to the source document.
-        markdown_processor (MarkItDown): Configured MarkItDown instance for conversions.
+    dpi = config.get("pipeline", {}).get("ingestion", {}).get("pdf_dpi", 300)
+    images = _pdf_to_images(pdf_path, dpi)
+    if not images:
+        return ""
 
-    Returns:
-        str | None: The Markdown content, or None if conversion failed.
+    calls = [
+        InferenceCall(
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "Convert this document page to clean Markdown. "
+                                "Preserve all text, structure, tables, and formatting. "
+                                "Output only the content in Markdown."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{_img_to_b64(img)}"},
+                        },
+                    ],
+                }
+            ],
+            tags=["pdf_ingestion", f"page_{idx + 1}", pdf_path.name],
+        )
+        for idx, img in enumerate(images)
+    ]
 
-    Logs:
-        - Info about the processing method used for each file type.
-        - Warnings for fallback scenarios or failed conversions.
-    """
-    file_ext = os.path.splitext(file_path)[1].lower()
+    pages: list[str] = []
+    responses = run_inference(config, "ingestion", calls)
+    if responses:
+        model_name = next(iter(responses))
+        pages.extend(responses[model_name])
 
-    if file_ext == ".md":
-        # For existing Markdown files, just read the content, ensuring UTF-8
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        logger.info(f"File '{file_path}' is already Markdown. Content read directly.")
-        return content
-
-    elif file_ext in [".html", ".htm"]:
-        logger.info(f"Processing HTML file: {file_path} with Trafilatura.")
-        content = _extract_markdown_from_html(file_path)
-        if content is None:  # Fallback to MarkItDown if Trafilatura failed or returned nothing
-            logger.warning(
-                f"Trafilatura processing failed or yielded no content for HTML '{file_path}'. "
-                "Falling back to MarkItDown for this file."
-            )
-            content = markdown_processor.convert(file_path).text_content
-        return content
-
-    else:  # For other file types, use the MarkItDown processor
-        logger.info(f"Converting non-HTML/Markdown file '{file_path}' using MarkItDown.")
-        return markdown_processor.convert(file_path).text_content
+    return "\n\n---\n\n".join(filter(None, pages))
 
 
-def _convert_document_to_markdown(file_path: str, output_dir: str, markdown_processor: MarkItDown) -> None:
-    """
-    Convert a single source file into Markdown and save the result.
-
-    Args:
-        file_path (str): The path to the source document.
-        output_dir (str): Directory where the converted .md file will be written.
-        markdown_processor (MarkItDown): Configured MarkItDown instance for conversions.
-
-    Returns:
-        None
-
-    Logs:
-        - Debug info about the file being processed.
-        - Warning if conversion fails or the file is empty.
-    """
-    logger.debug("Converting file: {}", file_path)
+def _pdf_to_images(pdf_path: Path, dpi: int) -> list[Image.Image]:
+    """Convert PDF pages to images."""
     try:
-        content = _get_markdown_content(file_path, markdown_processor)
+        with fitz.open(pdf_path) as doc:
+            images = []
+            for page in doc:
+                pix = page.get_pixmap(dpi=dpi)
+                mode = "RGBA" if pix.alpha else "RGB"
+                img = Image.frombytes(mode, (pix.width, pix.height), pix.samples)
+                images.append(img)
+        return images
+    except Exception as e:
+        logger.error(f"Failed to convert {pdf_path.name}: {e}")
+        return []
 
-        if content is None:
-            logger.warning(f"No content could be generated for file '{file_path}' after processing. Skipping output.")
-            return
 
-        # Construct an output filename with .md extension
-        base_name = os.path.basename(file_path)
-        file_name_no_ext = os.path.splitext(base_name)[0]
-        output_file = os.path.join(output_dir, f"{file_name_no_ext}.md")
+def _img_to_b64(image: Image.Image) -> str:
+    """Convert PIL image to base64."""
+    with io.BytesIO() as buffer:
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode()
 
-        # Write the converted Markdown to disk
-        with open(output_file, "w", encoding="utf-8") as out_f:
-            out_f.write(content)
 
-        logger.info(f"Successfully processed '{file_path}' and saved as '{output_file}'.")
-    except Exception as exc:
-        logger.error(f"Failed to convert '{file_path}'. Error details: {exc}")
+def _upload_to_hub(config: dict[str, Any], md_files: list[Path]):
+    """Upload markdown files to Hugging Face Hub."""
+    if not md_files:
+        logger.warning("No markdown files to upload")
+        return
+
+    docs = []
+    for path in md_files:
+        try:
+            if content := path.read_text(encoding="utf-8").strip():
+                docs.append({
+                    "document_id": str(uuid.uuid4()),
+                    "document_text": content,
+                    "document_filename": path.name,
+                    "document_metadata": {"file_size": path.stat().st_size},
+                })
+        except Exception as e:
+            logger.error(f"Failed to read {path.name} for upload: {e}")
+            continue
+
+    if not docs:
+        logger.warning("No valid documents to upload")
+        return
+
+    dataset = Dataset.from_list(docs)
+    custom_save_dataset(dataset, config, subset="ingested")
+    logger.info(f"Uploaded {len(docs)} documents to Hub")

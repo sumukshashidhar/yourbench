@@ -35,6 +35,7 @@ from yourbench.utils.chunking_utils import get_sampling_cfg
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, create_cross_document_dataset
 from yourbench.utils.parsing_engine import (
     parse_multi_hop_responses,
+    _remove_duplicate_questions,
     parse_single_shot_responses,
 )
 from yourbench.utils.inference.inference_core import run_inference
@@ -90,6 +91,9 @@ def run_single_shot(config: dict[str, Any]) -> None:
     responses = run_inference(config=config, step_name=SINGLE_SHOT_KEY, inference_calls=inference_calls)
     final_rows = parse_single_shot_responses(responses, inference_index_map, stage_cfg)
 
+    # Remove duplicate questions
+    final_rows = _remove_duplicate_questions(final_rows)
+
     if final_rows:
         logger.info(f"Saving {len(final_rows)} single-shot questions.")
         custom_save_dataset(Dataset.from_list(final_rows), config=config, subset="single_shot_questions")
@@ -134,6 +138,10 @@ def run_multi_hop(config: dict[str, Any]) -> None:
             return
         responses = run_inference(config=config, step_name=MULTI_HOP_KEY, inference_calls=inference_calls)
         final_rows = parse_multi_hop_responses(responses, inference_index_map, stage_cfg)
+
+        # Remove duplicate questions
+        final_rows = _remove_duplicate_questions(final_rows)
+
         if final_rows:
             logger.info(f"Saving {len(final_rows)} {label} questions.")
             custom_save_dataset(Dataset.from_list(final_rows), config=config, subset=label)

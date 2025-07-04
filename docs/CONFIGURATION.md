@@ -268,7 +268,7 @@ The `pipeline` section configures the stages of the YourBench workflow. Each sta
 
 ### Ingestion Stage
 
-The ingestion stage converts source documents from various formats to markdown.
+The ingestion stage converts source documents from various formats to markdown. It can use a standard parser or an advanced vision-capable LLM for processing PDFs. After conversion, it can optionally upload the processed files to your configured dataset repository.
 
 #### YAML Syntax
 ```yaml
@@ -277,6 +277,9 @@ pipeline:
     run: true
     source_documents_dir: example/data/raw
     output_dir: example/data/processed
+    upload_to_hub: true      # Uploads processed files to the dataset repository
+    llm_ingestion: false     # Use a vision model for PDF ingestion (for images, complex layouts)
+    pdf_dpi: 300             # Image resolution for LLM-based PDF processing
 ```
 
 #### Options
@@ -290,23 +293,20 @@ pipeline:
   - **Required**: Yes  
   - **Description**: Directory where the converted markdown files will be saved.
 
-### Upload Ingest to Hub Stage
+- **`upload_to_hub`**
+  - **Type**: Boolean
+  - **Default**: `true`
+  - **Description**: If `true`, uploads the processed markdown files from `output_dir` to the configured Hugging Face Hub dataset or local directory. This option consolidates the functionality of the former `upload_ingest_to_hub` stage.
 
-This stage uploads the processed documents to the Hugging Face Hub or local dataset.
+- **`llm_ingestion`**
+  - **Type**: Boolean
+  - **Default**: `false`
+  - **Description**: When `true`, uses a vision-capable language model (specified in `model_roles.ingestion`) to process PDF files. This is highly effective for PDFs with images, complex layouts, or tables, but it is more resource-intensive. When `false`, a standard local parser is used.
 
-#### YAML Syntax
-```yaml
-pipeline:
-  upload_ingest_to_hub:
-    run: true
-    source_documents_dir: example/data/processed
-```
-
-#### Options
-- **`source_documents_dir`**  
-  - **Type**: String  
-  - **Required**: Yes  
-  - **Description**: Directory containing the processed markdown files to be uploaded.
+- **`pdf_dpi`**
+  - **Type**: Integer
+  - **Default**: `300`
+  - **Description**: Specifies the resolution (dots per inch) for converting PDF pages to images. This setting only applies when `llm_ingestion` is `true`. Higher values improve image quality for the LLM but increase processing time.
 
 ### Summarization Stage
 
@@ -529,10 +529,9 @@ pipeline:
     run: true
     source_documents_dir: example/data/raw
     output_dir: example/data/processed
-
-  upload_ingest_to_hub:
-    run: true
-    source_documents_dir: example/data/processed
+    upload_to_hub: true
+    llm_ingestion: false
+    pdf_dpi: 300
 
   summarization:
     run: true

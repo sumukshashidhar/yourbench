@@ -42,6 +42,14 @@ hf_configuration:
   concat_if_exist: false
 
   # ----------------------------------------------------------
+  # 'upload_card': Whether to automatically generate and upload README dataset cards
+  # to the Hugging Face Hub. The cards are generated using a Jinja2 template and
+  # include dataset metadata like number of rows, columns, data types, etc.
+  #   true  => Automatically upload dataset cards (recommended)
+  #   false => Skip dataset card uploading
+  upload_card: true
+
+  # ----------------------------------------------------------
   # 'local_dataset_dir' and 'local_saving': (optional)
   #   local_dataset_dir: path for saving the dataset locally
   #   local_saving: whether to actually store locally in addition to pushing
@@ -143,17 +151,10 @@ pipeline:
     run: true
     source_documents_dir: example/data/raw   # Where your raw PDFs, HTML, etc. are
     output_dir: example/data/processed       # Where to store the post-processed .md files
+    upload_to_hub: true                      # Whether to upload the ingested documents to HF Hub. Turn this off if you don't want this.
+    llm_ingestion: false                     # Whether to use an LLM for ingestion. Expensive, but can be extremely powerful for PDFs with images.
 
-  # 2) UPLOAD_INGEST_TO_HUB
-  # Takes the .md documents from 'ingestion' output_dir, packages them into
-  # a Hugging Face dataset, and (optionally) pushes to the Hub.
-  upload_ingest_to_hub:
-    run: true
-    source_documents_dir: example/data/processed
-    # If the directory is empty or missing, it will fail. Make sure your
-    # ingestion stage successfully produced content.
-
-  # 3) SUMMARIZATION
+  # 2) SUMMARIZATION
   # Summarizes each document, typically in a hierarchical manner. This stage
   # can be helpful if your docs are extremely long. Summaries can provide
   # global context that helps with question generation or multi-chunk tasks.
@@ -173,7 +174,7 @@ pipeline:
     # by GPT-4/3.5 and some Qwen models. "gpt2" is for older GPT-2-like models.
     encoding_name: cl100k_base
 
-  # 4) CHUNKING
+  # 3) CHUNKING
   # Splits documents into smaller segments. Supports simple "fast_chunking" (token-based)
   # or more complex "semantic_chunking" which requires sentence embeddings to decide
   # boundaries based on similarity. The multi-hop question generation stage relies on
@@ -200,7 +201,7 @@ pipeline:
       # Tweak these to produce bigger or fewer multi-hop combos or to tighten
       # the chunk boundaries for more finely grained questions.
 
-  # 5) SINGLE_SHOT_QUESTION_GENERATION
+  # 4) SINGLE_SHOT_QUESTION_GENERATION
   # Generates single-hop question-answer pairs from each chunk. Typically simpler
   # factual or direct queries. The model is guided to produce "estimated_difficulty",
   # "citations," etc. 
@@ -219,7 +220,7 @@ pipeline:
     #   value: 5             # e.g. pick 5 random chunks per doc 
     #   random_seed: 123
 
-  # 6) MULTI_HOP_QUESTION_GENERATION
+  # 5) MULTI_HOP_QUESTION_GENERATION
   # Generates complex questions that require reasoning across multiple chunks
   # of a single document — or across different documents if cross-document
   # is enabled. Useful for evaluating deeper understanding and integration.
@@ -244,7 +245,7 @@ pipeline:
     #   value: 0.3           # e.g. take 30% of multi-hop chunk combos
     #   random_seed: 42
 
-  # 7) LIGHTEVAL
+  # 6) LIGHTEVAL
   # Combines the single-hop and multi-hop question sets into a unified “lighteval”
   # subset, optionally adding chunk context and original document text. Useful for
   # quick or “lightweight” downstream evaluations.
