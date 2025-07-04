@@ -1,6 +1,7 @@
 import re
 import json
 import random
+import string
 import hashlib
 from typing import Any, Optional
 
@@ -385,3 +386,41 @@ def shuffle_mcq(question_dict: dict) -> dict:
     question_dict["answer"] = new_answer_letter
 
     return question_dict
+
+
+def _remove_duplicate_questions(rows: list[dict]) -> list[dict]:
+    """
+    Removes duplicate question entries based on an enhanced normalized question text.
+    Normalization includes:
+        - Lowercasing
+        - Removing punctuation
+        - Removing digits
+        - Stripping and collapsing whitespace
+    The original question format is preserved in the output.
+    """
+    seen_questions = set()
+    deduped_rows = []
+
+    for row in rows:
+        question = row.get("question")
+        if question is None:
+            deduped_rows.append(row)
+            continue
+
+        # Normalize for deduplication
+        norm_question = question.lower()
+        norm_question = re.sub(rf"[{re.escape(string.punctuation)}]", "", norm_question)
+        norm_question = re.sub(r"\d+", "", norm_question)
+        norm_question = " ".join(norm_question.split())
+
+        if norm_question not in seen_questions:
+            seen_questions.add(norm_question)
+            deduped_rows.append(row)
+
+    removed = len(rows) - len(deduped_rows)
+    if removed > 0:
+        logger.info(f"Removed {removed} duplicate questions. Final count: {len(deduped_rows)}")
+    else:
+        logger.info(f"No duplicate questions detected. Final count: {len(deduped_rows)}")
+
+    return deduped_rows
