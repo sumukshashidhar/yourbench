@@ -23,6 +23,7 @@ from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.question_models import QuestionRow
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
+STAGE_TAG = ["question_rewriting"]
 
 @dataclass
 class RewrittenQuestion:
@@ -108,7 +109,7 @@ def _build_question_rewriting_calls(
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
-        calls.append(InferenceCall(messages=messages, tags=["question_rewriting"]))
+        calls.append(InferenceCall(messages=messages, tags=[STAGE_TAG]))
         indices.append(idx)
 
     return calls, indices
