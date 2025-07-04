@@ -7,6 +7,7 @@ from loguru import logger
 from rich.table import Table
 from rich.console import Console
 
+from datasets import exceptions as ds_exceptions
 from yourbench.utils.dataset_engine import ConfigurationError, custom_load_dataset
 from yourbench.utils.loading_engine import load_config
 
@@ -139,14 +140,25 @@ def run(*cli_args: List[str]) -> None:
     try:
         single_shot_questions = loader.load_questions("single_shot_questions")
         display.display_questions(single_shot_questions, "Single-Shot Questions (Detailed)", "bold magenta")
-    except (ConfigurationError, KeyError, ValueError) as e:
+    except (ConfigurationError, ValueError, ds_exceptions.DatasetNotFoundError, KeyError) as e:
         logger.error(f"Failed to load single-shot questions: {e}")
-        display.display_questions([], "Single-Shot Questions (Detailed)", "bold magenta")
 
     # Display multi-hop questions
     try:
         multi_hop_questions = loader.load_questions("multi_hop_questions")
         display.display_questions(multi_hop_questions, "Multi-Hop Questions (Detailed)", "bold green")
-    except (ConfigurationError, KeyError, ValueError) as e:
+    except (ConfigurationError, ValueError, ds_exceptions.DatasetNotFoundError, KeyError) as e:
         logger.error(f"Failed to load multi-hop questions: {e}")
-        display.display_questions([], "Multi-Hop Questions (Detailed)", "bold green")
+
+    # display rewritten questions
+    try:
+        rewritten_questions = loader.load_questions("single_shot_questions_rewritten")
+        display.display_questions(rewritten_questions, "Rewritten Questions (Detailed)", "bold yellow")
+    except (ConfigurationError, ValueError, ds_exceptions.DatasetNotFoundError, KeyError) as e:
+        logger.error(f"Failed to load rewritten questions: {e}")
+
+    try:
+        rewritten_questions = loader.load_questions("multi_hop_questions_rewritten")
+        display.display_questions(rewritten_questions, "Rewritten Questions (Detailed)", "bold yellow")
+    except (ConfigurationError, ValueError, ds_exceptions.DatasetNotFoundError, KeyError) as e:
+        logger.error(f"Failed to load rewritten questions: {e}")

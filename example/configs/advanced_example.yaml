@@ -244,8 +244,13 @@ pipeline:
     #   mode: "percentage"
     #   value: 0.3           # e.g. take 30% of multi-hop chunk combos
     #   random_seed: 42
-
-  # 6) LIGHTEVAL
+  
+  # 6) question_rewriting
+  # Rewrites the questions to make them more natural and engaging.
+  question_rewriting:
+    run: true
+    additional_instructions: "Make questions more conversational"
+  # 7) LIGHTEVAL
   # Combines the single-hop and multi-hop question sets into a unified “lighteval”
   # subset, optionally adding chunk context and original document text. Useful for
   # quick or “lightweight” downstream evaluations.

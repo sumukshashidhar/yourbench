@@ -39,6 +39,12 @@ class QuestionRow:
     chunk_id: Optional[str] = None
     source_chunk_ids: Optional[List[str]] = None
 
+    # Fields for question rewriting
+    original_question: Optional[str] = None
+    question_rewriting_model: Optional[str] = None
+    question_rewriting_rationale: Optional[str] = None
+    raw_question_rewriting_response: Optional[str] = None
+
     def __post_init__(self) -> None:
         self.question = str(self.question).strip()
         self.self_answer = str(self.self_answer).strip()
@@ -140,6 +146,10 @@ class QuestionRow:
             "thought_process": self.thought_process,
             "raw_response": self.raw_response,
             "citations": self.citations,
+            "original_question": self.original_question,
+            "question_rewriting_model": self.question_rewriting_model,
+            "question_rewriting_rationale": self.question_rewriting_rationale,
+            "raw_question_rewriting_response": self.raw_question_rewriting_response,
         }
 
         if self.question_mode == "multi-choice":

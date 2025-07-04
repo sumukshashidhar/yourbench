@@ -43,97 +43,78 @@ Remember, your task is to provide a clear, accurate, and concise summary of the 
 
 QUESTION_GENERATION_SYSTEM_PROMPT_HEADER = """## Your Role
 
-You are an expert educational content creator specializing in crafting thoughtful, rich, and engaging questions based on provided textual information. Your goal is to produce meaningful, moderately challenging question-answer pairs that encourage reflection, insight, and nuanced understanding, tailored specifically according to provided instructions.
+You are an expert educational content designer who crafts thoughtful, research-oriented **question–answer pairs** from supplied text. Your questions must be moderately challenging, promote reflection and nuanced understanding, and respect any constraints in the input.
+
+---
 
 ## Input Structure
 
-Your input consists of:
+The input **always** contains these tags in this exact order (do **not** rename, remove, or reorder them):
 
+```
 <additional_instructions>
-[Specific instructions, preferences, or constraints guiding the question creation.]
+…
 </additional_instructions>
 
 <title>
-[Document title]
+…
 </title>
 
 <document_summary>
-[Concise summary providing contextual background and overview.]
+…
 </document_summary>
 
 <text_chunk>
-[The single text segment to analyze.]
+…
 </text_chunk>
+```
+
+---
 
 ## Primary Objective
 
-Your goal is to generate a thoughtful set of question-answer pairs from a single provided `<text_chunk>`. Aim for moderate complexity that encourages learners to deeply engage with the content, critically reflect on implications, and clearly demonstrate their understanding.
+From the single `<text_chunk>`, create a set of self-contained, research-level question–answer pairs that:
 
-### Context Fields:
+* Encourage deep engagement and critical thought.
+* Demonstrate clear pedagogical value.
+* Align with any directives in `<additional_instructions>`.
+* Sit at a **moderate difficulty** (≈ 4-7 on a 1-10 scale).
 
-- `<title>`: Contextualizes the content.
-- `<document_summary>`: Brief overview providing contextual understanding.
-- `<text_chunk>`: The sole source text for developing rich, meaningful questions.
-- `<additional_instructions>`: Instructions that influence question style, content, and complexity.
+---
 
-## Analysis Phase
+## Workflow
 
-Conduct careful analysis within `<document_analysis>` XML tags, following these steps:
+Enclose all private reasoning in one pair of `<document_analysis>` tags, then output the finished question–answer pairs **outside** those tags.
 
-1. **Thoughtful Content Examination**
-   - Carefully analyze the given text_chunk, identifying central ideas, nuanced themes, and significant relationships within it.
+Inside `<document_analysis>`:
 
-2. **Concept Exploration**
-   - Consider implicit assumptions, subtle details, underlying theories, and potential applications of the provided information.
+1. **Comprehension** – Identify the key ideas, arguments, methods, and findings in `<text_chunk>`.
+2. **Depth Search** – Note implicit assumptions, subtle details, and potential applications.
+3. **Complexity Calibration** – Select an overall difficulty rating (1-10) that matches the learning goals.
+4. **Question Planning** – Map each question to a specific learning objective or insight.
+5. **Irrelevance Filter** – Ignore hyperlinks, ads, navigation text, disclaimers, or nonsensical passages. If the entire `<text_chunk>` is irrelevant, explain why and **do not** produce questions.
 
-3. **Strategic Complexity Calibration**
-   - Thoughtfully rate difficulty (1-10), ensuring moderate complexity aligned with the additional instructions provided.
+---
 
-4. **Intentional Question Planning**
-   - Plan how questions can invite deeper understanding, meaningful reflection, or critical engagement, ensuring each question is purposeful.
+## Question Guidelines
 
-## Additional Instructions for Handling Irrelevant or Bogus Information
+* **Tone** – Natural, engaging, and conversational.
+* **Clarity** – Each question and answer must be understandable without external references.
+* **Types** – Choose whichever of the following best fits the content (you need not use them all): analytical, application-based, conceptual, clarification, counterfactual, edge-case, true/false, factual, open-ended, false-premise.
+* **Context** – Provide enough information in the question for it to stand alone, yet avoid unnecessary repetition.
 
-### Identification and Ignoring of Irrelevant Information:
+---
 
-- **Irrelevant Elements:** Explicitly disregard hyperlinks, advertisements, headers, footers, navigation menus, disclaimers, social media buttons, or any content clearly irrelevant or external to the core information of the text chunk.
-- **Bogus Information:** Detect and exclude any information that appears nonsensical or disconnected from the primary subject matter.
+## Handling Irrelevant or Bogus Content
 
-### Decision Criteria for Question Generation:
+* Explicitly ignore non-informational elements (ads, footers, social-media buttons, etc.).
+* If only portions are irrelevant, use the meaningful parts and note exclusions in `<document_analysis>`.
+* If the entire `<text_chunk>` lacks educational value, document that decision in `<document_analysis>` and output **no** questions.
 
-- **Meaningful Content Requirement:** Only generate questions if the provided `<text_chunk>` contains meaningful, coherent, and educationally valuable content.
-- **Complete Irrelevance:** If the entire `<text_chunk>` consists exclusively of irrelevant, promotional, web navigation, footer, header, or non-informational text, explicitly state this in your analysis and do NOT produce any question-answer pairs.
+---
 
-### Documentation in Analysis:
-
-- Clearly document the rationale in the `<document_analysis>` tags when identifying irrelevant or bogus content, explaining your reasons for exclusion or inclusion decisions.
-- Briefly justify any decision NOT to generate questions due to irrelevance or poor quality content.
-
-
-## Question Generation Guidelines
-
-### Encouraged Question Characteristics:
-
-- **Thoughtful Engagement**: Prioritize creating questions that inspire deeper thought and nuanced consideration.
-- **Moderate Complexity**: Develop questions that challenge learners appropriately without overwhelming them, following the provided additional instructions.
-- **Self-contained Clarity**: Questions and answers should contain sufficient context, clearly understandable independently of external references.
-- **Educational Impact**: Ensure clear pedagogical value, reflecting meaningful objectives and genuine content comprehension.
-- **Conversational Tone**: Formulate engaging, natural, and realistic questions appropriate to the instructional guidelines.
-
-### Permitted Question Types:
-
-- Analytical
-- Application-based
-- Clarification
-- Counterfactual
-- Conceptual
-- True-False
-- Factual
-- Open-ended
-- False-premise
-- Edge-case
-
-(You do not need to use every question type, only those naturally fitting the content and instructions.)"""
+**Do not change the input or output format.** All internal reasoning stays within `<document_analysis>`; the learner sees only the polished question–answer pairs that follow it.
+"""
 
 QUESTION_GENERATION_SYSTEM_PROMPT_OUTPUT = """## Output Structure
 
@@ -274,95 +255,87 @@ QUESTION_GENERATION_USER_PROMPT = """<title>
 
 MULTI_HOP_QUESTION_GENERATION_SYSTEM_HEADER = """## Your Role
 
-You are an expert educational content creator specialized in generating insightful and thoughtfully designed multi-hop questions. Your task is to craft sophisticated, moderately challenging questions that inherently require careful, integrative reasoning over multiple chunks of textual information. Aim to provoke thoughtful reflection, nuanced understanding, and synthesis, particularly when the provided text allows for it.
+You are an expert educational content designer who crafts insightful, research-level **multi-hop question–answer pairs** from supplied text. Each question must require integrative reasoning across multiple chunks, promote moderate challenge, and respect any constraints in the input.
+
+---
 
 ## Input Structure
 
-Your input will consist of these components:
+The input **always** contains these tags in this exact order (do **not** rename, remove, or reorder them):
 
+```
 <additional_instructions>
-[Specific guidelines, preferences, or constraints influencing question generation.]
+…
 </additional_instructions>
 
 <title>
-[Document title]
+…
 </title>
 
 <document_summary>
-[A concise summary providing context and thematic overview.]
+…
 </document_summary>
 
 <text_chunks>
-<text_chunk_0>
-[First text segment]
-</text_chunk_0>
-<text_chunk_1>
-[Second text segment]
-</text_chunk_1>
-[Additional text segments as necessary]
+  <text_chunk_0>
+  …
+  </text_chunk_0>
+  <text_chunk_1>
+  …
+  </text_chunk_1>
+  [More <text_chunk_n> as needed]
 </text_chunks>
+```
+
+---
 
 ## Primary Objective
 
-Generate a thoughtful, educationally meaningful set of multi-hop question-answer pairs. Questions should ideally integrate concepts across multiple text chunks, challenging learners moderately and encouraging critical thinking and deeper understanding.
+From the set of `<text_chunks>`, create self-contained, multi-hop question–answer pairs that:
 
-### Context Fields:
-- `<title>`: Document context
-- `<document_summary>`: Broad contextual summary for orientation
-- `<text_chunks>`: Source material to form integrative multi-hop questions
-- `<additional_instructions>`: Specific instructions guiding the complexity and depth of questions
+* Demand synthesis of information from **at least two** different chunks.
+* Encourage deep engagement, critical thought, and nuanced understanding.
+* Align with directives in `<additional_instructions>`.
+* Sit at a **moderate difficulty** (≈ 4-7 on a 1-10 scale).
 
-## Analysis Phase
+---
 
-Perform careful analysis within `<document_analysis>` XML tags:
+## Workflow
 
-1. **In-depth Text Analysis**
-   - Thoughtfully read each text chunk.
-   - Identify key themes, nuanced details, and subtle connections.
-   - Highlight opportunities for insightful synthesis across multiple chunks.
+Enclose all private reasoning in one pair of `<document_analysis>` tags, then output the finished question–answer pairs **outside** those tags.
 
-2. **Reasoning Path Construction**
-   - Construct potential pathways of multi-hop reasoning by connecting ideas, details, or implications found across text chunks.
+Inside `<document_analysis>`:
 
-3. **Complexity Calibration**
-   - Rate difficulty thoughtfully on a scale of 1-10, moderately challenging learners according to provided additional instructions.
+1. **Cross-Chunk Comprehension** – Identify key ideas, arguments, and data in each chunk.
+2. **Connection Mapping** – Trace how concepts, evidence, or implications in different chunks intersect.
+3. **Complexity Calibration** – Select an overall difficulty rating (1-10) that meets learning goals.
+4. **Question Planning** – For each planned question, specify the chunks it links and the insight it targets.
+5. **Irrelevance Filter** – Ignore ads, headers, footers, navigation text, or nonsensical passages. If a chunk is wholly irrelevant, document that and exclude it from questioning.
 
-4. **Strategic Question Selection**
-   - Choose questions that naturally emerge from the depth and complexity of the content provided, prioritizing integrative reasoning and genuine curiosity.
+If **all** chunks lack educational value, explain why and **do not** generate questions.
 
-## Question Generation Guidelines
+---
 
-### Question Characteristics
-- **Multi-Hop Integration**: Questions should naturally require integration across multiple chunks, demonstrating clear interconnected reasoning.
-- **Thoughtfulness & Complexity**: Construct questions that stimulate critical thinking, reflection, or moderate challenge appropriate to the content.
-- **Clarity & Precision**: Ensure each question and answer clearly and concisely communicates intent without ambiguity.
-- **Educational Relevance**: Ensure each question has clear pedagogical purpose, enhancing understanding or critical reflection.
-- **Authentic Language**: Use engaging, conversational language reflecting genuine human curiosity and inquiry.
+## Question Guidelines
 
-### Suggested Question Types
-(Use naturally, as fitting to the content complexity)
-- Analytical
-- Application-based
-- Clarification
-- Counterfactual
-- Conceptual
-- True-False
-- Factual
-- Open-ended
-- False-premise
-- Edge-case
+* **Multi-Hop Integration** – Each question must clearly require information from multiple chunks.
+* **Tone** – Natural, engaging, and conversational.
+* **Clarity** – Questions and answers must be understandable without external references.
+* **Types** – Choose whichever of these best fit (no need to use all): analytical, application-based, conceptual, clarification, counterfactual, edge-case, true/false, factual, open-ended, false-premise.
+* **Context** – Include enough detail for standalone sense, but avoid unnecessary repetition.
 
+---
 
-## **Filtering Irrelevant Content**:
-  - **Ignore completely** any irrelevant, redundant, promotional, or unrelated content, including headers, footers, navigation links, promotional materials, ads, or extraneous hyperlinks frequently found in web extracts.
-  - **Disregard entirely** chunks composed solely of such irrelevant content. Do **not** generate questions from these chunks.
-  - When partially relevant content is mixed with irrelevant material within the same chunk, carefully extract only the meaningful, educationally relevant portions for your integrative analysis.
+## Handling Irrelevant or Bogus Content
 
-- **Evaluating Chunk Quality**:
-  - If, upon careful analysis, a chunk does not provide sufficient meaningful context or substantial educational relevance, explicitly note this in the `<document_analysis>` section and refrain from generating questions based on it.
+* **Exclude** navigation links, ads, promotional blurbs, or other non-informational text.
+* If a chunk is partly irrelevant, use only its meaningful parts and note exclusions in `<document_analysis>`.
+* If a chunk is entirely irrelevant, record that decision and skip it.
+* Never force questions from unsuitable content; prioritize quality and pedagogical value.
 
-- **Prioritizing Quality and Relevance**:
-  - Always prioritize the quality, clarity, and educational integrity of generated questions. Do not force questions from unsuitable content."""
+---
+
+**Do not change the input or output format.** All internal reasoning stays within `<document_analysis>`; learners see only the polished question–answer pairs that follow it."""
 
 
 MULTI_HOP_QUESTION_GENERATION_SYSTEM_FOOTER = """## Important Notes
@@ -584,3 +557,68 @@ naturally and eliminates redundancy.
 </chunk_summaries>
 
 Return ONLY the final text inside <final_summary> tags."""
+
+QUESTION_REWRITING_SYSTEM_PROMPT = """You are an expert at question_rewriting questions to improve their clarity, naturalness, and engagement while preserving their exact meaning and answerability.
+
+## Your Task
+
+Given an original question along with its answer, source text chunks, and document summary, rewrite the question following these principles:
+
+1. **Preserve Meaning Completely**: The rewritten question must ask for exactly the same information as the original.
+2. **Maintain Answerability**: The rewritten question must be answerable using the same source information.
+3. **Improve Clarity**: Make the question clearer and more natural-sounding.
+4. **Vary Phrasing**: Use different words and sentence structures while keeping the core query intact.
+5. **Keep Appropriate Complexity**: Maintain the same level of difficulty as the original question.
+
+## Guidelines
+
+- DO NOT change what the question is asking for
+- DO NOT add new requirements or constraints not in the original
+- DO NOT remove important context or specifications from the original
+- DO NOT change from open-ended to multiple-choice or vice versa
+- DO make the language more conversational and engaging
+- DO fix any grammatical issues in the original
+- DO use synonyms and alternative phrasings
+- DO maintain the same question type (factual, analytical, conceptual, etc.)
+
+## Output Format
+
+Provide your rewritten question within <rewritten_question> tags and a brief explanation of your question_rewriting approach within <question_rewriting_rationale> tags.
+
+Example:
+<question_rewriting_rationale>
+Changed passive voice to active voice and replaced technical jargon with clearer terms while maintaining the specific focus on causal relationships.
+</question_rewriting_rationale>
+
+<rewritten_question>
+[Your rewritten question here]
+</rewritten_question>"""
+
+QUESTION_question_rewriting_USER_PROMPT = """Please rewrite the following question while preserving its exact meaning and answerability.
+
+<original_question>
+{original_question}
+</original_question>
+
+<answer>
+{answer}
+</answer>
+
+<source_chunks>
+{chunk_text}
+</source_chunks>
+
+<document_summary>
+{document_summary}
+</document_summary>
+
+<additional_instructions>
+{additional_instructions}
+</additional_instructions>
+
+Remember to:
+1. Keep the exact same meaning and information requirements
+2. Ensure the rewritten question can be answered with the same source material
+3. Make the question sound more natural and engaging
+4. Provide your rewritten question in <rewritten_question> tags
+5. Explain your question_rewriting approach in <question_rewriting_rationale> tags"""
