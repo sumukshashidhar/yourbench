@@ -42,7 +42,6 @@ from yourbench.pipeline.question_generation import (
 # === Pipeline Stage Order Definition ===
 DEFAULT_STAGE_ORDER: List[str] = [
     "ingestion",
-    "upload_ingest_to_hub",
     "summarization",
     "chunking",
     "single_shot_question_generation",

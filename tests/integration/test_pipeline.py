@@ -1,7 +1,7 @@
 import os
 import shutil
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -50,10 +50,6 @@ def mock_config(temp_dir):
                 "run": True,
                 "source_documents_dir": os.path.join(temp_dir, "raw"),
                 "output_dir": os.path.join(temp_dir, "processed"),
-            },
-            "upload_ingest_to_hub": {
-                "run": False,
-                "source_documents_dir": os.path.join(temp_dir, "processed"),
             },
             "summarization": {"run": True},
             "chunking": {
@@ -111,13 +107,12 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
 
     # Mock the core functionality instead of just the MarkItDown class
     with (
-        patch("yourbench.pipeline.ingestion.MarkItDown") as mock_markitdown,
-        patch("yourbench.pipeline.ingestion._convert_document_to_markdown") as mock_convert,
+        patch("yourbench.pipeline.ingestion.InferenceClient"),
+        patch("yourbench.pipeline.ingestion._convert_file") as mock_convert,
+        patch("yourbench.pipeline.ingestion.custom_save_dataset") as mock_save,
     ):
         # Configure mocks
-        mock_markitdown_instance = MagicMock()
-        mock_markitdown.return_value = mock_markitdown_instance
-        mock_convert.return_value = True
+        mock_convert.return_value = "mocked content"
 
         # Import the run function after mocking
         from yourbench.pipeline.ingestion import run
@@ -128,8 +123,10 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
         # Verify behavior
         if mock_no_docs:
             mock_convert.assert_not_called()
+            mock_save.assert_not_called()
         else:
             mock_convert.assert_called()
+            mock_save.assert_called_once()
 
 
 # Test for summarization stage
