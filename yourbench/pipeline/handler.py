@@ -42,7 +42,6 @@ from yourbench.pipeline.question_generation import (
 # === Pipeline Stage Order Definition ===
 DEFAULT_STAGE_ORDER: List[str] = [
     "ingestion",
-    "upload_ingest_to_hub",
     "summarization",
     "chunking",
     "single_shot_question_generation",
@@ -131,6 +130,15 @@ def run_pipeline(
 
     pipeline_execution_end_time: float = time.time()
     _check_for_unrecognized_stages(pipeline_config)
+
+    # Upload the dataset card
+    try:
+        from yourbench.utils.dataset_engine import upload_dataset_card
+
+        logger.info("Uploading final dataset card with all pipeline stages information")
+        upload_dataset_card(config)
+    except Exception as e:
+        logger.warning(f"Failed to upload final dataset card: {e}")
 
     if plot_stage_timing or debug:
         _plot_pipeline_stage_timing()

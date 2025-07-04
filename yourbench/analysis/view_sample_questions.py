@@ -79,9 +79,20 @@ class QuestionLoader:
         self.sample_size = sample_size
 
     def load_questions(self, subset: Literal["single_shot_questions", "multi_hop_questions"]) -> List[Question]:
-        dataset = custom_load_dataset(config=self.config, subset=subset)
-        if not dataset:
-            return []
+        try:
+            dataset = custom_load_dataset(config=self.config, subset=subset)
+        except ConfigurationError as e:
+            logger.error(f"Configuration error loading subset '{subset}': {e}")
+            raise
+        except KeyError as e:
+            logger.error(f"Missing required key in config for subset '{subset}': {e}")
+            raise
+
+        if dataset is None:
+            raise ValueError(f"Dataset loading returned None for subset '{subset}'")
+
+        if len(dataset) == 0:
+            raise ValueError(f"Dataset '{subset}' is empty - no questions available")
 
         indices = random.sample(range(len(dataset)), min(self.sample_size, len(dataset)))
         return [Question.from_dataset_row(dataset[i], i) for i in indices]
@@ -118,8 +129,8 @@ def run(*cli_args: List[str]) -> None:
     except FileNotFoundError:
         logger.error(f"Configuration file not found at '{config_path}'. Aborting.")
         return
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing YAML from '{config_path}': {e}")
+    except (yaml.YAMLError, PermissionError) as e:
+        logger.error(f"Failed to load config from '{config_path}': {e}")
         return
 
     loader = QuestionLoader(config, sample_size)
