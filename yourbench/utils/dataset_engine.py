@@ -2,7 +2,6 @@ import os
 import math
 import random
 import shutil
-import hashlib
 import tempfile
 from typing import Any, Set, List, TypeVar, Sequence
 from pathlib import Path
@@ -569,11 +568,8 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
             doc_ids_sorted = sorted(doc_ids_for_tracing)
             doc_ids_str = "_".join(doc_ids_sorted)
 
-            # Use deterministic hash for collision resistance while maintaining readability
-            # Include chunks_per_document to distinguish between different sampling strategies
-            id_input = f"{doc_ids_str}_chunks{chunks_per_document}"
-            hash_suffix = hashlib.sha256(id_input.encode()).hexdigest()[:8]
-            cross_doc_id = f"cross_{len(doc_group)}docs_{hash_suffix}"
+            # Create a human-readable, deterministic ID using number of documents, sorted document IDs, and chunks per document
+            cross_doc_id = f"cross_{len(doc_group)}docs_{doc_ids_str}_chunks{chunks_per_document}"
 
             # Add comprehensive metadata for traceability
             metadata = {
