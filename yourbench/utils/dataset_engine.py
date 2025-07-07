@@ -287,21 +287,34 @@ def replace_dataset_columns(
 
 
 def _unrank_comb(n: int, k: int, rank: int) -> List[int]:
-    """Return the rank-th k‑subset of [0, n) in lexicographic order
+    """
+    Return the k-combination of [0, n) corresponding to the given rank
+    in colexicographic (colex) order.
+
+    Colexicographic order sorts combinations by increasing values of the
+    largest element, then second largest, and so on (i.e., right-to-left
+    significance).
 
     Parameters
     ----------
     n : int
-        Universe size.
+        Size of the universe (exclusive upper bound of elements).
     k : int
         Size of each combination.
     rank : int
-        0 ≤ rank < C(n,k).
+        Integer in the range [0, C(n, k)) specifying the position of the combination
+        in colexicographic order.
 
     Returns
     -------
     List[int]
-        Strictly increasing list of k integers (0‑based indices).
+        A strictly increasing list of k integers in the range [0, n),
+        representing the rank-th combination in colex order.
+
+    Raises
+    ------
+    ValueError
+        If k is not in [0, n] or rank is not in [0, C(n, k)).
     """
     if not 0 <= k <= n:
         raise ValueError(f"require 0 ≤ k ≤ n, got k={k}, n={n}")
@@ -341,7 +354,7 @@ def _floyd_sample_indices(total: int, sample_size: int, *, rng: random.Random | 
 
 
 def _sample_exact_combinations(objects: Sequence[T], k: int, N: int, *, rng: random.Random | None = None) -> List[List[T]]:
-    """Draw N distinct k‑combinations from objects exactly uniformly.
+    """Draw N distinct k-combinations from objects exactly uniformly.
 
     The function first uses Bob Floyd to pick N distinct ranks in
     `[0, C(n,k))` (where `n = len(objects)`), then converts each rank to its
