@@ -15,6 +15,7 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
 from rich.console import Console
 
+from yourbench.gradio import launch_ui
 from yourbench.analysis import run_analysis
 from yourbench.pipeline.handler import run_pipeline
 
@@ -469,8 +470,23 @@ def run(
         "--plot-stage-timing",
         help="Generate stage timing chart",
     ),
+    gradio: bool = typer.Option(False, "--gradio", help="Launch the Gradio UI"),
 ) -> None:
-    """Run the YourBench pipeline with a configuration file."""
+    """Run the YourBench pipeline with a configuration file or launch the Gradio UI."""
+    if gradio:
+        from yourbench.gradio import launch_ui
+
+        launch_ui()
+        return
+
+    # Handle both new positional and legacy --config
+    final_config = config_path or config
+
+    if not final_config:
+        console.print("[red]Error:[/red] Please provide a configuration file")
+        console.print("Usage: yourbench run CONFIG_FILE")
+        raise typer.Exit(1)
+
     # Handle both new positional and legacy --config
     final_config = config_path or config
 
@@ -627,9 +643,8 @@ def analyze(
 
 @app.command()
 def gui() -> None:
-    """Launch the Gradio UI (not yet implemented)."""
-    logger.error("GUI support is not yet implemented")
-    raise typer.Exit(1)
+    """Launch the Gradio UI."""
+    launch_ui()
 
 
 @app.command()
