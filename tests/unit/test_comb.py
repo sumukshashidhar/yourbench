@@ -82,9 +82,9 @@ def test_sample_basic_output():
     result = _sample_exact_combinations(objects, k=2, N=3)
     assert len(result) == 3
     for combination in result:
-        assert len(comb) == 2
-        assert all(obj in objects for obj in comb)
-        assert len(set(comb)) == 2  # Unique elements within combination
+        assert len(combination) == 2
+        assert all(obj in objects for obj in combination)
+        assert len(set(combination)) == 2  # Unique elements within combination
 
 
 def test_sample_no_duplicates():
