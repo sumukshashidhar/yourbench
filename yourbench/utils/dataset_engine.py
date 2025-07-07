@@ -1,10 +1,10 @@
 import os
+import math
 import random
 import shutil
 import hashlib
 import tempfile
-import math
-from typing import Any, List, Sequence, Set, TypeVar
+from typing import Any, Set, List, TypeVar, Sequence
 from pathlib import Path
 from contextlib import suppress
 from dataclasses import dataclass
@@ -353,7 +353,9 @@ def _floyd_sample_indices(total: int, sample_size: int, *, rng: random.Random | 
     return chosen
 
 
-def _sample_exact_combinations(objects: Sequence[T], k: int, N: int, *, rng: random.Random | None = None) -> List[List[T]]:
+def _sample_exact_combinations(
+    objects: Sequence[T], k: int, N: int, *, rng: random.Random | None = None
+) -> List[List[T]]:
     """Draw N distinct k-combinations from objects exactly uniformly.
 
     The function first uses Bob Floyd to pick N distinct ranks in
@@ -397,21 +399,21 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
     chunks_per_document = int(stage_cfg.get("chunks_per_document", 1))
     num_docs_range = stage_cfg.get("num_docs_per_combination", [2, 5])
     random_seed = int(stage_cfg.get("random_seed", 42))
-    
+
     # Validate num_docs_range
     if not isinstance(num_docs_range, list) or len(num_docs_range) != 2:
         raise ValueError("num_docs_per_combination must be a list of exactly 2 integers")
-    
+
     if not all(isinstance(x, int) for x in num_docs_range):
         raise ValueError("num_docs_per_combination must contain only integers")
-    
+
     min_docs, max_docs = num_docs_range[0], num_docs_range[1]
-    
+
     if min_docs < 2:
         raise ValueError("min_docs must be at least 2 for cross-document combinations")
     if max_docs < min_docs:
         raise ValueError("max_docs must be >= min_docs")
-    
+
     if chunks_per_document < 1:
         raise ValueError("chunks_per_document must be at least 1")
 
@@ -426,7 +428,8 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
         multihop_chunks = row.get("multihop_chunks", [])
         if isinstance(multihop_chunks, list) and multihop_chunks:
             valid_chunks = [
-                chunk for chunk in multihop_chunks 
+                chunk
+                for chunk in multihop_chunks
                 if isinstance(chunk, dict) and all(key in chunk for key in ("chunk_ids", "chunks_text"))
             ]
             if valid_chunks:
@@ -436,7 +439,7 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
                 clean_doc_id = "".join(c for c in str(doc_id) if c.isalnum() or c in "_-")
                 if not clean_doc_id:
                     clean_doc_id = f"doc_{idx}"
-                
+
                 docs.append({
                     "document_id": clean_doc_id,
                     "original_index": idx,
@@ -452,129 +455,126 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
 
     # Initialize random number generator
     rng = random.Random(random_seed)
-    
+
     # Generate combinations efficiently using exact uniform sampling
     cross_rows = []
-    
+
     # Strategy: distribute combinations across different group sizes
     # Calculate total possible combinations across all group sizes
     total_possible_combinations = sum(
-        math.comb(len(docs), k) 
-        for k in range(min_docs, min(max_docs + 1, len(docs) + 1))
+        math.comb(len(docs), k) for k in range(min_docs, min(max_docs + 1, len(docs) + 1))
     )
-    
+
     logger.info(f"Total possible combinations: {total_possible_combinations}")
-    
+
     # Cap max_combinations to what's actually possible
     actual_max_combinations = min(max_combinations, total_possible_combinations)
-    
+
     # For each possible number of documents to combine
     for num_docs_to_combine in range(min_docs, min(max_docs + 1, len(docs) + 1)):
         # Calculate how many combinations we can make with this number of docs
         combinations_for_this_size = math.comb(len(docs), num_docs_to_combine)
-        
+
         if combinations_for_this_size == 0:
             continue
-        
+
         # Determine how many combinations to generate for this group size
         remaining_combinations = actual_max_combinations - len(cross_rows)
         if remaining_combinations <= 0:
             break
-        
+
         # Simple proportional allocation
         proportion = combinations_for_this_size / total_possible_combinations
         target_for_this_size = max(1, int(proportion * actual_max_combinations))
         actual_for_this_size = min(target_for_this_size, combinations_for_this_size, remaining_combinations)
-        
+
         if actual_for_this_size <= 0:
             continue
-            
+
         logger.info(f"Generating {actual_for_this_size} combinations with {num_docs_to_combine} documents")
-        
+
         # Use exact uniform sampling to get distinct combinations
         try:
-            doc_combinations = _sample_exact_combinations(
-                docs, num_docs_to_combine, actual_for_this_size, rng=rng
-            )
+            doc_combinations = _sample_exact_combinations(docs, num_docs_to_combine, actual_for_this_size, rng=rng)
         except ValueError as e:
             logger.warning(f"Could not generate combinations for {num_docs_to_combine} docs: {e}")
             continue
-        
+
         # Process each combination
         for doc_group in doc_combinations:
             sampled_chunks_from_group = []
             doc_ids_for_tracing = []
-            
+
             # Sample chunks from each document in the group
             for doc in doc_group:
                 doc_ids_for_tracing.append(doc["document_id"])
-                
+
                 if not doc["multihop_chunks"]:
                     continue
-                
+
                 # Sample the specified number of chunks from this document
                 num_chunks_to_sample = min(chunks_per_document, len(doc["multihop_chunks"]))
                 if num_chunks_to_sample == 1:
                     sampled_chunks = [rng.choice(doc["multihop_chunks"])]
                 else:
                     sampled_chunks = rng.sample(doc["multihop_chunks"], num_chunks_to_sample)
-                
+
                 sampled_chunks_from_group.extend(sampled_chunks)
-            
+
             # Validation: ensure we have chunks from the expected number of documents
             # (This addresses the original validation mismatch issue)
             expected_total_chunks = len(doc_group) * chunks_per_document
             if len(sampled_chunks_from_group) < len(doc_group):
                 logger.warning(f"Insufficient chunks sampled from document group {doc_ids_for_tracing}")
                 continue
-            
+
             # Combine chunks from all documents in the group
             combined_ids = []
             combined_texts = []
-            
+
             for chunk in sampled_chunks_from_group:
                 chunk_ids = chunk.get("chunk_ids", [])
                 chunk_texts = chunk.get("chunks_text", [])
-                
+
                 if isinstance(chunk_ids, list):
                     combined_ids.extend(chunk_ids)
                 else:
                     combined_ids.append(chunk_ids)
-                    
+
                 if isinstance(chunk_texts, list):
                     combined_texts.extend(chunk_texts)
                 else:
                     combined_texts.append(chunk_texts)
-            
+
             # Create combined multihop chunk
             combined_multihop_chunk = {
                 "chunk_ids": combined_ids,
                 "chunks_text": combined_texts,
             }
-            
+
             # Combine document summaries
             doc_summaries = [
                 doc["document_summary"]
                 for doc in doc_group
                 if doc.get("document_summary") and doc["document_summary"].strip()
             ]
-            
+
             combined_summary = ""
             if doc_summaries:
                 header = "Here are the summaries from the various documents involved in the chunking:"
                 summary_bullets = "\n".join(f"- {s}" for s in doc_summaries)
                 combined_summary = f"{header}\n\n{summary_bullets}"
-            
+
             # Create readable and collision-resistant ID
             doc_ids_sorted = sorted(doc_ids_for_tracing)
             doc_ids_str = "_".join(doc_ids_sorted)
-            
+
             # Use deterministic hash for collision resistance while maintaining readability
             # Include chunks_per_document to distinguish between different sampling strategies
             id_input = f"{doc_ids_str}_chunks{chunks_per_document}"
             hash_suffix = hashlib.sha256(id_input.encode()).hexdigest()[:8]
             cross_doc_id = f"cross_{len(doc_group)}docs_{hash_suffix}"
-            
+
             # Add comprehensive metadata for traceability
             metadata = {
                 "source_documents": doc_ids_sorted,
@@ -582,26 +582,26 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
                 "chunks_per_doc": chunks_per_document,
                 "total_chunks_sampled": len(sampled_chunks_from_group),
                 "source_indices": sorted([doc["original_index"] for doc in doc_group]),
-                "generation_method": "exact_uniform_sampling"
+                "generation_method": "exact_uniform_sampling",
             }
-            
+
             cross_rows.append({
                 "document_id": cross_doc_id,
                 "document_summary": combined_summary,
                 "chunks": [],  # keep consistent with original schema
                 "multihop_chunks": [combined_multihop_chunk],
-                "cross_document_metadata": metadata  # add traceability
+                "cross_document_metadata": metadata,  # add traceability
             })
-    
+
     if not cross_rows:
         logger.warning("No cross-document combinations were generated.")
         return Dataset.from_list([])
-    
+
     if len(cross_rows) < max_combinations:
         logger.info(f"Generated {len(cross_rows)} out of {max_combinations} requested combinations.")
     else:
         logger.info(f"Successfully generated {len(cross_rows)} cross-document combinations.")
-    
+
     return Dataset.from_list(cross_rows)
 
 
