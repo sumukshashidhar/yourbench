@@ -2,12 +2,13 @@ import io
 import os
 import re
 import sys
+import atexit
 import shutil
-import tempfile
 import subprocess
 
 import yaml
 import gradio as gr
+import pandas as pd
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -15,6 +16,7 @@ from loguru import logger
 load_dotenv()
 logger.remove()
 logger.add(sys.stderr, level="INFO")
+
 
 STAGES = [
     "ingestion",
@@ -62,15 +64,58 @@ PROVIDERS = {
     "Together": "together",
 }
 
+RESULTS_PROCESSED_DIR = os.path.join("results", "processed")
+LOCAL_DATASETS_DIR = os.path.join("results", "datasets")
+
+# Session state for localhost usage
+WORKING_DIR = os.path.join(os.getcwd(), "yourbench_workspace")
+os.makedirs(WORKING_DIR, exist_ok=True)
+
+SESSION_STATE = {
+    "working_dir": WORKING_DIR,
+    "subprocess": None,
+    "files": [],
+    "config": None,
+    "pipeline_completed": False,
+}
+
+
+# Cleanup function for subprocess management
+def cleanup_session():
+    if SESSION_STATE["subprocess"]:
+        SESSION_STATE["subprocess"].stop()
+
+
+atexit.register(cleanup_session)
+
+
+def validate_file_upload(files):
+    """Validate uploaded files"""
+    if not files:
+        return False, "No files uploaded"
+
+    allowed_extensions = {".txt", ".md", ".pdf", ".html"}
+    for file in files:
+        _, ext = os.path.splitext(file.name.lower())
+        if ext not in allowed_extensions:
+            return False, f"File {file.name} has unsupported extension {ext}"
+
+    return True, "Files valid"
+
 
 def save_uploaded_files(files):
+    if not files:
+        return "❌ No files to upload."
+
     raw_dir = os.path.join(SESSION_STATE["working_dir"], "raw")
     os.makedirs(raw_dir, exist_ok=True)
     uploaded = []
+
     for file in files:
         dest = os.path.join(raw_dir, os.path.basename(file.name))
         shutil.copy(file.name, dest)
         uploaded.append(os.path.basename(file.name))
+
     SESSION_STATE["files"] = uploaded
     return f"✅ Uploaded {len(uploaded)} files."
 
@@ -78,17 +123,14 @@ def save_uploaded_files(files):
 def clear_uploaded_files():
     raw_dir = os.path.join(SESSION_STATE["working_dir"], "raw")
     if os.path.exists(raw_dir):
-        shutil.rmtree(raw_dir)
+        shutil.rmtree(raw_dir, ignore_errors=True)
     SESSION_STATE["files"] = []
     return "🧹 Uploads cleared.", gr.update(value=None)
 
 
-def load_config():
-    config_path = os.path.join(SESSION_STATE["working_dir"], "config.yaml")
-    if os.path.exists(config_path):
-        with open(config_path) as f:
-            return yaml.safe_load(f)
-    return {}
+def save_dirs(*paths):
+    for path in paths:
+        os.makedirs(path, exist_ok=True)
 
 
 class SubprocessManager:
@@ -98,23 +140,38 @@ class SubprocessManager:
         self.process = None
         self.output_stream = io.StringIO()
         self.exit_code = None
+        self.completed = False
 
     def start(self):
+        if self.is_running():
+            return False, "Process already running"
+
+        if not os.path.exists(self.config_path):
+            return False, "Config file not found"
+
         self.output_stream = io.StringIO()
+        self.completed = False
 
-        os.makedirs("results/processed", exist_ok=True)
+        save_dirs(RESULTS_PROCESSED_DIR)
 
-        self.process = subprocess.Popen(
-            ["uv", "run", "yourbench", "run", "--config", self.config_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        os.set_blocking(self.process.stdout.fileno(), False)
+        try:
+            self.process = subprocess.Popen(
+                ["uv", "run", "yourbench", "run", "--config", self.config_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            os.set_blocking(self.process.stdout.fileno(), False)
+            return True, "Process started successfully"
+        except Exception as e:
+            logger.error(f"Error starting subprocess: {e}")
+            return False, f"Error starting process: {str(e)}"
 
     def is_running(self):
-        return self.process and self.process.poll() is None
+        if not self.process:
+            return False
+        return self.process.poll() is None
 
     def stop(self):
         if self.is_running():
@@ -127,7 +184,8 @@ class SubprocessManager:
 
     def read_output(self):
         if not self.process or not self.process.stdout:
-            return "", []
+            return "", [], False
+
         try:
             while True:
                 line = self.process.stdout.readline()
@@ -137,12 +195,39 @@ class SubprocessManager:
                     break
         except BlockingIOError:
             pass
+
+        # Check if process completed
+        if not self.is_running() and not self.completed:
+            self.completed = True
+            self.exit_code = self.process.poll()
+
         full_output = self.output_stream.getvalue()
         stages_completed = list(set(re.findall(r"Completed stage: '([^']*)'", full_output)))
-        return full_output, [STAGE_DISPLAY_MAP[s] for s in stages_completed if s in STAGE_DISPLAY_MAP]
+        stages_display = [STAGE_DISPLAY_MAP[s] for s in stages_completed if s in STAGE_DISPLAY_MAP]
+
+        return full_output, stages_display, self.completed
 
 
-SESSION_STATE = {"working_dir": tempfile.mkdtemp(prefix="yourbench_"), "subprocess": None, "files": [], "config": None}
+def validate_config_inputs(table_data, ingestion_model, summarization_model, single_model, multi_model):
+    """Validate configuration inputs"""
+    errors = []
+
+    # Check if models are defined
+    if not table_data or len(table_data) == 0:
+        errors.append("At least one model must be defined")
+
+    # Check if all required roles have models assigned
+    required_models = [ingestion_model, summarization_model, single_model, multi_model]
+    model_names = [row[0] for row in table_data if isinstance(row, list) and len(row) > 0]
+
+    for i, model in enumerate(required_models):
+        role_names = ["ingestion", "summarization", "single_shot_question_generation", "multi_hop_question_generation"]
+        if not model:
+            errors.append(f"Model for {role_names[i]} must be selected")
+        elif model not in model_names:
+            errors.append(f"Model '{model}' for {role_names[i]} is not in the model list")
+
+    return errors
 
 
 def launch_ui():
@@ -172,8 +257,19 @@ def launch_ui():
                         private = gr.Checkbox(label="Private Dataset", value=HF_DEFAULTS["private"])
                         concat = gr.Checkbox(label="Concat if Exists", value=HF_DEFAULTS["concat_if_exist"])
                         upload_card = gr.Checkbox(label="Generate Dataset Card", value=HF_DEFAULTS["upload_card"])
+                        local_saving = gr.Checkbox(label="Save Locally", value=False)
+                        local_dataset_dir = gr.Textbox(
+                            label="Local Dataset Directory",
+                            value=LOCAL_DATASETS_DIR,
+                            visible=False,
+                        )
+                        local_saving.change(
+                            lambda checked: gr.update(visible=checked),
+                            inputs=local_saving,
+                            outputs=local_dataset_dir,
+                        )
 
-                model_name_input = gr.Textbox(label="Model Name")
+                model_name_input = gr.Textbox(label="Model Name", placeholder="e.g. meta-llama/Llama-3.3-70B-Instruct")
                 provider_dropdown = gr.Dropdown(
                     label="Provider", choices=list(PROVIDERS.keys()), value="HF Inference", allow_custom_value=True
                 )
@@ -183,18 +279,38 @@ def launch_ui():
                     datatype=["str", "str"],
                     row_count=(1, "dynamic"),
                     interactive=True,
+                    value=[],  # Initialize with empty list
                 )
                 remove_model_btn = gr.Button("🗑️ Remove Last Model")
 
                 def add_model(model_name, provider_key, table_data):
-                    if not model_name:
+                    if not model_name.strip():
                         raise gr.Error("Model name is required.")
-                    new_data = table_data if isinstance(table_data, list) else table_data.values.tolist()
+
+                    # Convert table_data to list format
+                    if isinstance(table_data, pd.DataFrame):
+                        new_data = table_data.values.tolist()
+                    elif table_data is None:
+                        new_data = []
+                    else:
+                        new_data = table_data
+
+                    # Check for duplicates
+                    for row in new_data:
+                        if isinstance(row, list) and len(row) > 0 and row[0] == model_name:
+                            raise gr.Error(f"Model '{model_name}' already exists.")
+
                     new_data.append([model_name, provider_key])
-                    return new_data, "", "", "HF Inference"
+                    return new_data, "", "HF Inference"
 
                 def remove_model(table_data):
-                    new_data = table_data.values.tolist() if hasattr(table_data, "values") else table_data
+                    if isinstance(table_data, pd.DataFrame):
+                        new_data = table_data.values.tolist()
+                    elif table_data is None:
+                        new_data = []
+                    else:
+                        new_data = table_data
+
                     if new_data:
                         new_data = new_data[:-1]
                     return new_data
@@ -202,7 +318,7 @@ def launch_ui():
                 add_model_btn.click(
                     add_model,
                     inputs=[model_name_input, provider_dropdown, model_table],
-                    outputs=[model_table, model_name_input, provider_dropdown, provider_dropdown],
+                    outputs=[model_table, model_name_input, provider_dropdown],
                 )
                 remove_model_btn.click(remove_model, inputs=[model_table], outputs=[model_table])
 
@@ -214,19 +330,23 @@ def launch_ui():
                     "multi_hop_question_generation",
                 ]:
                     role_fields[role] = gr.Dropdown(
-                        label=f"Model for {role.replace('_', ' ').title()}", interactive=True
+                        label=f"Model for {role.replace('_', ' ').title()}", interactive=True, choices=[]
                     )
 
                 def update_roles(table_data):
+                    if isinstance(table_data, pd.DataFrame):
+                        data = table_data.values.tolist()
+                    elif table_data is None:
+                        data = []
+                    else:
+                        data = table_data
+
                     names = [
-                        row[0]
-                        for row in (table_data.values.tolist() if hasattr(table_data, "values") else table_data)
-                        if isinstance(row, list) and len(row) > 0 and row[0]
+                        row[0] for row in data if isinstance(row, list) and len(row) > 0 and row[0] and row[0].strip()
                     ]
-                    return {
-                        field: gr.update(choices=names, value=names[0] if len(names) == 1 else None)
-                        for field in role_fields.values()
-                    }
+
+                    default_value = names[0] if len(names) == 1 else None
+                    return [gr.update(choices=names, value=default_value) for _ in role_fields.values()]
 
                 model_table.change(update_roles, inputs=[model_table], outputs=list(role_fields.values()))
 
@@ -239,10 +359,9 @@ def launch_ui():
                 cross_doc_enable = gr.Checkbox(label="Enable Cross-Document Question Generation", value=False)
 
                 build_btn = gr.Button("🛠️ Build Config")
-                save_config_btn = gr.Button("💾 Save Config")
-                save_status = gr.Textbox(label="Save Status", interactive=False)
                 config_display = gr.Code(label="Generated Config", language="yaml")
-                config_file_output = gr.File(label="Download Config")
+                save_config_btn = gr.Button("💾 Save Changes")
+                config_file_output = gr.File(label="📥 Download Config")
 
                 def build_config(
                     hf_token,
@@ -251,6 +370,8 @@ def launch_ui():
                     private,
                     concat,
                     upload_card,
+                    local_saving,
+                    local_dataset_dir,
                     table_data,
                     ingestion_model,
                     summarization_model,
@@ -260,8 +381,22 @@ def launch_ui():
                     additional_instructions,
                     cross_doc_enable,
                 ):
+                    # Convert table_data to list format
+                    if isinstance(table_data, pd.DataFrame):
+                        rows = table_data.values.tolist()
+                    elif table_data is None:
+                        rows = []
+                    else:
+                        rows = table_data
+
+                    # Basic validation
+                    if not rows:
+                        raise gr.Error("At least one model must be defined")
+
+                    if not all([ingestion_model, summarization_model, single_model, multi_model]):
+                        raise gr.Error("All model roles must be assigned")
+
                     model_list = []
-                    rows = table_data.values.tolist() if hasattr(table_data, "values") else table_data
                     for row in rows:
                         if isinstance(row, list) and len(row) >= 2 and row[0] and row[1]:
                             model_list.append({
@@ -278,6 +413,8 @@ def launch_ui():
                             "private": private,
                             "upload_card": upload_card,
                             "concat_if_exist": concat,
+                            "local_saving": local_saving,
+                            "local_dataset_dir": local_dataset_dir,
                         },
                         "model_list": model_list,
                         "model_roles": {
@@ -337,33 +474,49 @@ def launch_ui():
                         f.write(config_yaml)
 
                     SESSION_STATE["config"] = config
-
-                    return config_yaml, config_path, gr.update(visible=False)
+                    return config_yaml, gr.update(value=config_path)
 
                 build_btn.click(
                     build_config,
-                    inputs=[hf_token, hf_org, hf_dataset_name, private, concat, upload_card, model_table]
+                    inputs=[
+                        hf_token,
+                        hf_org,
+                        hf_dataset_name,
+                        private,
+                        concat,
+                        upload_card,
+                        local_saving,
+                        local_dataset_dir,
+                        model_table,
+                    ]
                     + list(role_fields.values())
                     + [question_mode, additional_instructions, cross_doc_enable],
-                    outputs=[config_display, config_file_output, save_status],
+                    outputs=[config_display, config_file_output],
                 )
 
                 def save_manual_config(yaml_text):
-                    config_path = os.path.join(SESSION_STATE["working_dir"], "config.yaml")
-                    with open(config_path, "w") as f:
-                        f.write(yaml_text)
-                    with open(config_path) as f:
-                        config = yaml.safe_load(f)
-                    SESSION_STATE["config"] = config
-                    return gr.Success("✅ Config updated and ready for download."), config_path
+                    try:
+                        # Validate YAML
+                        config = yaml.safe_load(yaml_text)
 
-                save_config_btn.click(
-                    save_manual_config, inputs=[config_display], outputs=[save_status, config_file_output]
-                )
+                        config_path = os.path.join(SESSION_STATE["working_dir"], "config.yaml")
+                        with open(config_path, "w") as f:
+                            f.write(yaml_text)
+
+                        SESSION_STATE["config"] = config
+                        gr.Success("✅ Config updated and ready to run")
+                        return gr.update(value=config_path)
+                    except yaml.YAMLError as e:
+                        raise gr.Error(f"Invalid YAML: {str(e)}")
+                    except Exception as e:
+                        raise gr.Error(f"Error saving config: {str(e)}")
+
+                save_config_btn.click(save_manual_config, inputs=[config_display], outputs=[config_file_output])
 
             with gr.Tab("Run Benchmark Pipeline"):
                 start_btn = gr.Button("▶️ Start Pipeline")
                 stop_btn = gr.Button("🛑 Stop Pipeline")
+                status_output = gr.Textbox(label="Pipeline Status", interactive=False)
                 stages_output = gr.CheckboxGroup(
                     choices=list(STAGE_DISPLAY_MAP.values()), label="Stages Completed", interactive=False
                 )
@@ -371,25 +524,55 @@ def launch_ui():
                 timer = gr.Timer(1.0, active=False)
 
                 def start_pipeline():
+                    if not SESSION_STATE["config"]:
+                        return gr.update(), "❌ Please build a config first"
+
+                    if not SESSION_STATE["files"]:
+                        return gr.update(), "❌ Please upload source documents first"
+
                     if SESSION_STATE["subprocess"] and SESSION_STATE["subprocess"].is_running():
-                        return gr.Warning("Already running.")
+                        return gr.update(), "⚠️ Pipeline already running"
+
                     manager = SubprocessManager(SESSION_STATE["working_dir"])
-                    manager.start()
-                    SESSION_STATE["subprocess"] = manager
-                    return gr.update(active=True)
+                    success, message = manager.start()
+
+                    if success:
+                        SESSION_STATE["subprocess"] = manager
+                        SESSION_STATE["pipeline_completed"] = False
+                        return gr.update(active=True), "✅ Pipeline started successfully"
+                    else:
+                        return gr.update(), f"❌ {message}"
 
                 def stop_pipeline():
                     if SESSION_STATE["subprocess"]:
                         SESSION_STATE["subprocess"].stop()
-                    return gr.update()
+                        return gr.update(active=False), "🛑 Pipeline stopped."
+                    return gr.update(active=False), "ℹ️ No pipeline running."
 
                 def stream_logs():
                     if not SESSION_STATE["subprocess"]:
-                        return "", []
-                    return SESSION_STATE["subprocess"].read_output()
+                        return "", [], ""
 
-                start_btn.click(start_pipeline, outputs=timer)
-                stop_btn.click(stop_pipeline)
-                timer.tick(fn=stream_logs, outputs=[log_output, stages_output])
+                    output, stages, completed = SESSION_STATE["subprocess"].read_output()
+                    exit_code = SESSION_STATE["subprocess"].exit_code
+
+                    if completed:
+                        if not SESSION_STATE["pipeline_completed"]:
+                            SESSION_STATE["pipeline_completed"] = True
+                        status = (
+                            "✅ Pipeline completed successfully!"
+                            if exit_code == 0
+                            else "❌ Pipeline failed. Check logs."
+                        )
+                        return output, stages, status
+
+                    if SESSION_STATE["subprocess"].is_running():
+                        return output, stages, "🔄 Pipeline running..."
+
+                    return output, stages, "⏸️ Pipeline stopped."
+
+                start_btn.click(start_pipeline, outputs=[timer, status_output])
+                stop_btn.click(stop_pipeline, outputs=[timer, status_output])
+                timer.tick(fn=stream_logs, outputs=[log_output, stages_output, status_output])
 
     demo.launch()
