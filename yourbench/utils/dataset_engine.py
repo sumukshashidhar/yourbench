@@ -260,7 +260,7 @@ def custom_save_dataset(
             except Exception as e:
                 logger.error(f"Unexpected error loading existing dataset: {e}")
                 raise
-        
+
         if settings.concat_if_exist and existing:
             new = concatenate_datasets([existing, dataset])
         elif existing and subset:
@@ -269,7 +269,7 @@ def custom_save_dataset(
             new = existing
         else:
             new = DatasetDict({subset: dataset}) if subset else dataset
-            
+
         # Ensure the local directory exists before saving
         settings.local_dir.mkdir(parents=True, exist_ok=True)
         _safe_save(new, settings.local_dir)
