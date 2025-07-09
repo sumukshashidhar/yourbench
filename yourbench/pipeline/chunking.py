@@ -8,7 +8,7 @@ from loguru import logger
 from tqdm.auto import tqdm
 
 from yourbench.utils.chunking_utils import split_into_token_chunks
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import get_hf_settings, custom_load_dataset, custom_save_dataset
 
 
 @dataclass(frozen=True)
@@ -174,7 +174,15 @@ def run(config: dict[str, Any]) -> None:
     )
 
     # Save dataset
-    custom_save_dataset(dataset=dataset, config=config, subset="chunked")
+    hf_settings = get_hf_settings(config)
+
+    custom_save_dataset(
+        dataset=dataset,
+        config=config,
+        subset="chunked",
+        save_local=hf_settings.local_saving,
+        push_to_hub=True,
+    )
 
     elapsed_total = time.time() - start_time
     logger.success(f"Chunking completed in {elapsed_total:.1f} seconds")

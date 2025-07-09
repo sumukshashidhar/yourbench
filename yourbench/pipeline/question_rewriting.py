@@ -18,7 +18,7 @@ from loguru import logger
 
 from datasets import Dataset
 from yourbench.utils.prompts import QUESTION_REWRITING_SYSTEM_PROMPT, QUESTION_question_rewriting_USER_PROMPT
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import get_hf_settings, custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.question_models import QuestionRow
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
@@ -209,7 +209,14 @@ def _process_question_type(
             return
 
         rewritten_ds = Dataset.from_list(rewritten_rows)
-        custom_save_dataset(dataset=rewritten_ds, config=config, subset=save_subset)
+        hf_settings = get_hf_settings(config)
+        custom_save_dataset(
+            dataset=rewritten_ds,
+            config=config,
+            subset=save_subset,
+            save_local=hf_settings.local_saving,
+            push_to_hub=True,
+        )
         logger.success(f"Saved {len(rewritten_rows)} rewritten {question_type} questions.")
 
     except Exception as e:

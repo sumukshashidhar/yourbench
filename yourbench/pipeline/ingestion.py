@@ -56,7 +56,7 @@ from markitdown import MarkItDown
 
 from datasets import Dataset
 from huggingface_hub import InferenceClient
-from yourbench.utils.dataset_engine import custom_save_dataset
+from yourbench.utils.dataset_engine import get_hf_settings, custom_save_dataset
 from yourbench.utils.inference.inference_core import (
     InferenceCall,
     _load_models,
@@ -292,5 +292,12 @@ def _upload_to_hub(config: dict[str, Any], md_files: list[Path]):
         return
 
     dataset = Dataset.from_list(docs)
-    custom_save_dataset(dataset, config, subset="ingested")
+    hf_settings = get_hf_settings(config)
+    custom_save_dataset(
+        dataset,
+        config,
+        subset="ingested",
+        save_local=hf_settings.local_saving,
+        push_to_hub=True,
+    )
     logger.info(f"Uploaded {len(docs)} documents to Hub")
