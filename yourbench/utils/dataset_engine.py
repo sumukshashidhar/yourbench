@@ -1,10 +1,10 @@
 import os
+import math
 import random
 import shutil
 import tempfile
-from typing import Any
+from typing import Any, Set, List, TypeVar, Sequence
 from pathlib import Path
-from itertools import combinations
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -15,7 +15,15 @@ from huggingface_hub import HfApi, DatasetCard, DatasetCardData, whoami
 from huggingface_hub.utils import HFValidationError
 
 
-__all__ = ["custom_load_dataset", "custom_save_dataset", "upload_dataset_card"]
+__all__ = [
+    "custom_load_dataset",
+    "custom_save_dataset",
+    "upload_dataset_card",
+    "get_hf_settings",
+    "replace_dataset_columns",
+]
+
+T = TypeVar("T")
 
 
 class ConfigurationError(Exception):
@@ -30,6 +38,7 @@ class HFSettings:
     organization: str | None
     token: str | None
     local_dir: Path | None
+    local_saving: bool = True
     concat_if_exist: bool = False
     private: bool = True
 
@@ -56,6 +65,11 @@ def _expand_var(value: str, field: str) -> str:
     return value
 
 
+def get_hf_settings(config: dict[str, Any]) -> HFSettings:
+    """Public getter for HF settings used in other modules."""
+    return _extract_settings(config)
+
+
 def _extract_settings(config: dict[str, Any]) -> HFSettings:
     """Parse and validate configuration."""
     if "hf_configuration" not in config:
@@ -79,6 +93,7 @@ def _extract_settings(config: dict[str, Any]) -> HFSettings:
         organization=organization,
         token=token,
         local_dir=local_dir,
+        local_saving=hf.get("local_saving", False),
         concat_if_exist=hf.get("concat_if_exist", False),
         private=hf.get("private", True),
     )
@@ -128,9 +143,13 @@ def _validate_repo(settings: HFSettings) -> None:
 
 
 def _load_local(path: Path, subset: str | None) -> Dataset:
-    """Load dataset from local path."""
+    """Load dataset from local path with detailed inspection logs."""
     logger.info(f"Loading '{subset or 'default'}' from {path}")
     dataset = load_from_disk(str(path))
+
+    logger.debug(f"Loaded type: {type(dataset)}")
+
+    logger.debug(f"Directory contents: {list(path.iterdir())}")
 
     if subset is None or not isinstance(dataset, DatasetDict):
         return dataset
@@ -227,11 +246,13 @@ def custom_save_dataset(
         push_to_hub = False
         logger.info("Offline mode - only saving locally")
 
-    if save_local and settings.local_dir:
+    # Check both local_saving flag and local_dir existence
+    if save_local and settings.local_saving and settings.local_dir:
         logger.info(f"Saving to {settings.local_dir}")
 
         existing = None
-        if settings.concat_if_exist and settings.local_dir.exists():
+        if settings.local_dir.exists():
+            logger.info(f"Loading existing dataset at: {settings.local_dir}")
             try:
                 existing = load_from_disk(str(settings.local_dir))
             except (FileNotFoundError, PermissionError, OSError) as e:
@@ -240,15 +261,24 @@ def custom_save_dataset(
                 logger.error(f"Unexpected error loading existing dataset: {e}")
                 raise
 
-        merged = (
-            _merge_datasets(existing, dataset, subset)
-            if existing
-            else (DatasetDict({subset: dataset}) if subset else dataset)
-        )
+        if settings.concat_if_exist and existing:
+            new = concatenate_datasets([existing, dataset])
+        elif existing and subset:
+            # only add subset to existing dataframe
+            existing[subset] = dataset
+            new = existing
+        else:
+            new = DatasetDict({subset: dataset}) if subset else dataset
 
-        settings.local_dir.parent.mkdir(parents=True, exist_ok=True)
-        _safe_save(merged, settings.local_dir)
+        # Ensure the local directory exists before saving
+        settings.local_dir.mkdir(parents=True, exist_ok=True)
+        _safe_save(new, settings.local_dir)
+    elif save_local and settings.local_saving and not settings.local_dir:
+        logger.warning("Local saving enabled but no local_dataset_dir specified in configuration")
+    elif save_local and not settings.local_saving:
+        logger.debug("Local saving skipped (local_saving=False in configuration)")
 
+    # TODO also update this part on how concat and merge is done
     if push_to_hub and not _is_offline():
         if settings.concat_if_exist:
             with suppress(Exception):
@@ -283,72 +313,323 @@ def replace_dataset_columns(
     return dataset
 
 
-def _create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, object]) -> Dataset:
+def _unrank_comb(n: int, k: int, rank: int) -> List[int]:
+    """
+    Return the k-combination of [0, n) corresponding to the given rank
+    in colexicographic (colex) order.
+
+    Colexicographic order sorts combinations by increasing values of the
+    largest element, then second largest, and so on (i.e., right-to-left
+    significance).
+
+    Parameters
+    ----------
+    n : int
+        Size of the universe (exclusive upper bound of elements).
+    k : int
+        Size of each combination.
+    rank : int
+        Integer in the range [0, C(n, k)) specifying the position of the combination
+        in colexicographic order.
+
+    Returns
+    -------
+    List[int]
+        A strictly increasing list of k integers in the range [0, n),
+        representing the rank-th combination in colex order.
+
+    Raises
+    ------
+    ValueError
+        If k is not in [0, n] or rank is not in [0, C(n, k)).
+    """
+    if not 0 <= k <= n:
+        raise ValueError(f"require 0 ≤ k ≤ n, got k={k}, n={n}")
+    max_rank = math.comb(n, k)
+    if not 0 <= rank < max_rank:
+        raise ValueError(f"rank must be in [0,{max_rank - 1}], got {rank}")
+
+    combo: List[int] = []
+    for i in range(k, 0, -1):
+        # largest c such that C(c, i) ≤ rank (binary search)
+        lo, hi = i - 1, n - 1
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if math.comb(mid, i) <= rank:
+                lo = mid
+            else:
+                hi = mid - 1
+        combo.append(lo)
+        rank -= math.comb(lo, i)
+        n = lo  # next digit must be < current one
+    combo.reverse()
+    return combo
+
+
+def _floyd_sample_indices(total: int, sample_size: int, *, rng: random.Random | None = None) -> Set[int]:
+    """Select sample_size unique integers ∈ [0, total) uniformly at random"""
+    if sample_size > total:
+        raise ValueError("sample_size cannot exceed total")
+    if rng is None:
+        rng = random
+
+    chosen: Set[int] = set()
+    for j in range(total - sample_size, total):
+        t = rng.randrange(0, j + 1)
+        chosen.add(t if t not in chosen else j)
+    return chosen
+
+
+def _sample_exact_combinations(
+    objects: Sequence[T], k: int, N: int, *, rng: random.Random | None = None
+) -> List[List[T]]:
+    """Draw N distinct k-combinations from objects exactly uniformly.
+
+    The function first uses Bob Floyd to pick N distinct ranks in
+    `[0, C(n,k))` (where `n = len(objects)`), then converts each rank to its
+    combination via `_unrank_comb`, and finally maps the integer indices back
+    to the actual objects.
+    """
+    n = len(objects)
+    if not 0 <= k <= n:
+        raise ValueError("require 0 ≤ k ≤ n")
+    total = math.comb(n, k)
+    if N > total:
+        raise ValueError("cannot request more combinations than exist")
+    if rng is None:
+        rng = random
+
+    ranks = _floyd_sample_indices(total, N, rng=rng)
+    combos: List[List[T]] = []
+    for r in ranks:
+        idxs = _unrank_comb(n, k, r)
+        combos.append([objects[i] for i in idxs])
+    return combos
+
+
+def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -> Dataset:
     """Creates a cross-document Dataset by combining multi-hop chunks from different documents.
 
     Args:
-        dataset: A HuggingFace Dataset where each row may contain a 'multihop_chunks' list.
-        stage_cfg: Stage-specific config containing 'max_combinations' and 'chunks_per_document'.
+        dataset: A HuggingFace Dataset where each row may contain a 'multihop_chunks' list and 'document_summary'.
+        stage_cfg: Stage-specific config containing:
+            - 'max_combinations' (int): The maximum number of cross-document combinations to generate.
+            - 'chunks_per_document' (int): The number of chunks to sample from each document.
+            - 'num_docs_per_combination' (List[int]): A list [min, max] specifying the range of documents to combine.
+            - 'random_seed' (int): Seed for the random number generator.
 
     Returns:
-        A new Dataset with cross-document combinations, preserving the same schema.
+        A new Dataset with cross-document combinations, preserving a similar schema but with an aggregated summary.
     """
+    # Extract and validate configuration
     max_combinations = int(stage_cfg.get("max_combinations", 100))
     chunks_per_document = int(stage_cfg.get("chunks_per_document", 1))
+    num_docs_range = stage_cfg.get("num_docs_per_combination", [2, 5])
+    random_seed = int(stage_cfg.get("random_seed", 42))
 
+    # Validate num_docs_range
+    if not isinstance(num_docs_range, list) or len(num_docs_range) != 2:
+        raise ValueError("num_docs_per_combination must be a list of exactly 2 integers")
+
+    if not all(isinstance(x, int) for x in num_docs_range):
+        raise ValueError("num_docs_per_combination must contain only integers")
+
+    min_docs, max_docs = num_docs_range[0], num_docs_range[1]
+
+    if min_docs < 2:
+        raise ValueError("min_docs must be at least 2 for cross-document combinations")
+    if max_docs < min_docs:
+        raise ValueError("max_docs must be >= min_docs")
+
+    if chunks_per_document < 1:
+        raise ValueError("chunks_per_document must be at least 1")
+
+    # Check for required column
     if "multihop_chunks" not in dataset.column_names:
         logger.warning("Dataset is missing 'multihop_chunks'. Cross-document generation aborted.")
         return Dataset.from_list([])
 
+    # Extract documents with valid multihop_chunks
     docs = []
     for idx, row in enumerate(dataset):
         multihop_chunks = row.get("multihop_chunks", [])
         if isinstance(multihop_chunks, list) and multihop_chunks:
-            docs.append({
-                "document_id": row.get("document_id", f"doc_{idx}"),
-                "multihop_chunks": multihop_chunks,
-            })
+            valid_chunks = [
+                chunk
+                for chunk in multihop_chunks
+                if isinstance(chunk, dict) and all(key in chunk for key in ("chunk_ids", "chunks_text"))
+            ]
+            if valid_chunks:
+                # Create more readable and collision-resistant document IDs
+                doc_id = row.get("document_id", f"doc_{idx}")
+                # Clean doc_id for safe ID generation
+                clean_doc_id = "".join(c for c in str(doc_id) if c.isalnum() or c in "_-")
+                if not clean_doc_id:
+                    clean_doc_id = f"doc_{idx}"
 
-    if len(docs) < 2:
-        logger.warning(f"Found only {len(docs)} document(s) with 'multihop_chunks'. Need at least 2.")
-        return Dataset.from_list([])
-
-    rng = random.Random(42)
-    rng.shuffle(docs)
-
-    cross_rows = []
-    for doc1, doc2 in combinations(docs, 2):
-        samp1 = rng.sample(doc1["multihop_chunks"], min(len(doc1["multihop_chunks"]), chunks_per_document))
-        samp2 = rng.sample(doc2["multihop_chunks"], min(len(doc2["multihop_chunks"]), chunks_per_document))
-
-        for chunk1 in samp1:
-            for chunk2 in samp2:
-                if not all(k in chunk1 for k in ("chunk_ids", "chunks_text")):
-                    logger.warning(f"Skipping malformed chunk in doc {doc1['document_id']}: {chunk1}")
-                    continue
-                if not all(k in chunk2 for k in ("chunk_ids", "chunks_text")):
-                    logger.warning(f"Skipping malformed chunk in doc {doc2['document_id']}: {chunk2}")
-                    continue
-
-                combined = {
-                    "chunk_ids": chunk1["chunk_ids"] + chunk2["chunk_ids"],
-                    "chunks_text": chunk1["chunks_text"] + chunk2["chunks_text"],
-                }
-
-                cross_rows.append({
-                    "document_id": f"cross_{doc1['document_id']}_{doc2['document_id']}",
-                    "chunks": [],
-                    "multihop_chunks": [combined],
+                docs.append({
+                    "document_id": clean_doc_id,
+                    "original_index": idx,
+                    "document_summary": row.get("document_summary", ""),
+                    "multihop_chunks": valid_chunks,
                 })
 
-                if len(cross_rows) >= max_combinations:
-                    logger.debug(f"Reached max_combinations: {max_combinations}")
-                    return Dataset.from_list(cross_rows)
+    if len(docs) < min_docs:
+        logger.warning(f"Found only {len(docs)} document(s) with valid 'multihop_chunks'. Need at least {min_docs}.")
+        return Dataset.from_list([])
+
+    logger.info(f"Found {len(docs)} documents with valid multihop_chunks")
+
+    # Initialize random number generator
+    rng = random.Random(random_seed)
+
+    # Generate combinations efficiently using exact uniform sampling
+    cross_rows = []
+
+    # Strategy: distribute combinations across different group sizes
+    # Calculate total possible combinations across all group sizes
+    total_possible_combinations = sum(
+        math.comb(len(docs), k) for k in range(min_docs, min(max_docs + 1, len(docs) + 1))
+    )
+
+    logger.info(f"Total possible combinations: {total_possible_combinations}")
+
+    # Cap max_combinations to what's actually possible
+    actual_max_combinations = min(max_combinations, total_possible_combinations)
+
+    # For each possible number of documents to combine
+    for num_docs_to_combine in range(min_docs, min(max_docs + 1, len(docs) + 1)):
+        # Calculate how many combinations we can make with this number of docs
+        combinations_for_this_size = math.comb(len(docs), num_docs_to_combine)
+
+        if combinations_for_this_size == 0:
+            continue
+
+        # Determine how many combinations to generate for this group size
+        remaining_combinations = actual_max_combinations - len(cross_rows)
+        if remaining_combinations <= 0:
+            break
+
+        # Simple proportional allocation
+        proportion = combinations_for_this_size / total_possible_combinations
+        target_for_this_size = max(1, int(proportion * actual_max_combinations))
+        actual_for_this_size = min(target_for_this_size, combinations_for_this_size, remaining_combinations)
+
+        if actual_for_this_size <= 0:
+            continue
+
+        logger.info(f"Generating {actual_for_this_size} combinations with {num_docs_to_combine} documents")
+
+        # Use exact uniform sampling to get distinct combinations
+        try:
+            doc_combinations = _sample_exact_combinations(docs, num_docs_to_combine, actual_for_this_size, rng=rng)
+        except ValueError as e:
+            logger.warning(f"Could not generate combinations for {num_docs_to_combine} docs: {e}")
+            continue
+
+        # Process each combination
+        for doc_group in doc_combinations:
+            sampled_chunks_from_group = []
+            doc_ids_for_tracing = []
+
+            # Sample chunks from each document in the group
+            for doc in doc_group:
+                doc_ids_for_tracing.append(doc["document_id"])
+
+                if not doc["multihop_chunks"]:
+                    continue
+
+                # Sample the specified number of chunks from this document
+                num_chunks_to_sample = min(chunks_per_document, len(doc["multihop_chunks"]))
+                if num_chunks_to_sample == 1:
+                    sampled_chunks = [rng.choice(doc["multihop_chunks"])]
+                else:
+                    sampled_chunks = rng.sample(doc["multihop_chunks"], num_chunks_to_sample)
+
+                sampled_chunks_from_group.extend(sampled_chunks)
+
+            # Validation: ensure we have chunks from the expected number of documents
+            # (This addresses the original validation mismatch issue)
+            expected_total_chunks = len(doc_group) * chunks_per_document
+            if len(sampled_chunks_from_group) < len(doc_group):
+                logger.warning(f"Insufficient chunks sampled from document group {doc_ids_for_tracing}")
+                continue
+
+            # Combine chunks from all documents in the group
+            combined_ids = []
+            combined_texts = []
+
+            for chunk in sampled_chunks_from_group:
+                chunk_ids = chunk.get("chunk_ids", [])
+                chunk_texts = chunk.get("chunks_text", [])
+
+                if isinstance(chunk_ids, list):
+                    combined_ids.extend(chunk_ids)
+                else:
+                    combined_ids.append(chunk_ids)
+
+                if isinstance(chunk_texts, list):
+                    combined_texts.extend(chunk_texts)
+                else:
+                    combined_texts.append(chunk_texts)
+
+            # Create combined multihop chunk
+            combined_multihop_chunk = {
+                "chunk_ids": combined_ids,
+                "chunks_text": combined_texts,
+            }
+
+            # Combine document summaries
+            doc_summaries = [
+                doc["document_summary"]
+                for doc in doc_group
+                if doc.get("document_summary") and doc["document_summary"].strip()
+            ]
+
+            combined_summary = ""
+            if doc_summaries:
+                header = "Here are the summaries from the various documents involved in the chunking:"
+                summary_bullets = "\n".join(f"- {s}" for s in doc_summaries)
+                combined_summary = f"{header}\n\n{summary_bullets}"
+
+            # Create readable and collision-resistant ID
+            doc_ids_sorted = sorted(doc_ids_for_tracing)
+            doc_ids_str = "_".join(doc_ids_sorted)
+
+            # Create a human-readable, deterministic ID using number of documents, sorted document IDs, and chunks per document
+            cross_doc_id = f"cross_{len(doc_group)}docs_{doc_ids_str}_chunks{chunks_per_document}"
+
+            # Add comprehensive metadata for traceability
+            metadata = {
+                "source_documents": doc_ids_sorted,
+                "num_source_docs": len(doc_group),
+                "chunks_per_doc": chunks_per_document,
+                "total_chunks_sampled": len(sampled_chunks_from_group),
+                "source_indices": sorted([doc["original_index"] for doc in doc_group]),
+                "generation_method": "exact_uniform_sampling",
+            }
+
+            cross_rows.append({
+                "document_id": cross_doc_id,
+                "document_summary": combined_summary,
+                "chunks": [],  # keep consistent with original schema
+                "multihop_chunks": [combined_multihop_chunk],
+                "cross_document_metadata": metadata,  # add traceability
+            })
+
+    if not cross_rows:
+        logger.warning("No cross-document combinations were generated.")
+        return Dataset.from_list([])
+
+    if len(cross_rows) < max_combinations:
+        logger.info(f"Generated {len(cross_rows)} out of {max_combinations} requested combinations.")
+    else:
+        logger.info(f"Successfully generated {len(cross_rows)} cross-document combinations.")
 
     return Dataset.from_list(cross_rows)
 
 
-# Dataset card generation functions from feature branch
+# Dataset card generation functions
 
 
 def extract_readme_metadata(repo_id: str, token: str | None = None) -> str:
