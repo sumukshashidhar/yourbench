@@ -404,6 +404,13 @@ def launch_ui():
                                 "provider": PROVIDERS.get(row[1], row[1]),
                             })
 
+                    # Ensure local_dataset_dir is set properly and matches dataset_engine expectations
+                    if local_saving and local_dataset_dir:
+                        # Make sure the directory exists
+                        os.makedirs(local_dataset_dir, exist_ok=True)
+                        # Use absolute path for consistency
+                        local_dataset_dir = os.path.abspath(local_dataset_dir)
+
                     config = {
                         "settings": {"debug": False},
                         "hf_configuration": {
@@ -414,8 +421,9 @@ def launch_ui():
                             "upload_card": upload_card,
                             "concat_if_exist": concat,
                             "local_saving": local_saving,
-                            "local_dataset_dir": local_dataset_dir,
+                            "local_dataset_dir": local_dataset_dir if local_saving else None,
                         },
+                        "local_dataset_dir": local_dataset_dir if local_saving else None,
                         "model_list": model_list,
                         "model_roles": {
                             "ingestion": [ingestion_model],
@@ -431,7 +439,6 @@ def launch_ui():
                                 "upload_to_hub": True,
                                 "llm_ingestion": False,
                             },
-                            "upload_ingest_to_hub": {"run": True, "source_documents_dir": "results/processed"},
                             "summarization": {
                                 "run": True,
                                 "max_tokens": 16384,
@@ -532,6 +539,14 @@ def launch_ui():
 
                     if SESSION_STATE["subprocess"] and SESSION_STATE["subprocess"].is_running():
                         return gr.update(), "⚠️ Pipeline already running"
+
+                    # Ensure local dataset directory exists before starting pipeline
+                    config = SESSION_STATE["config"]
+                    hf_config = config.get("hf_configuration", {})
+                    if hf_config.get("local_saving") and hf_config.get("local_dataset_dir"):
+                        local_dir = hf_config["local_dataset_dir"]
+                        os.makedirs(local_dir, exist_ok=True)
+                        logger.info(f"Ensured local dataset directory exists: {local_dir}")
 
                     manager = SubprocessManager(SESSION_STATE["working_dir"])
                     success, message = manager.start()
