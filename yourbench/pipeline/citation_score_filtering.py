@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from loguru import logger
 from thefuzz import fuzz
 
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, replace_dataset_columns
+from yourbench.utils.dataset_engine import (
+    get_hf_settings,
+    custom_load_dataset,
+    custom_save_dataset,
+    replace_dataset_columns,
+)
 
 
 @dataclass(slots=True)
@@ -89,6 +94,14 @@ def run(config: dict[str, Any]) -> None:
 
     lighteval_ds = replace_dataset_columns(lighteval_ds, columns_data)
 
+    # Save dataset
     logger.info("Saving updated dataset with new citation score columns...")
-    custom_save_dataset(dataset=lighteval_ds, config=config, subset=stage_cfg.subset)
+    hf_settings = get_hf_settings(config)
+    custom_save_dataset(
+        dataset=lighteval_ds,
+        config=config,
+        subset=stage_cfg.subset,
+        save_local=hf_settings.local_saving,
+        push_to_hub=True,
+    )
     logger.success("citation_score_filtering stage completed successfully.")

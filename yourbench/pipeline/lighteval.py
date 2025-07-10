@@ -44,7 +44,7 @@ from typing import Any, Dict, List
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import get_hf_settings, custom_load_dataset, custom_save_dataset
 
 
 def run(config: Dict[str, Any]) -> None:
@@ -297,5 +297,12 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Save dataset
-    custom_save_dataset(dataset=final_ds, config=config, subset=output_subset)
+    hf_settings = get_hf_settings(config)
+    custom_save_dataset(
+        dataset=final_ds,
+        config=config,
+        subset=output_subset,
+        save_local=hf_settings.local_saving,
+        push_to_hub=True,
+    )
     logger.success("Lighteval dataset saved successfully.")

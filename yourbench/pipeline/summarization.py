@@ -9,7 +9,7 @@ from yourbench.utils.prompts import (
     COMBINE_SUMMARIES_USER_PROMPT,
 )
 from yourbench.utils.chunking_utils import split_into_token_chunks
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import get_hf_settings, custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
@@ -198,5 +198,13 @@ def run(config: dict[str, Any]) -> None:
     effective_model_name = model_name if model_name else "unknown"
     dataset = dataset.add_column("summarization_model", [effective_model_name] * len(dataset))
 
-    custom_save_dataset(dataset=dataset, config=config, subset="summarized")
+    # Save dataset
+    hf_settings = get_hf_settings(config)
+    custom_save_dataset(
+        dataset=dataset,
+        config=config,
+        subset="summarized",
+        save_local=hf_settings.local_saving,
+        push_to_hub=True,
+    )
     logger.success(f"Hierarchical summarization completed ({len(dataset)} documents).")

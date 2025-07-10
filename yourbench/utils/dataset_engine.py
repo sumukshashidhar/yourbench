@@ -15,7 +15,13 @@ from huggingface_hub import HfApi, DatasetCard, DatasetCardData, whoami
 from huggingface_hub.utils import HFValidationError
 
 
-__all__ = ["custom_load_dataset", "custom_save_dataset", "upload_dataset_card"]
+__all__ = [
+    "custom_load_dataset",
+    "custom_save_dataset",
+    "upload_dataset_card",
+    "get_hf_settings",
+    "replace_dataset_columns",
+]
 
 T = TypeVar("T")
 
@@ -32,6 +38,7 @@ class HFSettings:
     organization: str | None
     token: str | None
     local_dir: Path | None
+    local_saving: bool = True
     concat_if_exist: bool = False
     private: bool = True
 
@@ -58,6 +65,11 @@ def _expand_var(value: str, field: str) -> str:
     return value
 
 
+def get_hf_settings(config: dict[str, Any]) -> HFSettings:
+    """Public getter for HF settings used in other modules."""
+    return _extract_settings(config)
+
+
 def _extract_settings(config: dict[str, Any]) -> HFSettings:
     """Parse and validate configuration."""
     if "hf_configuration" not in config:
@@ -81,6 +93,7 @@ def _extract_settings(config: dict[str, Any]) -> HFSettings:
         organization=organization,
         token=token,
         local_dir=local_dir,
+        local_saving=hf.get("local_saving", False),
         concat_if_exist=hf.get("concat_if_exist", False),
         private=hf.get("private", True),
     )
@@ -130,9 +143,13 @@ def _validate_repo(settings: HFSettings) -> None:
 
 
 def _load_local(path: Path, subset: str | None) -> Dataset:
-    """Load dataset from local path."""
+    """Load dataset from local path with detailed inspection logs."""
     logger.info(f"Loading '{subset or 'default'}' from {path}")
     dataset = load_from_disk(str(path))
+
+    logger.debug(f"Loaded type: {type(dataset)}")
+
+    logger.debug(f"Directory contents: {list(path.iterdir())}")
 
     if subset is None or not isinstance(dataset, DatasetDict):
         return dataset
@@ -229,11 +246,13 @@ def custom_save_dataset(
         push_to_hub = False
         logger.info("Offline mode - only saving locally")
 
-    if save_local and settings.local_dir:
+    # Check both local_saving flag and local_dir existence
+    if save_local and settings.local_saving and settings.local_dir:
         logger.info(f"Saving to {settings.local_dir}")
 
         existing = None
-        if settings.concat_if_exist and settings.local_dir.exists():
+        if settings.local_dir.exists():
+            logger.info(f"Loading existing dataset at: {settings.local_dir}")
             try:
                 existing = load_from_disk(str(settings.local_dir))
             except (FileNotFoundError, PermissionError, OSError) as e:
@@ -242,15 +261,24 @@ def custom_save_dataset(
                 logger.error(f"Unexpected error loading existing dataset: {e}")
                 raise
 
-        merged = (
-            _merge_datasets(existing, dataset, subset)
-            if existing
-            else (DatasetDict({subset: dataset}) if subset else dataset)
-        )
+        if settings.concat_if_exist and existing:
+            new = concatenate_datasets([existing, dataset])
+        elif existing and subset:
+            # only add subset to existing dataframe
+            existing[subset] = dataset
+            new = existing
+        else:
+            new = DatasetDict({subset: dataset}) if subset else dataset
 
-        settings.local_dir.parent.mkdir(parents=True, exist_ok=True)
-        _safe_save(merged, settings.local_dir)
+        # Ensure the local directory exists before saving
+        settings.local_dir.mkdir(parents=True, exist_ok=True)
+        _safe_save(new, settings.local_dir)
+    elif save_local and settings.local_saving and not settings.local_dir:
+        logger.warning("Local saving enabled but no local_dataset_dir specified in configuration")
+    elif save_local and not settings.local_saving:
+        logger.debug("Local saving skipped (local_saving=False in configuration)")
 
+    # TODO also update this part on how concat and merge is done
     if push_to_hub and not _is_offline():
         if settings.concat_if_exist:
             with suppress(Exception):

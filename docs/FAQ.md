@@ -25,6 +25,9 @@ YourBench’s pipeline typically consists of these stages (in a default order):
 
 2. **Upload/Save**  
    Optionally packages ingested documents into a Hugging Face Dataset and pushes it to the Hub (or saves locally).
+   Each stage can save its intermediate output either locally or to the Hugging Face Hub (or both), depending on your hf_configuration.
+   - Local saving is controlled by `local_saving` and `local_dataset_dir`.
+   - Remote saving (Hub) is controlled by `push_to_hub` and credentials (token + dataset name). This ensures that downstream stages can reliably load subsets across runs.
 
 3. **Summarization**  
    Creates short summaries of each document or chunk to provide global context.
@@ -187,14 +190,36 @@ Not necessarily. In your config’s `hf_configuration`, you can disable or enabl
 
 ```yaml
 hf_configuration:
-  local_saving: true
-  # private: true
-  # concat_if_exist: false
-  # ...
+  local_saving: true              # Enables saving to disk
+  local_dataset_dir: ./results/datasets  # Where datasets are saved locally
+  push_to_hub: true               # Optional: also push each stage result to the Hub
+  concat_if_exist: false          # Whether to merge with existing datasets
+  # private: true                 # Whether Hub datasets should be private
+
 ```
-You can set `local_dataset_dir` to a path and store your resulting dataset entirely locally. Or you can combine both local saving and hub pushing. The pipeline is flexible to your preference.
+You can set `local_dataset_dir` (under `hf_configuration`) to a path and store your resulting datasets entirely locally — as long as `local_saving: true` is also set. Alternatively, you can enable both local saving and Hub pushing. The pipeline is flexible to your preference.
 
 ---
+
+## 11b. How Are Intermediate Datasets Saved?
+
+Each pipeline stage saves its result using `custom_save_dataset()`. The behavior depends on both:
+- The config file, especially `hf_configuration.local_saving` and `local_dataset_dir`.
+- The per-stage logic, which calls:
+```yaml
+hf_settings = get_hf_settings(config)
+custom_save_dataset(
+    dataset=dataset,
+    config=config,
+    subset="stage_name",  # e.g., "summarized", "chunked"
+    save_local=hf_settings.local_saving,
+    push_to_hub=True,
+)
+```
+
+This ensures datasets are:
+- Persisted between stages, even across different runs.
+- Reloadable by exact subset name (e.g., "chunked"), preventing missing subset errors.
 
 ## 12. What If My Documents Are Very Large?
 
