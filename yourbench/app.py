@@ -403,7 +403,7 @@ def launch_ui():
 
                     # Use fixed safe paths
                     local_dataset_dir = LOCAL_DATASETS_DIR if local_saving else None
-                    
+
                     if local_saving:
                         os.makedirs(LOCAL_DATASETS_DIR, exist_ok=True)
                         logger.info(f"Local datasets will be saved to: {LOCAL_DATASETS_DIR}")
@@ -538,7 +538,7 @@ def launch_ui():
 
                     # Ensure directories exist before starting pipeline
                     save_dirs(RESULTS_PROCESSED_DIR, LOCAL_DATASETS_DIR)
-                    
+
                     config = SESSION_STATE["config"]
                     hf_config = config.get("hf_configuration", {})
                     if hf_config.get("local_saving"):
