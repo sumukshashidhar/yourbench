@@ -61,7 +61,7 @@ PROVIDERS = {
     "Nscale": "nscale",
     "Replicate": "replicate",
     "SambaNova": "sambanova",
-    "Together": "together",
+    "Together AI": "together",
 }
 
 RESULTS_PROCESSED_DIR = os.path.join("results", "processed")
@@ -231,10 +231,12 @@ def validate_config_inputs(table_data, ingestion_model, summarization_model, sin
 
 
 def launch_ui():
-    with gr.Blocks(title="YourBench") as demo:
+    with gr.Blocks(title="YourBench", theme=gr.themes.Default()) as demo:
         gr.Markdown("# 🚀 YourBench")
+        gr.Markdown("**Create custom benchmark datasets from your documents using AI-powered question generation**")
+
         if not HF_DEFAULTS["hf_token"]:
-            gr.Markdown("⚠️ **HF_TOKEN not set in `.env` file.**")
+            gr.Markdown("⚠️ HF_TOKEN not set in `.env` file. Please, add it there.")
 
         # Add output locations info
         with gr.Row():
@@ -245,16 +247,18 @@ def launch_ui():
             """)
 
         with gr.Tabs():
-            with gr.Tab("Upload Documents & Construct Config"):
+            with gr.Tab("📄 Upload Documents & Construct Config"):
                 with gr.Row():
                     with gr.Column():
+                        gr.Markdown("### Document Upload")
                         file_input = gr.File(
                             file_count="multiple",
                             file_types=[".txt", ".md", ".pdf", ".html"],
                             label="Upload Source Documents",
                         )
-                        upload_log = gr.Textbox(label="Upload Log")
-                        clear_btn = gr.Button("🧹 Clear Uploads")
+                        upload_log = gr.Textbox(label="Upload Status", interactive=False)
+                        clear_btn = gr.Button("🧹 Clear Uploads", variant="secondary")
+
                         file_input.upload(save_uploaded_files, inputs=file_input, outputs=upload_log)
                         clear_btn.click(fn=clear_uploaded_files, outputs=[upload_log, file_input])
 
@@ -320,6 +324,25 @@ def launch_ui():
                 )
                 remove_model_btn.click(remove_model, inputs=[model_table], outputs=[model_table])
 
+                role_infos = {
+                    "ingestion": (
+                        "Handles raw multi-format documents (PDFs, HTML, etc.) and converts them to clean text. "
+                        "May require a vision-capable model for documents with complex layouts or embedded images."
+                    ),
+                    "summarization": (
+                        "Produces concise summaries of the ingested content. Useful for reducing long context windows "
+                        "and improving downstream task performance."
+                    ),
+                    "single_shot_question_generation": (
+                        "Generates straightforward, single-hop questions directly from individual text chunks. "
+                        "Ideal for factual or localized queries."
+                    ),
+                    "multi_hop_question_generation": (
+                        "Creates more complex questions that require reasoning across multiple chunks or documents. "
+                        "Useful for evaluating deeper comprehension and integration."
+                    ),
+                }
+
                 role_fields = {}
                 for role in [
                     "ingestion",
@@ -328,7 +351,10 @@ def launch_ui():
                     "multi_hop_question_generation",
                 ]:
                     role_fields[role] = gr.Dropdown(
-                        label=f"Model for {role.replace('_', ' ').title()}", interactive=True, choices=[]
+                        label=f"Model for {role.replace('_', ' ').title()}",
+                        interactive=True,
+                        choices=[],
+                        info=role_infos.get(role, ""),
                     )
 
                 def update_roles(table_data):
@@ -349,11 +375,24 @@ def launch_ui():
                 model_table.change(update_roles, inputs=[model_table], outputs=list(role_fields.values()))
 
                 question_mode = gr.Dropdown(
-                    label="Question Mode", choices=["open-ended", "multi-choice"], value="multi-choice"
+                    label="Question Mode",
+                    choices=["open-ended", "multi-choice"],
+                    value="multi-choice",
+                    info=(
+                        "**open-ended**: model generates the answer to the question\n"
+                        "**multi-choice**: model creates options (A)-(D) and selects the correct one"
+                    ),
                 )
+
                 additional_instructions = gr.Textbox(
-                    label="Additional Instructions", value="Ask deep, evidence-based questions from the document."
+                    label="Additional Instructions",
+                    value="Ask deep, evidence-based questions from the document.",
+                    info=(
+                        "Optional prompt guidance sent to the model. Use this to steer question style, difficulty, tone, or domain focus – "
+                        "e.g., 'Generate factual questions at a graduate level' or 'Avoid questions about dates'"
+                    ),
                 )
+
                 cross_doc_enable = gr.Checkbox(label="Enable Cross-Document Question Generation", value=False)
 
                 build_btn = gr.Button("🛠️ Build Config")
@@ -516,14 +555,24 @@ def launch_ui():
 
                 save_config_btn.click(save_manual_config, inputs=[config_display], outputs=[config_file_output])
 
-            with gr.Tab("Run Benchmark Pipeline"):
+            with gr.Tab("🚀 Run Benchmark Pipeline"):
                 start_btn = gr.Button("▶️ Start Pipeline")
                 stop_btn = gr.Button("🛑 Stop Pipeline")
                 status_output = gr.Textbox(label="Pipeline Status", interactive=False)
                 stages_output = gr.CheckboxGroup(
-                    choices=list(STAGE_DISPLAY_MAP.values()), label="Stages Completed", interactive=False
+                    choices=list(STAGE_DISPLAY_MAP.values()),
+                    label="Completed Stages",
+                    interactive=False,
                 )
-                log_output = gr.Code(label="Live Log Output", language=None, lines=20, interactive=False)
+
+                with gr.Accordion("📜 Live Logs", open=False):
+                    log_output = gr.Code(
+                        label="Pipeline Output",
+                        language=None,
+                        lines=20,
+                        interactive=False,
+                    )
+
                 timer = gr.Timer(1.0, active=False)
 
                 def start_pipeline():
