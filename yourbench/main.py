@@ -15,7 +15,7 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
 from rich.console import Console
 
-from yourbench.gradio import launch_ui
+from yourbench.app import launch_ui
 from yourbench.analysis import run_analysis
 from yourbench.pipeline.handler import run_pipeline
 
@@ -474,7 +474,7 @@ def run(
 ) -> None:
     """Run the YourBench pipeline with a configuration file or launch the Gradio UI."""
     if gradio:
-        from yourbench.gradio import launch_ui
+        from yourbench.app import launch_ui
 
         launch_ui()
         return
