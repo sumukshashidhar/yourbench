@@ -152,7 +152,7 @@ class SubprocessManager:
         self.output_stream = io.StringIO()
         self.completed = False
 
-        save_dirs(RESULTS_PROCESSED_DIR)
+        save_dirs(RESULTS_PROCESSED_DIR, LOCAL_DATASETS_DIR)
 
         try:
             self.process = subprocess.Popen(
@@ -236,6 +236,14 @@ def launch_ui():
         if not HF_DEFAULTS["hf_token"]:
             gr.Markdown("⚠️ **HF_TOKEN not set in `.env` file.**")
 
+        # Add output locations info
+        with gr.Row():
+            gr.Markdown("""
+            ### 📁 Output Locations
+            - **Processed Data**: `results/processed/`
+            - **Local Datasets**: `results/datasets/` (when local saving is enabled)
+            """)
+
         with gr.Tabs():
             with gr.Tab("Upload Documents & Construct Config"):
                 with gr.Row():
@@ -258,16 +266,6 @@ def launch_ui():
                         concat = gr.Checkbox(label="Concat if Exists", value=HF_DEFAULTS["concat_if_exist"])
                         upload_card = gr.Checkbox(label="Generate Dataset Card", value=HF_DEFAULTS["upload_card"])
                         local_saving = gr.Checkbox(label="Save Locally", value=False)
-                        local_dataset_dir = gr.Textbox(
-                            label="Local Dataset Directory",
-                            value=LOCAL_DATASETS_DIR,
-                            visible=False,
-                        )
-                        local_saving.change(
-                            lambda checked: gr.update(visible=checked),
-                            inputs=local_saving,
-                            outputs=local_dataset_dir,
-                        )
 
                 model_name_input = gr.Textbox(label="Model Name", placeholder="e.g. meta-llama/Llama-3.3-70B-Instruct")
                 provider_dropdown = gr.Dropdown(
@@ -371,7 +369,6 @@ def launch_ui():
                     concat,
                     upload_card,
                     local_saving,
-                    local_dataset_dir,
                     table_data,
                     ingestion_model,
                     summarization_model,
@@ -404,12 +401,12 @@ def launch_ui():
                                 "provider": PROVIDERS.get(row[1], row[1]),
                             })
 
-                    # Ensure local_dataset_dir is set properly and matches dataset_engine expectations
-                    if local_saving and local_dataset_dir:
-                        # Make sure the directory exists
-                        os.makedirs(local_dataset_dir, exist_ok=True)
-                        # Use absolute path for consistency
-                        local_dataset_dir = os.path.abspath(local_dataset_dir)
+                    # Use fixed safe paths
+                    local_dataset_dir = LOCAL_DATASETS_DIR if local_saving else None
+                    
+                    if local_saving:
+                        os.makedirs(LOCAL_DATASETS_DIR, exist_ok=True)
+                        logger.info(f"Local datasets will be saved to: {LOCAL_DATASETS_DIR}")
 
                     config = {
                         "settings": {"debug": False},
@@ -421,9 +418,9 @@ def launch_ui():
                             "upload_card": upload_card,
                             "concat_if_exist": concat,
                             "local_saving": local_saving,
-                            "local_dataset_dir": local_dataset_dir if local_saving else None,
+                            "local_dataset_dir": local_dataset_dir,
                         },
-                        "local_dataset_dir": local_dataset_dir if local_saving else None,
+                        "local_dataset_dir": local_dataset_dir,
                         "model_list": model_list,
                         "model_roles": {
                             "ingestion": [ingestion_model],
@@ -493,7 +490,6 @@ def launch_ui():
                         concat,
                         upload_card,
                         local_saving,
-                        local_dataset_dir,
                         model_table,
                     ]
                     + list(role_fields.values())
@@ -540,13 +536,13 @@ def launch_ui():
                     if SESSION_STATE["subprocess"] and SESSION_STATE["subprocess"].is_running():
                         return gr.update(), "⚠️ Pipeline already running"
 
-                    # Ensure local dataset directory exists before starting pipeline
+                    # Ensure directories exist before starting pipeline
+                    save_dirs(RESULTS_PROCESSED_DIR, LOCAL_DATASETS_DIR)
+                    
                     config = SESSION_STATE["config"]
                     hf_config = config.get("hf_configuration", {})
-                    if hf_config.get("local_saving") and hf_config.get("local_dataset_dir"):
-                        local_dir = hf_config["local_dataset_dir"]
-                        os.makedirs(local_dir, exist_ok=True)
-                        logger.info(f"Ensured local dataset directory exists: {local_dir}")
+                    if hf_config.get("local_saving"):
+                        logger.info(f"Local datasets will be saved to: {LOCAL_DATASETS_DIR}")
 
                     manager = SubprocessManager(SESSION_STATE["working_dir"])
                     success, message = manager.start()
