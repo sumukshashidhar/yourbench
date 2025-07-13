@@ -48,7 +48,7 @@ import base64
 from typing import Any
 from pathlib import Path
 
-import fitz
+import pymupdf as fitz
 import trafilatura
 from PIL import Image
 from loguru import logger
