@@ -57,6 +57,8 @@ YourBench is available on PyPI and requires **Python 3.12+**. You can install it
   uv pip install -e .
 
   # pip
+  python -m venv .venv
+  source .venv/bin/activate
   pip install -e .
   ```
 
@@ -122,13 +124,14 @@ You can **try YourBench right away in your browser** – no installation needed:
 Contributions are welcome! If you’d like to improve YourBench or add new features, please follow these steps:
 
 1. **Fork** the repository (on GitHub).
-2. **Create a branch** for your feature (`git checkout -b feature/amazing-feature`).
-3. **Install dev dependencies** (e.g. `pip install -r requirements.txt` or use `poetry/uv` if available) and set up the project for development.
-4. **Make your changes**, adding new tests if applicable.
-5. **Run tests** (`pytest`) and ensure code style compliance with `make style` and `make quality` (we use [Ruff](https://github.com/charliermarsh/ruff) for linting).
-6. **Commit** your changes (`git commit -m 'Add amazing feature'`).
-7. **Push** to your branch (`git push origin your-amazing-feature`).
-8. Open a **Pull Request** on the main repository.
+2. **Clone** the forked repository
+3. **Create a branch** on your fork for your feature (`git checkout -b feature/amazing-feature`).
+4. **Installation** (e.g. `pip install -e .` or use `uv` if available) and set up the project for development. (see [Installation](#installation))
+5. **Make your changes**, adding new tests if applicable.
+6. **Run tests** (`pytest`) and ensure code style compliance with `make style` and `make quality` (we use [Ruff](https://github.com/charliermarsh/ruff) for linting).
+7. **Commit** your changes (`git commit -m 'Add amazing feature'`).
+8. **Push** to your branch (`git push origin your-amazing-feature`).
+9. Open a **Pull Request** on the main repository.
 
 We actively review PRs and welcome improvements or fixes from the community. For major changes, feel free to open an issue first to discuss the idea.
 
