@@ -14,8 +14,10 @@ dependencies = [
     "asyncio>=3.4.3",
     "click>=8.1.7",
     "datasets>=3.3.0",
+    "fitz>=0.0.1.dev2",
+    "gradio>=5.35.0",
     "hf-transfer>=0.1.9",
-    "huggingface-hub[inference,hf_xet]>=0.30.2",
+    "huggingface-hub[inference,hf_xet]>=0.33.4",
     "jinja2>=3.1.6",
     "loguru>=0.7.3",
     "markitdown[all]>=0.0.2",
@@ -33,6 +35,9 @@ dependencies = [
 
 [project.scripts]
 yourbench = "yourbench.main:main"
+
+[project.optional-dependencies]
+gui = ["gradio"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
