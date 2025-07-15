@@ -1,0 +1,1 @@
+Convert this document page to clean Markdown. Preserve all text, structure, tables, and formatting. Output only the content in Markdown. 
