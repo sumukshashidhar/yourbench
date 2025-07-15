@@ -374,7 +374,7 @@ def launch_ui():
 
                             # If custom base URL is provided, set provider to empty string
                             final_provider = "" if base_url.strip() else provider_key
-                            
+
                             new_data.append([model_name, final_provider, base_url, api_key_var])
                             gr.Info(f"✅ Model '{model_name}' added.")
                             return new_data, "", "HF Inference", "", ""
@@ -580,7 +580,7 @@ def launch_ui():
                                 model_entry = {
                                     "model_name": row[0],
                                 }
-                                
+
                                 # Handle provider vs custom base URL logic
                                 if len(row) > 2 and row[2]:  # Has base URL
                                     # Validate URL
@@ -592,7 +592,7 @@ def launch_ui():
                                 else:
                                     # Use provider only when no custom base URL
                                     model_entry["provider"] = PROVIDERS.get(row[1], row[1])
-                                
+
                                 if len(row) > 3 and row[3]:
                                     model_entry["api_key"] = f"${row[3]}"
                                 model_list.append(model_entry)
