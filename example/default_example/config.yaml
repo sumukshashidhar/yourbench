@@ -1,0 +1,15 @@
+hf_configuration:
+  hf_dataset_name: yourbench-simple-example
+
+model_list:
+  - model_name: Qwen/Qwen3-32B
+
+pipeline:
+  ingestion:
+    - source_documents_dir: ./example/default_example/data
+    - output_dir: ./data/processed_data/default_example
+  summarization:
+  chunking:
+  single_shot_question_generation:
+    additional_instructions: "Ask basic questions about Yourbench"
+  prepare_lighteval:
