@@ -1,0 +1,1 @@
+This provides a simple example of generating an FAQ set from the Yourbench Research Paper.
