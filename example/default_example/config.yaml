@@ -1,10 +1,13 @@
 hf_configuration:
+  # where you want your eventual dataset to be stored - this will be saved as a dataset on HuggingFace
   hf_dataset_name: yourbench-simple-example
 
 model_list:
+  # this is the model you want to use for the pipeline
   - model_name: Qwen/Qwen3-32B
 
 pipeline:
+  # this is the ingestion step - it will run preprocessing on the input data
   ingestion:
     - source_documents_dir: ./example/default_example/data
     - output_dir: ./data/processed_data/default_example
