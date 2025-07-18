@@ -496,7 +496,7 @@ def test_lighteval_stage(mock_config):
         mock_from_list.return_value = mock_final_dataset
 
         # Import and run lighteval stage
-        from yourbench.pipeline.lighteval import run
+        from yourbench.pipeline.prepare_lighteval import run
 
         run(mock_config)
 
