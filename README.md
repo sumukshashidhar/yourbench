@@ -149,7 +149,11 @@ We actively review PRs and welcome improvements or fixes from the community. For
 
 ## 📈 Progress
 
-<iframe style="width:100%;height:auto;min-width:600px;min-height:400px;" src="https://www.star-history.com/embed?secret=Z2l0aHViX3BhdF8xMUFMRTdEREkwYUlmdjJ5cDV3RlY2X1c1dzdna1lnSkl4S21JcjVGVUQ4N0duYnlodXo3Q0FHZWFmbmh4RXZrNFVRSVI3TVlDQWZ1dXpGMVM0#huggingface/yourbench&Date" frameBorder="0"></iframe>
+<div align="center">
+  <a href="https://star-history.com/#huggingface/yourbench&Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=huggingface/yourbench&type=Date">
+  </a>
+</div>
 
 ## 📜  License
 
