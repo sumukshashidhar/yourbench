@@ -3,7 +3,7 @@ Module handles everything related to the configuration of the pipeline.
 """
 
 import os
-from typing import Union
+from typing import TYPE_CHECKING, Union, ClassVar
 from pathlib import Path
 
 import yaml
@@ -18,6 +18,10 @@ from pydantic import (
 from randomname import get_name as get_random_name
 
 from huggingface_hub import whoami
+
+
+if TYPE_CHECKING:
+    pass
 
 
 def _expand_env(value: str) -> str:
@@ -434,8 +438,8 @@ class QuestionRewritingConfig(BaseModel):
     def load_prompts(self):
         # Import default prompts from the module
         from yourbench.utils.prompts import (
+            QUESTION_REWRITING_USER_PROMPT,
             QUESTION_REWRITING_SYSTEM_PROMPT,
-            QUESTION_question_rewriting_USER_PROMPT,
         )
 
         # Load prompts: can be file paths, string content, or fall back to defaults
@@ -448,7 +452,7 @@ class QuestionRewritingConfig(BaseModel):
         object.__setattr__(
             self,
             "question_rewriting_user_prompt",
-            _load_prompt_or_string(self.question_rewriting_user_prompt, QUESTION_question_rewriting_USER_PROMPT),
+            _load_prompt_or_string(self.question_rewriting_user_prompt, QUESTION_REWRITING_USER_PROMPT),
         )
 
         return self
@@ -488,6 +492,21 @@ class PipelineConfig(BaseModel):
         extra="allow",  # Allow extra fields for flexibility
     )
 
+    # Define pipeline stages in execution order
+    STAGE_ORDER: ClassVar[list[str]] = [
+        "ingestion",
+        "summarization",
+        "chunking",
+        "question_generation",
+        "single_shot_question_generation",
+        "multi_hop_question_generation",
+        "cross_document_question_generation",
+        "question_rewriting",
+        "prepare_lighteval",
+        "lighteval",
+        "citation_score_filtering",
+    ]
+
     ingestion: IngestionConfig = Field(default_factory=IngestionConfig)
     summarization: SummarizationConfig = Field(default_factory=SummarizationConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
@@ -505,6 +524,16 @@ class PipelineConfig(BaseModel):
     lighteval: LightevalConfig = Field(default_factory=LightevalConfig)
     prepare_lighteval: LightevalConfig = Field(default_factory=LightevalConfig)
     citation_score_filtering: CitationScoreFilteringConfig = Field(default_factory=CitationScoreFilteringConfig)
+
+    def get_enabled_stages(self) -> list[str]:
+        """Return list of enabled stages in execution order."""
+        return [stage for stage in self.STAGE_ORDER if getattr(self, stage).run]
+
+    def get_stage_config(self, stage_name: str):
+        """Get configuration for a specific stage."""
+        if stage_name not in self.STAGE_ORDER:
+            raise ValueError(f"Unknown stage: {stage_name}")
+        return getattr(self, stage_name)
 
 
 class YourbenchConfig(BaseModel):
@@ -533,19 +562,8 @@ class YourbenchConfig(BaseModel):
         if not default_model:
             return self
 
-        # All pipeline stages that can use models
-        pipeline_stages = [
-            "ingestion",
-            "summarization",
-            "chunking",
-            "question_generation",
-            "single_shot_question_generation",
-            "multi_hop_question_generation",
-            "cross_document_question_generation",
-            "question_rewriting",
-            "prepare_lighteval",
-            "citation_score_filtering",
-        ]
+        # Use the pipeline's ordered stage list for consistency
+        pipeline_stages = self.pipeline_config.STAGE_ORDER
 
         # Assign default model to stages that don't have model roles defined
         for stage in pipeline_stages:
@@ -553,6 +571,20 @@ class YourbenchConfig(BaseModel):
                 self.model_roles[stage] = [default_model]
 
         return self
+
+    def get_model_for_stage(self, stage_name: str) -> str | None:
+        """Get the model assigned to a specific stage."""
+        if stage_name not in self.model_roles:
+            return None
+        return self.model_roles[stage_name][0] if self.model_roles[stage_name] else None
+
+    def is_stage_enabled(self, stage_name: str) -> bool:
+        """Check if a pipeline stage is enabled."""
+        try:
+            stage_config = self.pipeline_config.get_stage_config(stage_name)
+            return stage_config.run
+        except (AttributeError, ValueError):
+            return False
 
     @classmethod
     def from_yaml(cls, path: Union[str, Path]) -> "YourbenchConfig":
@@ -644,6 +676,11 @@ class YourbenchConfig(BaseModel):
         """Return configuration as YAML string."""
         config_dict = self.model_dump(mode="json", exclude_defaults=False)
         return yaml.dump(config_dict, default_flow_style=False, indent=2, sort_keys=False)
+
+
+def is_yourbench_config(config: any) -> bool:
+    """Type-safe check if config is a YourbenchConfig instance."""
+    return isinstance(config, YourbenchConfig)
 
 
 if __name__ == "__main__":

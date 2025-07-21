@@ -7,21 +7,13 @@ from functools import cache
 from loguru import logger
 
 from yourbench.utils.dataset_engine import upload_dataset_card
-from yourbench.utils.configuration_engine import YourbenchConfig
+
+# Import stage order from configuration for consistency
+from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig
 from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
 
 
-STAGE_ORDER = [
-    "ingestion",
-    "summarization",
-    "chunking",
-    "single_shot_question_generation",
-    "multi_hop_question_generation",
-    "cross_document_question_generation",
-    "question_rewriting",
-    "prepare_lighteval",
-    "citation_score_filtering",
-]
+STAGE_ORDER = PipelineConfig.STAGE_ORDER
 
 STAGE_OVERRIDES = {
     "single_shot_question_generation": run_single_shot,
@@ -60,11 +52,12 @@ def run_pipeline(config_file_path: str, debug: bool = False, **kwargs) -> None:
         return
 
     for stage in STAGE_ORDER:
-        if not hasattr(pipeline, stage):
+        try:
+            stage_config = pipeline.get_stage_config(stage)
+        except ValueError:
             logger.warning(f"Stage '{stage}' not configured in pipeline")
             continue
 
-        stage_config = getattr(pipeline, stage)
         if not stage_config.run:
             logger.info(f"Skipping {stage} (disabled)")
             continue
