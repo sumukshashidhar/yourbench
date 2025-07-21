@@ -44,6 +44,46 @@ def _expand_env(value: str) -> str:
     return value
 
 
+def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
+    """
+    Load prompt content from file path, use as string, or fall back to default.
+    
+    Args:
+        value: Prompt value - can be file path, string content, or empty
+        default_fallback: Default prompt to use if value is empty
+    
+    Returns:
+        Final prompt content
+    """
+    if not value:
+        return default_fallback
+    
+    # If it's multi-line or very long, it's almost certainly string content, not a path
+    if '\n' in value or len(value) > 300:
+        return value
+    
+    # Check if it looks like a file path
+    value_path = Path(value)
+    
+    # If it has common text file extensions, try to load it as a file
+    text_extensions = {'.md', '.txt', '.prompt', '.text'}
+    if value_path.suffix.lower() in text_extensions:
+        try:
+            if value_path.exists():
+                content = value_path.read_text(encoding="utf-8").strip()
+                logger.debug(f"Loaded prompt from file: {value_path}")
+                return content
+            else:
+                logger.warning(f"Prompt file not found: {value_path}, treating as string content")
+                return value
+        except Exception as e:
+            logger.warning(f"Failed to read prompt file {value_path}: {e}, treating as string content")
+            return value
+    
+    # Otherwise, treat as string content
+    return value
+
+
 class HuggingFaceConfig(BaseModel):
     """Configuration for the Hugging Face dataset."""
 
@@ -155,10 +195,17 @@ class IngestionConfig(BaseModel):
 
     @model_validator(mode="after")
     def load_prompt_and_validate_dirs(self):
-        # Load prompt if it's a file path
-        prompt_path = Path("yourbench/prompts/ingestion/pdf_llm_prompt.md")
-        if prompt_path.exists():
-            self.pdf_llm_prompt = prompt_path.read_text(encoding="utf-8").strip()
+        # Load PDF LLM prompt using flexible approach
+        default_prompt_path = "yourbench/prompts/ingestion/pdf_llm_prompt.md"
+        default_fallback = ""
+        if Path(default_prompt_path).exists():
+            try:
+                default_fallback = Path(default_prompt_path).read_text(encoding="utf-8").strip()
+            except Exception:
+                pass
+        
+        # Use object.__setattr__ to bypass validation and avoid recursion
+        object.__setattr__(self, "pdf_llm_prompt", _load_prompt_or_string(self.pdf_llm_prompt, default_fallback))
 
         # Validate directories exist or can be created
         if not self.source_documents_dir.exists():
@@ -187,17 +234,20 @@ class SummarizationConfig(BaseModel):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Import prompts from the prompts module instead of loading from files
+        # Import default prompts from the module
         from yourbench.utils.prompts import (
             SUMMARIZATION_USER_PROMPT,
             COMBINE_SUMMARIES_USER_PROMPT,
         )
 
-        # Set the prompts from the module if they're not already set
-        if not self.summarization_user_prompt:
-            self.summarization_user_prompt = SUMMARIZATION_USER_PROMPT
-        if not self.combine_summaries_user_prompt:
-            self.combine_summaries_user_prompt = COMBINE_SUMMARIES_USER_PROMPT
+        # Load prompts: can be file paths, string content, or fall back to defaults
+        # Use object.__setattr__ to bypass validation and avoid recursion
+        object.__setattr__(self, "summarization_user_prompt", _load_prompt_or_string(
+            self.summarization_user_prompt, SUMMARIZATION_USER_PROMPT
+        ))
+        object.__setattr__(self, "combine_summaries_user_prompt", _load_prompt_or_string(
+            self.combine_summaries_user_prompt, COMBINE_SUMMARIES_USER_PROMPT
+        ))
 
         return self
 
@@ -244,20 +294,24 @@ class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Import prompts from the prompts module instead of loading from files
+        # Import default prompts from the module
         from yourbench.utils.prompts import (
             QUESTION_GENERATION_USER_PROMPT,
             QUESTION_GENERATION_SYSTEM_PROMPT,
             QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
         )
 
-        # Set the prompts from the module if they're not already set
-        if not self.single_shot_system_prompt:
-            self.single_shot_system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT
-        if not self.single_shot_system_prompt_multi:
-            self.single_shot_system_prompt_multi = QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        if not self.single_shot_user_prompt:
-            self.single_shot_user_prompt = QUESTION_GENERATION_USER_PROMPT
+        # Load prompts: can be file paths, string content, or fall back to defaults
+        # Use object.__setattr__ to bypass validation and avoid recursion
+        object.__setattr__(self, "single_shot_system_prompt", _load_prompt_or_string(
+            self.single_shot_system_prompt, QUESTION_GENERATION_SYSTEM_PROMPT
+        ))
+        object.__setattr__(self, "single_shot_system_prompt_multi", _load_prompt_or_string(
+            self.single_shot_system_prompt_multi, QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+        ))
+        object.__setattr__(self, "single_shot_user_prompt", _load_prompt_or_string(
+            self.single_shot_user_prompt, QUESTION_GENERATION_USER_PROMPT
+        ))
 
         return self
 
@@ -271,20 +325,24 @@ class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Import prompts from the prompts module instead of loading from files
+        # Import default prompts from the module
         from yourbench.utils.prompts import (
             MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
         )
 
-        # Set the prompts from the module if they're not already set
-        if not self.multi_hop_system_prompt:
-            self.multi_hop_system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
-        if not self.multi_hop_system_prompt_multi:
-            self.multi_hop_system_prompt_multi = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        if not self.multi_hop_user_prompt:
-            self.multi_hop_user_prompt = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
+        # Load prompts: can be file paths, string content, or fall back to defaults
+        # Use object.__setattr__ to bypass validation and avoid recursion
+        object.__setattr__(self, "multi_hop_system_prompt", _load_prompt_or_string(
+            self.multi_hop_system_prompt, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
+        ))
+        object.__setattr__(self, "multi_hop_system_prompt_multi", _load_prompt_or_string(
+            self.multi_hop_system_prompt_multi, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+        ))
+        object.__setattr__(self, "multi_hop_user_prompt", _load_prompt_or_string(
+            self.multi_hop_user_prompt, MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
+        ))
 
         return self
 
@@ -309,20 +367,24 @@ class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Import prompts from the prompts module instead of loading from files
+        # Import default prompts from the module
         from yourbench.utils.prompts import (
             MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
         )
 
-        # Set the prompts from the module if they're not already set
-        if not self.multi_hop_system_prompt:
-            self.multi_hop_system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
-        if not self.multi_hop_system_prompt_multi:
-            self.multi_hop_system_prompt_multi = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        if not self.multi_hop_user_prompt:
-            self.multi_hop_user_prompt = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
+        # Load prompts: can be file paths, string content, or fall back to defaults
+        # Use object.__setattr__ to bypass validation and avoid recursion
+        object.__setattr__(self, "multi_hop_system_prompt", _load_prompt_or_string(
+            self.multi_hop_system_prompt, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
+        ))
+        object.__setattr__(self, "multi_hop_system_prompt_multi", _load_prompt_or_string(
+            self.multi_hop_system_prompt_multi, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+        ))
+        object.__setattr__(self, "multi_hop_user_prompt", _load_prompt_or_string(
+            self.multi_hop_user_prompt, MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
+        ))
 
         return self
 
@@ -344,17 +406,20 @@ class QuestionRewritingConfig(BaseModel):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Import prompts from the prompts module instead of loading from files
+        # Import default prompts from the module
         from yourbench.utils.prompts import (
             QUESTION_REWRITING_SYSTEM_PROMPT,
             QUESTION_question_rewriting_USER_PROMPT,
         )
 
-        # Set the prompts from the module if they're not already set
-        if not self.question_rewriting_system_prompt:
-            self.question_rewriting_system_prompt = QUESTION_REWRITING_SYSTEM_PROMPT
-        if not self.question_rewriting_user_prompt:
-            self.question_rewriting_user_prompt = QUESTION_question_rewriting_USER_PROMPT
+        # Load prompts: can be file paths, string content, or fall back to defaults
+        # Use object.__setattr__ to bypass validation and avoid recursion
+        object.__setattr__(self, "question_rewriting_system_prompt", _load_prompt_or_string(
+            self.question_rewriting_system_prompt, QUESTION_REWRITING_SYSTEM_PROMPT
+        ))
+        object.__setattr__(self, "question_rewriting_user_prompt", _load_prompt_or_string(
+            self.question_rewriting_user_prompt, QUESTION_question_rewriting_USER_PROMPT
+        ))
 
         return self
 
