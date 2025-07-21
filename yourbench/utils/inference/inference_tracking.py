@@ -13,6 +13,7 @@ from loguru import logger
 @dataclass
 class InferenceMetrics:
     """Metrics for tracking inference requests."""
+
     request_id: str
     model_name: str
     stage: str
@@ -157,7 +158,7 @@ def log_inference_metrics(metrics: InferenceMetrics) -> None:
         input_tokens=metrics.input_tokens,
         output_tokens=metrics.output_tokens,
         tags=[metrics.stage],
-        encoding_name=metrics.encoding_name
+        encoding_name=metrics.encoding_name,
     )
     _update_aggregate_cost(metrics.model_name, metrics.input_tokens, metrics.output_tokens)
 

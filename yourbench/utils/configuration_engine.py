@@ -3,19 +3,20 @@ Module handles everything related to the configuration of the pipeline.
 """
 
 import os
-from typing import Any, Union
+from typing import Union
 from pathlib import Path
 
 import yaml
 from loguru import logger
-from randomname import get_name as get_random_name
 from pydantic import (
-    BaseModel,
     Field,
+    BaseModel,
+    ConfigDict,
     field_validator,
     model_validator,
-    ConfigDict,
 )
+from randomname import get_name as get_random_name
+
 from huggingface_hub import whoami
 
 
@@ -45,7 +46,7 @@ def _expand_env(value: str) -> str:
 
 class HuggingFaceConfig(BaseModel):
     """Configuration for the Hugging Face dataset."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -65,7 +66,7 @@ class HuggingFaceConfig(BaseModel):
     @classmethod
     def expand_env_vars(cls, v: str) -> str:
         return _expand_env(v)
-    
+
     @field_validator("local_dataset_dir")
     @classmethod
     def validate_path(cls, v: Union[str, Path, None]) -> Path | None:
@@ -76,7 +77,7 @@ class HuggingFaceConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     """Configuration for a model."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -106,7 +107,7 @@ class ModelConfig(BaseModel):
 
 class IngestionConfig(BaseModel):
     """Configuration for the ingestion stage."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -121,8 +122,19 @@ class IngestionConfig(BaseModel):
     pdf_llm_prompt: str = Field(default="")
     supported_file_extensions: list[str] = Field(
         default_factory=lambda: [
-            ".md", ".txt", ".html", ".htm", ".pdf", ".docx", ".doc",
-            ".pptx", ".ppt", ".xlsx", ".xls", ".rtf", ".odt",
+            ".md",
+            ".txt",
+            ".html",
+            ".htm",
+            ".pdf",
+            ".docx",
+            ".doc",
+            ".pptx",
+            ".ppt",
+            ".xlsx",
+            ".xls",
+            ".rtf",
+            ".odt",
         ]
     )
 
@@ -137,20 +149,20 @@ class IngestionConfig(BaseModel):
         prompt_path = Path("yourbench/prompts/ingestion/pdf_llm_prompt.md")
         if prompt_path.exists():
             self.pdf_llm_prompt = prompt_path.read_text(encoding="utf-8").strip()
-        
+
         # Validate directories exist or can be created
         if not self.source_documents_dir.exists():
             logger.warning(f"Source directory does not exist: {self.source_documents_dir}")
-        
+
         # Create output directory if it doesn't exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         return self
 
 
 class SummarizationConfig(BaseModel):
     """Configuration for the summarization stage."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -169,18 +181,18 @@ class SummarizationConfig(BaseModel):
         sum_path = Path("yourbench/prompts/summarization/summarization_user_prompt.md")
         if sum_path.exists():
             self.summarization_user_prompt = sum_path.read_text(encoding="utf-8").strip()
-        
+
         # Load combine summaries prompt
         combine_path = Path("yourbench/prompts/summarization/combine_summaries_user_prompt.md")
         if combine_path.exists():
             self.combine_summaries_user_prompt = combine_path.read_text(encoding="utf-8").strip()
-        
+
         return self
 
 
 class ChunkingConfig(BaseModel):
     """Configuration for the chunking stage."""
-    
+
     model_config = ConfigDict(validate_assignment=True)
 
     run: bool = False
@@ -200,7 +212,7 @@ class ChunkingConfig(BaseModel):
 
 class QuestionGenerationConfig(BaseModel):
     """Base configuration for question generation stages."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -213,7 +225,7 @@ class QuestionGenerationConfig(BaseModel):
 
 class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
     """Configuration for single shot question generation."""
-    
+
     single_shot_system_prompt: str = Field(default="")
     single_shot_system_prompt_multi: str = Field(default="")
     single_shot_user_prompt: str = Field(default="")
@@ -226,18 +238,18 @@ class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
             "single_shot_system_prompt_multi": "yourbench/prompts/question_generation/single_shot_system_prompt_multi.md",
             "single_shot_user_prompt": "yourbench/prompts/question_generation/single_shot_user_prompt.md",
         }
-        
+
         for attr, path_str in prompts_map.items():
             path = Path(path_str)
             if path.exists():
                 setattr(self, attr, path.read_text(encoding="utf-8").strip())
-        
+
         return self
 
 
 class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
     """Configuration for multi-hop question generation."""
-    
+
     multi_hop_system_prompt: str = Field(default="")
     multi_hop_system_prompt_multi: str = Field(default="")
     multi_hop_user_prompt: str = Field(default="")
@@ -250,18 +262,18 @@ class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
             "multi_hop_system_prompt_multi": "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md",
             "multi_hop_user_prompt": "yourbench/prompts/question_generation/multi_hop_user_prompt.md",
         }
-        
+
         for attr, path_str in prompts_map.items():
             path = Path(path_str)
             if path.exists():
                 setattr(self, attr, path.read_text(encoding="utf-8").strip())
-        
+
         return self
 
 
 class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
     """Configuration for cross-document question generation."""
-    
+
     multi_hop_system_prompt: str = Field(default="")
     multi_hop_system_prompt_multi: str = Field(default="")
     multi_hop_user_prompt: str = Field(default="")
@@ -285,18 +297,18 @@ class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
             "multi_hop_system_prompt_multi": "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md",
             "multi_hop_user_prompt": "yourbench/prompts/question_generation/multi_hop_user_prompt.md",
         }
-        
+
         for attr, path_str in prompts_map.items():
             path = Path(path_str)
             if path.exists():
                 setattr(self, attr, path.read_text(encoding="utf-8").strip())
-        
+
         return self
 
 
 class QuestionRewritingConfig(BaseModel):
     """Configuration for question rewriting."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -316,18 +328,18 @@ class QuestionRewritingConfig(BaseModel):
             "question_rewriting_system_prompt": "yourbench/prompts/question_rewriting/question_rewriting_system_prompt.md",
             "question_rewriting_user_prompt": "yourbench/prompts/question_rewriting/question_rewriting_user_prompt.md",
         }
-        
+
         for attr, path_str in prompts_map.items():
             path = Path(path_str)
             if path.exists():
                 setattr(self, attr, path.read_text(encoding="utf-8").strip())
-        
+
         return self
 
 
 class LightevalConfig(BaseModel):
     """Configuration for lighteval stages."""
-    
+
     model_config = ConfigDict(validate_assignment=True)
 
     run: bool = False
@@ -335,7 +347,7 @@ class LightevalConfig(BaseModel):
 
 class CitationScoreFilteringConfig(BaseModel):
     """Configuration for citation score filtering."""
-    
+
     model_config = ConfigDict(validate_assignment=True)
 
     run: bool = False
@@ -352,11 +364,11 @@ class CitationScoreFilteringConfig(BaseModel):
 
 class PipelineConfig(BaseModel):
     """Configuration for the pipeline."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
-        extra='allow',  # Allow extra fields for flexibility
+        extra="allow",  # Allow extra fields for flexibility
     )
 
     ingestion: IngestionConfig = Field(default_factory=IngestionConfig)
@@ -380,7 +392,7 @@ class PipelineConfig(BaseModel):
 
 class YourbenchConfig(BaseModel):
     """The main configuration class for the YourBench pipeline."""
-    
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
@@ -447,7 +459,7 @@ class YourbenchConfig(BaseModel):
 
         # Handle nested pipeline configuration properly
         pipeline_data = data.get("pipeline", {})
-        
+
         # Process each stage and set run=True by default if stage is present
         processed_pipeline = {}
         stage_config_classes = {
@@ -463,7 +475,7 @@ class YourbenchConfig(BaseModel):
             "prepare_lighteval": LightevalConfig,
             "citation_score_filtering": CitationScoreFilteringConfig,
         }
-        
+
         for stage_name, config_class in stage_config_classes.items():
             if stage_name in pipeline_data:
                 stage_config = pipeline_data[stage_name]
@@ -473,7 +485,7 @@ class YourbenchConfig(BaseModel):
                 elif stage_config is None:
                     # Handle empty stage configs like "ingestion:" with no value
                     stage_config = {"run": True}
-                
+
                 # Create the specific config instance
                 processed_pipeline[stage_name] = config_class(**stage_config)
             else:
@@ -502,13 +514,13 @@ class YourbenchConfig(BaseModel):
         """Save configuration to YAML file."""
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Convert to dict, handling Path objects and other types
         config_dict = self.model_dump(mode="json", exclude_defaults=False)
-        
+
         with open(path, "w", encoding="utf-8") as fh:
             yaml.dump(config_dict, fh, default_flow_style=False, indent=2, sort_keys=False)
-        
+
         logger.info(f"Configuration saved to {path}")
 
     def model_dump_yaml(self) -> str:
