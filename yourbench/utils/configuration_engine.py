@@ -47,26 +47,26 @@ def _expand_env(value: str) -> str:
 def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
     """
     Load prompt content from file path, use as string, or fall back to default.
-    
+
     Args:
         value: Prompt value - can be file path, string content, or empty
         default_fallback: Default prompt to use if value is empty
-    
+
     Returns:
         Final prompt content
     """
     if not value:
         return default_fallback
-    
+
     # If it's multi-line or very long, it's almost certainly string content, not a path
-    if '\n' in value or len(value) > 300:
+    if "\n" in value or len(value) > 300:
         return value
-    
+
     # Check if it looks like a file path
     value_path = Path(value)
-    
+
     # If it has common text file extensions, try to load it as a file
-    text_extensions = {'.md', '.txt', '.prompt', '.text'}
+    text_extensions = {".md", ".txt", ".prompt", ".text"}
     if value_path.suffix.lower() in text_extensions:
         try:
             if value_path.exists():
@@ -79,7 +79,7 @@ def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
         except Exception as e:
             logger.warning(f"Failed to read prompt file {value_path}: {e}, treating as string content")
             return value
-    
+
     # Otherwise, treat as string content
     return value
 
@@ -203,7 +203,7 @@ class IngestionConfig(BaseModel):
                 default_fallback = Path(default_prompt_path).read_text(encoding="utf-8").strip()
             except Exception:
                 pass
-        
+
         # Use object.__setattr__ to bypass validation and avoid recursion
         object.__setattr__(self, "pdf_llm_prompt", _load_prompt_or_string(self.pdf_llm_prompt, default_fallback))
 
@@ -242,12 +242,16 @@ class SummarizationConfig(BaseModel):
 
         # Load prompts: can be file paths, string content, or fall back to defaults
         # Use object.__setattr__ to bypass validation and avoid recursion
-        object.__setattr__(self, "summarization_user_prompt", _load_prompt_or_string(
-            self.summarization_user_prompt, SUMMARIZATION_USER_PROMPT
-        ))
-        object.__setattr__(self, "combine_summaries_user_prompt", _load_prompt_or_string(
-            self.combine_summaries_user_prompt, COMBINE_SUMMARIES_USER_PROMPT
-        ))
+        object.__setattr__(
+            self,
+            "summarization_user_prompt",
+            _load_prompt_or_string(self.summarization_user_prompt, SUMMARIZATION_USER_PROMPT),
+        )
+        object.__setattr__(
+            self,
+            "combine_summaries_user_prompt",
+            _load_prompt_or_string(self.combine_summaries_user_prompt, COMBINE_SUMMARIES_USER_PROMPT),
+        )
 
         return self
 
@@ -303,15 +307,21 @@ class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
 
         # Load prompts: can be file paths, string content, or fall back to defaults
         # Use object.__setattr__ to bypass validation and avoid recursion
-        object.__setattr__(self, "single_shot_system_prompt", _load_prompt_or_string(
-            self.single_shot_system_prompt, QUESTION_GENERATION_SYSTEM_PROMPT
-        ))
-        object.__setattr__(self, "single_shot_system_prompt_multi", _load_prompt_or_string(
-            self.single_shot_system_prompt_multi, QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        ))
-        object.__setattr__(self, "single_shot_user_prompt", _load_prompt_or_string(
-            self.single_shot_user_prompt, QUESTION_GENERATION_USER_PROMPT
-        ))
+        object.__setattr__(
+            self,
+            "single_shot_system_prompt",
+            _load_prompt_or_string(self.single_shot_system_prompt, QUESTION_GENERATION_SYSTEM_PROMPT),
+        )
+        object.__setattr__(
+            self,
+            "single_shot_system_prompt_multi",
+            _load_prompt_or_string(self.single_shot_system_prompt_multi, QUESTION_GENERATION_SYSTEM_PROMPT_MULTI),
+        )
+        object.__setattr__(
+            self,
+            "single_shot_user_prompt",
+            _load_prompt_or_string(self.single_shot_user_prompt, QUESTION_GENERATION_USER_PROMPT),
+        )
 
         return self
 
@@ -334,15 +344,23 @@ class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
 
         # Load prompts: can be file paths, string content, or fall back to defaults
         # Use object.__setattr__ to bypass validation and avoid recursion
-        object.__setattr__(self, "multi_hop_system_prompt", _load_prompt_or_string(
-            self.multi_hop_system_prompt, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
-        ))
-        object.__setattr__(self, "multi_hop_system_prompt_multi", _load_prompt_or_string(
-            self.multi_hop_system_prompt_multi, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        ))
-        object.__setattr__(self, "multi_hop_user_prompt", _load_prompt_or_string(
-            self.multi_hop_user_prompt, MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
-        ))
+        object.__setattr__(
+            self,
+            "multi_hop_system_prompt",
+            _load_prompt_or_string(self.multi_hop_system_prompt, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT),
+        )
+        object.__setattr__(
+            self,
+            "multi_hop_system_prompt_multi",
+            _load_prompt_or_string(
+                self.multi_hop_system_prompt_multi, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+            ),
+        )
+        object.__setattr__(
+            self,
+            "multi_hop_user_prompt",
+            _load_prompt_or_string(self.multi_hop_user_prompt, MULTI_HOP_QUESTION_GENERATION_USER_PROMPT),
+        )
 
         return self
 
@@ -376,15 +394,23 @@ class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
 
         # Load prompts: can be file paths, string content, or fall back to defaults
         # Use object.__setattr__ to bypass validation and avoid recursion
-        object.__setattr__(self, "multi_hop_system_prompt", _load_prompt_or_string(
-            self.multi_hop_system_prompt, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
-        ))
-        object.__setattr__(self, "multi_hop_system_prompt_multi", _load_prompt_or_string(
-            self.multi_hop_system_prompt_multi, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        ))
-        object.__setattr__(self, "multi_hop_user_prompt", _load_prompt_or_string(
-            self.multi_hop_user_prompt, MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
-        ))
+        object.__setattr__(
+            self,
+            "multi_hop_system_prompt",
+            _load_prompt_or_string(self.multi_hop_system_prompt, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT),
+        )
+        object.__setattr__(
+            self,
+            "multi_hop_system_prompt_multi",
+            _load_prompt_or_string(
+                self.multi_hop_system_prompt_multi, MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+            ),
+        )
+        object.__setattr__(
+            self,
+            "multi_hop_user_prompt",
+            _load_prompt_or_string(self.multi_hop_user_prompt, MULTI_HOP_QUESTION_GENERATION_USER_PROMPT),
+        )
 
         return self
 
@@ -414,12 +440,16 @@ class QuestionRewritingConfig(BaseModel):
 
         # Load prompts: can be file paths, string content, or fall back to defaults
         # Use object.__setattr__ to bypass validation and avoid recursion
-        object.__setattr__(self, "question_rewriting_system_prompt", _load_prompt_or_string(
-            self.question_rewriting_system_prompt, QUESTION_REWRITING_SYSTEM_PROMPT
-        ))
-        object.__setattr__(self, "question_rewriting_user_prompt", _load_prompt_or_string(
-            self.question_rewriting_user_prompt, QUESTION_question_rewriting_USER_PROMPT
-        ))
+        object.__setattr__(
+            self,
+            "question_rewriting_system_prompt",
+            _load_prompt_or_string(self.question_rewriting_system_prompt, QUESTION_REWRITING_SYSTEM_PROMPT),
+        )
+        object.__setattr__(
+            self,
+            "question_rewriting_user_prompt",
+            _load_prompt_or_string(self.question_rewriting_user_prompt, QUESTION_question_rewriting_USER_PROMPT),
+        )
 
         return self
 
