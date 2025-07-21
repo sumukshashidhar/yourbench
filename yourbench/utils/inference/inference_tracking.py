@@ -84,7 +84,7 @@ def _log_individual_call(model_name: str, input_tokens: int, output_tokens: int,
     try:
         _ensure_logs_dir()
         is_new_file = not os.path.exists(_individual_log_file)
-        
+
         with open(_individual_log_file, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             # Write header only if the file is completely new
