@@ -33,7 +33,6 @@ class InferenceMetrics:
 _cost_data = collections.defaultdict(lambda: {"input_tokens": 0, "output_tokens": 0, "calls": 0})
 _individual_log_file = os.path.join("logs", "inference_cost_log_individual.csv")
 _aggregate_log_file = os.path.join("logs", "inference_cost_log_aggregate.csv")
-_individual_header_written = False
 
 
 def _get_encoding(encoding_name: str = "cl100k_base") -> tiktoken.Encoding:
@@ -82,18 +81,15 @@ def _count_message_tokens(messages: List[Dict[str, str]], encoding: tiktoken.Enc
 
 def _log_individual_call(model_name: str, input_tokens: int, output_tokens: int, tags: List[str], encoding_name: str):
     """Logs a single inference call's cost details."""
-    global _individual_header_written
     try:
         _ensure_logs_dir()
         is_new_file = not os.path.exists(_individual_log_file)
-        mode = "a" if not is_new_file else "w"
-
-        with open(_individual_log_file, mode, newline="", encoding="utf-8") as f:
+        
+        with open(_individual_log_file, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            # Write header only if the file is new or header wasn't written yet in this run
-            if is_new_file or not _individual_header_written:
+            # Write header only if the file is completely new
+            if is_new_file:
                 writer.writerow(["timestamp", "model_name", "stage", "input_tokens", "output_tokens", "encoding_used"])
-                _individual_header_written = True
 
             stage = ";".join(tags) if tags else "unknown"
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
