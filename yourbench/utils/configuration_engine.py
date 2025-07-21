@@ -3,18 +3,23 @@ Module handles everything related to the configuration of the pipeline.
 """
 
 import os
-from typing import Any
+from typing import Any, Union
 from pathlib import Path
-from dataclasses import field, fields, dataclass
 
 import yaml
 from loguru import logger
 from randomname import get_name as get_random_name
-
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    ConfigDict,
+)
 from huggingface_hub import whoami
 
 
-def _expand_env(value: Any) -> Any:
+def _expand_env(value: str) -> str:
     """
     Replace leading '$VARNAME' with its environment value.
     Special case: if $HF_ORGANIZATION is missing we try HF_TOKEN + whoami().
@@ -38,17 +43,16 @@ def _expand_env(value: Any) -> Any:
     return value
 
 
-def _expand_dataclass(obj: Any) -> None:
-    """In-place $ENV expansion for every str field of a dataclass."""
-    for f in fields(obj):
-        setattr(obj, f.name, _expand_env(getattr(obj, f.name)))
-
-
-@dataclass
-class HuggingFaceConfig:
+class HuggingFaceConfig(BaseModel):
     """Configuration for the Hugging Face dataset."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+        str_strip_whitespace=True,
+    )
 
-    hf_dataset_name: str = get_random_name()
+    hf_dataset_name: str = Field(default_factory=get_random_name)
     hf_organization: str = "$HF_ORGANIZATION"
     hf_token: str = "$HF_TOKEN"
     private: bool = False
@@ -57,294 +61,348 @@ class HuggingFaceConfig:
     local_saving: bool = True
     upload_card: bool = True
 
-    def __post_init__(self) -> None:
-        _expand_dataclass(self)
+    @field_validator("hf_organization", "hf_token")
+    @classmethod
+    def expand_env_vars(cls, v: str) -> str:
+        return _expand_env(v)
+    
+    @field_validator("local_dataset_dir")
+    @classmethod
+    def validate_path(cls, v: Union[str, Path, None]) -> Path | None:
+        if v is None:
+            return None
+        return Path(v)
 
 
-@dataclass
-class ModelConfig:
+class ModelConfig(BaseModel):
     """Configuration for a model."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+    )
 
     model_name: str | None = None
     base_url: str | None = None
     api_key: str | None = "$HF_TOKEN"
-    max_concurrent_requests: int = 32
+    max_concurrent_requests: int = Field(default=32, ge=1, le=100)
     encoding_name: str = "cl100k_base"
-
-    # You can find the list of available providers here: https://huggingface.co/docs/huggingface_hub/guides/inference#supported-providers-and-tasks
-    # huggingface specific
     provider: str | None = None
     bill_to: str | None = None
 
-    def __post_init__(self) -> None:
-        _expand_dataclass(self)
+    @field_validator("api_key")
+    @classmethod
+    def expand_env_vars(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return _expand_env(v)
 
-        # if base_url is not set, and provider is not set, default to "auto"
+    @model_validator(mode="after")
+    def set_default_provider(self):
         if not self.base_url and not self.provider:
             self.provider = "auto"
+        return self
 
 
-@dataclass
-class IngestionConfig:
-    """Configuration for the ingestion stage"""
+class IngestionConfig(BaseModel):
+    """Configuration for the ingestion stage."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+    )
 
     run: bool = False
-    source_documents_dir: Path | None = Path("example/data/raw/simple_example")
-    output_dir: Path | None = Path("data/processed/simple_example")
+    source_documents_dir: Path = Path("example/data/raw/simple_example")
+    output_dir: Path = Path("data/processed/simple_example")
     upload_to_hub: bool = True
     llm_ingestion: bool = False
-    pdf_dpi: int = 300
-    pdf_llm_prompt: str | Path = Path("yourbench/prompts/ingestion/pdf_llm_prompt.md")
-    supported_file_extensions: list[str] = field(
+    pdf_dpi: int = Field(default=300, ge=72, le=600)
+    pdf_llm_prompt: str = Field(default="")
+    supported_file_extensions: list[str] = Field(
         default_factory=lambda: [
-            ".md",
-            ".txt",
-            ".html",
-            ".htm",
-            ".pdf",
-            ".docx",
-            ".doc",
-            ".pptx",
-            ".ppt",
-            ".xlsx",
-            ".xls",
-            ".rtf",
-            ".odt",
+            ".md", ".txt", ".html", ".htm", ".pdf", ".docx", ".doc",
+            ".pptx", ".ppt", ".xlsx", ".xls", ".rtf", ".odt",
         ]
     )
 
-    def __post_init__(self) -> None:
-        # convert string directories to Path objects
-        if self.source_documents_dir:
-            self.source_documents_dir = Path(self.source_documents_dir)
-        if self.output_dir:
-            self.output_dir = Path(self.output_dir)
+    @field_validator("source_documents_dir", "output_dir")
+    @classmethod
+    def validate_path(cls, v: Union[str, Path]) -> Path:
+        return Path(v)
 
-        prompt_path = Path(self.pdf_llm_prompt)
-        if prompt_path.is_file():
+    @model_validator(mode="after")
+    def load_prompt_and_validate_dirs(self):
+        # Load prompt if it's a file path
+        prompt_path = Path("yourbench/prompts/ingestion/pdf_llm_prompt.md")
+        if prompt_path.exists():
             self.pdf_llm_prompt = prompt_path.read_text(encoding="utf-8").strip()
+        
+        # Validate directories exist or can be created
+        if not self.source_documents_dir.exists():
+            logger.warning(f"Source directory does not exist: {self.source_documents_dir}")
+        
+        # Create output directory if it doesn't exist
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        return self
 
-        if not self.source_documents_dir or not self.output_dir:
-            logger.error("Missing source or output director. Creating default directories.")
-            raise ValueError("Missing source or output directory")
 
-
-@dataclass
-class SummarizationConfig:
-    """Configuration for the summarization stage"""
+class SummarizationConfig(BaseModel):
+    """Configuration for the summarization stage."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+    )
 
     run: bool = False
-    max_tokens: int = 32768
-    token_overlap: int = 512
+    max_tokens: int = Field(default=32768, ge=1024, le=100000)
+    token_overlap: int = Field(default=512, ge=0)
     encoding_name: str = "cl100k_base"
-    summarization_user_prompt: str | Path = Path("yourbench/prompts/summarization/summarization_user_prompt.md")
-    combine_summaries_user_prompt: str | Path = Path(
-        "yourbench/prompts/summarization/combine_summaries_user_prompt.md"
-    )
+    summarization_user_prompt: str = Field(default="")
+    combine_summaries_user_prompt: str = Field(default="")
 
-    def __post_init__(self) -> None:
-        # Load prompt files if they exist
-        summarization_prompt_path = Path(self.summarization_user_prompt)
-        if summarization_prompt_path.is_file():
-            self.summarization_user_prompt = summarization_prompt_path.read_text(encoding="utf-8").strip()
+    @model_validator(mode="after")
+    def load_prompts(self):
+        # Load summarization prompt
+        sum_path = Path("yourbench/prompts/summarization/summarization_user_prompt.md")
+        if sum_path.exists():
+            self.summarization_user_prompt = sum_path.read_text(encoding="utf-8").strip()
+        
+        # Load combine summaries prompt
+        combine_path = Path("yourbench/prompts/summarization/combine_summaries_user_prompt.md")
+        if combine_path.exists():
+            self.combine_summaries_user_prompt = combine_path.read_text(encoding="utf-8").strip()
+        
+        return self
 
-        combine_prompt_path = Path(self.combine_summaries_user_prompt)
-        if combine_prompt_path.is_file():
-            self.combine_summaries_user_prompt = combine_prompt_path.read_text(encoding="utf-8").strip()
 
-
-@dataclass
-class ChunkingConfig:
-    """Configuration for the chunking stage"""
+class ChunkingConfig(BaseModel):
+    """Configuration for the chunking stage."""
+    
+    model_config = ConfigDict(validate_assignment=True)
 
     run: bool = False
-    l_max_tokens: int = 8192
-    token_overlap: int = 512
+    l_max_tokens: int = Field(default=8192, ge=256, le=50000)
+    token_overlap: int = Field(default=512, ge=0)
     encoding_name: str = "cl100k_base"
-    h_min: int = 2
-    h_max: int = 5
-    num_multihops_factor: int = 1
+    h_min: int = Field(default=2, ge=1)
+    h_max: int = Field(default=5, ge=1)
+    num_multihops_factor: int = Field(default=1, ge=1)
+
+    @model_validator(mode="after")
+    def validate_hop_ranges(self):
+        if self.h_min > self.h_max:
+            raise ValueError(f"h_min ({self.h_min}) cannot be greater than h_max ({self.h_max})")
+        return self
 
 
-@dataclass
-class QuestionGenerationConfig:
-    """Configuration for the question generation stage"""
-
-    run: bool = False
-
-
-@dataclass
-class SingleShotQuestionGenerationConfig:
-    """Configuration for the single shot question generation stage"""
-
-    run: bool = False
-    question_mode: str = "open-ended"  # "open-ended" or "multi-choice"
-    single_shot_system_prompt: str | Path = Path("yourbench/prompts/question_generation/single_shot_system_prompt.md")
-    single_shot_system_prompt_multi: str | Path = Path(
-        "yourbench/prompts/question_generation/single_shot_system_prompt_multi.md"
+class QuestionGenerationConfig(BaseModel):
+    """Base configuration for question generation stages."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
     )
-    single_shot_user_prompt: str | Path = Path("yourbench/prompts/question_generation/single_shot_user_prompt.md")
+
+    run: bool = False
+    question_mode: str = Field(default="open-ended", pattern="^(open-ended|multi-choice)$")
     additional_instructions: str = ""
 
-    def __post_init__(self) -> None:
-        # Load prompt files if they exist
-        single_shot_system_prompt_path = Path(self.single_shot_system_prompt)
-        if single_shot_system_prompt_path.is_file():
-            self.single_shot_system_prompt = single_shot_system_prompt_path.read_text(encoding="utf-8").strip()
 
-        single_shot_system_prompt_multi_path = Path(self.single_shot_system_prompt_multi)
-        if single_shot_system_prompt_multi_path.is_file():
-            self.single_shot_system_prompt_multi = single_shot_system_prompt_multi_path.read_text(
-                encoding="utf-8"
-            ).strip()
+class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
+    """Configuration for single shot question generation."""
+    
+    single_shot_system_prompt: str = Field(default="")
+    single_shot_system_prompt_multi: str = Field(default="")
+    single_shot_user_prompt: str = Field(default="")
 
-        single_shot_user_prompt_path = Path(self.single_shot_user_prompt)
-        if single_shot_user_prompt_path.is_file():
-            self.single_shot_user_prompt = single_shot_user_prompt_path.read_text(encoding="utf-8").strip()
+    @model_validator(mode="after")
+    def load_prompts(self):
+        # Load prompts from files if they exist
+        prompts_map = {
+            "single_shot_system_prompt": "yourbench/prompts/question_generation/single_shot_system_prompt.md",
+            "single_shot_system_prompt_multi": "yourbench/prompts/question_generation/single_shot_system_prompt_multi.md",
+            "single_shot_user_prompt": "yourbench/prompts/question_generation/single_shot_user_prompt.md",
+        }
+        
+        for attr, path_str in prompts_map.items():
+            path = Path(path_str)
+            if path.exists():
+                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        
+        return self
 
 
-@dataclass
-class MultiHopQuestionGenerationConfig:
-    """Configuration for the multi hop question generation stage"""
+class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
+    """Configuration for multi-hop question generation."""
+    
+    multi_hop_system_prompt: str = Field(default="")
+    multi_hop_system_prompt_multi: str = Field(default="")
+    multi_hop_user_prompt: str = Field(default="")
+
+    @model_validator(mode="after")
+    def load_prompts(self):
+        # Load prompts from files if they exist
+        prompts_map = {
+            "multi_hop_system_prompt": "yourbench/prompts/question_generation/multi_hop_system_prompt.md",
+            "multi_hop_system_prompt_multi": "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md",
+            "multi_hop_user_prompt": "yourbench/prompts/question_generation/multi_hop_user_prompt.md",
+        }
+        
+        for attr, path_str in prompts_map.items():
+            path = Path(path_str)
+            if path.exists():
+                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        
+        return self
+
+
+class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
+    """Configuration for cross-document question generation."""
+    
+    multi_hop_system_prompt: str = Field(default="")
+    multi_hop_system_prompt_multi: str = Field(default="")
+    multi_hop_user_prompt: str = Field(default="")
+    max_combinations: int = Field(default=100, ge=1, le=1000)
+    chunks_per_document: int = Field(default=1, ge=1)
+    num_docs_per_combination: list[int] = Field(default_factory=lambda: [2, 5])
+    random_seed: int = Field(default=42, ge=0)
+
+    @field_validator("num_docs_per_combination")
+    @classmethod
+    def validate_doc_combination(cls, v: list[int]) -> list[int]:
+        if len(v) != 2 or v[0] >= v[1] or any(x < 2 for x in v):
+            raise ValueError("num_docs_per_combination must be [min, max] where min >= 2 and min < max")
+        return v
+
+    @model_validator(mode="after")
+    def load_prompts(self):
+        # Load prompts from files if they exist
+        prompts_map = {
+            "multi_hop_system_prompt": "yourbench/prompts/question_generation/multi_hop_system_prompt.md",
+            "multi_hop_system_prompt_multi": "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md",
+            "multi_hop_user_prompt": "yourbench/prompts/question_generation/multi_hop_user_prompt.md",
+        }
+        
+        for attr, path_str in prompts_map.items():
+            path = Path(path_str)
+            if path.exists():
+                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        
+        return self
+
+
+class QuestionRewritingConfig(BaseModel):
+    """Configuration for question rewriting."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+    )
 
     run: bool = False
-    question_mode: str = "open-ended"  # "open-ended" or "multi-choice"
-    multi_hop_system_prompt: str | Path = Path("yourbench/prompts/question_generation/multi_hop_system_prompt.md")
-    multi_hop_system_prompt_multi: str | Path = Path(
-        "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md"
-    )
-    multi_hop_user_prompt: str | Path = Path("yourbench/prompts/question_generation/multi_hop_user_prompt.md")
-    additional_instructions: str = ""
-
-    def __post_init__(self) -> None:
-        # Load prompt files if they exist
-        multi_hop_system_prompt_path = Path(self.multi_hop_system_prompt)
-        if multi_hop_system_prompt_path.is_file():
-            self.multi_hop_system_prompt = multi_hop_system_prompt_path.read_text(encoding="utf-8").strip()
-
-        multi_hop_system_prompt_multi_path = Path(self.multi_hop_system_prompt_multi)
-        if multi_hop_system_prompt_multi_path.is_file():
-            self.multi_hop_system_prompt_multi = multi_hop_system_prompt_multi_path.read_text(encoding="utf-8").strip()
-
-        multi_hop_user_prompt_path = Path(self.multi_hop_user_prompt)
-        if multi_hop_user_prompt_path.is_file():
-            self.multi_hop_user_prompt = multi_hop_user_prompt_path.read_text(encoding="utf-8").strip()
-
-
-@dataclass
-class CrossDocumentQuestionGenerationConfig:
-    """Configuration for the cross-document question generation stage"""
-
-    run: bool = False
-    question_mode: str = "open-ended"  # "open-ended" or "multi-choice"
-    multi_hop_system_prompt: str | Path = Path("yourbench/prompts/question_generation/multi_hop_system_prompt.md")
-    multi_hop_system_prompt_multi: str | Path = Path(
-        "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md"
-    )
-    multi_hop_user_prompt: str | Path = Path("yourbench/prompts/question_generation/multi_hop_user_prompt.md")
-    additional_instructions: str = ""
-    max_combinations: int = 100
-    chunks_per_document: int = 1
-    num_docs_per_combination: list[int] = field(default_factory=lambda: [2, 5])
-    random_seed: int = 42
-
-    def __post_init__(self) -> None:
-        # Load prompt files if they exist
-        multi_hop_system_prompt_path = Path(self.multi_hop_system_prompt)
-        if multi_hop_system_prompt_path.is_file():
-            self.multi_hop_system_prompt = multi_hop_system_prompt_path.read_text(encoding="utf-8").strip()
-
-        multi_hop_system_prompt_multi_path = Path(self.multi_hop_system_prompt_multi)
-        if multi_hop_system_prompt_multi_path.is_file():
-            self.multi_hop_system_prompt_multi = multi_hop_system_prompt_multi_path.read_text(encoding="utf-8").strip()
-
-        multi_hop_user_prompt_path = Path(self.multi_hop_user_prompt)
-        if multi_hop_user_prompt_path.is_file():
-            self.multi_hop_user_prompt = multi_hop_user_prompt_path.read_text(encoding="utf-8").strip()
-
-
-@dataclass
-class QuestionRewritingConfig:
-    """Configuration for the question rewriting stage"""
-
-    run: bool = False
-    question_rewriting_system_prompt: str | Path = Path(
-        "yourbench/prompts/question_rewriting/question_rewriting_system_prompt.md"
-    )
-    question_rewriting_user_prompt: str | Path = Path(
-        "yourbench/prompts/question_rewriting/question_rewriting_user_prompt.md"
-    )
+    question_rewriting_system_prompt: str = Field(default="")
+    question_rewriting_user_prompt: str = Field(default="")
     additional_instructions: str = (
         "Rewrite the question to sound more natural and conversational while preserving the exact meaning."
     )
 
-    def __post_init__(self) -> None:
-        # Load prompt files if they exist
-        system_prompt_path = Path(self.question_rewriting_system_prompt)
-        if system_prompt_path.is_file():
-            self.question_rewriting_system_prompt = system_prompt_path.read_text(encoding="utf-8").strip()
+    @model_validator(mode="after")
+    def load_prompts(self):
+        # Load prompts from files if they exist
+        prompts_map = {
+            "question_rewriting_system_prompt": "yourbench/prompts/question_rewriting/question_rewriting_system_prompt.md",
+            "question_rewriting_user_prompt": "yourbench/prompts/question_rewriting/question_rewriting_user_prompt.md",
+        }
+        
+        for attr, path_str in prompts_map.items():
+            path = Path(path_str)
+            if path.exists():
+                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        
+        return self
 
-        user_prompt_path = Path(self.question_rewriting_user_prompt)
-        if user_prompt_path.is_file():
-            self.question_rewriting_user_prompt = user_prompt_path.read_text(encoding="utf-8").strip()
 
-
-@dataclass
-class LightevalConfig:
-    """Configuration for the lighteval stage"""
+class LightevalConfig(BaseModel):
+    """Configuration for lighteval stages."""
+    
+    model_config = ConfigDict(validate_assignment=True)
 
     run: bool = False
 
 
-@dataclass
-class CitationScoreFilteringConfig:
-    """Configuration for the citation score filtering stage"""
+class CitationScoreFilteringConfig(BaseModel):
+    """Configuration for citation score filtering."""
+    
+    model_config = ConfigDict(validate_assignment=True)
 
     run: bool = False
+    subset: str = "prepared_lighteval"
+    alpha: float = Field(default=0.7, ge=0, le=1)
+    beta: float = Field(default=0.3, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def validate_alpha_beta(self):
+        if abs(self.alpha + self.beta - 1.0) > 1e-6:
+            raise ValueError("alpha + beta must equal 1.0")
+        return self
 
 
-@dataclass
-class PipelineConfig:
-    """Configuration for the pipeline"""
+class PipelineConfig(BaseModel):
+    """Configuration for the pipeline."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+        extra='allow',  # Allow extra fields for flexibility
+    )
 
-    ingestion: IngestionConfig = field(default_factory=IngestionConfig)
-    summarization: SummarizationConfig = field(default_factory=SummarizationConfig)
-    chunking: ChunkingConfig = field(default_factory=ChunkingConfig)
-    question_generation: QuestionGenerationConfig = field(default_factory=QuestionGenerationConfig)
-    single_shot_question_generation: SingleShotQuestionGenerationConfig = field(
+    ingestion: IngestionConfig = Field(default_factory=IngestionConfig)
+    summarization: SummarizationConfig = Field(default_factory=SummarizationConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    question_generation: QuestionGenerationConfig = Field(default_factory=QuestionGenerationConfig)
+    single_shot_question_generation: SingleShotQuestionGenerationConfig = Field(
         default_factory=SingleShotQuestionGenerationConfig
     )
-    multi_hop_question_generation: MultiHopQuestionGenerationConfig = field(
+    multi_hop_question_generation: MultiHopQuestionGenerationConfig = Field(
         default_factory=MultiHopQuestionGenerationConfig
     )
-    cross_document_question_generation: CrossDocumentQuestionGenerationConfig = field(
+    cross_document_question_generation: CrossDocumentQuestionGenerationConfig = Field(
         default_factory=CrossDocumentQuestionGenerationConfig
     )
-    question_rewriting: QuestionRewritingConfig = field(default_factory=QuestionRewritingConfig)
-    lighteval: LightevalConfig = field(default_factory=LightevalConfig)
-    prepare_lighteval: LightevalConfig = field(default_factory=LightevalConfig)
-    citation_score_filtering: CitationScoreFilteringConfig = field(default_factory=CitationScoreFilteringConfig)
+    question_rewriting: QuestionRewritingConfig = Field(default_factory=QuestionRewritingConfig)
+    lighteval: LightevalConfig = Field(default_factory=LightevalConfig)
+    prepare_lighteval: LightevalConfig = Field(default_factory=LightevalConfig)
+    citation_score_filtering: CitationScoreFilteringConfig = Field(default_factory=CitationScoreFilteringConfig)
 
 
-@dataclass
-class YourbenchConfig:
+class YourbenchConfig(BaseModel):
     """The main configuration class for the YourBench pipeline."""
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+        validate_default=True,
+    )
 
-    hf_configuration: HuggingFaceConfig = field(default_factory=HuggingFaceConfig)
-    pipeline_config: PipelineConfig = field(default_factory=PipelineConfig)
-    model_list: list[ModelConfig] = field(default_factory=list)
-    model_roles: dict[str, list[str]] = field(default_factory=dict)
+    hf_configuration: HuggingFaceConfig = Field(default_factory=HuggingFaceConfig)
+    pipeline_config: PipelineConfig = Field(default_factory=PipelineConfig)
+    model_list: list[ModelConfig] = Field(default_factory=list)
+    model_roles: dict[str, list[str]] = Field(default_factory=dict)
     debug: bool = False
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def assign_default_model_roles(self):
         """Assign default model roles for each pipeline stage if not specified."""
         if not self.model_list:
-            return
+            return self
 
         # Get the first model name as default
         default_model = self.model_list[0].model_name
         if not default_model:
-            return
+            return self
 
         # All pipeline stages that can use models
         pipeline_stages = [
@@ -365,26 +423,33 @@ class YourbenchConfig:
             if stage not in self.model_roles:
                 self.model_roles[stage] = [default_model]
 
+        return self
+
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "YourbenchConfig":
+    def from_yaml(cls, path: Union[str, Path]) -> "YourbenchConfig":
         """
-        Load YAML → dict → dataclass, with env-var expansion
-        confined to HuggingFaceConfig.__post_init__.
+        Load YAML config with proper validation and legacy support.
         """
-        with open(Path(path), "r", encoding="utf-8") as fh:
-            data = yaml.safe_load(fh) or {}
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {path}")
 
-        hf_kwargs = data.get("hf_configuration", {})
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                data = yaml.safe_load(fh) or {}
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in {path}: {e}") from e
 
-        # Handle both 'models' and 'model_list' keys for backward compatibility
-        model_list = data.get("model_list", data.get("models", []))
-        model_roles = data.get("model_roles", {})
+        # Legacy compatibility: handle both 'models' and 'model_list'
+        if "models" in data and "model_list" not in data:
+            data["model_list"] = data.pop("models")
+            logger.info("Converted legacy 'models' field to 'model_list'")
 
-        # Handle pipeline configuration with proper nested dataclass instantiation
+        # Handle nested pipeline configuration properly
         pipeline_data = data.get("pipeline", {})
-        pipeline_kwargs = {}
-
-        # Map stage names to their corresponding config classes
+        
+        # Process each stage and set run=True by default if stage is present
+        processed_pipeline = {}
         stage_config_classes = {
             "ingestion": IngestionConfig,
             "summarization": SummarizationConfig,
@@ -398,30 +463,61 @@ class YourbenchConfig:
             "prepare_lighteval": LightevalConfig,
             "citation_score_filtering": CitationScoreFilteringConfig,
         }
-
-        # Convert each stage configuration dict to its dataclass instance
-        for stage_name, config_data in pipeline_data.items():
-            if stage_name in stage_config_classes:
-                config_class = stage_config_classes[stage_name]
-
-                if config_data is None:
-                    config_data = {}
-
-                # If a stage is present in the config, assume it should run unless `run: false` is explicit.
-                config_data.setdefault("run", True)
-
-                pipeline_kwargs[stage_name] = config_class(**config_data)
+        
+        for stage_name, config_class in stage_config_classes.items():
+            if stage_name in pipeline_data:
+                stage_config = pipeline_data[stage_name]
+                if isinstance(stage_config, dict):
+                    # Set run=True by default if not specified
+                    stage_config.setdefault("run", True)
+                elif stage_config is None:
+                    # Handle empty stage configs like "ingestion:" with no value
+                    stage_config = {"run": True}
+                
+                # Create the specific config instance
+                processed_pipeline[stage_name] = config_class(**stage_config)
             else:
-                logger.warning(f"Unknown pipeline stage: {stage_name}")
+                # Create default instance
+                processed_pipeline[stage_name] = config_class()
 
-        return cls(
-            hf_configuration=HuggingFaceConfig(**hf_kwargs),
-            model_list=[ModelConfig(**m) for m in model_list],
-            model_roles=model_roles,
-            pipeline_config=PipelineConfig(**pipeline_kwargs),
-        )
+        # Create the pipeline config
+        pipeline_config = PipelineConfig(**processed_pipeline)
+
+        # Build final config
+        config_data = {
+            "hf_configuration": HuggingFaceConfig(**data.get("hf_configuration", {})),
+            "pipeline_config": pipeline_config,
+            "model_list": [ModelConfig(**m) for m in data.get("model_list", [])],
+            "model_roles": data.get("model_roles", {}),
+            "debug": data.get("debug", False),
+        }
+
+        try:
+            return cls(**config_data)
+        except Exception as e:
+            logger.error(f"Configuration validation failed for {path}: {e}")
+            raise ValueError(f"Invalid configuration: {e}") from e
+
+    def to_yaml(self, path: Union[str, Path]) -> None:
+        """Save configuration to YAML file."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Convert to dict, handling Path objects and other types
+        config_dict = self.model_dump(mode="json", exclude_defaults=False)
+        
+        with open(path, "w", encoding="utf-8") as fh:
+            yaml.dump(config_dict, fh, default_flow_style=False, indent=2, sort_keys=False)
+        
+        logger.info(f"Configuration saved to {path}")
+
+    def model_dump_yaml(self) -> str:
+        """Return configuration as YAML string."""
+        config_dict = self.model_dump(mode="json", exclude_defaults=False)
+        return yaml.dump(config_dict, default_flow_style=False, indent=2, sort_keys=False)
 
 
 if __name__ == "__main__":
+    # Test loading the simple example config
     config = YourbenchConfig.from_yaml("example/configs/simple_example.yaml")
-    print(config)
+    print(config.model_dump_yaml())

@@ -4,9 +4,27 @@ import atexit
 import datetime
 import collections
 from typing import Dict, List
+from dataclasses import dataclass
 
 import tiktoken
 from loguru import logger
+
+
+@dataclass
+class InferenceMetrics:
+    """Metrics for tracking inference requests."""
+    request_id: str
+    model_name: str
+    stage: str
+    input_tokens: int
+    output_tokens: int
+    duration: float
+    queue_time: float
+    retry_count: int
+    success: bool
+    concurrency_level: int
+    temperature: float | None
+    encoding_name: str
 
 
 # Using defaultdict for easier accumulation
@@ -114,3 +132,47 @@ def _write_aggregate_log():
 
 # Register the aggregate log function to run at exit
 atexit.register(_write_aggregate_log)
+
+
+def _categorize_error(error: Exception) -> str:
+    """Categorize an error for tracking purposes."""
+    error_type = type(error).__name__
+    if "timeout" in str(error).lower() or "TimeoutError" in error_type:
+        return "timeout"
+    elif "rate_limit" in str(error).lower() or "RateLimitError" in error_type:
+        return "rate_limit"
+    elif "authentication" in str(error).lower() or "AuthenticationError" in error_type:
+        return "auth_error"
+    elif "connection" in str(error).lower() or "ConnectionError" in error_type:
+        return "connection_error"
+    else:
+        return "other_error"
+
+
+def log_inference_metrics(metrics: InferenceMetrics) -> None:
+    """Log inference metrics to tracking system."""
+    _ensure_logs_dir()
+    _log_individual_call(
+        model_name=metrics.model_name,
+        input_tokens=metrics.input_tokens,
+        output_tokens=metrics.output_tokens,
+        tags=[metrics.stage],
+        encoding_name=metrics.encoding_name
+    )
+    _update_aggregate_cost(metrics.model_name, metrics.input_tokens, metrics.output_tokens)
+
+
+def get_performance_summary() -> Dict[str, any]:
+    """Get performance summary statistics."""
+    summary = {
+        "models": list(_cost_data.keys()),
+        "total_calls": sum(data["calls"] for data in _cost_data.values()),
+        "total_input_tokens": sum(data["input_tokens"] for data in _cost_data.values()),
+        "total_output_tokens": sum(data["output_tokens"] for data in _cost_data.values()),
+    }
+    return summary
+
+
+def update_aggregate_metrics(model_name: str, input_tokens: int, output_tokens: int) -> None:
+    """Update aggregate metrics for a model."""
+    _update_aggregate_cost(model_name, input_tokens, output_tokens)
