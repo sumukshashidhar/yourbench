@@ -765,10 +765,8 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
 
     # Convert YourbenchConfig to dict if needed
     if hasattr(config, "hf_configuration"):
-        # Convert YourbenchConfig dataclass to dict format for serialization
-        from dataclasses import asdict
-
-        config_dict = asdict(config)
+        # Convert YourbenchConfig Pydantic model to dict format for serialization
+        config_dict = config.model_dump()
     else:
         config_dict = config
 

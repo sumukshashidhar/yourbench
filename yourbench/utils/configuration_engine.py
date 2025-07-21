@@ -187,15 +187,17 @@ class SummarizationConfig(BaseModel):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Load summarization prompt
-        sum_path = Path("yourbench/prompts/summarization/summarization_user_prompt.md")
-        if sum_path.exists():
-            self.summarization_user_prompt = sum_path.read_text(encoding="utf-8").strip()
-
-        # Load combine summaries prompt
-        combine_path = Path("yourbench/prompts/summarization/combine_summaries_user_prompt.md")
-        if combine_path.exists():
-            self.combine_summaries_user_prompt = combine_path.read_text(encoding="utf-8").strip()
+        # Import prompts from the prompts module instead of loading from files
+        from yourbench.utils.prompts import (
+            SUMMARIZATION_USER_PROMPT,
+            COMBINE_SUMMARIES_USER_PROMPT,
+        )
+        
+        # Set the prompts from the module if they're not already set
+        if not self.summarization_user_prompt:
+            self.summarization_user_prompt = SUMMARIZATION_USER_PROMPT
+        if not self.combine_summaries_user_prompt:
+            self.combine_summaries_user_prompt = COMBINE_SUMMARIES_USER_PROMPT
 
         return self
 
@@ -242,17 +244,20 @@ class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Load prompts from files if they exist
-        prompts_map = {
-            "single_shot_system_prompt": "yourbench/prompts/question_generation/single_shot_system_prompt.md",
-            "single_shot_system_prompt_multi": "yourbench/prompts/question_generation/single_shot_system_prompt_multi.md",
-            "single_shot_user_prompt": "yourbench/prompts/question_generation/single_shot_user_prompt.md",
-        }
-
-        for attr, path_str in prompts_map.items():
-            path = Path(path_str)
-            if path.exists():
-                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        # Import prompts from the prompts module instead of loading from files
+        from yourbench.utils.prompts import (
+            QUESTION_GENERATION_SYSTEM_PROMPT,
+            QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
+            QUESTION_GENERATION_USER_PROMPT,
+        )
+        
+        # Set the prompts from the module if they're not already set
+        if not self.single_shot_system_prompt:
+            self.single_shot_system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT
+        if not self.single_shot_system_prompt_multi:
+            self.single_shot_system_prompt_multi = QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+        if not self.single_shot_user_prompt:
+            self.single_shot_user_prompt = QUESTION_GENERATION_USER_PROMPT
 
         return self
 
@@ -266,17 +271,20 @@ class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Load prompts from files if they exist
-        prompts_map = {
-            "multi_hop_system_prompt": "yourbench/prompts/question_generation/multi_hop_system_prompt.md",
-            "multi_hop_system_prompt_multi": "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md",
-            "multi_hop_user_prompt": "yourbench/prompts/question_generation/multi_hop_user_prompt.md",
-        }
-
-        for attr, path_str in prompts_map.items():
-            path = Path(path_str)
-            if path.exists():
-                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        # Import prompts from the prompts module instead of loading from files
+        from yourbench.utils.prompts import (
+            MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+            MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
+            MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
+        )
+        
+        # Set the prompts from the module if they're not already set
+        if not self.multi_hop_system_prompt:
+            self.multi_hop_system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
+        if not self.multi_hop_system_prompt_multi:
+            self.multi_hop_system_prompt_multi = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+        if not self.multi_hop_user_prompt:
+            self.multi_hop_user_prompt = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
 
         return self
 
@@ -301,17 +309,20 @@ class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Load prompts from files if they exist
-        prompts_map = {
-            "multi_hop_system_prompt": "yourbench/prompts/question_generation/multi_hop_system_prompt.md",
-            "multi_hop_system_prompt_multi": "yourbench/prompts/question_generation/multi_hop_system_prompt_multi.md",
-            "multi_hop_user_prompt": "yourbench/prompts/question_generation/multi_hop_user_prompt.md",
-        }
-
-        for attr, path_str in prompts_map.items():
-            path = Path(path_str)
-            if path.exists():
-                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        # Import prompts from the prompts module instead of loading from files
+        from yourbench.utils.prompts import (
+            MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
+            MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
+            MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
+        )
+        
+        # Set the prompts from the module if they're not already set
+        if not self.multi_hop_system_prompt:
+            self.multi_hop_system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
+        if not self.multi_hop_system_prompt_multi:
+            self.multi_hop_system_prompt_multi = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
+        if not self.multi_hop_user_prompt:
+            self.multi_hop_user_prompt = MULTI_HOP_QUESTION_GENERATION_USER_PROMPT
 
         return self
 
@@ -333,16 +344,17 @@ class QuestionRewritingConfig(BaseModel):
 
     @model_validator(mode="after")
     def load_prompts(self):
-        # Load prompts from files if they exist
-        prompts_map = {
-            "question_rewriting_system_prompt": "yourbench/prompts/question_rewriting/question_rewriting_system_prompt.md",
-            "question_rewriting_user_prompt": "yourbench/prompts/question_rewriting/question_rewriting_user_prompt.md",
-        }
-
-        for attr, path_str in prompts_map.items():
-            path = Path(path_str)
-            if path.exists():
-                setattr(self, attr, path.read_text(encoding="utf-8").strip())
+        # Import prompts from the prompts module instead of loading from files
+        from yourbench.utils.prompts import (
+            QUESTION_REWRITING_SYSTEM_PROMPT,
+            QUESTION_question_rewriting_USER_PROMPT,
+        )
+        
+        # Set the prompts from the module if they're not already set
+        if not self.question_rewriting_system_prompt:
+            self.question_rewriting_system_prompt = QUESTION_REWRITING_SYSTEM_PROMPT
+        if not self.question_rewriting_user_prompt:
+            self.question_rewriting_user_prompt = QUESTION_question_rewriting_USER_PROMPT
 
         return self
 

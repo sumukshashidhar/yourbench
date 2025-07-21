@@ -5,7 +5,7 @@ hf_configuration:
   upload_card: true # whether to automatically upload README dataset cards
 
 model_list:
-  - model_name: Qwen/Qwen3-30B-A3B
+  - model_name: Qwen/Qwen3-235B-A22B
     provider: fireworks-ai
 
 pipeline:
@@ -17,5 +17,5 @@ pipeline:
   chunking:
   single_shot_question_generation:
   multi_hop_question_generation:
-  lighteval:
+  prepare_lighteval:
   citation_score_filtering:

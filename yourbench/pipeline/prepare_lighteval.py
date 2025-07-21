@@ -125,7 +125,24 @@ def run(config: YourbenchConfig) -> None:
         summarized_ds = Dataset.from_dict({})
 
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0 and len(cross_doc_ds) == 0:
-        logger.error("No data in single-shot, multi-hop, or cross-document datasets. Exiting.")
+        logger.warning("No data in single-shot, multi-hop, or cross-document datasets. Creating empty prepared_lighteval subset.")
+        # Create empty dataset with the expected schema
+        empty_dataset = Dataset.from_dict({
+            "task_id": [],
+            "question": [],
+            "answer": [],
+            "choices": [],
+            "gold": [],
+            "question_type": [],
+            "document_id": [],
+            "document_text": [],
+            "document_summary": [],
+            "chunk_id": [],
+            "chunk_text": [],
+            "related_chunks": [],
+            "type": [],
+        })
+        custom_save_dataset(empty_dataset, config=config, subset="prepared_lighteval")
         return
 
     # Prepare lookups from chunked dataset
