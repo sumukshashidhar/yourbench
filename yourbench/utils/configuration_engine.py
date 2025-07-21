@@ -192,7 +192,7 @@ class SummarizationConfig(BaseModel):
             SUMMARIZATION_USER_PROMPT,
             COMBINE_SUMMARIES_USER_PROMPT,
         )
-        
+
         # Set the prompts from the module if they're not already set
         if not self.summarization_user_prompt:
             self.summarization_user_prompt = SUMMARIZATION_USER_PROMPT
@@ -246,11 +246,11 @@ class SingleShotQuestionGenerationConfig(QuestionGenerationConfig):
     def load_prompts(self):
         # Import prompts from the prompts module instead of loading from files
         from yourbench.utils.prompts import (
+            QUESTION_GENERATION_USER_PROMPT,
             QUESTION_GENERATION_SYSTEM_PROMPT,
             QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
-            QUESTION_GENERATION_USER_PROMPT,
         )
-        
+
         # Set the prompts from the module if they're not already set
         if not self.single_shot_system_prompt:
             self.single_shot_system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT
@@ -273,11 +273,11 @@ class MultiHopQuestionGenerationConfig(QuestionGenerationConfig):
     def load_prompts(self):
         # Import prompts from the prompts module instead of loading from files
         from yourbench.utils.prompts import (
+            MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
-            MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
         )
-        
+
         # Set the prompts from the module if they're not already set
         if not self.multi_hop_system_prompt:
             self.multi_hop_system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
@@ -311,11 +311,11 @@ class CrossDocumentQuestionGenerationConfig(QuestionGenerationConfig):
     def load_prompts(self):
         # Import prompts from the prompts module instead of loading from files
         from yourbench.utils.prompts import (
+            MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
             MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
-            MULTI_HOP_QUESTION_GENERATION_USER_PROMPT,
         )
-        
+
         # Set the prompts from the module if they're not already set
         if not self.multi_hop_system_prompt:
             self.multi_hop_system_prompt = MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
@@ -349,7 +349,7 @@ class QuestionRewritingConfig(BaseModel):
             QUESTION_REWRITING_SYSTEM_PROMPT,
             QUESTION_question_rewriting_USER_PROMPT,
         )
-        
+
         # Set the prompts from the module if they're not already set
         if not self.question_rewriting_system_prompt:
             self.question_rewriting_system_prompt = QUESTION_REWRITING_SYSTEM_PROMPT

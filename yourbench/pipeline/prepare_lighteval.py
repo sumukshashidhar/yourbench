@@ -125,7 +125,9 @@ def run(config: YourbenchConfig) -> None:
         summarized_ds = Dataset.from_dict({})
 
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0 and len(cross_doc_ds) == 0:
-        logger.warning("No data in single-shot, multi-hop, or cross-document datasets. Creating empty prepared_lighteval subset.")
+        logger.warning(
+            "No data in single-shot, multi-hop, or cross-document datasets. Creating empty prepared_lighteval subset."
+        )
         # Create empty dataset with the expected schema
         empty_dataset = Dataset.from_dict({
             "task_id": [],
