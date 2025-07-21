@@ -1,6 +1,7 @@
 hf_configuration:
   hf_dataset_name: yourbench_example # change this to your desired dataset name
-  private: false # change this to true if you want to make the dataset private. it's true by default.
+  hf_organization: yourbench # change this to your desired organization name
+  private: true # change this to true if you want to make the dataset private. it's true by default.
   upload_card: true # whether to automatically upload README dataset cards
 
 model_list:

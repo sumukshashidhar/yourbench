@@ -26,6 +26,7 @@ class InferenceMetrics:
     concurrency_level: int
     temperature: float | None
     encoding_name: str
+    error_message: str | None = None
 
 
 # Using defaultdict for easier accumulation
@@ -163,17 +164,38 @@ def log_inference_metrics(metrics: InferenceMetrics) -> None:
     _update_aggregate_cost(metrics.model_name, metrics.input_tokens, metrics.output_tokens)
 
 
-def get_performance_summary() -> Dict[str, any]:
+def get_performance_summary(model_name: str | None = None) -> Dict[str, any]:
     """Get performance summary statistics."""
-    summary = {
-        "models": list(_cost_data.keys()),
-        "total_calls": sum(data["calls"] for data in _cost_data.values()),
-        "total_input_tokens": sum(data["input_tokens"] for data in _cost_data.values()),
-        "total_output_tokens": sum(data["output_tokens"] for data in _cost_data.values()),
-    }
+    if model_name and model_name in _cost_data:
+        # Return summary for specific model
+        data = _cost_data[model_name]
+        summary = {
+            "model_name": model_name,
+            "total_calls": data["calls"],
+            "total_input_tokens": data["input_tokens"],
+            "total_output_tokens": data["output_tokens"],
+        }
+    else:
+        # Return overall summary
+        summary = {
+            "models": list(_cost_data.keys()),
+            "total_calls": sum(data["calls"] for data in _cost_data.values()),
+            "total_input_tokens": sum(data["input_tokens"] for data in _cost_data.values()),
+            "total_output_tokens": sum(data["output_tokens"] for data in _cost_data.values()),
+        }
     return summary
 
 
-def update_aggregate_metrics(model_name: str, input_tokens: int, output_tokens: int) -> None:
+def update_aggregate_metrics(
+    model_name: str, 
+    input_tokens: int, 
+    output_tokens: int,
+    duration: float = 0.0,
+    success: bool = True,
+    queue_time: float = 0.0,
+    retry_count: int = 0,
+    error: Exception | None = None,
+    concurrency_level: int = 1
+) -> None:
     """Update aggregate metrics for a model."""
     _update_aggregate_cost(model_name, input_tokens, output_tokens)
