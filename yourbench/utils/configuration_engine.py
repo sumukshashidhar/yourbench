@@ -63,15 +63,15 @@ class HuggingFaceConfig(BaseModel):
     upload_card: bool = True
 
     @field_validator("hf_organization", "hf_token")
-    @classmethod 
+    @classmethod
     def expand_env_vars(cls, v: str) -> str:
         return _expand_env(v)
-    
+
     @model_validator(mode="after")
     def expand_all_env_vars(self):
         # Use object.__setattr__ to bypass validation and avoid recursion
-        object.__setattr__(self, 'hf_token', _expand_env(self.hf_token))
-        object.__setattr__(self, 'hf_organization', _expand_env(self.hf_organization))
+        object.__setattr__(self, "hf_token", _expand_env(self.hf_token))
+        object.__setattr__(self, "hf_organization", _expand_env(self.hf_organization))
         return self
 
     @field_validator("local_dataset_dir")
@@ -111,7 +111,7 @@ class ModelConfig(BaseModel):
             self.provider = "auto"
         # Also ensure api_key is expanded
         if self.api_key:
-            object.__setattr__(self, 'api_key', _expand_env(self.api_key))
+            object.__setattr__(self, "api_key", _expand_env(self.api_key))
         return self
 
 
