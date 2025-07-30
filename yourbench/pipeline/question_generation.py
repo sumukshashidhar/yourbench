@@ -1,48 +1,17 @@
-"""
-Question Generation Pipeline (Single-Hop, Multi-Hop & Cross-Document)
-
-This module defines a pipeline for generating question-answer pairs using either
-single document chunks (single-hop), multiple chunks (multi-hop), or
-chunks from multiple documents (cross-document). It supports
-prompt-based inference via a language model, parses responses, and saves the output.
-
-Features:
-- Configurable chunk sampling (by count or percentage)
-- Prompt formatting for single-hop and multi-hop generation
-- Cross-document questions using existing multi-hop infrastructure
-- Response parsing and validation
-- Integration with HuggingFace Datasets and custom I/O
-
-Main Functions:
-- run_single_shot(): Generates single-hop questions.
-- run_multi_hop(): Generates multi-hop questions.
-- run_cross_document(): Generates cross-document questions.
-"""
-
 from __future__ import annotations
 from typing import Any
 
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.prompts import (
-    QUESTION_GENERATION_SYSTEM_PROMPT,
-    QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
-    MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT,
-    MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI,
-)
 from yourbench.utils.chunking_utils import get_sampling_cfg
-from yourbench.utils.dataset_engine import (
-    get_hf_settings,
-    custom_load_dataset,
-    custom_save_dataset,
-    create_cross_document_dataset,
-)
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, create_cross_document_dataset
 from yourbench.utils.parsing_engine import (
     parse_multi_hop_responses,
     _remove_duplicate_questions,
     parse_single_shot_responses,
 )
+from yourbench.utils.configuration_engine import YourbenchConfig
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,
@@ -50,129 +19,133 @@ from yourbench.utils.inference.inference_builders import (
 )
 
 
-SINGLE_SHOT_KEY = "single_shot_question_generation"
-MULTI_HOP_KEY = "multi_hop_question_generation"
-CROSS_DOCUMENT_KEY = "cross_document_question_generation"
+def _get_system_prompt(stage_cfg: Any, mode: str, is_multi: bool = False) -> str:
+    """Get appropriate system prompt based on mode and stage type."""
+    prefix = "multi_hop_" if is_multi else "single_shot_"
+    suffix = "_multi" if mode == "multi-choice" else ""
+    return getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
 
 
-def run_single_shot(config: dict[str, Any]) -> None:
-    """
-    Orchestrates the single-hop question generation pipeline.
-    """
-    stage_cfg = config.get("pipeline", {}).get(SINGLE_SHOT_KEY, {})
-    if not stage_cfg.get("run", False):
-        logger.info("single_shot_question_generation stage is disabled.")
-        return
+def _validate_mode(mode: str) -> str:
+    """Ensure question mode is valid."""
+    mode = (mode or "open-ended").strip().lower()
+    if mode not in {"open-ended", "multi-choice"}:
+        logger.warning(f"Invalid question_mode '{mode}', defaulting to 'open-ended'")
+        return "open-ended"
+    return mode
 
-    question_mode = stage_cfg.get("question_mode", "open-ended")
-    allowed_types = {"open-ended", "multi-choice"}
-    if question_mode not in allowed_types:
-        logger.warning(f"Invalid question_mode '{question_mode}', defaulting to 'open-ended'")
-        question_mode = "open-ended"
 
-    logger.info(f"Single-shot question_mode: {question_mode}")
-
-    if question_mode == "multi-choice":
-        system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        logger.debug("Using MULTI-CHOICE prompt for single-shot generation.")
-    else:
-        system_prompt = QUESTION_GENERATION_SYSTEM_PROMPT
-        logger.debug("Using OPEN-ENDED prompt for single-shot generation.")
-
-    system_msg = {"role": "system", "content": system_prompt}
-
-    dataset = custom_load_dataset(config=config, subset="chunked")
-    logger.info(f"Loaded {len(dataset)} chunks for single-shot.")
-
-    sampling_cfg = get_sampling_cfg(stage_cfg)
-
-    inference_calls, inference_index_map = build_single_shot_inference_calls(
-        dataset, system_msg, stage_cfg, sampling_cfg
+def _build_and_run_inference(
+    dataset: Dataset, system_msg: dict, stage_cfg: Any, builder_func: callable, step_name: str, config: YourbenchConfig
+) -> tuple[dict, list]:
+    """Common pattern: build calls, run inference, return responses + index map."""
+    sampling_cfg = (
+        get_sampling_cfg(stage_cfg) if hasattr(builder_func, "__name__") and "single" in builder_func.__name__ else {}
     )
-    if not inference_calls:
-        logger.warning("No valid inference calls for single-shot.")
+
+    calls, index_map = (
+        builder_func(dataset, system_msg, stage_cfg, sampling_cfg)
+        if sampling_cfg
+        else builder_func(dataset, system_msg, stage_cfg)
+    )
+
+    if not calls:
+        logger.warning(f"No valid inference calls for {step_name}")
+        return {}, []
+
+    responses = run_inference(config=config, step_name=step_name, inference_calls=calls)
+    return responses, index_map
+
+
+def _save_questions(rows: list[dict], config: YourbenchConfig, subset: str) -> None:
+    """Save question rows after deduplication."""
+    if not (clean_rows := _remove_duplicate_questions(rows)):
         return
 
-    responses = run_inference(config=config, step_name=SINGLE_SHOT_KEY, inference_calls=inference_calls)
-    final_rows = parse_single_shot_responses(responses, inference_index_map, stage_cfg)
+    logger.info(f"Saving {len(clean_rows)} {subset}")
+    custom_save_dataset(Dataset.from_list(clean_rows), config=config, subset=subset)
 
-    # Remove duplicate questions
-    final_rows = _remove_duplicate_questions(final_rows)
 
-    if final_rows:
-        logger.info(f"Saving {len(final_rows)} single-shot questions.")
-        hf_settings = get_hf_settings(config)
-        custom_save_dataset(
-            Dataset.from_list(final_rows),
-            config=config,
-            subset="single_shot_questions",
-            save_local=hf_settings.local_saving,
-            push_to_hub=True,
+def run_single_shot(config: YourbenchConfig) -> None:
+    """Generate single-hop questions from individual chunks."""
+    if not (stage_cfg := config.pipeline_config.single_shot_question_generation).run:
+        logger.info("single_shot_question_generation disabled")
+        return
+
+    mode = _validate_mode(getattr(stage_cfg, "question_mode", "open-ended"))
+    logger.info(f"Single-shot mode: {mode}")
+
+    system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode)}
+    dataset = custom_load_dataset(config=config, subset="chunked")
+
+    responses, index_map = _build_and_run_inference(
+        dataset, system_msg, stage_cfg, build_single_shot_inference_calls, "single_shot_question_generation", config
+    )
+
+    if rows := parse_single_shot_responses(responses, index_map, stage_cfg):
+        _save_questions(rows, config, "single_shot_questions")
+
+
+def run_multi_hop(config: YourbenchConfig) -> None:
+    """Generate multi-hop questions."""
+    stage_cfg = config.pipeline_config.multi_hop_question_generation
+    if not stage_cfg.run:
+        logger.info("Multi-hop question generation disabled")
+        return
+
+    mode = _validate_mode(getattr(stage_cfg, "question_mode", "open-ended"))
+    system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode, is_multi=True)}
+
+    chunked_ds = custom_load_dataset(config=config, subset="chunked")
+    logger.info(f"Loaded {len(chunked_ds)} documents for multi-hop")
+
+    # Process regular multi-hop
+    _process_questions(
+        chunked_ds, "multi_hop_questions", system_msg, stage_cfg, config, "multi_hop_question_generation"
+    )
+
+
+def run_cross_document(config: YourbenchConfig) -> None:
+    """Generate cross-document questions."""
+    stage_cfg = config.pipeline_config.cross_document_question_generation
+    if not stage_cfg.run:
+        logger.info("Cross-document question generation disabled")
+        return
+
+    mode = _validate_mode(getattr(stage_cfg, "question_mode", "open-ended"))
+    system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode, is_multi=True)}
+
+    chunked_ds = custom_load_dataset(config=config, subset="chunked")
+    logger.info(f"Loaded {len(chunked_ds)} documents for cross-document")
+
+    # Create cross-document configuration dict for compatibility
+    cross_cfg = {
+        "enable": True,
+        "max_combinations": stage_cfg.max_combinations,
+        "chunks_per_document": stage_cfg.chunks_per_document,
+        "num_docs_per_combination": stage_cfg.num_docs_per_combination,
+        "random_seed": stage_cfg.random_seed,
+    }
+
+    logger.info("Starting cross-document generation")
+    if cross_ds := create_cross_document_dataset(chunked_ds, cross_cfg):
+        logger.info(f"Generated {len(cross_ds)} cross-document combinations")
+        _process_questions(
+            cross_ds, "cross_document_questions", system_msg, stage_cfg, config, "cross_document_question_generation"
         )
 
 
-def run_multi_hop(config: dict[str, Any]) -> None:
-    """
-    Orchestrates both multi-hop and cross-document question generation pipelines,
-    if enabled in config
-    """
-    stage_cfg = config.get("pipeline", {}).get(MULTI_HOP_KEY, {})
-    cross_cfg = stage_cfg.get("cross_document", {})
-    run_multi = stage_cfg.get("run", False)
-    run_cross = cross_cfg.get("enable", False)
-
-    if not run_multi:
-        logger.info("Multi-hop question generation is disabled.")
+def _process_questions(
+    dataset: Dataset, label: str, system_msg: dict, stage_cfg: Any, config: YourbenchConfig, step_name: str
+) -> None:
+    """Process and save a set of questions."""
+    if not dataset or len(dataset) == 0:
+        logger.warning(f"No valid {label} dataset")
         return
 
-    question_mode = stage_cfg.get("question_mode", "open-ended")
-    if question_mode not in {"open-ended", "multi-choice"}:
-        logger.warning(f"Invalid question_mode '{question_mode}', defaulting to 'open-ended'")
-        question_mode = "open-ended"
-
-    system_prompt = (
-        MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT_MULTI
-        if question_mode == "multi-choice"
-        else MULTI_HOP_QUESTION_GENERATION_SYSTEM_PROMPT
+    responses, index_map = _build_and_run_inference(
+        dataset, system_msg, stage_cfg, build_multi_hop_inference_calls, step_name, config
     )
-    system_msg = {"role": "system", "content": system_prompt}
 
-    chunked_ds = custom_load_dataset(config=config, subset="chunked")
-    logger.info(f"Loaded {len(chunked_ds)} documents for multi-hop processing.")
-
-    def _run_and_save(dataset, label: str):
-        if not dataset or len(dataset) == 0:
-            logger.warning(f"No valid {label} dataset found. Skipping.")
-            return
-        inference_calls, inference_index_map = build_multi_hop_inference_calls(dataset, system_msg, stage_cfg)
-        if not inference_calls:
-            logger.warning(f"No valid inference calls for {label}.")
-            return
-        responses = run_inference(config=config, step_name=MULTI_HOP_KEY, inference_calls=inference_calls)
-        final_rows = parse_multi_hop_responses(responses, inference_index_map, stage_cfg)
-
-        # Remove duplicate questions
-        final_rows = _remove_duplicate_questions(final_rows)
-
-        if final_rows:
-            logger.info(f"Saving {len(final_rows)} {label} questions.")
-            hf_settings = get_hf_settings(config)
-            custom_save_dataset(
-                Dataset.from_list(final_rows),
-                config=config,
-                subset=label,
-                save_local=hf_settings.local_saving,
-                push_to_hub=True,
-            )
-        else:
-            logger.info(f"No valid {label} questions parsed.")
-
-    # Run standard multi-hop if enabled
-    _run_and_save(chunked_ds, "multi_hop_questions")
-
-    # Run cross-document if enabled
-    if run_cross:
-        logger.info("Starting cross-document question generation.")
-        cross_ds = create_cross_document_dataset(chunked_ds, cross_cfg)
-        logger.info(f"Generated {len(cross_ds)} cross-document combinations.")
-        _run_and_save(cross_ds, "cross_document_questions")
+    if rows := parse_multi_hop_responses(responses, index_map, stage_cfg):
+        _save_questions(rows, config, label)

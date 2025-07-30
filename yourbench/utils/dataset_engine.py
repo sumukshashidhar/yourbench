@@ -3,7 +3,9 @@ import math
 import random
 import shutil
 import tempfile
-from typing import Any, Set, List, TypeVar, Sequence
+
+# TYPE_CHECKING import to avoid circular imports
+from typing import TYPE_CHECKING, Any, Set, List, Union, TypeVar, Sequence
 from pathlib import Path
 from contextlib import suppress
 from dataclasses import dataclass
@@ -15,13 +17,11 @@ from huggingface_hub import HfApi, DatasetCard, DatasetCardData, whoami
 from huggingface_hub.utils import HFValidationError
 
 
-__all__ = [
-    "custom_load_dataset",
-    "custom_save_dataset",
-    "upload_dataset_card",
-    "get_hf_settings",
-    "replace_dataset_columns",
-]
+if TYPE_CHECKING:
+    from yourbench.utils.configuration_engine import YourbenchConfig
+
+
+__all__ = ["custom_load_dataset", "custom_save_dataset", "upload_dataset_card"]
 
 T = TypeVar("T")
 
@@ -38,7 +38,6 @@ class HFSettings:
     organization: str | None
     token: str | None
     local_dir: Path | None
-    local_saving: bool = True
     concat_if_exist: bool = False
     private: bool = True
 
@@ -65,38 +64,55 @@ def _expand_var(value: str, field: str) -> str:
     return value
 
 
-def get_hf_settings(config: dict[str, Any]) -> HFSettings:
-    """Public getter for HF settings used in other modules."""
-    return _extract_settings(config)
-
-
-def _extract_settings(config: dict[str, Any]) -> HFSettings:
+def _extract_settings(config: Union[dict[str, Any], "YourbenchConfig"]) -> HFSettings:
     """Parse and validate configuration."""
-    if "hf_configuration" not in config:
-        raise ConfigurationError("'hf_configuration' section missing")
+    # Handle both dict and YourbenchConfig
+    from yourbench.utils.configuration_engine import is_yourbench_config
 
-    hf = config["hf_configuration"]
-    if "hf_dataset_name" not in hf:
-        raise ConfigurationError("'hf_dataset_name' required")
+    if is_yourbench_config(config):
+        # YourbenchConfig dataclass
+        hf = config.hf_configuration
+        dataset_name = _expand_var(hf.hf_dataset_name, "hf_dataset_name")
+        org_raw = hf.hf_organization
+        token = hf.hf_token or os.getenv("HF_TOKEN")
+        organization = _resolve_organization(org_raw, token)
+        local_dir = hf.local_dataset_dir
+        if local_dir and not isinstance(local_dir, Path):
+            local_dir = Path(local_dir).expanduser().resolve()
+        return HFSettings(
+            dataset_name=dataset_name,
+            organization=organization,
+            token=token,
+            local_dir=local_dir,
+            concat_if_exist=hf.concat_if_exist,
+            private=hf.private,
+        )
+    else:
+        # Legacy dict format
+        if "hf_configuration" not in config:
+            raise ConfigurationError("'hf_configuration' section missing")
 
-    dataset_name = _expand_var(hf["hf_dataset_name"], "hf_dataset_name")
-    org_raw = hf.get("hf_organization")
-    token = hf.get("token") or os.getenv("HF_TOKEN")
+        hf = config["hf_configuration"]
+        if "hf_dataset_name" not in hf:
+            raise ConfigurationError("'hf_dataset_name' required")
 
-    organization = _resolve_organization(org_raw, token)
+        dataset_name = _expand_var(hf["hf_dataset_name"], "hf_dataset_name")
+        org_raw = hf.get("hf_organization")
+        token = hf.get("token") or os.getenv("HF_TOKEN")
 
-    local_raw = config.get("local_dataset_dir") or hf.get("local_dataset_dir")
-    local_dir = Path(local_raw).expanduser().resolve() if local_raw else None
+        organization = _resolve_organization(org_raw, token)
 
-    return HFSettings(
-        dataset_name=dataset_name,
-        organization=organization,
-        token=token,
-        local_dir=local_dir,
-        local_saving=hf.get("local_saving", False),
-        concat_if_exist=hf.get("concat_if_exist", False),
-        private=hf.get("private", True),
-    )
+        local_raw = config.get("local_dataset_dir") or hf.get("local_dataset_dir")
+        local_dir = Path(local_raw).expanduser().resolve() if local_raw else None
+
+        return HFSettings(
+            dataset_name=dataset_name,
+            organization=organization,
+            token=token,
+            local_dir=local_dir,
+            concat_if_exist=hf.get("concat_if_exist", False),
+            private=hf.get("private", True),
+        )
 
 
 def _resolve_organization(org: str | None, token: str | None) -> str | None:
@@ -143,21 +159,25 @@ def _validate_repo(settings: HFSettings) -> None:
 
 
 def _load_local(path: Path, subset: str | None) -> Dataset:
-    """Load dataset from local path with detailed inspection logs."""
+    """Load dataset from local path."""
     logger.info(f"Loading '{subset or 'default'}' from {path}")
     dataset = load_from_disk(str(path))
 
-    logger.debug(f"Loaded type: {type(dataset)}")
+    if subset is None:
+        return dataset
 
-    logger.debug(f"Directory contents: {list(path.iterdir())}")
-
-    if subset is None or not isinstance(dataset, DatasetDict):
+    if not isinstance(dataset, DatasetDict):
+        # If subset is requested but dataset is not a DatasetDict,
+        # return the dataset with a warning (assuming it's the one they want)
+        logger.warning(f"Subset '{subset}' requested but dataset is not a DatasetDict. Returning the dataset anyway.")
         return dataset
 
     if subset in dataset:
         return dataset[subset]
 
-    raise ConfigurationError(f"Subset '{subset}' not found in local dataset")
+    # Provide a helpful error message showing available subsets
+    available_subsets = list(dataset.keys())
+    raise ConfigurationError(f"Subset '{subset}' not found in local dataset. Available subsets: {available_subsets}")
 
 
 def _load_hub(repo_id: str, subset: str | None, token: str | None) -> Dataset:
@@ -177,17 +197,22 @@ def _load_hub(repo_id: str, subset: str | None, token: str | None) -> Dataset:
         raise
 
 
-def _merge_datasets(existing: Dataset | DatasetDict, new: Dataset, subset: str | None) -> Dataset | DatasetDict:
-    """Merge new dataset with existing. If subset exists, new data is concatenated."""
+def _merge_datasets(
+    existing: Dataset | DatasetDict, new: Dataset, subset: str | None, concat_if_exist: bool = False
+) -> Dataset | DatasetDict:
+    """Merge new dataset with existing. If subset exists and concat_if_exist is True, new data is concatenated."""
     if subset is None:
         if isinstance(existing, Dataset):
-            return concatenate_datasets([existing, new])
+            if concat_if_exist:
+                return concatenate_datasets([existing, new])
+            else:
+                return new
         return new
 
     if not isinstance(existing, DatasetDict):
         existing = DatasetDict({"default": existing})
 
-    if subset in existing:
+    if subset in existing and concat_if_exist:
         try:
             # Concatenate new data with the existing subset
             new = concatenate_datasets([existing[subset], new])
@@ -216,7 +241,7 @@ def _safe_save(dataset: Dataset | DatasetDict, path: Path) -> None:
         logger.success(f"Saved to {path} (via temp)")
 
 
-def custom_load_dataset(config: dict[str, Any], subset: str | None = None) -> Dataset:
+def custom_load_dataset(config: Union[dict[str, Any], "YourbenchConfig"], subset: str | None = None) -> Dataset:
     """Load dataset subset from local path or Hub. Raises errors if data missing or invalid."""
     settings = _extract_settings(config)
 
@@ -232,7 +257,7 @@ def custom_load_dataset(config: dict[str, Any], subset: str | None = None) -> Da
 
 def custom_save_dataset(
     dataset: Dataset,
-    config: dict[str, Any],
+    config: Union[dict[str, Any], "YourbenchConfig"],
     subset: str | None = None,
     *,
     save_local: bool = True,
@@ -246,13 +271,11 @@ def custom_save_dataset(
         push_to_hub = False
         logger.info("Offline mode - only saving locally")
 
-    # Check both local_saving flag and local_dir existence
-    if save_local and settings.local_saving and settings.local_dir:
+    if save_local and settings.local_dir:
         logger.info(f"Saving to {settings.local_dir}")
 
         existing = None
         if settings.local_dir.exists():
-            logger.info(f"Loading existing dataset at: {settings.local_dir}")
             try:
                 existing = load_from_disk(str(settings.local_dir))
             except (FileNotFoundError, PermissionError, OSError) as e:
@@ -261,24 +284,15 @@ def custom_save_dataset(
                 logger.error(f"Unexpected error loading existing dataset: {e}")
                 raise
 
-        if settings.concat_if_exist and existing:
-            new = concatenate_datasets([existing, dataset])
-        elif existing and subset:
-            # only add subset to existing dataframe
-            existing[subset] = dataset
-            new = existing
-        else:
-            new = DatasetDict({subset: dataset}) if subset else dataset
+        merged = (
+            _merge_datasets(existing, dataset, subset, settings.concat_if_exist)
+            if existing
+            else (DatasetDict({subset: dataset}) if subset else dataset)
+        )
 
-        # Ensure the local directory exists before saving
-        settings.local_dir.mkdir(parents=True, exist_ok=True)
-        _safe_save(new, settings.local_dir)
-    elif save_local and settings.local_saving and not settings.local_dir:
-        logger.warning("Local saving enabled but no local_dataset_dir specified in configuration")
-    elif save_local and not settings.local_saving:
-        logger.debug("Local saving skipped (local_saving=False in configuration)")
+        settings.local_dir.parent.mkdir(parents=True, exist_ok=True)
+        _safe_save(merged, settings.local_dir)
 
-    # TODO also update this part on how concat and merge is done
     if push_to_hub and not _is_offline():
         if settings.concat_if_exist:
             with suppress(Exception):
@@ -422,10 +436,34 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
         A new Dataset with cross-document combinations, preserving a similar schema but with an aggregated summary.
     """
     # Extract and validate configuration
-    max_combinations = int(stage_cfg.get("max_combinations", 100))
-    chunks_per_document = int(stage_cfg.get("chunks_per_document", 1))
-    num_docs_range = stage_cfg.get("num_docs_per_combination", [2, 5])
-    random_seed = int(stage_cfg.get("random_seed", 42))
+    max_combinations = int(
+        getattr(stage_cfg, "max_combinations", 100)
+        if hasattr(stage_cfg, "max_combinations")
+        else stage_cfg.get("max_combinations", 100)
+        if isinstance(stage_cfg, dict)
+        else 100
+    )
+    chunks_per_document = int(
+        getattr(stage_cfg, "chunks_per_document", 1)
+        if hasattr(stage_cfg, "chunks_per_document")
+        else stage_cfg.get("chunks_per_document", 1)
+        if isinstance(stage_cfg, dict)
+        else 1
+    )
+    num_docs_range = (
+        getattr(stage_cfg, "num_docs_per_combination", [2, 5])
+        if hasattr(stage_cfg, "num_docs_per_combination")
+        else stage_cfg.get("num_docs_per_combination", [2, 5])
+        if isinstance(stage_cfg, dict)
+        else [2, 5]
+    )
+    random_seed = int(
+        getattr(stage_cfg, "random_seed", 42)
+        if hasattr(stage_cfg, "random_seed")
+        else stage_cfg.get("random_seed", 42)
+        if isinstance(stage_cfg, dict)
+        else 42
+    )
 
     # Validate num_docs_range
     if not isinstance(num_docs_range, list) or len(num_docs_range) != 2:
@@ -690,7 +728,7 @@ def extract_dataset_info(repo_id: str, token: str | None = None) -> str:
         return ""
 
 
-def _serialize_config_for_card(config: dict[str, Any]) -> str:
+def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"]) -> str:
     """
     Sanitize and serialize pipeline config to YAML for inclusion in dataset card.
     """
@@ -705,6 +743,9 @@ def _serialize_config_for_card(config: dict[str, Any]) -> str:
             return {k: _sanitize(v, k) for k, v in obj.items()}
         if isinstance(obj, list):
             return [_sanitize(v) for v in obj]
+        if isinstance(obj, Path):
+            # Convert Path objects to strings
+            return str(obj)
         if isinstance(obj, str):
             # Keep placeholders
             if obj.startswith("$"):
@@ -724,11 +765,20 @@ def _serialize_config_for_card(config: dict[str, Any]) -> str:
             return obj
         return obj
 
-    sanitized = _sanitize(deepcopy(config))
+    # Convert YourbenchConfig to dict if needed
+    from yourbench.utils.configuration_engine import is_yourbench_config
+
+    if is_yourbench_config(config):
+        # Convert YourbenchConfig Pydantic model to dict format for serialization
+        config_dict = config.model_dump()
+    else:
+        config_dict = config
+
+    sanitized = _sanitize(deepcopy(config_dict))
     return yaml.safe_dump(sanitized, sort_keys=False, default_flow_style=False)
 
 
-def _get_pipeline_subset_info(config: dict[str, Any]) -> str:
+def _get_pipeline_subset_info(config: Union[dict[str, Any], "YourbenchConfig"]) -> str:
     """
     Generate a formatted markdown list of enabled pipeline stages with descriptions.
     The resulting markdown is used in the dataset card to document
@@ -753,16 +803,41 @@ def _get_pipeline_subset_info(config: dict[str, Any]) -> str:
         "lighteval": "Merge QA pairs and chunk metadata into a lighteval compatible dataset for quick model-based scoring",
         "citation_score_filtering": "Compute overlap-based citation scores and filter QA pairs accordingly",
     }
-    pipeline = config.get("pipeline", {})
-    lines = []
-    for stage, cfg in pipeline.items():
-        if isinstance(cfg, dict) and cfg.get("run"):
-            desc = mapping.get(stage, stage.replace("_", " ").title())
-            lines.append(f"- **{stage}**: {desc}")
+    # Handle both dict and YourbenchConfig
+    from yourbench.utils.configuration_engine import is_yourbench_config
+
+    if is_yourbench_config(config):
+        # YourbenchConfig dataclass
+        pipeline_config = config.pipeline_config
+        lines = []
+        for stage_name in [
+            "ingestion",
+            "summarization",
+            "chunking",
+            "single_shot_question_generation",
+            "multi_hop_question_generation",
+            "question_rewriting",
+            "lighteval",
+            "citation_score_filtering",
+        ]:
+            stage_config = getattr(pipeline_config, stage_name, None)
+            if stage_config and getattr(stage_config, "run", False):
+                desc = mapping.get(stage_name, stage_name.replace("_", " ").title())
+                lines.append(f"- **{stage_name}**: {desc}")
+    else:
+        # Legacy dict format
+        pipeline = config.get("pipeline", {})
+        lines = []
+        for stage, cfg in pipeline.items():
+            if isinstance(cfg, dict) and cfg.get("run"):
+                desc = mapping.get(stage, stage.replace("_", " ").title())
+                lines.append(f"- **{stage}**: {desc}")
     return "\n".join(lines)
 
 
-def _generate_and_upload_dataset_card(config: dict[str, Any], template_path: str | None = None) -> None:
+def _generate_and_upload_dataset_card(
+    config: Union[dict[str, Any], "YourbenchConfig"], template_path: str | None = None
+) -> None:
     """
     Internal implementation that generates and uploads a dataset card to Hugging Face Hub.
 
@@ -816,12 +891,23 @@ def _generate_and_upload_dataset_card(config: dict[str, Any], template_path: str
         logger.info(f"Extracted dataset_info section, length: {len(config_data) if config_data else 0} characters")
 
         # Use explicitly configured pretty_name or generate one from the dataset name
-        hf_config = config.get("hf_configuration", {})
-        if "pretty_name" in hf_config:
-            pretty_name = hf_config["pretty_name"]
+        from yourbench.utils.configuration_engine import is_yourbench_config
+
+        if is_yourbench_config(config):
+            # YourbenchConfig dataclass
+            hf_config = config.hf_configuration
+            pretty_name = getattr(hf_config, "pretty_name", None)
+            if not pretty_name:
+                dataset_name = dataset_repo_name.split("/")[-1]
+                pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
         else:
-            dataset_name = dataset_repo_name.split("/")[-1]
-            pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
+            # Legacy dict format
+            hf_config = config.get("hf_configuration", {})
+            if "pretty_name" in hf_config:
+                pretty_name = hf_config["pretty_name"]
+            else:
+                dataset_name = dataset_repo_name.split("/")[-1]
+                pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
 
         card_data_kwargs = {"pretty_name": pretty_name}
 
@@ -845,7 +931,9 @@ def _generate_and_upload_dataset_card(config: dict[str, Any], template_path: str
             "config_yaml": _serialize_config_for_card(config),
             "pipeline_subsets": _get_pipeline_subset_info(config),
             "config_data": config_data,  # Use the extracted dataset_info section
-            "footer": hf_config.get("footer", "*(This dataset card was automatically generated by YourBench)*"),
+            "footer": getattr(hf_config, "footer", "*(This dataset card was automatically generated by YourBench)*")
+            if is_yourbench_config(config)
+            else hf_config.get("footer", "*(This dataset card was automatically generated by YourBench)*"),
         }
 
         logger.info("Rendering dataset card from template")
@@ -868,7 +956,7 @@ def _generate_and_upload_dataset_card(config: dict[str, Any], template_path: str
         logger.exception("Full traceback:")
 
 
-def upload_dataset_card(config: dict[str, Any]) -> None:
+def upload_dataset_card(config: Union[dict[str, Any], "YourbenchConfig"]) -> None:
     """
     Public interface to generate and upload a dataset card to Hugging Face Hub.
 
@@ -882,8 +970,16 @@ def upload_dataset_card(config: dict[str, Any]) -> None:
     """
     try:
         # Check if card upload is enabled in config
-        hf_config = config.get("hf_configuration", {})
-        upload_card = hf_config.get("upload_card", True)
+        from yourbench.utils.configuration_engine import is_yourbench_config
+
+        if is_yourbench_config(config):
+            # YourbenchConfig dataclass
+            hf_config = config.hf_configuration
+            upload_card = getattr(hf_config, "upload_card", True)
+        else:
+            # Legacy dict format
+            hf_config = config.get("hf_configuration", {})
+            upload_card = hf_config.get("upload_card", True)
 
         if not upload_card:
             logger.info("Dataset card upload disabled in configuration. Skipping card upload.")

@@ -737,7 +737,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "0.33.4"
+version = "0.34.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -749,9 +749,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/9e/9366b7349fc125dd68b9d384a0fea84d67b7497753fe92c71b67e13f47c4/huggingface_hub-0.33.4.tar.gz", hash = "sha256:6af13478deae120e765bfd92adad0ae1aec1ad8c439b46f23058ad5956cbca0a", size = 426674, upload-time = "2025-07-11T12:32:48.694Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/b4/e6b465eca5386b52cf23cb6df8644ad318a6b0e12b4b96a7e0be09cbfbcc/huggingface_hub-0.34.3.tar.gz", hash = "sha256:d58130fd5aa7408480681475491c0abd7e835442082fbc3ef4d45b6c39f83853", size = 456800, upload-time = "2025-07-29T08:38:53.885Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/7b/98daa50a2db034cab6cd23a3de04fa2358cb691593d28e9130203eb7a805/huggingface_hub-0.33.4-py3-none-any.whl", hash = "sha256:09f9f4e7ca62547c70f8b82767eefadd2667f4e116acba2e3e62a5a81815a7bb", size = 515339, upload-time = "2025-07-11T12:32:46.346Z" },
+    { url = "https://files.pythonhosted.org/packages/59/a8/4677014e771ed1591a87b63a2392ce6923baf807193deef302dcfde17542/huggingface_hub-0.34.3-py3-none-any.whl", hash = "sha256:5444550099e2d86e68b2898b09e85878fbd788fc2957b506c6a79ce060e39492", size = 558847, upload-time = "2025-07-29T08:38:51.904Z" },
 ]
 
 [package.optional-dependencies]
@@ -2157,6 +2157,7 @@ dependencies = [
     { name = "loguru" },
     { name = "markitdown", extra = ["all"] },
     { name = "pillow" },
+    { name = "pydantic" },
     { name = "pymupdf" },
     { name = "python-dotenv" },
     { name = "randomname" },
@@ -2188,11 +2189,12 @@ requires-dist = [
     { name = "gradio", specifier = ">=5.35.0" },
     { name = "gradio", marker = "extra == 'gui'" },
     { name = "hf-transfer", specifier = ">=0.1.9" },
-    { name = "huggingface-hub", extras = ["inference", "hf-xet"], specifier = ">=0.33.4" },
+    { name = "huggingface-hub", extras = ["inference", "hf-xet"], specifier = ">=0.34.3" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "markitdown", extras = ["all"], specifier = ">=0.0.2" },
     { name = "pillow", specifier = ">=11.2.1" },
+    { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pymupdf", specifier = ">=1.26.1" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "randomname", specifier = ">=0.2.1" },

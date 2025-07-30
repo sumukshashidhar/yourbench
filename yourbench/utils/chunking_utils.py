@@ -46,9 +46,18 @@ def split_into_token_chunks(
     return [enc.decode(tokens[i : i + chunk_tokens]) for i in range(0, len(tokens), stride)]
 
 
-def get_sampling_cfg(cfg: dict[str, Any]) -> ChunkSamplingConfig:
+def get_sampling_cfg(cfg: Any) -> ChunkSamplingConfig:
     """Extract and return the chunk sampling config as a ChunkSamplingConfig dataclass"""
-    return ChunkSamplingConfig(**cfg.get("chunk_sampling", {}))
+    if hasattr(cfg, "chunk_sampling"):
+        chunk_sampling = cfg.chunk_sampling
+        if isinstance(chunk_sampling, dict):
+            return ChunkSamplingConfig(**chunk_sampling)
+        else:
+            return ChunkSamplingConfig()
+    elif isinstance(cfg, dict):
+        return ChunkSamplingConfig(**cfg.get("chunk_sampling", {}))
+    else:
+        return ChunkSamplingConfig()
 
 
 def safe_sample(lst: list[Any], k: int) -> list[Any]:
