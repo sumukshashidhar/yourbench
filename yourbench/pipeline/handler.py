@@ -26,6 +26,12 @@ STAGE_OVERRIDES = {
 def get_stage_function(stage: str):
     if func := STAGE_OVERRIDES.get(stage):
         return func
+    
+    # Support older configs
+    # TODO add warning here
+    if stage == "lighteval":
+        logger.warning(f"Found depricated name for {stage}. Please, update your config to use 'prepare_lighteval'")
+        stage = "prepare_lighteval"
     module = importlib.import_module(f"yourbench.pipeline.{stage}")
     return module.run
 
