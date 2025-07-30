@@ -44,10 +44,11 @@ from typing import Any, Dict, List
 from loguru import logger
 
 from datasets import Dataset
-from yourbench.utils.dataset_engine import get_hf_settings, custom_load_dataset, custom_save_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.configuration_engine import YourbenchConfig
 
 
-def run(config: Dict[str, Any]) -> None:
+def run(config: YourbenchConfig) -> None:
     """
     Main entry point for the lighteval pipeline stage.
 
@@ -66,34 +67,25 @@ def run(config: Dict[str, Any]) -> None:
       10. chunks
       11. document
 
-    The result is saved under the subset name specified in config["pipeline"]["lighteval"]["output_subset"].
+    The result is saved under the subset name specified in config.pipeline_config.lighteval.
 
     Args:
-        config (Dict[str, Any]):
-            The entire pipeline configuration. Must have the following fields:
-            - config["pipeline"]["lighteval"]["run"] (bool): Whether to run this stage.
-            - config["pipeline"]["lighteval"]["single_shot_subset"] (str): Subset containing single-shot questions.
-            - config["pipeline"]["lighteval"]["multi_hop_subset"]   (str): Subset containing multi-hop questions.
-            - config["pipeline"]["lighteval"]["chunked_subset"]     (str): Subset containing chunked documents.
-            - config["pipeline"]["lighteval"]["output_subset"]      (str): Subset name for saving final dataset.
+        config (YourbenchConfig): The entire pipeline configuration.
 
     Returns:
         None. The merged dataset is saved to disk or HF Hub as configured.
     """
-    stage_cfg = config.get("pipeline", {}).get("lighteval", {})
-    if not stage_cfg.get("run", False):
-        logger.info("lighteval stage is disabled. Skipping.")
-        return
+    stage_cfg = config.pipeline_config.prepare_lighteval
 
     logger.info("Saving lighteval compatible dataset")
 
     # Use configurable subset names with fallbacks
-    single_shot_subset = stage_cfg.get("single_shot_subset", "single_shot_questions")
-    multi_hop_subset = stage_cfg.get("multi_hop_subset", "multi_hop_questions")
-    cross_doc_subset = stage_cfg.get("cross_doc_subset", "cross_document_questions")
-    chunked_subset = stage_cfg.get("chunked_subset", "chunked")
-    summarized_subset = stage_cfg.get("summarized_subset", "summarized")
-    output_subset = stage_cfg.get("output_subset", "lighteval")
+    single_shot_subset = getattr(stage_cfg, "single_shot_subset", "single_shot_questions")
+    multi_hop_subset = getattr(stage_cfg, "multi_hop_subset", "multi_hop_questions")
+    cross_doc_subset = getattr(stage_cfg, "cross_doc_subset", "cross_document_questions")
+    chunked_subset = getattr(stage_cfg, "chunked_subset", "chunked")
+    summarized_subset = getattr(stage_cfg, "summarized_subset", "summarized")
+    output_subset = getattr(stage_cfg, "output_subset", "prepared_lighteval")
 
     # Load datasets
     try:
@@ -133,7 +125,26 @@ def run(config: Dict[str, Any]) -> None:
         summarized_ds = Dataset.from_dict({})
 
     if len(single_shot_ds) == 0 and len(multi_hop_ds) == 0 and len(cross_doc_ds) == 0:
-        logger.error("No data in single-shot, multi-hop, or cross-document datasets. Exiting.")
+        logger.warning(
+            "No data in single-shot, multi-hop, or cross-document datasets. Creating empty prepared_lighteval subset."
+        )
+        # Create empty dataset with the expected schema
+        empty_dataset = Dataset.from_dict({
+            "task_id": [],
+            "question": [],
+            "answer": [],
+            "choices": [],
+            "gold": [],
+            "question_type": [],
+            "document_id": [],
+            "document_text": [],
+            "document_summary": [],
+            "chunk_id": [],
+            "chunk_text": [],
+            "related_chunks": [],
+            "type": [],
+        })
+        custom_save_dataset(empty_dataset, config=config, subset="prepared_lighteval")
         return
 
     # Prepare lookups from chunked dataset
@@ -166,12 +177,12 @@ def run(config: Dict[str, Any]) -> None:
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg_local = config.get("pipeline", {}).get("single_shot_question_generation", {})
+        stage_cfg_local = config.pipeline_config.single_shot_question_generation
         gold = (
             [ord(gold) - ord("A")]
-            if stage_cfg_local.get("question_mode") == "multi-choice" and gold
+            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
             else [0]
-            if stage_cfg_local.get("question_mode") == "multi-choice"
+            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice"
             else [gold]
         )
 
@@ -211,12 +222,12 @@ def run(config: Dict[str, Any]) -> None:
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg_local = config.get("pipeline", {}).get("multi_hop_question_generation", {})
+        stage_cfg_local = config.pipeline_config.multi_hop_question_generation
         gold = (
             [ord(gold) - ord("A")]
-            if stage_cfg_local.get("question_mode") == "multi-choice" and gold
+            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
             else [0]
-            if stage_cfg_local.get("question_mode") == "multi-choice"
+            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice"
             else [gold]
         )
 
@@ -250,12 +261,12 @@ def run(config: Dict[str, Any]) -> None:
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg_local = config.get("pipeline", {}).get("multi_hop_question_generation", {})
+        stage_cfg_local = config.pipeline_config.cross_document_question_generation
         gold = (
             [ord(gold) - ord("A")]
-            if stage_cfg_local.get("question_mode") == "multi-choice" and gold
+            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
             else [0]
-            if stage_cfg_local.get("question_mode") == "multi-choice"
+            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice"
             else [gold]
         )
 
@@ -297,12 +308,5 @@ def run(config: Dict[str, Any]) -> None:
         return
 
     # Save dataset
-    hf_settings = get_hf_settings(config)
-    custom_save_dataset(
-        dataset=final_ds,
-        config=config,
-        subset=output_subset,
-        save_local=hf_settings.local_saving,
-        push_to_hub=True,
-    )
-    logger.success("Lighteval dataset saved successfully.")
+    custom_save_dataset(dataset=final_ds, config=config, subset=output_subset)
+    logger.success("Prepared Lighteval dataset saved successfully.")

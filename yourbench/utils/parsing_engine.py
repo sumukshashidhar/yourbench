@@ -239,7 +239,17 @@ def normalize_multi_choice(pair: dict[str, Any]) -> Optional[dict[str, Any]]:
 
 def parse_single_shot_responses(responses, index_map, stage_cfg):
     rows = []
-    question_mode = str(stage_cfg.get("question_mode", "open-ended")).strip().lower()
+    question_mode = (
+        str(
+            getattr(stage_cfg, "question_mode", "open-ended")
+            if hasattr(stage_cfg, "question_mode")
+            else stage_cfg.get("question_mode", "open-ended")
+            if isinstance(stage_cfg, dict)
+            else "open-ended"
+        )
+        .strip()
+        .lower()
+    )
 
     for model, replies in responses.items():
         if len(replies) != len(index_map):
@@ -278,7 +288,11 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
                             chunk_id=index_map[i][2],
                             source_chunk_ids=None,
                             document_id=index_map[i][1],
-                            additional_instructions=stage_cfg.get("additional_instructions", ""),
+                            additional_instructions=getattr(stage_cfg, "additional_instructions", "")
+                            if hasattr(stage_cfg, "additional_instructions")
+                            else stage_cfg.get("additional_instructions", "")
+                            if isinstance(stage_cfg, dict)
+                            else "",
                             question=str(pair.get("question", "")).strip(),
                             self_answer=str(pair.get("answer", "")).strip(),
                             choices=choices,
@@ -300,7 +314,17 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
 
 def parse_multi_hop_responses(responses, index_map, stage_cfg):
     rows = []
-    question_mode = str(stage_cfg.get("question_mode", "open-ended")).strip().lower()
+    question_mode = (
+        str(
+            getattr(stage_cfg, "question_mode", "open-ended")
+            if hasattr(stage_cfg, "question_mode")
+            else stage_cfg.get("question_mode", "open-ended")
+            if isinstance(stage_cfg, dict)
+            else "open-ended"
+        )
+        .strip()
+        .lower()
+    )
 
     for model, replies in responses.items():
         for i, raw in enumerate(replies):
@@ -331,7 +355,11 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
                             chunk_id=None,
                             source_chunk_ids=index_map[i][2],
                             document_id=index_map[i][1],
-                            additional_instructions=stage_cfg.get("additional_instructions", ""),
+                            additional_instructions=getattr(stage_cfg, "additional_instructions", "")
+                            if hasattr(stage_cfg, "additional_instructions")
+                            else stage_cfg.get("additional_instructions", "")
+                            if isinstance(stage_cfg, dict)
+                            else "",
                             question=str(pair.get("question", "")).strip(),
                             self_answer=str(pair.get("answer", "")).strip(),
                             choices=choices,

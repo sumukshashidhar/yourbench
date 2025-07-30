@@ -1,29 +1,31 @@
 """Compute overlap based citation scores for the lighteval dataset."""
 
-from typing import Any, Sequence
+from typing import Sequence
 from dataclasses import dataclass
 
 from loguru import logger
 from thefuzz import fuzz
 
-from yourbench.utils.dataset_engine import (
-    get_hf_settings,
-    custom_load_dataset,
-    custom_save_dataset,
-    replace_dataset_columns,
-)
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, replace_dataset_columns
+from yourbench.utils.configuration_engine import YourbenchConfig
 
 
 @dataclass(slots=True)
 class StageConfig:
     run: bool = False
-    subset: str = "lighteval"
+    subset: str = "prepared_lighteval"
     alpha: float = 0.7
     beta: float = 0.3
 
 
-def _get_stage_config(config: dict[str, Any]) -> StageConfig:
-    return StageConfig(**config.get("pipeline", {}).get("citation_score_filtering", {}))
+def _get_stage_config(config: YourbenchConfig) -> StageConfig:
+    stage_cfg = config.pipeline_config.citation_score_filtering
+    return StageConfig(
+        run=stage_cfg.run,
+        subset=getattr(stage_cfg, "subset", "prepared_lighteval"),
+        alpha=getattr(stage_cfg, "alpha", 0.7),
+        beta=getattr(stage_cfg, "beta", 0.3),
+    )
 
 
 @dataclass(slots=True)
@@ -49,7 +51,7 @@ class CitationScoreCalculator:
         return avg_ans, avg_chunk, final
 
 
-def run(config: dict[str, Any]) -> None:
+def run(config: YourbenchConfig) -> None:
     """Entry point for the citation score filtering stage."""
     stage_cfg = _get_stage_config(config)
     if not stage_cfg.run:
@@ -94,14 +96,6 @@ def run(config: dict[str, Any]) -> None:
 
     lighteval_ds = replace_dataset_columns(lighteval_ds, columns_data)
 
-    # Save dataset
     logger.info("Saving updated dataset with new citation score columns...")
-    hf_settings = get_hf_settings(config)
-    custom_save_dataset(
-        dataset=lighteval_ds,
-        config=config,
-        subset=stage_cfg.subset,
-        save_local=hf_settings.local_saving,
-        push_to_hub=True,
-    )
+    custom_save_dataset(dataset=lighteval_ds, config=config, subset=stage_cfg.subset)
     logger.success("citation_score_filtering stage completed successfully.")

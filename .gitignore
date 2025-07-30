@@ -8,6 +8,8 @@ plots/
 files/
 .gradio/
 example/data/processed/
+data/saved_dataset/
+data/processed/
 # C extensions
 *.so
 

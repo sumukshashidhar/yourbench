@@ -25,9 +25,8 @@
 
 ---
 
-> **YourBench** is an open-source framework for generating domain-specific benchmarks in a zero-shot manner. It aims to keep your large language models on their toes – even as new data sources, domains, and knowledge demands evolve.
+Yourbench is a structured data generation library for building better AI systems. Generate high-quality QA pairs, training data, and evaluation datasets from any source documents with full control over the output format and complexity. The modular architecture lets you configure every aspect of the generation pipeline, from document parsing (with built-in converters for common formats to markdown) to chunking strategies to output schemas. Most eval frameworks force you into their structure; Yourbench adapts to yours. Use it to create domain-specific benchmarks, fine-tuning datasets, or systematic model evaluations. Peer-reviewed and appearing at COLM 2025.
 
-YourBench tackles a critical evaluation gap for LLMs. Traditional static benchmarks are quickly **saturated** or contaminated by training data, making it hard to assess models on new knowledge. Domain-specific or up-to-date evaluation is often costly and slow with human annotation. **YourBench addresses this by enabling dynamic, automated generation of reliable, domain-tailored benchmarks directly from your data, without manual labeling**. In a recent study, YourBench replicated several subsets of a popular benchmark (MMLU) using minimal source text for **under \$15** in total cost, while preserving the original ranking of model performance (Spearman ρ = 1). By grounding questions in user-provided documents, YourBench ensures evaluations stay relevant and **truly test a model’s knowledge on content it hasn’t seen before**.
 
 ## Installation
 
@@ -37,13 +36,15 @@ YourBench is available on PyPI and requires **Python 3.12+**. You can install it
 
   ```bash
   # uv (recommended; get it here: https://docs.astral.sh/uv/getting-started/installation/)
+  uv venv --python 3.12
+  source .venv/bin/activate
   uv pip install yourbench
 
   # pip (standard support)
   pip install yourbench
   ```
 
-  This will install the latest published version (e.g. `0.3.1`).
+  This will install the latest published version (e.g. `0.4.0`).
 
 * **Install from source (development version):**
 
@@ -52,13 +53,11 @@ YourBench is available on PyPI and requires **Python 3.12+**. You can install it
   cd yourbench
   
   # uv, recommended
-  uv venv
+  uv venv --python 3.12
   source .venv/bin/activate
   uv pip install -e .
 
   # pip
-  python -m venv .venv
-  source .venv/bin/activate
   pip install -e .
   ```
 
@@ -121,17 +120,7 @@ You can **try YourBench right away in your browser** – no installation needed:
 
 ## Contributing
 
-Contributions are welcome! If you’d like to improve YourBench or add new features, please follow these steps:
-
-1. **Fork** the repository (on GitHub).
-2. **Clone** the forked repository
-3. **Create a branch** on your fork for your feature (`git checkout -b feature/amazing-feature`).
-4. **Installation** (e.g. `pip install -e .` or use `uv` if available) and set up the project for development. (see [Installation](#installation))
-5. **Make your changes**, adding new tests if applicable.
-6. **Run tests** (`pytest`) and ensure code style compliance with `make style` and `make quality` (we use [Ruff](https://github.com/charliermarsh/ruff) for linting).
-7. **Commit** your changes (`git commit -m 'Add amazing feature'`).
-8. **Push** to your branch (`git push origin your-amazing-feature`).
-9. Open a **Pull Request** on the main repository.
+Contributions are welcome!
 
 We actively review PRs and welcome improvements or fixes from the community. For major changes, feel free to open an issue first to discuss the idea.
 
@@ -158,11 +147,19 @@ We actively review PRs and welcome improvements or fixes from the community. For
 </a>
 </div>
 
-## License
+## 📈 Progress
+
+<div align="center">
+  <a href="https://star-history.com/#huggingface/yourbench&Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=huggingface/yourbench&type=Date">
+  </a>
+</div>
+
+## 📜  License
 
 This project is licensed under the Apache 2.0 License – see the [LICENSE](LICENSE) file for details. You are free to use, modify, and distribute YourBench in either commercial or academic projects under the terms of this license.
 
-## Citation
+## 📚 Citation
 
 If you use **YourBench** in your research or applications, please consider citing our paper:
 

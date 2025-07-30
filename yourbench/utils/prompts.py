@@ -594,7 +594,7 @@ Changed passive voice to active voice and replaced technical jargon with clearer
 [Your rewritten question here]
 </rewritten_question>"""
 
-QUESTION_question_rewriting_USER_PROMPT = """Please rewrite the following question while preserving its exact meaning and answerability.
+QUESTION_REWRITING_USER_PROMPT = """Please rewrite the following question while preserving its exact meaning and answerability.
 
 <original_question>
 {original_question}
