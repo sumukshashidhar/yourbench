@@ -9,15 +9,11 @@ model_list:
     base_url: https://openrouter.ai/api/v1
     api_key: $OPENROUTER_API_KEY
 
-  - model_name: o4-mini
-    base_url: https://api.openai.com/v1
-    api_key: $OPENAI_API_KEY
-
 pipeline:
   ingestion:
     llm_ingestion: true
     source_documents_dir: example/rich_pdf_extraction_with_gemini/data
-    output_dir: data/processed/rich_pdf_extraction_with_gemini
+    output_dir: example/rich_pdf_extraction_with_gemini/processed
   summarization:
   chunking:
   single_shot_question_generation:
