@@ -26,7 +26,7 @@ STAGE_OVERRIDES = {
 def get_stage_function(stage: str):
     if func := STAGE_OVERRIDES.get(stage):
         return func
-    
+
     # Support older configs
     # TODO add warning here
     if stage == "lighteval":
