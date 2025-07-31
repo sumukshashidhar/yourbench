@@ -3,9 +3,14 @@
 
 from __future__ import annotations
 import sys
+import time
 from typing import Optional
 from pathlib import Path
 from dataclasses import field, dataclass
+
+# Early startup logging
+print("🚀 YourBench starting up...", flush=True)
+startup_time = time.perf_counter()
 
 import yaml
 import typer
@@ -15,11 +20,37 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
 from rich.console import Console
 
-from yourbench.app import launch_ui
-from yourbench.analysis import run_analysis
-from yourbench.pipeline.handler import run_pipeline
+print("⏳ Loading core modules...", flush=True)
 
+# Lazy imports - only import when needed
+launch_ui = None
+run_analysis = None 
+run_pipeline = None
 
+def _lazy_import_ui():
+    global launch_ui
+    if launch_ui is None:
+        print("⏳ Loading Gradio UI components...", flush=True)
+        from yourbench.app import launch_ui as _launch_ui
+        launch_ui = _launch_ui
+    return launch_ui
+
+def _lazy_import_analysis():
+    global run_analysis
+    if run_analysis is None:
+        from yourbench.analysis import run_analysis as _run_analysis
+        run_analysis = _run_analysis
+    return run_analysis
+
+def _lazy_import_pipeline():
+    global run_pipeline
+    if run_pipeline is None:
+        print("⏳ Loading pipeline components...", flush=True)
+        from yourbench.pipeline.handler import run_pipeline as _run_pipeline
+        run_pipeline = _run_pipeline
+    return run_pipeline
+
+print("⏳ Loading environment variables...", flush=True)
 load_dotenv()
 
 # Configuration constants
@@ -38,6 +69,9 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 console = Console()
+
+# Log startup completion
+print(f"✅ YourBench loaded in {time.perf_counter() - startup_time:.2f}s", flush=True)
 
 
 @dataclass
@@ -474,9 +508,8 @@ def run(
 ) -> None:
     """Run the YourBench pipeline with a configuration file or launch the Gradio UI."""
     if gradio:
-        from yourbench.app import launch_ui
-
-        launch_ui()
+        ui_func = _lazy_import_ui()
+        ui_func()
         return
 
     # Handle both new positional and legacy --config
@@ -502,7 +535,8 @@ def run(
     logger.info(f"Running pipeline with config: {final_config}")
 
     try:
-        run_pipeline(
+        pipeline_func = _lazy_import_pipeline()
+        pipeline_func(
             config_file_path=str(final_config),
             debug=debug,
             plot_stage_timing=plot_stage_timing,
@@ -635,7 +669,8 @@ def analyze(
     logger.info(f"Running analysis '{analysis_name}' with arguments: {args}")
 
     try:
-        run_analysis(analysis_name, args, debug=debug)
+        analysis_func = _lazy_import_analysis()
+        analysis_func(analysis_name, args, debug=debug)
     except Exception as e:
         logger.exception(f"Analysis '{analysis_name}' failed: {e}")
         raise typer.Exit(1)
@@ -644,7 +679,8 @@ def analyze(
 @app.command()
 def gui() -> None:
     """Launch the Gradio UI."""
-    launch_ui()
+    ui_func = _lazy_import_ui()
+    ui_func()
 
 
 @app.command()
