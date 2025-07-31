@@ -1,579 +1,457 @@
-# YourBench Configuration Documentation
+# YourBench Configuration Guide
 
-## Configuration File Overview
+YourBench uses a flexible YAML-based configuration system built on Pydantic models. This guide covers all configuration options and usage patterns.
 
-The YourBench configuration file is written in YAML and consists of several key sections, each controlling a distinct part of the tool's functionality:
+## Table of Contents
 
-- **`settings`**: Global settings that apply across the entire application.
-- **`hf_configuration`**: Settings for integration with the Hugging Face Hub.
-- **`local_dataset_dir`**: Optional path for local dataset storage instead of Hugging Face Hub.
-- **`model_list`**: Definitions of the models available for use in YourBench.
-- **`model_roles`**: Assignments of models to specific pipeline stages.
-- **`pipeline`**: Configuration for the stages of the YourBench pipeline.
+- [Overview](#overview)
+- [Configuration Structure](#configuration-structure)
+- [Core Components](#core-components)
+  - [Hugging Face Configuration](#hugging-face-configuration)
+  - [Model Configuration](#model-configuration)
+  - [Pipeline Configuration](#pipeline-configuration)
+- [Pipeline Stages](#pipeline-stages)
+  - [Ingestion](#ingestion)
+  - [Summarization](#summarization)
+  - [Chunking](#chunking)
+  - [Question Generation](#question-generation)
+  - [Question Rewriting](#question-rewriting)
+  - [LightEval](#lighteval)
+  - [Citation Score Filtering](#citation-score-filtering)
+- [Advanced Features](#advanced-features)
+  - [Environment Variables](#environment-variables)
+  - [Custom Prompts](#custom-prompts)
+  - [Model Role Assignment](#model-role-assignment)
+- [Configuration Examples](#configuration-examples)
+- [API Reference](#api-reference)
 
-Below, each section is detailed with descriptions, YAML syntax, and examples to help you configure YourBench effectively.
+## Overview
 
----
+YourBench configuration is structured around three main components:
 
-## Global Settings
+1. **Hugging Face Configuration** - Settings for dataset management and uploads
+2. **Model Configuration** - LLM provider settings and API credentials
+3. **Pipeline Configuration** - Stage-specific settings for the processing pipeline
 
-The `settings` section defines global options that influence the overall behavior of YourBench.
+## Configuration Structure
 
-### YAML Syntax
-```yaml
-settings:
-  debug: false  # Enable debug mode with metrics collection
-```
+A typical YourBench configuration file follows this structure:
 
-### Options
-- **`debug`**  
-  - **Type**: Boolean  
-  - **Default**: `false`  
-  - **Description**: When set to `true`, enables debug mode, which collects additional metrics during execution for troubleshooting or analysis. In debug mode, perplexity and readability metrics are calculated for chunks, and similarity plots may be generated.
-
-### Example
-To enable debug mode:
-```yaml
-settings:
-  debug: true
-```
-
----
-
-## Hugging Face Settings
-
-The `hf_configuration` section manages integration with the Hugging Face Hub, including authentication and dataset handling.
-
-### YAML Syntax
 ```yaml
 hf_configuration:
-  token: $HF_TOKEN  # Hugging Face API token
-  hf_organization: $HF_ORGANIZATION  # Optional: Organization name
-  private: false  # Dataset visibility
-  hf_dataset_name: yourbench_example  # Dataset name for traces and questions
-  concat_if_exist: false  # Whether to concatenate with existing dataset
+  # Hugging Face dataset settings
+
+model_list:
+  # List of model configurations
+
+model_roles:
+  # Optional: Assign specific models to pipeline stages
+
+pipeline:
+  # Pipeline stage configurations
 ```
 
-### Options
-- **`token`**  
-  - **Type**: String  
-  - **Required**: Yes  
-  - **Description**: Your Hugging Face API token, obtainable from [Hugging Face's documentation](https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication). Use an environment variable (e.g., `$HF_TOKEN`) for security.
+## Core Components
 
-- **`hf_organization`**  
-  - **Type**: String  
-  - **Optional**: Yes  
-  - **Default**: Your Hugging Face username  
-  - **Description**: Specifies the organization under which datasets are created. If omitted, defaults to your username.
+### Hugging Face Configuration
 
-- **`private`**  
-  - **Type**: Boolean  
-  - **Default**: `true`  
-  - **Description**: Controls dataset visibility on the Hugging Face Hub. Set to `false` for public datasets, `true` for private ones.
+Controls dataset naming, organization, and upload behavior.
 
-- **`hf_dataset_name`**  
-  - **Type**: String  
-  - **Required**: Yes  
-  - **Description**: The name of the dataset on the Hugging Face Hub where traces and generated questions are stored.
-
-- **`concat_if_exist`**  
-  - **Type**: Boolean  
-  - **Default**: `false`  
-  - **Description**: If set to `true`, new data will be concatenated to an existing dataset with the same name. If `false`, the existing dataset will be overwritten.
-
-### Example
-For a public dataset under a specific organization:
 ```yaml
 hf_configuration:
-  token: $HF_TOKEN
-  hf_organization: my_org
-  private: false
-  hf_dataset_name: yourbench_data
-  concat_if_exist: false
+  hf_dataset_name: my-dataset-name  # Default: random name
+  hf_organization: $HF_ORGANIZATION  # Environment variable
+  hf_token: $HF_TOKEN               # Environment variable
+  private: false                    # Dataset visibility
+  concat_if_exist: false           # Append to existing dataset
+  local_dataset_dir: data/saved_dataset  # Local save path
+  local_saving: true               # Save locally
+  upload_card: true                # Upload dataset card
 ```
 
----
+**Key Features:**
+- Environment variable expansion with `$VARNAME` syntax
+- Automatic HF organization detection from token if `$HF_ORGANIZATION` is not set
+- Random dataset names generated if not specified
 
-## Local Dataset Directory
+### Model Configuration
 
-As an alternative to storing datasets on the Hugging Face Hub, you can specify a local directory for dataset storage.
+Defines LLM providers and connection settings.
 
-### YAML Syntax
-```yaml
-local_dataset_dir: /path/to/local/dataset
-```
-
-### Options
-- **`local_dataset_dir`**  
-  - **Type**: String  
-  - **Optional**: Yes  
-  - **Description**: Path to a local directory where datasets will be stored. If specified, this overrides the Hugging Face Hub storage.
-
-### Example
-```yaml
-local_dataset_dir: /home/user/yourbench_datasets
-```
-
----
-
-## Model Settings
-
-The `model_list` section defines the models YourBench can utilize, supporting various providers and inference backends.
-
-### YAML Syntax
 ```yaml
 model_list:
-  # Hugging Face model
-  - model_name: Qwen/Qwen2.5-VL-72B-Instruct
-    provider: hf-inference  # Optional: e.g., hf-inference, novita, together
-    api_key: $HF_TOKEN
+  - model_name: gpt-4o
+    base_url: https://api.openai.com/v1/
+    api_key: $OPENAI_API_KEY
     max_concurrent_requests: 32
-    base_url: null  # Optional: custom API endpoint
-
-  # OpenAI model
-  - model_name: gpt-4o
-    provider: null  # Set to null for OpenAI API
-    base_url: "https://api.openai.com/v1"  # Default OpenAI API URL
-    api_key: $OPENAI_API_KEY
-    max_concurrent_requests: 10
-
-  # OpenAI-compatible model (e.g., local server, Azure, Anthropic)
-  - model_name: claude-3-opus-20240229
-    provider: null
-    base_url: "https://api.anthropic.com/v1"  # Replace with your API endpoint
-    api_key: $ANTHROPIC_API_KEY
-    max_concurrent_requests: 5
+    encoding_name: cl100k_base
+    provider: auto  # Automatically set if not specified
+    bill_to: optional-billing-id
 ```
 
-### Options
-For each model in the list, you can specify:
+**Supported Fields:**
+- `model_name`: Model identifier (required)
+- `base_url`: API endpoint (optional)
+- `api_key`: Authentication token (supports env vars)
+- `max_concurrent_requests`: Rate limiting (1-100)
+- `encoding_name`: Tokenizer encoding
+- `provider`: Provider type (auto-detected if not set)
 
-- **`model_name`**  
-  - **Type**: String  
-  - **Required**: Yes  
-  - **Description**: The identifier or name of the model (e.g., `gpt-4o`, `Qwen/Qwen2.5-VL-72B-Instruct`).
+### Pipeline Configuration
 
-- **`provider`**  
-  - **Type**: String  
-  - **Optional**: Yes  
-  - **Default**: `null`  
-  - **Description**: For Hugging Face models, specifies the inference provider (e.g., `hf-inference`, `novita`, `together`). Set to `null` for OpenAI API or OpenAI-compatible endpoints.
+Controls which stages run and their parameters.
 
-- **`api_key`**  
-  - **Type**: String  
-  - **Required**: Yes (for most models)  
-  - **Description**: The API key for accessing the model, typically stored as an environment variable.
-
-- **`base_url`**  
-  - **Type**: String  
-  - **Optional**: Yes  
-  - **Description**: The base URL for the API endpoint. Use this to specify custom endpoints for OpenAI-compatible APIs or local inference servers.
-
-- **`max_concurrent_requests`**  
-  - **Type**: Integer  
-  - **Optional**: Yes  
-  - **Default**: `16`  
-  - **Description**: Limits the number of concurrent requests to the model.
-
-### Example
-Configuring a mix of remote and local models:
 ```yaml
-model_list:
-  - model_name: gpt-4o
-    provider: null
-    base_url: "https://api.openai.com/v1"
-    api_key: $OPENAI_API_KEY
-    max_concurrent_requests: 10
+pipeline:
+  ingestion:
+    run: true  # Automatically set when stage is present
+    # ... stage-specific config
   
-  - model_name: local-llama-3
-    provider: null
-    base_url: "http://localhost:8000/v1"
-    api_key: null
-    max_concurrent_requests: 1
-```
-
----
-
-## Model Roles
-
-The `model_roles` section assigns models from `model_list` to specific stages of the YourBench pipeline. Each stage can use one or multiple models.
-
-### YAML Syntax
-```yaml
-model_roles:
-  ingestion:
-    - Qwen/Qwen2.5-VL-72B-Instruct  # Vision-supported model required for multimodality
   summarization:
-    - Qwen/Qwen2.5-72B-Instruct
-  chunking:
-    - intfloat/multilingual-e5-large-instruct  # Embedding model for semantic chunking
-  single_shot_question_generation:
-    - Qwen/Qwen2.5-72B-Instruct
-  multi_hop_question_generation:
-    - Qwen/Qwen2.5-72B-Instruct
+    # Presence implies run: true
+    # ... stage-specific config
 ```
-
-### Available Roles
-- **`ingestion`**  
-  - **Description**: Models used for document ingestion and conversion to markdown. Vision-supported models are required for processing images.
-  - **Recommended**: Vision-capable models like `Qwen/Qwen2.5-VL-72B-Instruct`, `gpt-4o`, etc.
-
-- **`summarization`**  
-  - **Description**: Models used to generate document summaries.
-  - **Recommended**: Strong language models with good summarization capabilities.
-
-- **`chunking`**  
-  - **Description**: Models used for semantic chunking (embedding models).
-  - **Recommended**: Sentence embedding models like `intfloat/multilingual-e5-large-instruct`.
-
-- **`single_shot_question_generation`**  
-  - **Description**: Models used to generate questions from individual chunks.
-  - **Recommended**: Strong language models with good question generation capabilities.
-
-- **`multi_hop_question_generation`**  
-  - **Description**: Models used to generate questions that require reasoning across multiple chunks.
-  - **Recommended**: Strong language models with good reasoning capabilities.
-
-### Notes
-- For the `ingestion` stage, a vision-supported model is required if your documents contain images.
-- Multiple models per stage allow for flexibility or experimentation.
-- If no model is specified for a role, the first model in `model_list` will be used.
-
-### Example
-```yaml
-model_roles:
-  ingestion:
-    - gpt-4o
-  summarization:
-    - claude-3-opus-20240229
-  chunking:
-    - intfloat/multilingual-e5-large-instruct
-  single_shot_question_generation:
-    - gpt-4o
-  multi_hop_question_generation:
-    - claude-3-opus-20240229
-```
-
----
 
 ## Pipeline Stages
 
-The `pipeline` section configures the stages of the YourBench workflow. Each stage can be enabled or disabled and includes additional settings specific to its functionality.
+### Ingestion
 
-### Common Options for All Stages
-- **`run`**  
-  - **Type**: Boolean  
-  - **Required**: Yes  
-  - **Description**: Enables (`true`) or disables (`false`) the stage.
+Processes raw documents into structured markdown format.
 
-### Ingestion Stage
-
-The ingestion stage converts source documents from various formats to markdown. It can use a standard parser or an advanced vision-capable LLM for processing PDFs. After conversion, it can optionally upload the processed files to your configured dataset repository.
-
-#### YAML Syntax
 ```yaml
 pipeline:
   ingestion:
-    run: true
-    source_documents_dir: example/data/raw
-    output_dir: example/data/processed
-    upload_to_hub: true      # Uploads processed files to the dataset repository
-    llm_ingestion: false     # Use a vision model for PDF ingestion (for images, complex layouts)
-    pdf_dpi: 300             # Image resolution for LLM-based PDF processing
+    source_documents_dir: path/to/documents
+    output_dir: path/to/output
+    upload_to_hub: true
+    llm_ingestion: false  # Use LLM for PDF extraction
+    pdf_dpi: 300         # PDF rendering quality (72-600)
+    pdf_llm_prompt: ""   # Custom prompt or file path
+    supported_file_extensions:
+      - .pdf
+      - .docx
+      - .html
+      - .md
+      # ... more extensions
 ```
 
-#### Options
-- **`source_documents_dir`**  
-  - **Type**: String  
-  - **Required**: Yes  
-  - **Description**: Directory containing the raw source documents to be processed.
+**LLM-Powered PDF Extraction:**
+When `llm_ingestion: true`, PDFs are processed using an LLM for better extraction quality. You can customize the prompt by providing either:
+- Direct prompt text
+- Path to a prompt file (`.md`, `.txt`, `.prompt`)
 
-- **`output_dir`**  
-  - **Type**: String  
-  - **Required**: Yes  
-  - **Description**: Directory where the converted markdown files will be saved.
+### Summarization
 
-- **`upload_to_hub`**
-  - **Type**: Boolean
-  - **Default**: `true`
-  - **Description**: If `true`, uploads the processed markdown files from `output_dir` to the configured Hugging Face Hub dataset or local directory. This option consolidates the functionality of the former `upload_ingest_to_hub` stage.
+Creates document summaries for better context understanding.
 
-- **`llm_ingestion`**
-  - **Type**: Boolean
-  - **Default**: `false`
-  - **Description**: When `true`, uses a vision-capable language model (specified in `model_roles.ingestion`) to process PDF files. This is highly effective for PDFs with images, complex layouts, or tables, but it is more resource-intensive. When `false`, a standard local parser is used.
-
-- **`pdf_dpi`**
-  - **Type**: Integer
-  - **Default**: `300`
-  - **Description**: Specifies the resolution (dots per inch) for converting PDF pages to images. This setting only applies when `llm_ingestion` is `true`. Higher values improve image quality for the LLM but increase processing time.
-
-### Summarization Stage
-
-This stage generates summaries for each document.
-
-#### YAML Syntax
 ```yaml
 pipeline:
   summarization:
-    run: true
+    max_tokens: 32768
+    token_overlap: 512
+    encoding_name: cl100k_base
+    summarization_user_prompt: ""  # Custom prompt or file path
+    combine_summaries_user_prompt: ""  # Custom prompt or file path
 ```
 
-#### Options
-- No additional options required. The stage uses the dataset from the previous stage.
+### Chunking
 
-### Chunking Stage
+Splits documents into manageable chunks for question generation.
 
-This stage splits documents into chunks for question generation.
-
-#### YAML Syntax
 ```yaml
 pipeline:
   chunking:
-    run: true
-    chunking_configuration:
-      l_min_tokens: 64
-      l_max_tokens: 128
-      tau_threshold: 0.8
-      h_min: 2
-      h_max: 5
-      num_multihops_factor: 2
-      chunking_mode: "fast_chunking"
+    l_max_tokens: 8192      # Maximum chunk size
+    token_overlap: 512      # Overlap between chunks
+    encoding_name: cl100k_base
+    h_min: 2               # Minimum hop distance
+    h_max: 5               # Maximum hop distance
+    num_multihops_factor: 1  # Multi-hop generation factor
 ```
 
-#### Options
-- **`chunking_configuration`**  
-  - **Type**: Object  
-  - **Optional**: Yes  
-  - **Description**: Configuration for the chunking process.
+### Question Generation
 
-  - **`l_min_tokens`**  
-    - **Type**: Integer  
-    - **Default**: `64`  
-    - **Description**: Minimum number of tokens in each chunk.
+YourBench supports three question generation strategies:
 
-  - **`l_max_tokens`**  
-    - **Type**: Integer  
-    - **Default**: `128`  
-    - **Description**: Maximum number of tokens in each chunk.
+#### Single-Shot Question Generation
 
-  - **`tau_threshold`**  
-    - **Type**: Float  
-    - **Default**: `0.3`  
-    - **Description**: Similarity threshold for determining chunk boundaries in semantic chunking.
-
-  - **`h_min`**  
-    - **Type**: Integer  
-    - **Default**: `2`  
-    - **Description**: Minimum number of unique chunks to combine for multi-hop questions.
-
-  - **`h_max`**  
-    - **Type**: Integer  
-    - **Default**: `3`  
-    - **Description**: Maximum number of unique chunks to combine for multi-hop questions.
-
-  - **`num_multihops_factor`**  
-    - **Type**: Integer or Float  
-    - **Default**: `2`  
-    - **Description**: Factor determining how many multi-hop combinations to generate. Higher values generate more combinations.
-
-  - **`chunking_mode`**  
-    - **Type**: String  
-    - **Default**: `"fast_chunking"`  
-    - **Options**: `"fast_chunking"` or `"semantic_chunking"`  
-    - **Description**: Mode for chunking. `"fast_chunking"` uses purely length-based rules, while `"semantic_chunking"` uses sentence embeddings and similarity thresholds.
-
-### Single Shot Question Generation Stage
-
-This stage generates questions from individual chunks.
-
-#### YAML Syntax
 ```yaml
 pipeline:
   single_shot_question_generation:
-    run: true
-    additional_instructions: "Generate questions to test a curious adult"
-    chunk_sampling:
-      mode: "count"
-      value: 5
-      random_seed: 123
+    question_mode: open-ended  # or "multi-choice"
+    additional_instructions: "Focus on technical details"
+    single_shot_system_prompt: path/to/prompt.md
+    single_shot_system_prompt_multi: path/to/multi_choice_prompt.md
+    single_shot_user_prompt: path/to/user_prompt.md
 ```
 
-#### Options
-- **`additional_instructions`**  
-  - **Type**: String  
-  - **Default**: `"Generate questions to test an undergraduate student"`  
-  - **Description**: Additional instructions for the question generation model.
+#### Multi-Hop Question Generation
 
-- **`chunk_sampling`**  
-  - **Type**: Object  
-  - **Optional**: Yes  
-  - **Description**: Configuration for sampling chunks to reduce cost.
-
-  - **`mode`**  
-    - **Type**: String  
-    - **Default**: `"all"`  
-    - **Options**: `"all"`, `"count"`, or `"percentage"`  
-    - **Description**: Mode for sampling chunks. `"all"` uses all chunks, `"count"` uses a fixed number, and `"percentage"` uses a percentage of chunks.
-
-  - **`value`**  
-    - **Type**: Integer or Float  
-    - **Default**: `1.0`  
-    - **Description**: Value for sampling. For `"count"` mode, this is the number of chunks. For `"percentage"` mode, this is the percentage (0.0-1.0) of chunks.
-
-  - **`random_seed`**  
-    - **Type**: Integer  
-    - **Default**: `42`  
-    - **Description**: Random seed for reproducible sampling.
-
-### Multi-Hop Question Generation Stage
-
-This stage generates questions that require reasoning across multiple chunks.
-
-#### YAML Syntax
 ```yaml
 pipeline:
   multi_hop_question_generation:
-    run: true
-    additional_instructions: "Generate questions to test a curious adult"
-    chunk_sampling:
-      mode: "percentage"
-      value: 0.3
-      random_seed: 42
+    question_mode: open-ended
+    additional_instructions: ""
+    multi_hop_system_prompt: path/to/prompt.md
+    multi_hop_system_prompt_multi: path/to/multi_choice_prompt.md
+    multi_hop_user_prompt: path/to/user_prompt.md
 ```
 
-#### Options
-- **`additional_instructions`**  
-  - **Type**: String  
-  - **Default**: `"Generate questions to test an undergraduate student"`  
-  - **Description**: Additional instructions for the question generation model.
+#### Cross-Document Question Generation
 
-- **`chunk_sampling`**  
-  - **Type**: Object  
-  - **Optional**: Yes  
-  - **Description**: Configuration for sampling chunks to reduce cost.
+```yaml
+pipeline:
+  cross_document_question_generation:
+    question_mode: open-ended
+    max_combinations: 100
+    chunks_per_document: 1
+    num_docs_per_combination: [2, 5]  # [min, max]
+    random_seed: 42
+    # ... prompt configurations
+```
 
-  - **`mode`**  
-    - **Type**: String  
-    - **Default**: `"all"`  
-    - **Options**: `"all"`, `"count"`, or `"percentage"`  
-    - **Description**: Mode for sampling chunks. `"all"` uses all chunks, `"count"` uses a fixed number, and `"percentage"` uses a percentage of chunks.
+### Question Rewriting
 
-  - **`value`**  
-    - **Type**: Integer or Float  
-    - **Default**: `1.0`  
-    - **Description**: Value for sampling. For `"count"` mode, this is the number of chunks. For `"percentage"` mode, this is the percentage (0.0-1.0) of chunks.
+Improves question naturalness and clarity.
 
-  - **`random_seed`**  
-    - **Type**: Integer  
-    - **Default**: `42`  
-    - **Description**: Random seed for reproducible sampling.
-
-### question_rewriting Stage
-
-This optional stage takes generated questions and rewrites them using an LLM to create variations while preserving meaning.
-
-#### YAML Syntax
 ```yaml
 pipeline:
   question_rewriting:
-    run: false
-    additional_instructions: "Make questions more conversational"
+    additional_instructions: "Make questions conversational"
+    question_rewriting_system_prompt: path/to/prompt.md
+    question_rewriting_user_prompt: path/to/prompt.md
+```
 
-### LightEval Stage
+### LightEval
 
-This stage combines single-shot and multi-hop questions into a unified dataset for evaluation.
+Prepares data for evaluation.
 
-#### YAML Syntax
 ```yaml
 pipeline:
+  prepare_lighteval:
+    run: true
+  
   lighteval:
     run: true
 ```
 
-#### Options
-- No additional options required. The stage uses the datasets from the previous stages.
+### Citation Score Filtering
 
----
-
-## Complete Configuration Example
+Filters questions based on citation quality metrics.
 
 ```yaml
-# === GLOBAL SETTINGS ===
-settings:
-  debug: false
+pipeline:
+  citation_score_filtering:
+    subset: prepared_lighteval
+    alpha: 0.7  # Weight for metric 1
+    beta: 0.3   # Weight for metric 2 (alpha + beta = 1.0)
+```
 
-# === HUGGINGFACE SETTINGS ===
+## Advanced Features
+
+### Environment Variables
+
+YourBench automatically expands environment variables prefixed with `$`:
+
+```yaml
 hf_configuration:
-  token: $HF_TOKEN
+  hf_token: $HF_TOKEN
   hf_organization: $HF_ORGANIZATION
-  private: false
-  hf_dataset_name: yourbench_example
-  concat_if_exist: false
 
-# === MODEL CONFIGURATION ===
-model_list: 
-  - model_name: Qwen/Qwen2.5-VL-72B-Instruct
-    provider: hf-inference
-    api_key: $HF_TOKEN
-    max_concurrent_requests: 32
-  - model_name: Qwen/Qwen2.5-72B-Instruct
-    provider: novita
-    api_key: $HF_TOKEN
-    max_concurrent_requests: 32
+model_list:
+  - api_key: $OPENAI_API_KEY
+```
+
+**Special Behavior:**
+- If `$HF_ORGANIZATION` is not set, YourBench attempts to retrieve it from the Hugging Face token
+
+### Custom Prompts
+
+Prompts can be specified in three ways:
+
+1. **Built-in defaults** - Leave field empty
+2. **Inline text** - Provide prompt directly in YAML
+3. **File reference** - Path to `.md`, `.txt`, or `.prompt` file
+
+```yaml
+# Method 1: Use default
+summarization_user_prompt: ""
+
+# Method 2: Inline
+summarization_user_prompt: "Summarize the key points..."
+
+# Method 3: File reference
+summarization_user_prompt: path/to/custom_prompt.md
+```
+
+**Package Resource Loading:**
+YourBench first attempts to load prompts from the installed package's `yourbench.prompts` directory, ensuring compatibility with pip-installed versions.
+
+### Model Role Assignment
+
+Assign specific models to pipeline stages:
+
+```yaml
+model_list:
+  - model_name: gpt-4o
+  - model_name: claude-3-opus
 
 model_roles:
-  ingestion:
-    - Qwen/Qwen2.5-VL-72B-Instruct
-  summarization:
-    - Qwen/Qwen2.5-72B-Instruct
-  chunking:
-    - intfloat/multilingual-e5-large-instruct
-  single_shot_question_generation:
-    - Qwen/Qwen2.5-72B-Instruct
-  multi_hop_question_generation:
-    - Qwen/Qwen2.5-72B-Instruct
+  ingestion: [gpt-4o]
+  summarization: [claude-3-opus]
+  question_generation: [gpt-4o]
+  # Unspecified stages use the first model
+```
 
-# === PIPELINE CONFIGURATION ===
+## Configuration Examples
+
+### Minimal Configuration
+
+```yaml
+hf_configuration:
+  hf_dataset_name: my-benchmark
+
+model_list:
+  - model_name: gpt-4o
+
 pipeline:
   ingestion:
-    run: true
-    source_documents_dir: example/data/raw
-    output_dir: example/data/processed
-    upload_to_hub: true
-    llm_ingestion: false
-    pdf_dpi: 300
+    source_documents_dir: data/documents
+  single_shot_question_generation:
+```
 
+### Advanced Configuration
+
+```yaml
+hf_configuration:
+  hf_dataset_name: advanced-benchmark
+  hf_organization: my-org
+  private: true
+  concat_if_exist: true
+
+model_list:
+  - model_name: gpt-4o
+    base_url: https://api.openai.com/v1/
+    api_key: $OPENAI_API_KEY
+    max_concurrent_requests: 50
+  
+  - model_name: claude-3-opus
+    base_url: https://api.anthropic.com/v1/
+    api_key: $ANTHROPIC_API_KEY
+
+model_roles:
+  ingestion: [gpt-4o]
+  summarization: [claude-3-opus]
+  question_generation: [gpt-4o]
+
+pipeline:
+  ingestion:
+    source_documents_dir: data/raw
+    output_dir: data/processed
+    llm_ingestion: true
+    pdf_llm_prompt: prompts/pdf_extraction.md
+  
   summarization:
-    run: true
+    max_tokens: 64000
+    summarization_user_prompt: prompts/custom_summary.md
   
   chunking:
-    run: true
-    chunking_configuration:
-      l_min_tokens: 64
-      l_max_tokens: 128
-      tau_threshold: 0.8
-      h_min: 2
-      h_max: 5
-      num_multihops_factor: 2
-      chunking_mode: "fast_chunking"
+    l_max_tokens: 16384
+    h_min: 3
+    h_max: 7
   
   single_shot_question_generation:
-    run: true
-    additional_instructions: "Generate questions to test a curious adult"
-    chunk_sampling:
-      mode: "count"
-      value: 5
-      random_seed: 123
+    question_mode: multi-choice
+    additional_instructions: "Create challenging technical questions"
+    single_shot_system_prompt_multi: prompts/mc_system.md
   
   multi_hop_question_generation:
-    run: true
-    additional_instructions: "Generate questions to test a curious adult"
-    chunk_sampling:
-      mode: "percentage"
-      value: 0.3
-      random_seed: 42
-
-  lighteval:
-    run: true
+    question_mode: open-ended
+  
+  question_rewriting:
+    additional_instructions: "Ensure questions are clear and unambiguous"
+  
+  prepare_lighteval:
+  
+  citation_score_filtering:
+    alpha: 0.8
+    beta: 0.2
 ```
+
+## API Reference
+
+### Loading Configuration
+
+```python
+from yourbench.utils.configuration_engine import YourbenchConfig
+
+# Load from YAML file
+config = YourbenchConfig.from_yaml("config.yaml")
+
+# Create programmatically
+config = YourbenchConfig(
+    hf_configuration=HuggingFaceConfig(
+        hf_dataset_name="my-dataset"
+    ),
+    model_list=[
+        ModelConfig(model_name="gpt-4o")
+    ]
+)
+```
+
+### Accessing Configuration
+
+```python
+# Check if stage is enabled
+if config.is_stage_enabled("ingestion"):
+    ingestion_config = config.pipeline_config.ingestion
+    
+# Get model for stage
+model_name = config.get_model_for_stage("summarization")
+
+# Get enabled stages in execution order
+enabled_stages = config.pipeline_config.get_enabled_stages()
+```
+
+### Saving Configuration
+
+```python
+# Save to YAML file
+config.to_yaml("output_config.yaml")
+
+# Get YAML string
+yaml_str = config.model_dump_yaml()
+```
+
+### Validation
+
+All configuration is validated using Pydantic:
+
+- Type checking
+- Range validation (e.g., DPI between 72-600)
+- Constraint validation (e.g., alpha + beta = 1.0)
+- Path validation and auto-creation
+- Environment variable expansion
+
+## Best Practices
+
+1. **Use environment variables** for sensitive data like API keys
+2. **Start with minimal config** and add stages as needed
+3. **Leverage default prompts** before writing custom ones
+4. **Test with small datasets** before processing large corpora
+5. **Enable debug mode** for troubleshooting: `debug: true`
+6. **Use model roles** when different stages need different models
+7. **Version control** your configuration files
+8. **Document custom prompts** clearly for team collaboration
+
+## Troubleshooting
+
+Common issues and solutions:
+
+- **Missing environment variables**: Export required vars or use `.env` file
+- **Path not found**: Use absolute paths or paths relative to config file
+- **Validation errors**: Check field types and constraints in error message
+- **Model assignment**: Ensure model names in `model_roles` match `model_list`
+- **Prompt loading**: Verify file paths and extensions for custom prompts
+
+For more examples, see the `example/` directory in the YourBench repository.

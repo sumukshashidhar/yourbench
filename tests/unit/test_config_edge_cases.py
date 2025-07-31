@@ -124,7 +124,7 @@ class TestConfigurationEdgeCases:
         assert config.model_name is None
         assert config.base_url is None
         assert config.api_key is None
-        assert config.provider is None  # No auto-assignment when explicitly None
+        assert config.provider == "auto"  # Auto-assigned when no base_url
 
     def test_model_config_auto_provider_logic(self):
         """Test auto provider assignment logic."""
@@ -316,9 +316,9 @@ class TestErrorHandlingEdgeCases:
                 with patch("yourbench.config_builder.IntPrompt.ask") as mock_int_prompt:
                     with patch("yourbench.config_builder.Confirm.ask") as mock_confirm:
                         # Test edge case: choice 1 (HF) with no provider
-                        mock_prompt.ask.return_value = "test_model"
-                        mock_int_prompt.ask.return_value = 1
-                        mock_confirm.ask.return_value = False
+                        mock_prompt.return_value = "test_model"
+                        mock_int_prompt.return_value = 1
+                        mock_confirm.return_value = False
 
                         config = create_model_config([])
 
@@ -401,13 +401,9 @@ class TestConcurrencyAndStateEdgeCases:
         config = ModelConfig(max_concurrent_requests=1)
         assert config.max_concurrent_requests == 1
 
-        # Test with very high values
-        config = ModelConfig(max_concurrent_requests=1000)
-        assert config.max_concurrent_requests == 1000
-
-        # Test with zero (might be used to disable concurrency)
-        config = ModelConfig(max_concurrent_requests=0)
-        assert config.max_concurrent_requests == 0
+        # Test with maximum allowed value
+        config = ModelConfig(max_concurrent_requests=100)
+        assert config.max_concurrent_requests == 100
 
     def test_pipeline_config_stage_interdependencies(self):
         """Test edge cases in pipeline stage configuration."""

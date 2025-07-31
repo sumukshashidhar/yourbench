@@ -5,6 +5,7 @@ Module handles everything related to the configuration of the pipeline.
 import os
 from typing import TYPE_CHECKING, Union, ClassVar
 from pathlib import Path
+from importlib.resources import files
 
 import yaml
 from loguru import logger
@@ -33,7 +34,8 @@ def _expand_env(value: str) -> str:
         return value
 
     var = value[1:]
-    if env := os.getenv(var):
+    env = os.getenv(var)
+    if env is not None:
         return env
 
     # == SPECIAL CASES ==
@@ -48,9 +50,49 @@ def _expand_env(value: str) -> str:
     return value
 
 
+def _load_prompt_from_package(package_path: str) -> str | None:
+    """
+    Load prompt content from package resources using importlib.resources.
+
+    Args:
+        package_path: Path relative to yourbench.prompts (e.g., "ingestion/pdf_llm_prompt.md")
+
+    Returns:
+        Prompt content if found, None otherwise
+    """
+    try:
+        # Access the prompts package
+        prompts_files = files("yourbench.prompts")
+
+        # Navigate to the specific file
+        parts = package_path.split("/")
+        current_files = prompts_files
+
+        for part in parts[:-1]:  # Navigate to subdirectories
+            current_files = current_files / part
+
+        # Get the file content
+        file_resource = current_files / parts[-1]
+        if file_resource.is_file():
+            content = file_resource.read_text(encoding="utf-8").strip()
+            logger.debug(f"Loaded prompt from package: {package_path}")
+            return content
+        else:
+            logger.debug(f"Prompt file not found in package: {package_path}")
+            return None
+
+    except Exception as e:
+        logger.debug(f"Failed to load prompt from package {package_path}: {e}")
+        return None
+
+
 def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
     """
     Load prompt content from file path, use as string, or fall back to default.
+
+    This function now prioritizes loading from package resources for prompts
+    in the yourbench.prompts package, which ensures compatibility when the
+    package is installed via pip.
 
     Args:
         value: Prompt value - can be file path, string content, or empty
@@ -72,6 +114,14 @@ def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
     # If it has common text file extensions, try to load it as a file
     text_extensions = {".md", ".txt", ".prompt", ".text"}
     if value_path.suffix.lower() in text_extensions:
+        # First, try to load from package resources if it looks like a yourbench prompt
+        if str(value_path).startswith("yourbench/prompts/"):
+            package_path = str(value_path)[len("yourbench/prompts/") :]
+            package_content = _load_prompt_from_package(package_path)
+            if package_content is not None:
+                return package_content
+
+        # Fallback to file system loading (for development and custom prompts)
         try:
             if value_path.exists():
                 content = value_path.read_text(encoding="utf-8").strip()
@@ -199,14 +249,21 @@ class IngestionConfig(BaseModel):
 
     @model_validator(mode="after")
     def load_prompt_and_validate_dirs(self):
-        # Load PDF LLM prompt using flexible approach
-        default_prompt_path = "yourbench/prompts/ingestion/pdf_llm_prompt.md"
+        # Load PDF LLM prompt using package resources first, then fallback
         default_fallback = ""
-        if Path(default_prompt_path).exists():
-            try:
-                default_fallback = Path(default_prompt_path).read_text(encoding="utf-8").strip()
-            except Exception:
-                pass
+
+        # Try to load from package resources first
+        package_content = _load_prompt_from_package("ingestion/pdf_llm_prompt.md")
+        if package_content is not None:
+            default_fallback = package_content
+        else:
+            # Fallback to file system (for development)
+            default_prompt_path = "yourbench/prompts/ingestion/pdf_llm_prompt.md"
+            if Path(default_prompt_path).exists():
+                try:
+                    default_fallback = Path(default_prompt_path).read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
 
         # Use object.__setattr__ to bypass validation and avoid recursion
         object.__setattr__(self, "pdf_llm_prompt", _load_prompt_or_string(self.pdf_llm_prompt, default_fallback))
@@ -608,6 +665,8 @@ class YourbenchConfig(BaseModel):
 
         # Handle nested pipeline configuration properly
         pipeline_data = data.get("pipeline", {})
+        if pipeline_data is None:
+            pipeline_data = {}
 
         # Process each stage and set run=True by default if stage is present
         processed_pipeline = {}
@@ -645,10 +704,15 @@ class YourbenchConfig(BaseModel):
         pipeline_config = PipelineConfig(**processed_pipeline)
 
         # Build final config
+        # Filter out None values from hf_configuration
+        hf_config_data = data.get("hf_configuration", {})
+        if hf_config_data:
+            hf_config_data = {k: v for k, v in hf_config_data.items() if v is not None}
+        
         config_data = {
-            "hf_configuration": HuggingFaceConfig(**data.get("hf_configuration", {})),
+            "hf_configuration": HuggingFaceConfig(**hf_config_data),
             "pipeline_config": pipeline_config,
-            "model_list": [ModelConfig(**m) for m in data.get("model_list", [])],
+            "model_list": [ModelConfig(**{k: v for k, v in m.items() if v is not None}) for m in data.get("model_list", [])],
             "model_roles": data.get("model_roles", {}),
             "debug": data.get("debug", False),
         }

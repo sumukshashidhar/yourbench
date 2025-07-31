@@ -199,7 +199,7 @@ def normalize_open_ended(pair: dict[str, Any]) -> Optional[dict[str, Any]]:
 
     if q_type not in OPEN_ENDED_TYPES:
         logger.warning(f"Inconsistent open-ended question_type: '{q_type}'")
-        return None
+        return pair
 
     # No choices for open-ended
     pair["choices"] = []
@@ -226,7 +226,7 @@ def normalize_multi_choice(pair: dict[str, Any]) -> Optional[dict[str, Any]]:
 
     if q_type not in MULTI_CHOICE_TYPES:
         logger.warning(f"Inconsistent multiple-choice question_type: '{q_type}'")
-        return None
+        return pair
 
     choices = validate_list(pair.get("choices", []))
     if len(choices) != 4:

@@ -288,8 +288,8 @@ class TestConfigCreation:
     def test_create_yourbench_config_advanced_minimal(self, mock_prompt, mock_confirm, mock_get_name, mock_console):
         """Test creating an advanced configuration with minimal user input."""
         mock_get_name.return_value = "test_dataset"
-        mock_prompt.ask.return_value = "test_dataset"
-        mock_confirm.ask.return_value = False  # Always decline optional configuration
+        mock_prompt.return_value = "test_dataset"
+        mock_confirm.return_value = False  # Always decline optional configuration
 
         config = create_yourbench_config(simple=False)
 

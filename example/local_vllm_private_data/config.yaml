@@ -1,0 +1,26 @@
+# This is an example configuration for running the pipeline on a local VLLM server.
+# It uses the Magistral-Small-2506 model from Mistral AI.
+hf_configuration:
+  hf_dataset_name: reachy_mini_info_benchmark
+  hf_organization: yourbench
+  private: false
+
+model_list:
+  - model_name: mistralai/Magistral-Small-2506
+    base_url: http://localhost:8000/v1
+    api_key: NO-API-KEY-NEEDED
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/local_vllm_private_data/data
+    output_dir: example/local_vllm_private_data/processed
+  summarization:
+  chunking:
+  single_shot_question_generation:
+    additional_instructions: "Ask generalizable questions."
+  multi_hop_question_generation:
+    additional_instructions: "Ask generalizable questions."
+  cross_document_question_generation:
+    additional_instructions: "Ask generalizable questions."
+  prepare_lighteval:
+  citation_score_filtering:

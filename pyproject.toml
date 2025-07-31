@@ -1,6 +1,6 @@
 [project]
 name = "yourbench"
-version = "0.3.1"
+version = "0.4.0"
 authors = [
     { name = "Sumuk Shashidhar", email = "sumuks2@illinois.edu" },
     { name = "Alina Lozovskaia", email = "alina.lozovskaia@huggingface.co" },
@@ -14,17 +14,19 @@ dependencies = [
     "asyncio>=3.4.3",
     "click>=8.1.7",
     "datasets>=3.3.0",
-    "fitz>=0.0.1.dev2",
     "gradio>=5.35.0",
     "hf-transfer>=0.1.9",
     "huggingface-hub[inference,hf_xet]>=0.34.3",
     "jinja2>=3.1.6",
     "loguru>=0.7.3",
     "markitdown[all]>=0.0.2",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
     "pillow>=11.2.1",
     "pydantic>=2.11.7",
     "pymupdf>=1.26.1",
     "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.0",
     "randomname>=0.2.1",
     "rich>=13.7.0",
     "ruff>=0.11.1",
@@ -47,6 +49,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["yourbench*"]
+
+[tool.setuptools.package-data]
+yourbench = ["prompts/**/*.md"]
 
 [tool.ruff]
 line-length = 119
@@ -73,5 +78,7 @@ line-ending = "auto"
 
 [dependency-groups]
 dev = [
+    "build>=1.2.2.post1",
     "pytest>=8.4.1",
+    "twine>=6.1.0",
 ]
