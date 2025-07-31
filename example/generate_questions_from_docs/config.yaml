@@ -1,0 +1,20 @@
+hf_configuration:
+  hf_dataset_name: yourbench-custom-prompts-example
+  hf_organization: yourbench
+
+model_list:
+  - model_name: gpt-4.1
+    base_url: https://api.openai.com/v1/
+    api_key: $OPENAI_API_KEY
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/generate_questions_from_docs/data
+    output_dir: example/generate_questions_from_docs/processed
+  summarization:
+    max_tokens: 64000
+  chunking:
+    l_max_tokens: 50000
+  single_shot_question_generation:
+    single_shot_system_prompt: example/generate_questions_from_docs/prompts/custom_prompt.md
+  prepare_lighteval:

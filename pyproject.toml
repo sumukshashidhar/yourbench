@@ -14,7 +14,6 @@ dependencies = [
     "asyncio>=3.4.3",
     "click>=8.1.7",
     "datasets>=3.3.0",
-    "fitz>=0.0.1.dev2",
     "gradio>=5.35.0",
     "hf-transfer>=0.1.9",
     "huggingface-hub[inference,hf_xet]>=0.34.3",

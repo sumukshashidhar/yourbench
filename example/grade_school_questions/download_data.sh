@@ -1,1 +1,0 @@
-wget https://www.math.ksu.edu/~rozhkovs/math320_Bversion.pdf
