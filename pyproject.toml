@@ -51,7 +51,7 @@ build-backend = "setuptools.build_meta"
 include = ["yourbench*"]
 
 [tool.setuptools.package-data]
-yourbench = ["prompts/**/*.md"]
+yourbench = ["prompts/**/*.md", "utils/yourbench_card_template.md"]
 
 [tool.ruff]
 line-length = 119
