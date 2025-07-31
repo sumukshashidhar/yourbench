@@ -7,28 +7,36 @@ import atexit
 import shutil
 import subprocess
 
+
 # Early startup logging
 print("🌐 YourBench Gradio UI starting up...", flush=True)
 ui_startup_time = time.perf_counter()
 
-import yaml
+import yaml  # noqa: E402
+
 
 print("  📦 Loading Gradio...", flush=True)
-import gradio as gr
+import gradio as gr  # noqa: E402
+
+
 print("  ✓ Gradio loaded", flush=True)
 
-from dotenv import load_dotenv
-from loguru import logger
+from dotenv import load_dotenv  # noqa: E402
+from loguru import logger  # noqa: E402
+
 
 # Lazy import pandas - only when needed
 pd = None
+
 
 def _get_pandas():
     global pd
     if pd is None:
         import pandas
+
         pd = pandas
     return pd
+
 
 print("⏳ Loading Gradio components...", flush=True)
 
@@ -262,9 +270,9 @@ def validate_config_inputs(table_data, ingestion_model, summarization_model, sin
 
 
 def launch_ui():
-    print(f"⏳ Building Gradio interface...", flush=True)
+    print("⏳ Building Gradio interface...", flush=True)
     interface_start = time.perf_counter()
-    
+
     with gr.Blocks(title="YourBench", theme=gr.themes.Default()) as demo:
         gr.Markdown("# 🚀 YourBench")
         gr.Markdown("**Create custom benchmark datasets from your documents using AI-powered question generation**")
@@ -877,5 +885,5 @@ def launch_ui():
     print(f"✅ Gradio interface built in {time.perf_counter() - interface_start:.2f}s", flush=True)
     print(f"✅ Total UI startup time: {time.perf_counter() - ui_startup_time:.2f}s", flush=True)
     print("🌐 Launching Gradio server...", flush=True)
-    
+
     demo.launch()

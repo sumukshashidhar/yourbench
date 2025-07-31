@@ -6,32 +6,39 @@ from functools import cache
 
 from loguru import logger
 
+
 # Lazy imports for heavy modules
 _dataset_engine_loaded = False
 _config_engine_loaded = False
 _question_gen_loaded = False
+
 
 def _lazy_load_dataset_engine():
     global _dataset_engine_loaded, upload_dataset_card
     if not _dataset_engine_loaded:
         logger.debug("Loading dataset engine...")
         from yourbench.utils.dataset_engine import upload_dataset_card
+
         _dataset_engine_loaded = True
     return upload_dataset_card
+
 
 def _lazy_load_config_engine():
     global _config_engine_loaded, PipelineConfig, YourbenchConfig
     if not _config_engine_loaded:
         logger.debug("Loading configuration engine...")
         from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig
+
         _config_engine_loaded = True
     return PipelineConfig, YourbenchConfig
+
 
 def _lazy_load_question_gen():
     global _question_gen_loaded, run_multi_hop, run_single_shot, run_cross_document
     if not _question_gen_loaded:
         logger.debug("Loading question generation modules...")
         from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
+
         _question_gen_loaded = True
     return run_multi_hop, run_single_shot, run_cross_document
 
@@ -41,14 +48,20 @@ def get_stage_order():
     PipelineConfig, _ = _lazy_load_config_engine()
     return PipelineConfig.STAGE_ORDER
 
+
+# For backward compatibility with tests
+STAGE_OVERRIDES = {}
+
 @cache
 def get_stage_overrides():
-    run_multi_hop, run_single_shot, run_cross_document = _lazy_load_question_gen()
-    return {
-        "single_shot_question_generation": run_single_shot,
-        "multi_hop_question_generation": run_multi_hop,
-        "cross_document_question_generation": run_cross_document,
-    }
+    if not STAGE_OVERRIDES:
+        run_multi_hop, run_single_shot, run_cross_document = _lazy_load_question_gen()
+        STAGE_OVERRIDES.update({
+            "single_shot_question_generation": run_single_shot,
+            "multi_hop_question_generation": run_multi_hop,
+            "cross_document_question_generation": run_cross_document,
+        })
+    return STAGE_OVERRIDES
 
 
 @cache
