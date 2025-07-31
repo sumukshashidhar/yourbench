@@ -5,6 +5,7 @@ Module handles everything related to the configuration of the pipeline.
 import os
 from typing import TYPE_CHECKING, Union, ClassVar
 from pathlib import Path
+from importlib.resources import files
 
 import yaml
 from loguru import logger
@@ -18,8 +19,6 @@ from pydantic import (
 from randomname import get_name as get_random_name
 
 from huggingface_hub import whoami
-
-from importlib.resources import files
 
 
 if TYPE_CHECKING:
@@ -53,24 +52,24 @@ def _expand_env(value: str) -> str:
 def _load_prompt_from_package(package_path: str) -> str | None:
     """
     Load prompt content from package resources using importlib.resources.
-    
+
     Args:
         package_path: Path relative to yourbench.prompts (e.g., "ingestion/pdf_llm_prompt.md")
-    
+
     Returns:
         Prompt content if found, None otherwise
     """
     try:
         # Access the prompts package
         prompts_files = files("yourbench.prompts")
-        
+
         # Navigate to the specific file
         parts = package_path.split("/")
         current_files = prompts_files
-        
+
         for part in parts[:-1]:  # Navigate to subdirectories
             current_files = current_files / part
-            
+
         # Get the file content
         file_resource = current_files / parts[-1]
         if file_resource.is_file():
@@ -80,7 +79,7 @@ def _load_prompt_from_package(package_path: str) -> str | None:
         else:
             logger.debug(f"Prompt file not found in package: {package_path}")
             return None
-            
+
     except Exception as e:
         logger.debug(f"Failed to load prompt from package {package_path}: {e}")
         return None
@@ -89,7 +88,7 @@ def _load_prompt_from_package(package_path: str) -> str | None:
 def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
     """
     Load prompt content from file path, use as string, or fall back to default.
-    
+
     This function now prioritizes loading from package resources for prompts
     in the yourbench.prompts package, which ensures compatibility when the
     package is installed via pip.
@@ -116,11 +115,11 @@ def _load_prompt_or_string(value: str, default_fallback: str = "") -> str:
     if value_path.suffix.lower() in text_extensions:
         # First, try to load from package resources if it looks like a yourbench prompt
         if str(value_path).startswith("yourbench/prompts/"):
-            package_path = str(value_path)[len("yourbench/prompts/"):]
+            package_path = str(value_path)[len("yourbench/prompts/") :]
             package_content = _load_prompt_from_package(package_path)
             if package_content is not None:
                 return package_content
-        
+
         # Fallback to file system loading (for development and custom prompts)
         try:
             if value_path.exists():
@@ -251,7 +250,7 @@ class IngestionConfig(BaseModel):
     def load_prompt_and_validate_dirs(self):
         # Load PDF LLM prompt using package resources first, then fallback
         default_fallback = ""
-        
+
         # Try to load from package resources first
         package_content = _load_prompt_from_package("ingestion/pdf_llm_prompt.md")
         if package_content is not None:
