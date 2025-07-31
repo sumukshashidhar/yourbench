@@ -52,6 +52,7 @@ def get_stage_order():
 # For backward compatibility with tests
 STAGE_OVERRIDES = {}
 
+
 @cache
 def get_stage_overrides():
     if not STAGE_OVERRIDES:
