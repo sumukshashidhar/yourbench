@@ -6,6 +6,18 @@ from unittest.mock import patch
 import pytest
 
 from datasets import Dataset
+from yourbench.utils.configuration_engine import (
+    YourbenchConfig,
+    HuggingFaceConfig,
+    ModelConfig,
+    PipelineConfig,
+    IngestionConfig,
+    SummarizationConfig,
+    ChunkingConfig,
+    SingleShotQuestionGenerationConfig,
+    MultiHopQuestionGenerationConfig,
+    LightevalConfig,
+)
 
 
 # Fixture for temporary directory
@@ -19,71 +31,67 @@ def temp_dir():
 # Fixture for mock configuration
 @pytest.fixture
 def mock_config(temp_dir):
-    return {
-        "settings": {"debug": False},
-        "hf_configuration": {
-            "token": "fake_token",
-            "hf_organization": "fake_org",
-            "private": True,
-            "hf_dataset_name": "fake_dataset",
-            "concat_if_exist": False,
-        },
-        "local_dataset_dir": temp_dir,
-        "model_list": [
-            {
-                "model_name": "fake_model",
-                "provider": None,
-                "api_key": "fake_key",
-                "base_url": "http://localhost:8000/v1",
-                "max_concurrent_requests": 1,
-            }
-        ],
-        "model_roles": {
-            "ingestion": ["fake_model"],
-            "summarization": ["fake_model"],
-            "chunking": ["fake_model"],
-            "single_shot_question_generation": ["fake_model"],
-            "multi_hop_question_generation": ["fake_model"],
-        },
-        "pipeline": {
-            "ingestion": {
-                "run": True,
-                "source_documents_dir": os.path.join(temp_dir, "raw"),
-                "output_dir": os.path.join(temp_dir, "processed"),
-            },
-            "summarization": {"run": True},
-            "chunking": {
-                "run": True,
-                "chunking_configuration": {
-                    "l_max_tokens": 128,  # Only max_tokens is used now
-                    "h_min": 2,
-                    "h_max": 5,
-                    "num_multihops_factor": 2,
-                },
-            },
-            "single_shot_question_generation": {
-                "run": True,
-                "question_mode": "open-ended",
-                "additional_instructions": "Generate questions to test a curious adult",
-                "chunk_sampling": {
-                    "mode": "count",
-                    "value": 1,
-                    "random_seed": 123,
-                },
-            },
-            "multi_hop_question_generation": {
-                "run": True,
-                "question_mode": "multi-choice",
-                "additional_instructions": "Generate multi-choice questions to test a curious adult",
-                "chunk_sampling": {
-                    "mode": "count",
-                    "value": 1,
-                    "random_seed": 42,
-                },
-            },
-            "lighteval": {"run": True},
-        },
+    # Create proper configuration objects
+    hf_config = HuggingFaceConfig(
+        hf_token="fake_token",
+        hf_organization="fake_org",
+        private=True,
+        hf_dataset_name="fake_dataset",
+        concat_if_exist=False,
+        local_dataset_dir=temp_dir,
+    )
+    
+    model_list = [
+        ModelConfig(
+            model_name="fake_model",
+            provider=None,
+            api_key="fake_key",
+            base_url="http://localhost:8000/v1",
+            max_concurrent_requests=1,
+        )
+    ]
+    
+    pipeline_config = PipelineConfig(
+        ingestion=IngestionConfig(
+            run=True,
+            source_documents_dir=os.path.join(temp_dir, "raw"),
+            output_dir=os.path.join(temp_dir, "processed"),
+        ),
+        summarization=SummarizationConfig(run=True),
+        chunking=ChunkingConfig(
+            run=True,
+            l_max_tokens=256,
+            h_min=2,
+            h_max=5,
+            num_multihops_factor=2,
+        ),
+        single_shot_question_generation=SingleShotQuestionGenerationConfig(
+            run=True,
+            question_mode="open-ended",
+            additional_instructions="Generate questions to test a curious adult",
+        ),
+        multi_hop_question_generation=MultiHopQuestionGenerationConfig(
+            run=True,
+            question_mode="multi-choice",
+            additional_instructions="Generate multi-choice questions to test a curious adult",
+        ),
+        prepare_lighteval=LightevalConfig(run=True),
+    )
+    
+    model_roles = {
+        "ingestion": ["fake_model"],
+        "summarization": ["fake_model"],
+        "chunking": ["fake_model"],
+        "single_shot_question_generation": ["fake_model"],
+        "multi_hop_question_generation": ["fake_model"],
     }
+    
+    return YourbenchConfig(
+        hf_config=hf_config,
+        model_list=model_list,
+        pipeline_config=pipeline_config,
+        model_roles=model_roles,
+    )
 
 
 # Test for ingestion stage with mocked components
@@ -95,8 +103,8 @@ def test_ingestion_stage(mock_config, temp_dir, mock_no_docs):
     Verifies that the ingestion stage correctly processes source documents.
     """
     # Create test document structure
-    raw_dir = mock_config["pipeline"]["ingestion"]["source_documents_dir"]
-    output_dir = mock_config["pipeline"]["ingestion"]["output_dir"]
+    raw_dir = str(mock_config.pipeline_config.ingestion.source_documents_dir)
+    output_dir = str(mock_config.pipeline_config.ingestion.output_dir)
     os.makedirs(raw_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -274,9 +282,9 @@ def test_run_multi_hop_only_basic_case(mock_config):
     """
     from yourbench.utils.inference.inference_core import InferenceCall
 
-    # Setup config: multi-hop on, cross-doc off
-    mock_config["pipeline"]["multi_hop_question_generation"]["run"] = True
-    mock_config["pipeline"]["multi_hop_question_generation"]["cross_document"] = {"enable": False}
+    # Setup config: multi-hop on, cross-doc off  
+    mock_config.pipeline_config.multi_hop_question_generation.run = True
+    # Note: cross_document is not a field in the current configuration
 
     mock_dataset = Dataset.from_list([
         {
@@ -331,8 +339,8 @@ def test_multi_hop_variants(mock_config, run_flag, cross_flag, expected_label):
     from yourbench.utils.inference.inference_core import InferenceCall
 
     # Update config
-    mock_config["pipeline"]["multi_hop_question_generation"]["run"] = run_flag
-    mock_config["pipeline"]["multi_hop_question_generation"]["cross_document"] = {"enable": cross_flag}
+    mock_config.pipeline_config.multi_hop_question_generation.run = run_flag
+    # Note: cross_document configuration is handled differently in the current implementation
 
     # Create either 1 or 2 documents depending on cross_flag
     if cross_flag:
@@ -403,16 +411,13 @@ def test_multi_hop_variants(mock_config, run_flag, cross_flag, expected_label):
         run_multi_hop(mock_config)
 
         if expected_label:
-            # Fix: When cross_flag=False, only expect 1 save call for multi_hop_questions
-            # When cross_flag=True, expect 2 save calls for both multi_hop_questions and cross_document_questions
-            expected_calls = 2 if cross_flag else 1
-            assert mock_save.call_count == expected_calls
+            # The current implementation only generates multi_hop_questions in run_multi_hop
+            # Cross-document questions are handled by run_cross_document separately
+            assert mock_save.call_count == 1
 
             subsets = [kwargs["subset"] for _, kwargs in mock_save.call_args_list]
-            assert expected_label in subsets
-            if cross_flag:
-                assert "multi_hop_questions" in subsets
-                assert "cross_document_questions" in subsets
+            # run_multi_hop always saves to "multi_hop_questions"
+            assert "multi_hop_questions" in subsets
         else:
             mock_save.assert_not_called()
 
@@ -510,7 +515,7 @@ def test_lighteval_stage(mock_config):
 
 def test_stage_function_overrides(monkeypatch, tmp_path):
     """
-    Test that STAGE_FUNCTION_OVERRIDES are honored and used instead of dynamic imports
+    Test that STAGE_OVERRIDES are honored and used instead of dynamic imports
     """
     from yourbench.pipeline import handler
 
@@ -524,19 +529,29 @@ def test_stage_function_overrides(monkeypatch, tmp_path):
         called_stages.append("multi_hop_question_generation")
 
     # Patch the override map to use mocks
-    monkeypatch.setitem(handler.STAGE_FUNCTION_OVERRIDES, "single_shot_question_generation", mock_run_single_shot)
-    monkeypatch.setitem(handler.STAGE_FUNCTION_OVERRIDES, "multi_hop_question_generation", mock_run_multi_hop)
+    monkeypatch.setitem(handler.STAGE_OVERRIDES, "single_shot_question_generation", mock_run_single_shot)
+    monkeypatch.setitem(handler.STAGE_OVERRIDES, "multi_hop_question_generation", mock_run_multi_hop)
 
-    # Patch load_config to avoid reading real file
-    def mock_load_config(path):
-        return {
-            "pipeline": {
-                "single_shot_question_generation": {"run": True},
-                "multi_hop_question_generation": {"run": True},
-            }
-        }
-
-    monkeypatch.setattr(handler, "load_config", mock_load_config)
+    # Create a mock config
+    from yourbench.utils.configuration_engine import (
+        YourbenchConfig,
+        HuggingFaceConfig,
+        PipelineConfig,
+        SingleShotQuestionGenerationConfig,
+        MultiHopQuestionGenerationConfig,
+    )
+    
+    mock_config = YourbenchConfig(
+        hf_config=HuggingFaceConfig(hf_dataset_name="test"),
+        model_list=[],
+        pipeline_config=PipelineConfig(
+            single_shot_question_generation=SingleShotQuestionGenerationConfig(run=True),
+            multi_hop_question_generation=MultiHopQuestionGenerationConfig(run=True),
+        ),
+    )
+    
+    # Patch YourbenchConfig.from_yaml to return our mock
+    monkeypatch.setattr(YourbenchConfig, "from_yaml", lambda path: mock_config)
 
     # Run pipeline
     config_path = tmp_path / "fake_config.yaml"

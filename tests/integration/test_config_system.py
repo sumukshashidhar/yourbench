@@ -228,7 +228,7 @@ class TestConfigurationSystemIntegration:
                         "run": True,
                         "max_combinations": 50,
                         "chunks_per_document": 2,
-                        "num_docs_per_combination": [2, 3, 5],
+                        "num_docs_per_combination": [2, 5],
                         "random_seed": 123,
                     },
                     "question_rewriting": {
@@ -274,7 +274,7 @@ class TestConfigurationSystemIntegration:
             assert config.pipeline_config.cross_document_question_generation.run
             assert config.pipeline_config.cross_document_question_generation.max_combinations == 50
             assert config.pipeline_config.cross_document_question_generation.chunks_per_document == 2
-            assert config.pipeline_config.cross_document_question_generation.num_docs_per_combination == [2, 3, 5]
+            assert config.pipeline_config.cross_document_question_generation.num_docs_per_combination == [2, 5]
             assert config.pipeline_config.cross_document_question_generation.random_seed == 123
 
             # Verify question rewriting config
@@ -321,7 +321,7 @@ class TestConfigurationSystemIntegration:
             # Create invalid YAML
             config_path.write_text("invalid: yaml: content: [")
 
-            with pytest.raises(yaml.YAMLError):
+            with pytest.raises(ValueError, match="Invalid YAML"):
                 load_config(config_path)
 
     def test_error_handling_missing_file(self):
