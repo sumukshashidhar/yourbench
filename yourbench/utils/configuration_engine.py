@@ -155,6 +155,8 @@ class HuggingFaceConfig(BaseModel):
     local_dataset_dir: Path | None = Path("data/saved_dataset")
     local_saving: bool = True
     upload_card: bool = True
+    export_jsonl: bool = False
+    jsonl_export_dir: Path | None = Path("data/jsonl_export")
 
     @field_validator("hf_organization", "hf_token")
     @classmethod
@@ -168,7 +170,7 @@ class HuggingFaceConfig(BaseModel):
         object.__setattr__(self, "hf_organization", _expand_env(self.hf_organization))
         return self
 
-    @field_validator("local_dataset_dir")
+    @field_validator("local_dataset_dir", "jsonl_export_dir")
     @classmethod
     def validate_path(cls, v: Union[str, Path, None]) -> Path | None:
         if v is None:
@@ -708,11 +710,13 @@ class YourbenchConfig(BaseModel):
         hf_config_data = data.get("hf_configuration", {})
         if hf_config_data:
             hf_config_data = {k: v for k, v in hf_config_data.items() if v is not None}
-        
+
         config_data = {
             "hf_configuration": HuggingFaceConfig(**hf_config_data),
             "pipeline_config": pipeline_config,
-            "model_list": [ModelConfig(**{k: v for k, v in m.items() if v is not None}) for m in data.get("model_list", [])],
+            "model_list": [
+                ModelConfig(**{k: v for k, v in m.items() if v is not None}) for m in data.get("model_list", [])
+            ],
             "model_roles": data.get("model_roles", {}),
             "debug": data.get("debug", False),
         }
