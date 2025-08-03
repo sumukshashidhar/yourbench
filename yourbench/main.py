@@ -794,7 +794,7 @@ def _run_quick_mode(
         # Generate dataset name
         dataset_name = push_to_hub if push_to_hub else get_random_name()
 
-        # Create minimal configuration focused on single-hop questions
+        # Create configuration matching default_example structure
         config = {
             "hf_configuration": {
                 "hf_dataset_name": dataset_name,
@@ -809,9 +809,9 @@ def _run_quick_mode(
             "model_list": [
                 {
                     "model_name": model,
-                    "max_concurrent_requests": 8,
-                    "base_url": "https://api.openai.com/v1" if "gpt" in model.lower() else None,
+                    "base_url": "https://api.openai.com/v1/" if "gpt" in model.lower() else None,
                     "api_key": "$OPENAI_API_KEY" if "gpt" in model.lower() else "$HF_TOKEN",
+                    "max_concurrent_requests": 16,
                 }
             ],
             "pipeline": {
@@ -820,18 +820,31 @@ def _run_quick_mode(
                     "source_documents_dir": str(raw_dir),
                     "output_dir": str(temp_path / "processed"),
                 },
-                "chunking": {
-                    "run": True, 
-                    "l_max_tokens": 512,
-                    "input_subset": "ingested",  # Read from ingested instead of summarized
+                "summarization": {
+                    "run": True,
                 },
-                "single_shot_question_generation": {"run": True},
-                "multi_hop_question_generation": {"run": False},  # Skip for speed
-                "prepare_lighteval": {"run": True},
-                "citation_score_filtering": {"run": False},  # Skip for speed
+                "chunking": {
+                    "run": True,
+                },
+                "single_shot_question_generation": {
+                    "run": True,
+                    "additional_instructions": "Ask basic questions about the content",
+                },
+                "prepare_lighteval": {
+                    "run": True,
+                },
             },
         }
 
+        # Add model roles mapping
+        config["model_roles"] = {
+            "ingestion": [model],
+            "summarization": [model],
+            "chunking": [model],
+            "single_shot_question_generation": [model],
+            "multi_hop_question_generation": [model],
+        }
+        
         # If push_to_hub is specified, enable it
         if push_to_hub:
             config["pipeline"]["upload_ingest_to_hub"] = {"run": True}
