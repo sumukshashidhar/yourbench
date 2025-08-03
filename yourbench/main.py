@@ -778,14 +778,13 @@ def _run_quick_mode(
     # Create processing directory
     processing_dir = Path("yourbench_processing")
     processing_dir.mkdir(exist_ok=True)
-    
+
     # Use dataset name as subdirectory
     dataset_name = push_to_hub if push_to_hub else get_random_name()
     temp_path = processing_dir / dataset_name
     temp_path.mkdir(exist_ok=True)
-    
-    try:
 
+    try:
         # Prepare documents directory
         if docs_path.is_file():
             # Single file - create a directory and copy it
@@ -797,7 +796,6 @@ def _run_quick_mode(
         else:
             # Directory - use as is
             raw_dir = docs_path
-
 
         # Create configuration matching default_example structure
         config = {
