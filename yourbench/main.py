@@ -16,6 +16,7 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
 from rich.console import Console
 
+
 # Track startup time
 startup_time = time.perf_counter()
 
@@ -762,7 +763,7 @@ def _run_quick_mode(
 ) -> None:
     """Run YourBench in quick mode with minimal configuration."""
     import tempfile
-    import json
+
     from randomname import get_name as get_random_name
 
     # Setup logging
@@ -809,6 +810,8 @@ def _run_quick_mode(
                 {
                     "model_name": model,
                     "max_concurrent_requests": 8,
+                    "base_url": "https://api.openai.com/v1" if "gpt" in model.lower() else None,
+                    "api_key": "$OPENAI_API_KEY" if "gpt" in model.lower() else "$HF_TOKEN",
                 }
             ],
             "pipeline": {
@@ -817,8 +820,11 @@ def _run_quick_mode(
                     "source_documents_dir": str(raw_dir),
                     "output_dir": str(temp_path / "processed"),
                 },
-                "summarization": {"run": False},  # Skip for speed
-                "chunking": {"run": True, "l_max_tokens": 512},  # Smaller chunks
+                "chunking": {
+                    "run": True, 
+                    "l_max_tokens": 512,
+                    "input_subset": "ingested",  # Read from ingested instead of summarized
+                },
                 "single_shot_question_generation": {"run": True},
                 "multi_hop_question_generation": {"run": False},  # Skip for speed
                 "prepare_lighteval": {"run": True},
@@ -852,7 +858,7 @@ def _run_quick_mode(
             # Check for JSONL files in current directory
             jsonl_files = list(Path.cwd().glob("*.jsonl"))
             if jsonl_files:
-                console.print(f"\n[green]✓[/green] Generated JSONL files:")
+                console.print("\n[green]✓[/green] Generated JSONL files:")
                 for file in jsonl_files:
                     console.print(f"  - {file.name}")
 

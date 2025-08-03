@@ -528,9 +528,15 @@ def test_stage_function_overrides(monkeypatch, tmp_path):
     def mock_run_multi_hop(config):
         called_stages.append("multi_hop_question_generation")
 
+    # Reload STAGE_OVERRIDES since it's loaded at module import time
+    handler.STAGE_OVERRIDES = handler._get_stage_overrides()
+    
     # Patch the override map to use mocks
     monkeypatch.setitem(handler.STAGE_OVERRIDES, "single_shot_question_generation", mock_run_single_shot)
     monkeypatch.setitem(handler.STAGE_OVERRIDES, "multi_hop_question_generation", mock_run_multi_hop)
+    
+    # Clear the cache for get_stage_function since it uses @cache
+    handler.get_stage_function.cache_clear()
 
     # Create a mock config
     from yourbench.utils.configuration_engine import (
@@ -552,6 +558,20 @@ def test_stage_function_overrides(monkeypatch, tmp_path):
 
     # Patch YourbenchConfig.from_yaml to return our mock
     monkeypatch.setattr(YourbenchConfig, "from_yaml", lambda path: mock_config)
+
+    # Mock dataset loading and saving to avoid HF API calls
+    from datasets import Dataset
+    mock_dataset = Dataset.from_list([{"text": "test"}])
+    
+    # Mock the actual custom_load_dataset function
+    import yourbench.utils.dataset_engine
+    monkeypatch.setattr(yourbench.utils.dataset_engine, "custom_load_dataset", lambda *args, **kwargs: mock_dataset)
+    
+    # Mock custom_save_dataset to avoid file operations
+    monkeypatch.setattr(yourbench.utils.dataset_engine, "custom_save_dataset", lambda *args, **kwargs: None)
+    
+    # Mock upload_dataset_card to avoid HF API calls
+    monkeypatch.setattr(yourbench.utils.dataset_engine, "upload_dataset_card", lambda *args, **kwargs: None)
 
     # Run pipeline
     config_path = tmp_path / "fake_config.yaml"

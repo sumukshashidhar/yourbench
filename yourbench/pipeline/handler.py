@@ -5,6 +5,7 @@ import importlib
 from functools import cache
 
 from loguru import logger
+from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig  # noqa: E402
 
 
 # Lazy imports for heavy modules
@@ -21,9 +22,6 @@ def _lazy_load_dataset_engine():
         _dataset_engine_loaded = True
     return _upload_dataset_card
 
-
-# Import stage order from configuration for consistency
-from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig
 
 # Lazy imports for question generation
 _qg_loaded = False
