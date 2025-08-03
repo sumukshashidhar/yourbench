@@ -116,29 +116,6 @@ Contributions are welcome!
 
 We actively review PRs and welcome improvements or fixes from the community. For major changes, feel free to open an issue first to discuss the idea.
 
-## Highlights
-
-
-* **Dynamic Benchmark Generation** – Produce diverse, up-to-date question-answer pairs derived from real-world source documents (PDF, Word, HTML, even multimedia).
-* **Scalable & Structured** – Seamlessly handle ingestion, summarization, and multi-hop chunking for large or specialized datasets.
-* **Extensible Pipeline** – Use out-of-the-box stages (ingestion, summarization, question generation) or plug in custom models and logic to accommodate domain-specific needs.
-* **Robust Configuration** – Control the entire pipeline via a single YAML config (model choices, data paths, chunking parameters, generation prompts, deduplication thresholds, etc.).
-* **Multi-Model Support** – Assign different LLMs for each stage (ingestion, summarization, QG, answering), fostering broader coverage and question-style diversity.
-* **Deduplication & Quality Filtering** – Automatically group near-duplicates to prune questions and retain a curated set of high-quality queries.
-* **Logging & Analysis** – Built-in metrics evaluate dataset coverage, question distribution, difficulty, and more.
-* **Flexible Output** – Save generated benchmarks locally or push them to the Hugging Face Hub for sharing or public leaderboards.
-
-<div align="center">
-
-<a href="https://youtu.be/mhszO6kZSbI" target="_blank">
-  <img src="https://img.youtube.com/vi/mhszO6kZSbI/maxresdefault.jpg" alt="YourBench Demo Video" width="600" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-  <br/>
-  <img src="https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch Demo on YouTube"/>
-  <br/>
-  <em>Watch our 3-minute demo of the YourBench pipeline</em>
-</a>
-</div>
-
 ## 📈 Progress
 
 <div align="center">
