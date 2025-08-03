@@ -72,11 +72,45 @@ app = typer.Typer(
     name="yourbench",
     help="YourBench - Dynamic Evaluation Set Generation with Large Language Models.",
     pretty_exceptions_show_locals=False,
+    invoke_without_command=True,
 )
 console = Console()
 
 # Log startup completion
 print(f"✅ YourBench loaded in {time.perf_counter() - startup_time:.2f}s", flush=True)
+
+# Global state for quick mode
+_quick_mode_state = {
+    "model": None,
+    "docs": None,
+    "push_to_hub": None,
+    "debug": False,
+}
+
+
+@app.callback()
+def main_callback(
+    ctx: typer.Context,
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use for generation (e.g., gpt-4o)"),
+    docs: Optional[Path] = typer.Option(None, "--docs", "-d", help="Path to documents (PDF, TXT, etc.)"),
+    push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Push dataset to HuggingFace Hub"),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+):
+    """Main callback to handle quick mode options."""
+    if ctx.invoked_subcommand is None and model and docs:
+        # Quick mode - run directly without subcommand
+        _run_quick_mode(model, docs, push_to_hub, debug, False)
+        raise typer.Exit(0)
+    elif ctx.invoked_subcommand is None:
+        # No subcommand and no quick mode args - show help
+        console.print(ctx.get_help())
+        raise typer.Exit(0)
+    else:
+        # Store state for subcommands if needed
+        _quick_mode_state["model"] = model
+        _quick_mode_state["docs"] = docs
+        _quick_mode_state["push_to_hub"] = push_to_hub
+        _quick_mode_state["debug"] = debug
 
 
 @dataclass
@@ -503,16 +537,12 @@ def run(
         dir_okay=False,
         readable=True,
     ),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
     plot_stage_timing: bool = typer.Option(
         False,
         "--plot-stage-timing",
         help="Generate stage timing chart",
     ),
     gradio: bool = typer.Option(False, "--gradio", help="Launch the Gradio UI"),
-    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use for generation (e.g., gpt-4o)"),
-    docs: Optional[Path] = typer.Option(None, "--docs", "-d", help="Path to documents (PDF, TXT, etc.)"),
-    push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Push dataset to HuggingFace Hub"),
 ) -> None:
     """Run the YourBench pipeline with a configuration file or launch the Gradio UI."""
     if gradio:
@@ -520,19 +550,8 @@ def run(
         ui_func()
         return
 
-    # Handle quick run mode with --model and --docs
-    if model and docs:
-        # Create a temporary config for quick run
-        _run_quick_mode(model, docs, push_to_hub, debug, plot_stage_timing)
-        return
-
-    # Handle both new positional and legacy --config
-    final_config = config_path or config
-
-    if not final_config:
-        console.print("[red]Error:[/red] Please provide a configuration file")
-        console.print("Usage: yourbench run CONFIG_FILE")
-        raise typer.Exit(1)
+    # Get debug flag from global state if running from main command
+    debug = _quick_mode_state.get("debug", False)
 
     # Handle both new positional and legacy --config
     final_config = config_path or config
