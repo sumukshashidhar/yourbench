@@ -762,7 +762,6 @@ def _run_quick_mode(
     plot_stage_timing: bool,
 ) -> None:
     """Run YourBench in quick mode with minimal configuration."""
-    import tempfile
 
     from randomname import get_name as get_random_name
 

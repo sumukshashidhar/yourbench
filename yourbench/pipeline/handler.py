@@ -5,6 +5,7 @@ import importlib
 from functools import cache
 
 from loguru import logger
+
 from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig  # noqa: E402
 
 

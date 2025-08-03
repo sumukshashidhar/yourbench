@@ -525,12 +525,16 @@ def test_stage_function_overrides(monkeypatch, tmp_path):
     def mock_get_stage_function(stage):
         """Mock get_stage_function to return our mock functions"""
         if stage == "single_shot_question_generation":
+
             def mock_single_shot(config):
                 called_stages.append("single_shot_question_generation")
+
             return mock_single_shot
         elif stage == "multi_hop_question_generation":
+
             def mock_multi_hop(config):
                 called_stages.append("multi_hop_question_generation")
+
             return mock_multi_hop
         else:
             # For other stages, return a no-op
