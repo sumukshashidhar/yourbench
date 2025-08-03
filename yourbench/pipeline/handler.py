@@ -16,6 +16,7 @@ def _lazy_load_dataset_engine():
     global _dataset_engine_loaded, _upload_dataset_card
     if not _dataset_engine_loaded:
         from yourbench.utils.dataset_engine import upload_dataset_card
+
         _upload_dataset_card = upload_dataset_card
         _dataset_engine_loaded = True
     return _upload_dataset_card
@@ -35,6 +36,7 @@ def _lazy_load_question_generation():
     global _qg_loaded, _run_multi_hop, _run_single_shot, _run_cross_document
     if not _qg_loaded:
         from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
+
         _run_multi_hop = run_multi_hop
         _run_single_shot = run_single_shot
         _run_cross_document = run_cross_document
@@ -43,6 +45,7 @@ def _lazy_load_question_generation():
 
 
 STAGE_ORDER = PipelineConfig.STAGE_ORDER
+
 
 def _get_stage_overrides():
     """Get stage overrides with lazy loading."""
@@ -55,7 +58,7 @@ def _get_stage_overrides():
 
 
 # For backward compatibility with tests
-STAGE_OVERRIDES = property(_get_stage_overrides)
+STAGE_OVERRIDES = _get_stage_overrides()
 
 
 @cache
