@@ -173,5 +173,9 @@ cython_debug/
 .ruff_cache
 
 # OS specific cache
-.DS_Store*.jsonl
+.DS_Store
+
+# Generated files
+*.jsonl
 index.json
+yourbench_processing/

@@ -775,9 +775,16 @@ def _run_quick_mode(
         console.print(f"[red]Error:[/red] Documents path does not exist: {docs_path}")
         raise typer.Exit(1)
 
-    # Create temporary directory for processing
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
+    # Create processing directory
+    processing_dir = Path("yourbench_processing")
+    processing_dir.mkdir(exist_ok=True)
+    
+    # Use dataset name as subdirectory
+    dataset_name = push_to_hub if push_to_hub else get_random_name()
+    temp_path = processing_dir / dataset_name
+    temp_path.mkdir(exist_ok=True)
+    
+    try:
 
         # Prepare documents directory
         if docs_path.is_file():
@@ -791,8 +798,6 @@ def _run_quick_mode(
             # Directory - use as is
             raw_dir = docs_path
 
-        # Generate dataset name
-        dataset_name = push_to_hub if push_to_hub else get_random_name()
 
         # Create configuration matching default_example structure
         config = {
@@ -844,7 +849,7 @@ def _run_quick_mode(
             "single_shot_question_generation": [model],
             "multi_hop_question_generation": [model],
         }
-        
+
         # If push_to_hub is specified, enable it
         if push_to_hub:
             config["pipeline"]["upload_ingest_to_hub"] = {"run": True}
@@ -881,6 +886,9 @@ def _run_quick_mode(
         except Exception as e:
             logger.exception(f"Pipeline failed: {e}")
             raise typer.Exit(1)
+    finally:
+        # Keep the processing directory for inspection
+        logger.info(f"Processing files saved in: {temp_path}")
 
 
 def main() -> None:
