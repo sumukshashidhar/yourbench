@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import sys
+import time
 from typing import Optional
 from pathlib import Path
 from dataclasses import field, dataclass
@@ -15,11 +16,42 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
 from rich.console import Console
 
-from yourbench.app import launch_ui
-from yourbench.analysis import run_analysis
-from yourbench.pipeline.handler import run_pipeline
+# Track startup time
+startup_time = time.perf_counter()
+
+# Lazy imports for heavy modules
+launch_ui = None
+run_analysis = None
+run_pipeline = None
 
 
+def _lazy_import_ui():
+    global launch_ui
+    if launch_ui is None:
+        print("⏳ Loading Gradio UI components...", flush=True)
+        from yourbench.app import launch_ui as _launch_ui
+        launch_ui = _launch_ui
+    return launch_ui
+
+
+def _lazy_import_analysis():
+    global run_analysis
+    if run_analysis is None:
+        from yourbench.analysis import run_analysis as _run_analysis
+        run_analysis = _run_analysis
+    return run_analysis
+
+
+def _lazy_import_pipeline():
+    global run_pipeline
+    if run_pipeline is None:
+        print("⏳ Loading pipeline components...", flush=True)
+        from yourbench.pipeline.handler import run_pipeline as _run_pipeline
+        run_pipeline = _run_pipeline
+    return run_pipeline
+
+
+print("⏳ Loading environment variables...", flush=True)
 load_dotenv()
 
 # Configuration constants
@@ -38,6 +70,9 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 console = Console()
+
+# Log startup completion
+print(f"✅ YourBench loaded in {time.perf_counter() - startup_time:.2f}s", flush=True)
 
 
 @dataclass
@@ -471,12 +506,20 @@ def run(
         help="Generate stage timing chart",
     ),
     gradio: bool = typer.Option(False, "--gradio", help="Launch the Gradio UI"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use for generation (e.g., gpt-4o)"),
+    docs: Optional[Path] = typer.Option(None, "--docs", "-d", help="Path to documents (PDF, TXT, etc.)"),
+    push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Push dataset to HuggingFace Hub"),
 ) -> None:
     """Run the YourBench pipeline with a configuration file or launch the Gradio UI."""
     if gradio:
-        from yourbench.app import launch_ui
-
-        launch_ui()
+        ui_func = _lazy_import_ui()
+        ui_func()
+        return
+    
+    # Handle quick run mode with --model and --docs
+    if model and docs:
+        # Create a temporary config for quick run
+        _run_quick_mode(model, docs, push_to_hub, debug, plot_stage_timing)
         return
 
     # Handle both new positional and legacy --config
@@ -502,7 +545,8 @@ def run(
     logger.info(f"Running pipeline with config: {final_config}")
 
     try:
-        run_pipeline(
+        pipeline_func = _lazy_import_pipeline()
+        pipeline_func(
             config_file_path=str(final_config),
             debug=debug,
             plot_stage_timing=plot_stage_timing,
@@ -635,7 +679,8 @@ def analyze(
     logger.info(f"Running analysis '{analysis_name}' with arguments: {args}")
 
     try:
-        run_analysis(analysis_name, args, debug=debug)
+        analysis_func = _lazy_import_analysis()
+        analysis_func(analysis_name, args, debug=debug)
     except Exception as e:
         logger.exception(f"Analysis '{analysis_name}' failed: {e}")
         raise typer.Exit(1)
@@ -644,7 +689,8 @@ def analyze(
 @app.command()
 def gui() -> None:
     """Launch the Gradio UI."""
-    launch_ui()
+    ui_func = _lazy_import_ui()
+    ui_func()
 
 
 @app.command()
@@ -704,9 +750,123 @@ def help() -> None:
     console.print("• Visit the documentation for detailed guides and examples")
 
 
+def _run_quick_mode(
+    model: str,
+    docs_path: Path,
+    push_to_hub: Optional[str],
+    debug: bool,
+    plot_stage_timing: bool,
+) -> None:
+    """Run YourBench in quick mode with minimal configuration."""
+    import tempfile
+    import json
+    from randomname import get_name as get_random_name
+    
+    # Setup logging
+    logger.remove()
+    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
+    
+    # Validate docs path
+    if not docs_path.exists():
+        console.print(f"[red]Error:[/red] Documents path does not exist: {docs_path}")
+        raise typer.Exit(1)
+    
+    # Create temporary directory for processing
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Prepare documents directory
+        if docs_path.is_file():
+            # Single file - create a directory and copy it
+            raw_dir = temp_path / "raw"
+            raw_dir.mkdir(parents=True)
+            import shutil
+            shutil.copy2(docs_path, raw_dir)
+        else:
+            # Directory - use as is
+            raw_dir = docs_path
+        
+        # Generate dataset name
+        dataset_name = push_to_hub if push_to_hub else get_random_name()
+        
+        # Create minimal configuration
+        config = {
+            "hf_configuration": {
+                "hf_dataset_name": dataset_name,
+                "hf_organization": "$HF_ORGANIZATION",
+                "hf_token": "$HF_TOKEN",
+                "private": True,
+                "local_dataset_dir": str(temp_path / "dataset"),
+                "local_saving": True,
+                "export_jsonl": True,
+                "jsonl_export_dir": ".",  # Export to current directory
+            },
+            "model_list": [
+                {
+                    "model_name": model,
+                    "max_concurrent_requests": 16,
+                }
+            ],
+            "pipeline": {
+                "ingestion": {
+                    "run": True,
+                    "source_documents_dir": str(raw_dir),
+                    "output_dir": str(temp_path / "processed"),
+                },
+                "summarization": {"run": True},
+                "chunking": {"run": True},
+                "single_shot_question_generation": {"run": True},
+                "multi_hop_question_generation": {"run": True},
+                "lighteval": {"run": True},
+                "citation_score_filtering": {"run": True},
+            },
+        }
+        
+        # If push_to_hub is specified, enable it
+        if push_to_hub:
+            config["pipeline"]["upload_ingest_to_hub"] = {"run": True}
+        
+        # Save config to temporary file
+        config_path = temp_path / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+        
+        logger.info(f"Running YourBench with model: {model}")
+        logger.info(f"Processing documents from: {docs_path}")
+        if push_to_hub:
+            logger.info(f"Will push dataset to Hub as: {push_to_hub}")
+        
+        # Run the pipeline
+        try:
+            pipeline_func = _lazy_import_pipeline()
+            pipeline_func(
+                config_file_path=str(config_path),
+                debug=debug,
+                plot_stage_timing=plot_stage_timing,
+            )
+            
+            # Copy JSONL files to current directory
+            jsonl_files = list(Path(".").glob("*.jsonl"))
+            if jsonl_files:
+                console.print(f"\n[green]✓[/green] Generated JSONL files:")
+                for file in jsonl_files:
+                    console.print(f"  - {file}")
+            
+            if push_to_hub:
+                console.print(f"\n[green]✓[/green] Dataset pushed to: https://huggingface.co/datasets/{push_to_hub}")
+                
+        except Exception as e:
+            logger.exception(f"Pipeline failed: {e}")
+            raise typer.Exit(1)
+
+
 def main() -> None:
     """Main entry point for the CLI."""
-    app()
+    # Check if running without arguments (show help)
+    if len(sys.argv) == 1:
+        app(["--help"])
+    else:
+        app()
 
 
 if __name__ == "__main__":

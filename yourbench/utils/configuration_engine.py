@@ -155,6 +155,8 @@ class HuggingFaceConfig(BaseModel):
     local_dataset_dir: Path | None = Path("data/saved_dataset")
     local_saving: bool = True
     upload_card: bool = True
+    export_jsonl: bool = False
+    jsonl_export_dir: Path | None = Path("data/jsonl_export")
 
     @field_validator("hf_organization", "hf_token")
     @classmethod
@@ -168,7 +170,7 @@ class HuggingFaceConfig(BaseModel):
         object.__setattr__(self, "hf_organization", _expand_env(self.hf_organization))
         return self
 
-    @field_validator("local_dataset_dir")
+    @field_validator("local_dataset_dir", "jsonl_export_dir")
     @classmethod
     def validate_path(cls, v: Union[str, Path, None]) -> Path | None:
         if v is None:

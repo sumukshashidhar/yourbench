@@ -6,25 +6,62 @@ from functools import cache
 
 from loguru import logger
 
-from yourbench.utils.dataset_engine import upload_dataset_card
+
+# Lazy imports for heavy modules
+_dataset_engine_loaded = False
+_upload_dataset_card = None
+
+
+def _lazy_load_dataset_engine():
+    global _dataset_engine_loaded, _upload_dataset_card
+    if not _dataset_engine_loaded:
+        from yourbench.utils.dataset_engine import upload_dataset_card
+        _upload_dataset_card = upload_dataset_card
+        _dataset_engine_loaded = True
+    return _upload_dataset_card
+
 
 # Import stage order from configuration for consistency
 from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig
-from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
+
+# Lazy imports for question generation
+_qg_loaded = False
+_run_multi_hop = None
+_run_single_shot = None
+_run_cross_document = None
+
+
+def _lazy_load_question_generation():
+    global _qg_loaded, _run_multi_hop, _run_single_shot, _run_cross_document
+    if not _qg_loaded:
+        from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
+        _run_multi_hop = run_multi_hop
+        _run_single_shot = run_single_shot
+        _run_cross_document = run_cross_document
+        _qg_loaded = True
+    return _run_multi_hop, _run_single_shot, _run_cross_document
 
 
 STAGE_ORDER = PipelineConfig.STAGE_ORDER
 
-STAGE_OVERRIDES = {
-    "single_shot_question_generation": run_single_shot,
-    "multi_hop_question_generation": run_multi_hop,
-    "cross_document_question_generation": run_cross_document,
-}
+def _get_stage_overrides():
+    """Get stage overrides with lazy loading."""
+    run_multi_hop, run_single_shot, run_cross_document = _lazy_load_question_generation()
+    return {
+        "single_shot_question_generation": run_single_shot,
+        "multi_hop_question_generation": run_multi_hop,
+        "cross_document_question_generation": run_cross_document,
+    }
+
+
+# For backward compatibility with tests
+STAGE_OVERRIDES = property(_get_stage_overrides)
 
 
 @cache
 def get_stage_function(stage: str):
-    if func := STAGE_OVERRIDES.get(stage):
+    overrides = _get_stage_overrides()
+    if func := overrides.get(stage):
         return func
 
     # Support older configs
@@ -72,6 +109,7 @@ def run_pipeline(config_file_path: str, debug: bool = False, **kwargs) -> None:
         logger.success(f"Completed {stage} in {elapsed:.3f}s")
 
     try:
-        upload_dataset_card(config)
+        upload_func = _lazy_load_dataset_engine()
+        upload_func(config)
     except Exception as e:
         logger.warning(f"Failed to upload dataset card: {e}")
