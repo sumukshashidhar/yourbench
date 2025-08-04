@@ -177,7 +177,7 @@ class HuggingFaceConfig(BaseModel):
         if self.hf_token == "$HF_TOKEN" and not os.getenv("HF_TOKEN"):
             logger.warning("HF_TOKEN environment variable not set. Please set it with: export HF_TOKEN=your_token")
         return self
-      
+
     @field_validator("local_dataset_dir", "jsonl_export_dir")
     @classmethod
     def validate_path(cls, v: Union[str, Path, None]) -> Path | None:
