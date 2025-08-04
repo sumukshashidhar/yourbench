@@ -1,4 +1,5 @@
 import os
+import json
 import math
 import random
 import shutil
@@ -40,6 +41,8 @@ class HFSettings:
     local_dir: Path | None
     concat_if_exist: bool = False
     private: bool = True
+    export_jsonl: bool = False
+    jsonl_export_dir: Path | None = None
 
     @property
     def repo_id(self) -> str:
@@ -79,6 +82,9 @@ def _extract_settings(config: Union[dict[str, Any], "YourbenchConfig"]) -> HFSet
         local_dir = hf.local_dataset_dir
         if local_dir and not isinstance(local_dir, Path):
             local_dir = Path(local_dir).expanduser().resolve()
+        jsonl_export_dir = hf.jsonl_export_dir
+        if jsonl_export_dir and not isinstance(jsonl_export_dir, Path):
+            jsonl_export_dir = Path(jsonl_export_dir).expanduser().resolve()
         return HFSettings(
             dataset_name=dataset_name,
             organization=organization,
@@ -86,6 +92,8 @@ def _extract_settings(config: Union[dict[str, Any], "YourbenchConfig"]) -> HFSet
             local_dir=local_dir,
             concat_if_exist=hf.concat_if_exist,
             private=hf.private,
+            export_jsonl=hf.export_jsonl,
+            jsonl_export_dir=jsonl_export_dir,
         )
     else:
         # Legacy dict format
@@ -105,6 +113,9 @@ def _extract_settings(config: Union[dict[str, Any], "YourbenchConfig"]) -> HFSet
         local_raw = config.get("local_dataset_dir") or hf.get("local_dataset_dir")
         local_dir = Path(local_raw).expanduser().resolve() if local_raw else None
 
+        jsonl_export_raw = hf.get("jsonl_export_dir")
+        jsonl_export_dir = Path(jsonl_export_raw).expanduser().resolve() if jsonl_export_raw else None
+
         return HFSettings(
             dataset_name=dataset_name,
             organization=organization,
@@ -112,6 +123,8 @@ def _extract_settings(config: Union[dict[str, Any], "YourbenchConfig"]) -> HFSet
             local_dir=local_dir,
             concat_if_exist=hf.get("concat_if_exist", False),
             private=hf.get("private", True),
+            export_jsonl=hf.get("export_jsonl", False),
+            jsonl_export_dir=jsonl_export_dir,
         )
 
 
@@ -241,6 +254,44 @@ def _safe_save(dataset: Dataset | DatasetDict, path: Path) -> None:
         logger.success(f"Saved to {path} (via temp)")
 
 
+def _export_to_jsonl(dataset: Dataset | DatasetDict, export_dir: Path, subset: str | None = None) -> None:
+    """Export dataset to JSONL format."""
+    export_dir.mkdir(parents=True, exist_ok=True)
+
+    if isinstance(dataset, Dataset):
+        # Single dataset - export to single file
+        file_name = f"{subset}.jsonl" if subset else "dataset.jsonl"
+        file_path = export_dir / file_name
+
+        logger.info(f"Exporting dataset to JSONL: {file_path}")
+        with open(file_path, "w", encoding="utf-8") as f:
+            for row in dataset:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        logger.success(f"Exported {len(dataset)} rows to {file_path}")
+
+    elif isinstance(dataset, DatasetDict):
+        # Multiple subsets - export each to separate file
+        logger.info(f"Exporting DatasetDict with {len(dataset)} subsets to JSONL")
+        for subset_name, subset_data in dataset.items():
+            file_path = export_dir / f"{subset_name}.jsonl"
+
+            logger.info(f"Exporting subset '{subset_name}' to {file_path}")
+            with open(file_path, "w", encoding="utf-8") as f:
+                for row in subset_data:
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            logger.success(f"Exported {len(subset_data)} rows to {file_path}")
+
+        # Create an index file listing all subsets
+        index_path = export_dir / "index.json"
+        index_data = {
+            "subsets": list(dataset.keys()),
+            "total_rows": sum(len(subset_data) for subset_data in dataset.values()),
+        }
+        with open(index_path, "w", encoding="utf-8") as f:
+            json.dump(index_data, f, indent=2)
+        logger.info(f"Created index file: {index_path}")
+
+
 def custom_load_dataset(config: Union[dict[str, Any], "YourbenchConfig"], subset: str | None = None) -> Dataset:
     """Load dataset subset from local path or Hub. Raises errors if data missing or invalid."""
     settings = _extract_settings(config)
@@ -292,6 +343,11 @@ def custom_save_dataset(
 
         settings.local_dir.parent.mkdir(parents=True, exist_ok=True)
         _safe_save(merged, settings.local_dir)
+
+        # Export to JSONL if enabled
+        if settings.export_jsonl and settings.jsonl_export_dir:
+            logger.info("JSONL export is enabled")
+            _export_to_jsonl(merged, settings.jsonl_export_dir, subset)
 
     if push_to_hub and not _is_offline():
         if settings.concat_if_exist:

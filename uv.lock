@@ -2084,14 +2084,12 @@ dependencies = [
     { name = "asyncio" },
     { name = "click" },
     { name = "datasets" },
-    { name = "gradio" },
     { name = "hf-transfer" },
     { name = "huggingface-hub", extra = ["hf-xet", "inference"] },
     { name = "jinja2" },
     { name = "loguru" },
-    { name = "markitdown", extra = ["all"] },
+    { name = "markitdown" },
     { name = "numpy" },
-    { name = "pandas" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "pymupdf" },
@@ -2108,8 +2106,14 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+analysis = [
+    { name = "pandas" },
+]
 gui = [
     { name = "gradio" },
+]
+llm = [
+    { name = "markitdown", extra = ["all"] },
 ]
 
 [package.dev-dependencies]
@@ -2124,15 +2128,15 @@ requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "datasets", specifier = ">=3.3.0" },
-    { name = "gradio", specifier = ">=5.35.0" },
-    { name = "gradio", marker = "extra == 'gui'" },
+    { name = "gradio", marker = "extra == 'gui'", specifier = ">=5.35.0" },
     { name = "hf-transfer", specifier = ">=0.1.9" },
     { name = "huggingface-hub", extras = ["inference", "hf-xet"], specifier = ">=0.34.3" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "loguru", specifier = ">=0.7.3" },
-    { name = "markitdown", extras = ["all"], specifier = ">=0.0.2" },
+    { name = "markitdown", specifier = ">=0.0.2" },
+    { name = "markitdown", extras = ["all"], marker = "extra == 'llm'", specifier = ">=0.0.2" },
     { name = "numpy", specifier = ">=1.24.0" },
-    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "pandas", marker = "extra == 'analysis'", specifier = ">=2.0.0" },
     { name = "pillow", specifier = ">=11.2.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pymupdf", specifier = ">=1.26.1" },
@@ -2147,7 +2151,7 @@ requires-dist = [
     { name = "trafilatura", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.15.2" },
 ]
-provides-extras = ["gui"]
+provides-extras = ["gui", "llm", "analysis"]
 
 [package.metadata.requires-dev]
 dev = [

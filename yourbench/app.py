@@ -2,16 +2,44 @@ import io
 import os
 import re
 import sys
+import time
 import atexit
 import shutil
 import subprocess
 
-import yaml
-import gradio as gr
-import pandas as pd
-from dotenv import load_dotenv
+# Early startup logging
 from loguru import logger
 
+
+logger.info("YourBench Gradio UI starting up...")
+ui_startup_time = time.perf_counter()
+
+import yaml  # noqa: E402
+
+
+logger.info("Loading Gradio...")
+import gradio as gr  # noqa: E402
+
+
+logger.info("Gradio loaded")
+
+from dotenv import load_dotenv  # noqa: E402
+
+
+# Lazy import pandas - only when needed
+pd = None
+
+
+def _get_pandas():
+    global pd
+    if pd is None:
+        import pandas
+
+        pd = pandas
+    return pd
+
+
+logger.info("Loading Gradio components...")
 
 load_dotenv()
 logger.remove()
@@ -243,6 +271,9 @@ def validate_config_inputs(table_data, ingestion_model, summarization_model, sin
 
 
 def launch_ui():
+    logger.info("Building Gradio interface...")
+    interface_start = time.perf_counter()
+
     with gr.Blocks(title="YourBench", theme=gr.themes.Default()) as demo:
         gr.Markdown("# 🚀 YourBench")
         gr.Markdown("**Create custom benchmark datasets from your documents using AI-powered question generation**")
@@ -360,7 +391,8 @@ def launch_ui():
                                     gr.Warning(f"⚠️ Invalid Base URL: {error_msg}")
                                     return table_data, model_name, provider_key, base_url, api_key_var
 
-                            if isinstance(table_data, pd.DataFrame):
+                            pandas = _get_pandas()
+                            if isinstance(table_data, pandas.DataFrame):
                                 new_data = table_data.values.tolist()
                             elif table_data is None:
                                 new_data = []
@@ -380,7 +412,8 @@ def launch_ui():
                             return new_data, "", "HF Inference", "", ""
 
                         def remove_model(table_data):
-                            if isinstance(table_data, pd.DataFrame):
+                            pandas = _get_pandas()
+                            if isinstance(table_data, pandas.DataFrame):
                                 new_data = table_data.values.tolist()
                             elif table_data is None:
                                 new_data = []
@@ -448,7 +481,8 @@ def launch_ui():
                             )
 
                         def update_role_choices(table_data):
-                            if isinstance(table_data, pd.DataFrame):
+                            pandas = _get_pandas()
+                            if isinstance(table_data, pandas.DataFrame):
                                 data = table_data.values.tolist()
                             elif table_data is None:
                                 data = []
@@ -559,7 +593,8 @@ def launch_ui():
                 ):
                     try:
                         # Convert table_data to list format
-                        if isinstance(table_data, pd.DataFrame):
+                        pandas = _get_pandas()
+                        if isinstance(table_data, pandas.DataFrame):
                             rows = table_data.values.tolist()
                         elif table_data is None:
                             rows = []
@@ -847,5 +882,9 @@ def launch_ui():
         }
         """
         )
+
+    logger.success(f"Gradio interface built in {time.perf_counter() - interface_start:.2f}s")
+    logger.success(f"Total UI startup time: {time.perf_counter() - ui_startup_time:.2f}s")
+    logger.info("Launching Gradio server...")
 
     demo.launch()

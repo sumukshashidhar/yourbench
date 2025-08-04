@@ -12,6 +12,8 @@ data/saved_dataset/
 data/processed/
 test_config.yaml
 processed/
+yourbench_processing/
+test_output/
 # C extensions
 *.so
 
@@ -175,3 +177,8 @@ cython_debug/
 
 # OS specific cache
 .DS_Store
+
+# Generated files
+*.jsonl
+index.json
+yourbench_processing/
