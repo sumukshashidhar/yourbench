@@ -155,6 +155,8 @@ class HuggingFaceConfig(BaseModel):
     local_dataset_dir: Path | None = Path("data/saved_dataset")
     local_saving: bool = True
     upload_card: bool = True
+    export_jsonl: bool = False
+    jsonl_export_dir: Path | None = Path("data/jsonl_export")
 
     @field_validator("hf_organization", "hf_token")
     @classmethod
@@ -168,7 +170,15 @@ class HuggingFaceConfig(BaseModel):
         object.__setattr__(self, "hf_organization", _expand_env(self.hf_organization))
         return self
 
-    @field_validator("local_dataset_dir")
+    @model_validator(mode="after")
+    def validate_required_tokens(self):
+        """Validate that required tokens are set when needed."""
+        # Check if HF_TOKEN is needed and set
+        if self.hf_token == "$HF_TOKEN" and not os.getenv("HF_TOKEN"):
+            logger.warning("HF_TOKEN environment variable not set. Please set it with: export HF_TOKEN=your_token")
+        return self
+
+    @field_validator("local_dataset_dir", "jsonl_export_dir")
     @classmethod
     def validate_path(cls, v: Union[str, Path, None]) -> Path | None:
         if v is None:
@@ -206,6 +216,22 @@ class ModelConfig(BaseModel):
         # Also ensure api_key is expanded
         if self.api_key:
             object.__setattr__(self, "api_key", _expand_env(self.api_key))
+        return self
+
+    @model_validator(mode="after")
+    def validate_api_keys(self):
+        """Validate that required API keys are set."""
+        # Check OpenAI models
+        if self.model_name and "gpt" in self.model_name.lower():
+            if self.api_key == "$OPENAI_API_KEY" and not os.getenv("OPENAI_API_KEY"):
+                logger.warning(
+                    f"OpenAI model '{self.model_name}' requires OPENAI_API_KEY. Please set it with: export OPENAI_API_KEY=your_key"
+                )
+        # Check HF models
+        elif self.api_key == "$HF_TOKEN" and not os.getenv("HF_TOKEN"):
+            logger.warning(
+                f"Model '{self.model_name}' may require HF_TOKEN. Please set it with: export HF_TOKEN=your_token"
+            )
         return self
 
 
@@ -752,4 +778,4 @@ def is_yourbench_config(config: any) -> bool:
 if __name__ == "__main__":
     # Test loading the simple example config
     config = YourbenchConfig.from_yaml("example/configs/simple_example.yaml")
-    print(config.model_dump_yaml())
+    logger.info(config.model_dump_yaml())
