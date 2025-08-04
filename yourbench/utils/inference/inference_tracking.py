@@ -124,9 +124,15 @@ def _write_aggregate_log():
                 writer.writerow([model_name, data["input_tokens"], data["output_tokens"], data["calls"]])
         logger.success(f"Aggregate cost log successfully written to {_aggregate_log_file}")
     except Exception as e:
-        # Use print here as logger might be shutting down during atexit
-        # This is intentional - do not change to logger
-        print(f"ERROR: Failed to write aggregate cost log: {e}", flush=True)
+        # Try logger first, fallback to stderr if logger is shutting down
+        try:
+            logger.error(f"Failed to write aggregate cost log: {e}")
+        except Exception:
+            # Logger might be shutting down during atexit, write to stderr directly
+            import sys
+
+            sys.stderr.write(f"ERROR: Failed to write aggregate cost log: {e}\n")
+            sys.stderr.flush()
 
 
 # Register the aggregate log function to run at exit
