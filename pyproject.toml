@@ -1,6 +1,6 @@
 [project]
 name = "yourbench"
-version = "0.4.0"
+version = "0.4.1"
 authors = [
     { name = "Sumuk Shashidhar", email = "sumuks2@illinois.edu" },
     { name = "Alina Lozovskaia", email = "alina.lozovskaia@huggingface.co" },
@@ -51,7 +51,7 @@ build-backend = "setuptools.build_meta"
 include = ["yourbench*"]
 
 [tool.setuptools.package-data]
-yourbench = ["prompts/**/*.md"]
+yourbench = ["prompts/**/*.md", "utils/yourbench_card_template.md"]
 
 [tool.ruff]
 line-length = 119
