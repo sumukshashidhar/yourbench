@@ -53,7 +53,7 @@ YourBench is available on PyPI and requires **Python 3.12+**. You can install it
   pip install yourbench
   ```
 
-  This will install the latest published version (e.g. `0.4.0`).
+  This will install the latest published version (e.g. `0.4.1`).
 
 * **Install from source (development version):**
 
