@@ -11,5 +11,4 @@ pipeline:
   summarization:
   chunking:
   single_shot_question_generation:
-    additional_instructions: "Ask basic questions about Yourbench"
   prepare_lighteval:

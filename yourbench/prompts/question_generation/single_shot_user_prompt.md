@@ -1,3 +1,7 @@
+<additional_instructions>
+{additional_instructions}
+</additional_instructions> 
+
 <title>
 {title}
 </title>
@@ -9,7 +13,3 @@
 <text_chunk>
 {text_chunk}
 </text_chunk>
-
-<additional_instructions>
-{additional_instructions}
-</additional_instructions> 

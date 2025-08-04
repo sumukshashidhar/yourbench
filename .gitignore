@@ -10,6 +10,7 @@ files/
 example/data/processed/
 data/saved_dataset/
 data/processed/
+test_config.yaml
 processed/
 # C extensions
 *.so
