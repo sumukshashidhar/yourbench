@@ -854,7 +854,6 @@ def _run_quick_mode(
                 },
                 "single_shot_question_generation": {
                     "run": True,
-                    "additional_instructions": "Ask basic questions about the content",
                 },
                 "prepare_lighteval": {
                     "run": True,
