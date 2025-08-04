@@ -11,6 +11,8 @@ example/data/processed/
 data/saved_dataset/
 data/processed/
 processed/
+yourbench_processing/
+test_output/
 # C extensions
 *.so
 
