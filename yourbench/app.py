@@ -9,20 +9,20 @@ import subprocess
 
 
 # Early startup logging
-print("🌐 YourBench Gradio UI starting up...", flush=True)
+from loguru import logger
+logger.info("YourBench Gradio UI starting up...")
 ui_startup_time = time.perf_counter()
 
 import yaml  # noqa: E402
 
 
-print("  📦 Loading Gradio...", flush=True)
+logger.info("Loading Gradio...")
 import gradio as gr  # noqa: E402
 
 
-print("  ✓ Gradio loaded", flush=True)
+logger.info("Gradio loaded")
 
 from dotenv import load_dotenv  # noqa: E402
-from loguru import logger  # noqa: E402
 
 
 # Lazy import pandas - only when needed
@@ -38,7 +38,7 @@ def _get_pandas():
     return pd
 
 
-print("⏳ Loading Gradio components...", flush=True)
+logger.info("Loading Gradio components...")
 
 load_dotenv()
 logger.remove()
@@ -270,7 +270,7 @@ def validate_config_inputs(table_data, ingestion_model, summarization_model, sin
 
 
 def launch_ui():
-    print("⏳ Building Gradio interface...", flush=True)
+    logger.info("Building Gradio interface...")
     interface_start = time.perf_counter()
 
     with gr.Blocks(title="YourBench", theme=gr.themes.Default()) as demo:
@@ -882,8 +882,8 @@ def launch_ui():
         """
         )
 
-    print(f"✅ Gradio interface built in {time.perf_counter() - interface_start:.2f}s", flush=True)
-    print(f"✅ Total UI startup time: {time.perf_counter() - ui_startup_time:.2f}s", flush=True)
-    print("🌐 Launching Gradio server...", flush=True)
+    logger.success(f"Gradio interface built in {time.perf_counter() - interface_start:.2f}s")
+    logger.success(f"Total UI startup time: {time.perf_counter() - ui_startup_time:.2f}s")
+    logger.info("Launching Gradio server...")
 
     demo.launch()
