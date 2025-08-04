@@ -7,16 +7,16 @@ import pytest
 
 from datasets import Dataset
 from yourbench.utils.configuration_engine import (
-    YourbenchConfig,
-    HuggingFaceConfig,
     ModelConfig,
+    ChunkingConfig,
     PipelineConfig,
     IngestionConfig,
-    SummarizationConfig,
-    ChunkingConfig,
-    SingleShotQuestionGenerationConfig,
-    MultiHopQuestionGenerationConfig,
     LightevalConfig,
+    YourbenchConfig,
+    HuggingFaceConfig,
+    SummarizationConfig,
+    MultiHopQuestionGenerationConfig,
+    SingleShotQuestionGenerationConfig,
 )
 
 
@@ -40,7 +40,7 @@ def mock_config(temp_dir):
         concat_if_exist=False,
         local_dataset_dir=temp_dir,
     )
-    
+
     model_list = [
         ModelConfig(
             model_name="fake_model",
@@ -50,7 +50,7 @@ def mock_config(temp_dir):
             max_concurrent_requests=1,
         )
     ]
-    
+
     pipeline_config = PipelineConfig(
         ingestion=IngestionConfig(
             run=True,
@@ -77,7 +77,7 @@ def mock_config(temp_dir):
         ),
         prepare_lighteval=LightevalConfig(run=True),
     )
-    
+
     model_roles = {
         "ingestion": ["fake_model"],
         "summarization": ["fake_model"],
@@ -85,7 +85,7 @@ def mock_config(temp_dir):
         "single_shot_question_generation": ["fake_model"],
         "multi_hop_question_generation": ["fake_model"],
     }
-    
+
     return YourbenchConfig(
         hf_config=hf_config,
         model_list=model_list,
@@ -282,7 +282,7 @@ def test_run_multi_hop_only_basic_case(mock_config):
     """
     from yourbench.utils.inference.inference_core import InferenceCall
 
-    # Setup config: multi-hop on, cross-doc off  
+    # Setup config: multi-hop on, cross-doc off
     mock_config.pipeline_config.multi_hop_question_generation.run = True
     # Note: cross_document is not a field in the current configuration
 
@@ -534,13 +534,13 @@ def test_stage_function_overrides(monkeypatch, tmp_path):
 
     # Create a mock config
     from yourbench.utils.configuration_engine import (
+        PipelineConfig,
         YourbenchConfig,
         HuggingFaceConfig,
-        PipelineConfig,
-        SingleShotQuestionGenerationConfig,
         MultiHopQuestionGenerationConfig,
+        SingleShotQuestionGenerationConfig,
     )
-    
+
     mock_config = YourbenchConfig(
         hf_config=HuggingFaceConfig(hf_dataset_name="test"),
         model_list=[],
@@ -549,7 +549,7 @@ def test_stage_function_overrides(monkeypatch, tmp_path):
             multi_hop_question_generation=MultiHopQuestionGenerationConfig(run=True),
         ),
     )
-    
+
     # Patch YourbenchConfig.from_yaml to return our mock
     monkeypatch.setattr(YourbenchConfig, "from_yaml", lambda path: mock_config)
 
