@@ -6,17 +6,22 @@ from functools import cache
 
 from loguru import logger
 
-from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig  # noqa: E402
-
-
 # Lazy imports for heavy modules
 _dataset_engine_loaded = False
+_config_engine_loaded = False
+_question_gen_loaded = False
 _upload_dataset_card = None
+_PipelineConfig = None
+_YourbenchConfig = None
+_run_multi_hop = None
+_run_single_shot = None
+_run_cross_document = None
 
 
 def _lazy_load_dataset_engine():
     global _dataset_engine_loaded, _upload_dataset_card
     if not _dataset_engine_loaded:
+        logger.debug("Loading dataset engine...")
         from yourbench.utils.dataset_engine import upload_dataset_card
 
         _upload_dataset_card = upload_dataset_card
@@ -24,46 +29,57 @@ def _lazy_load_dataset_engine():
     return _upload_dataset_card
 
 
-# Lazy imports for question generation
-_qg_loaded = False
-_run_multi_hop = None
-_run_single_shot = None
-_run_cross_document = None
+def _lazy_load_config_engine():
+    global _config_engine_loaded, _PipelineConfig, _YourbenchConfig
+    if not _config_engine_loaded:
+        logger.debug("Loading configuration engine...")
+        from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig
+
+        _PipelineConfig = PipelineConfig
+        _YourbenchConfig = YourbenchConfig
+        _config_engine_loaded = True
+    return _PipelineConfig, _YourbenchConfig
 
 
-def _lazy_load_question_generation():
-    global _qg_loaded, _run_multi_hop, _run_single_shot, _run_cross_document
-    if not _qg_loaded:
+def _lazy_load_question_gen():
+    global _question_gen_loaded, _run_multi_hop, _run_single_shot, _run_cross_document
+    if not _question_gen_loaded:
+        logger.debug("Loading question generation modules...")
         from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
 
         _run_multi_hop = run_multi_hop
         _run_single_shot = run_single_shot
         _run_cross_document = run_cross_document
-        _qg_loaded = True
+        _question_gen_loaded = True
     return _run_multi_hop, _run_single_shot, _run_cross_document
 
 
-STAGE_ORDER = PipelineConfig.STAGE_ORDER
-
-
-def _get_stage_overrides():
-    """Get stage overrides with lazy loading."""
-    run_multi_hop, run_single_shot, run_cross_document = _lazy_load_question_generation()
-    return {
-        "single_shot_question_generation": run_single_shot,
-        "multi_hop_question_generation": run_multi_hop,
-        "cross_document_question_generation": run_cross_document,
-    }
+@cache
+def get_stage_order():
+    PipelineConfig, _ = _lazy_load_config_engine()
+    return PipelineConfig.STAGE_ORDER
 
 
 # For backward compatibility with tests
-STAGE_OVERRIDES = _get_stage_overrides()
+STAGE_OVERRIDES = {}
+
+
+@cache
+def get_stage_overrides():
+    if not STAGE_OVERRIDES:
+        run_multi_hop, run_single_shot, run_cross_document = _lazy_load_question_gen()
+        STAGE_OVERRIDES.update({
+            "single_shot_question_generation": run_single_shot,
+            "multi_hop_question_generation": run_multi_hop,
+            "cross_document_question_generation": run_cross_document,
+        })
+    return STAGE_OVERRIDES
 
 
 @cache
 def get_stage_function(stage: str):
-    overrides = _get_stage_overrides()
-    if func := overrides.get(stage):
+    stage_overrides = get_stage_overrides()
+    if func := stage_overrides.get(stage):
         return func
 
     # Support older configs
@@ -75,7 +91,7 @@ def get_stage_function(stage: str):
     return module.run
 
 
-def run_stage(stage: str, config: YourbenchConfig) -> float:
+def run_stage(stage: str, config) -> float:
     logger.info(f"Running {stage}")
     start = time.perf_counter()
 
@@ -88,6 +104,7 @@ def run_stage(stage: str, config: YourbenchConfig) -> float:
 
 
 def run_pipeline(config_file_path: str, debug: bool = False, **kwargs) -> None:
+    _, YourbenchConfig = _lazy_load_config_engine()
     config = YourbenchConfig.from_yaml(config_file_path)
     config.debug = debug
     pipeline = config.pipeline_config
@@ -96,7 +113,8 @@ def run_pipeline(config_file_path: str, debug: bool = False, **kwargs) -> None:
         logger.warning("No pipeline stages configured")
         return
 
-    for stage in STAGE_ORDER:
+    stage_order = get_stage_order()
+    for stage in stage_order:
         try:
             stage_config = pipeline.get_stage_config(stage)
         except ValueError:
@@ -111,7 +129,7 @@ def run_pipeline(config_file_path: str, debug: bool = False, **kwargs) -> None:
         logger.success(f"Completed {stage} in {elapsed:.3f}s")
 
     try:
-        upload_func = _lazy_load_dataset_engine()
-        upload_func(config)
+        upload_dataset_card = _lazy_load_dataset_engine()
+        upload_dataset_card(config)
     except Exception as e:
         logger.warning(f"Failed to upload dataset card: {e}")

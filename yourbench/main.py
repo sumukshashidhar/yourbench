@@ -8,19 +8,23 @@ from typing import Optional
 from pathlib import Path
 from dataclasses import field, dataclass
 
-import yaml
-import typer
-from dotenv import load_dotenv
-from loguru import logger
-from rich.table import Table
-from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt
-from rich.console import Console
-
 
 # Track startup time
 startup_time = time.perf_counter()
 
-# Lazy imports for heavy modules
+import yaml  # noqa: E402
+import typer  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
+from loguru import logger  # noqa: E402
+from rich.table import Table  # noqa: E402
+from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt  # noqa: E402
+from rich.console import Console  # noqa: E402
+
+# Early startup logging
+logger.info("YourBench starting up...")
+logger.info("Loading core modules...")
+
+# Lazy imports - only import when needed
 launch_ui = None
 run_analysis = None
 run_pipeline = None
