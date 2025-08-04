@@ -20,6 +20,7 @@ from rich.table import Table  # noqa: E402
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt  # noqa: E402
 from rich.console import Console  # noqa: E402
 
+
 # Early startup logging
 logger.info("YourBench starting up...")
 logger.info("Loading core modules...")
