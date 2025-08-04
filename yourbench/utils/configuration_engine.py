@@ -778,4 +778,4 @@ def is_yourbench_config(config: any) -> bool:
 if __name__ == "__main__":
     # Test loading the simple example config
     config = YourbenchConfig.from_yaml("example/configs/simple_example.yaml")
-    print(config.model_dump_yaml())
+    logger.info(config.model_dump_yaml())

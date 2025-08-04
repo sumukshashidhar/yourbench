@@ -29,7 +29,7 @@ run_pipeline = None
 def _lazy_import_ui():
     global launch_ui
     if launch_ui is None:
-        print("⏳ Loading Gradio UI components...", flush=True)
+        logger.info("Loading Gradio UI components...")
         from yourbench.app import launch_ui as _launch_ui
 
         launch_ui = _launch_ui
@@ -48,14 +48,14 @@ def _lazy_import_analysis():
 def _lazy_import_pipeline():
     global run_pipeline
     if run_pipeline is None:
-        print("⏳ Loading pipeline components...", flush=True)
+        logger.info("Loading pipeline components...")
         from yourbench.pipeline.handler import run_pipeline as _run_pipeline
 
         run_pipeline = _run_pipeline
     return run_pipeline
 
 
-print("⏳ Loading environment variables...", flush=True)
+logger.info("Loading environment variables...")
 load_dotenv()
 
 # Configuration constants
@@ -77,7 +77,7 @@ app = typer.Typer(
 console = Console()
 
 # Log startup completion
-print(f"✅ YourBench loaded in {time.perf_counter() - startup_time:.2f}s", flush=True)
+logger.success(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
 
 # Global state for quick mode
 _quick_mode_state = {
