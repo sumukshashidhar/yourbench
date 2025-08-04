@@ -176,3 +176,8 @@ cython_debug/
 
 # OS specific cache
 .DS_Store
+
+# Generated files
+*.jsonl
+index.json
+yourbench_processing/

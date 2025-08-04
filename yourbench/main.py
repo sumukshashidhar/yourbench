@@ -9,8 +9,7 @@ from pathlib import Path
 from dataclasses import field, dataclass
 
 
-# Early startup logging
-print("🚀 YourBench starting up...", flush=True)
+# Track startup time
 startup_time = time.perf_counter()
 
 import yaml  # noqa: E402
@@ -21,8 +20,9 @@ from rich.table import Table  # noqa: E402
 from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt  # noqa: E402
 from rich.console import Console  # noqa: E402
 
-
-print("⏳ Loading core modules...", flush=True)
+# Early startup logging
+logger.info("YourBench starting up...")
+logger.info("Loading core modules...")
 
 # Lazy imports - only import when needed
 launch_ui = None
@@ -33,7 +33,7 @@ run_pipeline = None
 def _lazy_import_ui():
     global launch_ui
     if launch_ui is None:
-        print("⏳ Loading Gradio UI components...", flush=True)
+        logger.info("Loading Gradio UI components...")
         from yourbench.app import launch_ui as _launch_ui
 
         launch_ui = _launch_ui
@@ -52,14 +52,14 @@ def _lazy_import_analysis():
 def _lazy_import_pipeline():
     global run_pipeline
     if run_pipeline is None:
-        print("⏳ Loading pipeline components...", flush=True)
+        logger.info("Loading pipeline components...")
         from yourbench.pipeline.handler import run_pipeline as _run_pipeline
 
         run_pipeline = _run_pipeline
     return run_pipeline
 
 
-print("⏳ Loading environment variables...", flush=True)
+logger.info("Loading environment variables...")
 load_dotenv()
 
 # Configuration constants
@@ -76,11 +76,45 @@ app = typer.Typer(
     name="yourbench",
     help="YourBench - Dynamic Evaluation Set Generation with Large Language Models.",
     pretty_exceptions_show_locals=False,
+    invoke_without_command=True,
 )
 console = Console()
 
 # Log startup completion
-print(f"✅ YourBench loaded in {time.perf_counter() - startup_time:.2f}s", flush=True)
+logger.success(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
+
+# Global state for quick mode
+_quick_mode_state = {
+    "model": None,
+    "docs": None,
+    "push_to_hub": None,
+    "debug": False,
+}
+
+
+@app.callback()
+def main_callback(
+    ctx: typer.Context,
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use for generation (e.g., gpt-4o)"),
+    docs: Optional[Path] = typer.Option(None, "--docs", "-d", help="Path to documents (PDF, TXT, etc.)"),
+    push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Push dataset to HuggingFace Hub"),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+):
+    """Main callback to handle quick mode options."""
+    if ctx.invoked_subcommand is None and model and docs:
+        # Quick mode - run directly without subcommand
+        _run_quick_mode(model, docs, push_to_hub, debug, False)
+        raise typer.Exit(0)
+    elif ctx.invoked_subcommand is None:
+        # No subcommand and no quick mode args - show help
+        console.print(ctx.get_help())
+        raise typer.Exit(0)
+    else:
+        # Store state for subcommands if needed
+        _quick_mode_state["model"] = model
+        _quick_mode_state["docs"] = docs
+        _quick_mode_state["push_to_hub"] = push_to_hub
+        _quick_mode_state["debug"] = debug
 
 
 @dataclass
@@ -507,7 +541,6 @@ def run(
         dir_okay=False,
         readable=True,
     ),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
     plot_stage_timing: bool = typer.Option(
         False,
         "--plot-stage-timing",
@@ -521,13 +554,8 @@ def run(
         ui_func()
         return
 
-    # Handle both new positional and legacy --config
-    final_config = config_path or config
-
-    if not final_config:
-        console.print("[red]Error:[/red] Please provide a configuration file")
-        console.print("Usage: yourbench run CONFIG_FILE")
-        raise typer.Exit(1)
+    # Get debug flag from global state if running from main command
+    debug = _quick_mode_state.get("debug", False)
 
     # Handle both new positional and legacy --config
     final_config = config_path or config
@@ -749,9 +777,147 @@ def help() -> None:
     console.print("• Visit the documentation for detailed guides and examples")
 
 
+def _run_quick_mode(
+    model: str,
+    docs_path: Path,
+    push_to_hub: Optional[str],
+    debug: bool,
+    plot_stage_timing: bool,
+) -> None:
+    """Run YourBench in quick mode with minimal configuration."""
+
+    from randomname import get_name as get_random_name
+
+    # Setup logging
+    logger.remove()
+    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
+
+    # Validate docs path
+    if not docs_path.exists():
+        console.print(f"[red]Error:[/red] Documents path does not exist: {docs_path}")
+        raise typer.Exit(1)
+
+    # Create processing directory
+    processing_dir = Path("yourbench_processing")
+    processing_dir.mkdir(exist_ok=True)
+
+    # Use dataset name as subdirectory
+    dataset_name = push_to_hub if push_to_hub else get_random_name()
+    temp_path = processing_dir / dataset_name
+    temp_path.mkdir(exist_ok=True)
+
+    try:
+        # Prepare documents directory
+        if docs_path.is_file():
+            # Single file - create a directory and copy it
+            raw_dir = temp_path / "raw"
+            raw_dir.mkdir(parents=True)
+            import shutil
+
+            shutil.copy2(docs_path, raw_dir)
+        else:
+            # Directory - use as is
+            raw_dir = docs_path
+
+        # Create configuration matching default_example structure
+        config = {
+            "hf_configuration": {
+                "hf_dataset_name": dataset_name,
+                "hf_organization": "$HF_ORGANIZATION",
+                "hf_token": "$HF_TOKEN",
+                "private": True,
+                "local_dataset_dir": str(temp_path / "dataset"),
+                "local_saving": True,
+                "export_jsonl": True,
+                "jsonl_export_dir": str(Path.cwd()),  # Export to current directory
+            },
+            "model_list": [
+                {
+                    "model_name": model,
+                    "base_url": "https://api.openai.com/v1/" if "gpt" in model.lower() else None,
+                    "api_key": "$OPENAI_API_KEY" if "gpt" in model.lower() else "$HF_TOKEN",
+                    "max_concurrent_requests": 16,
+                }
+            ],
+            "pipeline": {
+                "ingestion": {
+                    "run": True,
+                    "source_documents_dir": str(raw_dir),
+                    "output_dir": str(temp_path / "processed"),
+                },
+                "summarization": {
+                    "run": True,
+                },
+                "chunking": {
+                    "run": True,
+                },
+                "single_shot_question_generation": {
+                    "run": True,
+                    "additional_instructions": "Ask basic questions about the content",
+                },
+                "prepare_lighteval": {
+                    "run": True,
+                },
+            },
+        }
+
+        # Add model roles mapping
+        config["model_roles"] = {
+            "ingestion": [model],
+            "summarization": [model],
+            "chunking": [model],
+            "single_shot_question_generation": [model],
+            "multi_hop_question_generation": [model],
+        }
+
+        # If push_to_hub is specified, enable it
+        if push_to_hub:
+            config["pipeline"]["upload_ingest_to_hub"] = {"run": True}
+
+        # Save config to temporary file
+        config_path = temp_path / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+        logger.info(f"Running YourBench with model: {model}")
+        logger.info(f"Processing documents from: {docs_path}")
+        if push_to_hub:
+            logger.info(f"Will push dataset to Hub as: {push_to_hub}")
+
+        # Run the pipeline
+        try:
+            pipeline_func = _lazy_import_pipeline()
+            pipeline_func(
+                config_file_path=str(config_path),
+                debug=debug,
+                plot_stage_timing=plot_stage_timing,
+            )
+
+            # Check for JSONL files in current directory
+            jsonl_files = list(Path.cwd().glob("*.jsonl"))
+            if jsonl_files:
+                console.print("\n[green]✓[/green] Generated JSONL files:")
+                for file in jsonl_files:
+                    console.print(f"  - {file.name}")
+
+            if push_to_hub:
+                console.print(f"\n[green]✓[/green] Dataset pushed to: https://huggingface.co/datasets/{push_to_hub}")
+
+        except Exception as e:
+            logger.exception(f"Pipeline failed: {e}")
+            raise typer.Exit(1)
+    finally:
+        # Keep the processing directory for inspection
+        logger.info(f"Processing files saved in: {temp_path}")
+
+
 def main() -> None:
     """Main entry point for the CLI."""
-    app()
+    # Check if running without arguments (show help)
+    if len(sys.argv) == 1:
+        app(["--help"])
+    else:
+        app()
 
 
 if __name__ == "__main__":

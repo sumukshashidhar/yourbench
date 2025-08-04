@@ -6,41 +6,52 @@ from functools import cache
 
 from loguru import logger
 
-
 # Lazy imports for heavy modules
 _dataset_engine_loaded = False
 _config_engine_loaded = False
 _question_gen_loaded = False
+_upload_dataset_card = None
+_PipelineConfig = None
+_YourbenchConfig = None
+_run_multi_hop = None
+_run_single_shot = None
+_run_cross_document = None
 
 
 def _lazy_load_dataset_engine():
-    global _dataset_engine_loaded, upload_dataset_card
+    global _dataset_engine_loaded, _upload_dataset_card
     if not _dataset_engine_loaded:
         logger.debug("Loading dataset engine...")
         from yourbench.utils.dataset_engine import upload_dataset_card
 
+        _upload_dataset_card = upload_dataset_card
         _dataset_engine_loaded = True
-    return upload_dataset_card
+    return _upload_dataset_card
 
 
 def _lazy_load_config_engine():
-    global _config_engine_loaded, PipelineConfig, YourbenchConfig
+    global _config_engine_loaded, _PipelineConfig, _YourbenchConfig
     if not _config_engine_loaded:
         logger.debug("Loading configuration engine...")
         from yourbench.utils.configuration_engine import PipelineConfig, YourbenchConfig
 
+        _PipelineConfig = PipelineConfig
+        _YourbenchConfig = YourbenchConfig
         _config_engine_loaded = True
-    return PipelineConfig, YourbenchConfig
+    return _PipelineConfig, _YourbenchConfig
 
 
 def _lazy_load_question_gen():
-    global _question_gen_loaded, run_multi_hop, run_single_shot, run_cross_document
+    global _question_gen_loaded, _run_multi_hop, _run_single_shot, _run_cross_document
     if not _question_gen_loaded:
         logger.debug("Loading question generation modules...")
         from yourbench.pipeline.question_generation import run_multi_hop, run_single_shot, run_cross_document
 
+        _run_multi_hop = run_multi_hop
+        _run_single_shot = run_single_shot
+        _run_cross_document = run_cross_document
         _question_gen_loaded = True
-    return run_multi_hop, run_single_shot, run_cross_document
+    return _run_multi_hop, _run_single_shot, _run_cross_document
 
 
 @cache
