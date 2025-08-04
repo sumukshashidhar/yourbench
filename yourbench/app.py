@@ -7,9 +7,10 @@ import atexit
 import shutil
 import subprocess
 
-
 # Early startup logging
 from loguru import logger
+
+
 logger.info("YourBench Gradio UI starting up...")
 ui_startup_time = time.perf_counter()
 
