@@ -817,8 +817,8 @@ def _run_quick_mode(
 
             shutil.copy2(docs_path, raw_dir)
         else:
-            # Directory - use as is
-            raw_dir = docs_path
+            # Directory - resolve to absolute path to avoid issues
+            raw_dir = docs_path.resolve()
 
         # Create configuration matching default_example structure
         config = {
