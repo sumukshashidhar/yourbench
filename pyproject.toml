@@ -1,6 +1,6 @@
 [project]
 name = "yourbench"
-version = "0.5.3"
+version = "0.6.0"
 authors = [
     { name = "Sumuk Shashidhar", email = "sumuks2@illinois.edu" },
     { name = "Alina Lozovskaia", email = "alina.lozovskaia@huggingface.co" },
