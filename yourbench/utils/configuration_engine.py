@@ -227,11 +227,15 @@ class ModelConfig(BaseModel):
                 logger.warning(
                     f"OpenAI model '{self.model_name}' requires OPENAI_API_KEY. Please set it with: export OPENAI_API_KEY=your_key"
                 )
-        # Check HF models
-        elif self.api_key == "$HF_TOKEN" and not os.getenv("HF_TOKEN"):
-            logger.warning(
-                f"Model '{self.model_name}' may require HF_TOKEN. Please set it with: export HF_TOKEN=your_token"
-            )
+        # Check HF models - if base_url is None, it uses HF inference API which requires token
+        elif not self.base_url or self.api_key == "$HF_TOKEN":
+            if not os.getenv("HF_TOKEN"):
+                error_msg = (
+                    f"Model '{self.model_name}' requires HF_TOKEN since base_url is not set. "
+                    "Please set it with: export HF_TOKEN=your_token"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
         return self
 
 
