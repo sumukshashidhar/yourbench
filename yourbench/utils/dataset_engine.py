@@ -794,19 +794,128 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
         raise ImportError("PyYAML is required for config serialization")
     from copy import deepcopy
 
-    def _sanitize(obj, key=None):
+    # Load default prompts to compare against
+    from yourbench.utils.configuration_engine import _load_prompt_from_package
+
+    # Map of prompt fields to their default package paths
+    default_prompt_paths = {
+        "pdf_llm_prompt": "ingestion/pdf_llm_prompt.md",
+        "summarization_user_prompt": "summarization/summarization_user_prompt.md",
+        "combine_summaries_user_prompt": "summarization/combine_summaries_user_prompt.md",
+        "single_shot_system_prompt": "question_generation/single_shot_system_prompt.md",
+        "single_shot_system_prompt_multi": "question_generation/single_shot_system_prompt_multi.md",
+        "single_shot_user_prompt": "question_generation/single_shot_user_prompt.md",
+        "multi_hop_system_prompt": "question_generation/multi_hop_system_prompt.md",
+        "multi_hop_user_prompt": "question_generation/multi_hop_user_prompt.md",
+        "question_rewriting_system_prompt": "question_rewriting/question_rewriting_system_prompt.md",
+        "question_rewriting_user_prompt": "question_rewriting/question_rewriting_user_prompt.md",
+    }
+
+    # Load default prompts for comparison
+    default_prompts = {}
+    for field, path in default_prompt_paths.items():
+        content = _load_prompt_from_package(path)
+        if content:
+            default_prompts[field] = content
+
+    def _is_default_prompt(value: str, field_name: str) -> bool:
+        """Check if a prompt value matches the default."""
+        if field_name in default_prompts:
+            return value.strip() == default_prompts[field_name].strip()
+        return False
+
+    def _make_relative_path(path_str: str) -> str:
+        """Convert absolute path to relative if possible."""
+        try:
+            path = Path(path_str)
+            # If it's already relative, return as is
+            if not path.is_absolute():
+                return path_str
+
+            # For absolute paths, try to make relative to cwd
+            cwd = Path.cwd()
+
+            # Handle paths that might not exist yet
+            if path.exists():
+                abs_path = path.resolve()
+                try:
+                    rel_path = abs_path.relative_to(cwd)
+                    return str(rel_path)
+                except ValueError:
+                    pass
+            else:
+                # For non-existent paths, do string-based relative conversion
+                cwd_str = str(cwd)
+                if path_str.startswith(cwd_str):
+                    return path_str[len(cwd_str) :].lstrip("/\\")
+
+            # If we can't make it relative, return just the last parts
+            # This helps avoid exposing full system paths
+            parts = path.parts
+            if len(parts) > 3:
+                # Keep last 3 parts for context
+                return str(Path(*parts[-3:]))
+
+            return path_str
+        except Exception:
+            # If all else fails, return as is
+            return path_str
+
+    def _sanitize(obj, key=None, parent_key=None):
         if isinstance(obj, dict):
-            return {k: _sanitize(v, k) for k, v in obj.items()}
+            sanitized_dict = {}
+            for k, v in obj.items():
+                sanitized_value = _sanitize(v, k, key)
+                # Skip fields with None values or empty strings
+                if sanitized_value is not None and sanitized_value != "":
+                    sanitized_dict[k] = sanitized_value
+            return sanitized_dict if sanitized_dict else None
+
         if isinstance(obj, list):
-            return [_sanitize(v) for v in obj]
+            # Handle model_list specially
+            if key == "model_list" and all(isinstance(item, dict) for item in obj):
+                # Check if all models are the same
+                model_names = [item.get("model_name") for item in obj if item.get("model_name")]
+                if len(set(model_names)) <= 1:
+                    # All models are the same or only one model, skip the list
+                    return None
+            return [_sanitize(v, key, parent_key) for v in obj]
+
         if isinstance(obj, Path):
-            # Convert Path objects to strings
-            return str(obj)
+            # Convert Path objects to relative strings
+            return _make_relative_path(str(obj))
+
         if isinstance(obj, str):
             # Keep placeholders
             if obj.startswith("$"):
                 return obj
-            # Mask only api_key arguments
+
+            # Handle paths - make them relative
+            if key and any(path_key in key.lower() for path_key in ["path", "dir", "directory"]):
+                if "/" in obj or "\\" in obj:
+                    return _make_relative_path(obj)
+
+            # Handle prompt fields
+            if key and "prompt" in key.lower():
+                # Check if it's a default prompt
+                if _is_default_prompt(obj, key):
+                    # Return the filename/path instead of the content
+                    if key in default_prompt_paths:
+                        return f"yourbench/prompts/{default_prompt_paths[key]}"
+                    else:
+                        return "<default_prompt>"
+
+                # For custom prompts, check if it's a file path or inline content
+                if "\n" in obj or len(obj) > 300:
+                    # It's inline content, keep first line and indicate it's custom
+                    first_line = obj.split("\n")[0][:50]
+                    return f"<custom_prompt: {first_line}...>"
+
+                # If it looks like a file path, make it relative
+                if any(ext in obj for ext in [".md", ".txt", ".prompt"]):
+                    return _make_relative_path(obj)
+
+            # Mask api_key arguments
             if key and "api_key" in key.lower():
                 return "$API_KEY"
             # Mask OpenAI API keys
@@ -816,9 +925,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             if obj.startswith("hf_"):
                 return "$HF_TOKEN"
             return obj
-        # Explicitly return boolean, integer, float, and None values unchanged
-        if obj is None or isinstance(obj, (bool, int, float)):
+
+        # Explicitly return boolean, integer, float values unchanged
+        if isinstance(obj, (bool, int, float)):
             return obj
+
+        # Return None for None values (will be filtered out)
+        if obj is None:
+            return None
+
         return obj
 
     # Convert YourbenchConfig to dict if needed
@@ -830,7 +945,114 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
     else:
         config_dict = config
 
+    # First pass sanitization
     sanitized = _sanitize(deepcopy(config_dict))
+
+    # Remove empty dictionaries and None values recursively
+    def _remove_empty(obj):
+        if isinstance(obj, dict):
+            cleaned = {}
+            for k, v in obj.items():
+                cleaned_value = _remove_empty(v)
+                if cleaned_value is not None and cleaned_value != {} and cleaned_value != []:
+                    cleaned[k] = cleaned_value
+            return cleaned if cleaned else None
+        elif isinstance(obj, list):
+            cleaned = [_remove_empty(item) for item in obj]
+            return [item for item in cleaned if item is not None]
+        else:
+            return obj
+
+    sanitized = _remove_empty(sanitized)
+
+    # Filter out default values from hf_configuration
+    if "hf_configuration" in sanitized:
+        hf_config = sanitized["hf_configuration"]
+        # Remove default values
+        defaults_to_remove = {
+            "private": False,
+            "concat_if_exist": False,
+            "local_saving": True,
+            "upload_card": True,
+            "export_jsonl": False,
+        }
+        for key, default_value in defaults_to_remove.items():
+            if key in hf_config and hf_config[key] == default_value:
+                del hf_config[key]
+
+    # Filter out default values from pipeline stages
+    if "pipeline_config" in sanitized:
+        pipeline = sanitized["pipeline_config"]
+        # Remove stages that are not enabled
+        stages_to_remove = []
+        for stage, stage_config in pipeline.items():
+            if isinstance(stage_config, dict):
+                # Remove run: false stages entirely
+                if stage_config.get("run") is False:
+                    stages_to_remove.append(stage)
+                # Remove run: true as it's redundant when stage is present
+                elif stage_config.get("run") is True:
+                    del stage_config["run"]
+
+                # Remove other stage-specific defaults
+                stage_defaults = {
+                    # Ingestion defaults
+                    "upload_to_hub": True,
+                    "llm_ingestion": False,
+                    "pdf_dpi": 300,
+                    # Summarization defaults
+                    "max_tokens": 32768,
+                    "token_overlap": 512,
+                    "encoding_name": "cl100k_base",
+                    # Chunking defaults
+                    "l_max_tokens": 8192,
+                    "h_min": 2,
+                    "h_max": 5,
+                    "num_multihops_factor": 1,
+                    # Question generation defaults
+                    "question_mode": "open-ended",
+                    # Default file extensions
+                    "supported_file_extensions": [
+                        ".md",
+                        ".txt",
+                        ".html",
+                        ".htm",
+                        ".pdf",
+                        ".docx",
+                        ".doc",
+                        ".pptx",
+                        ".ppt",
+                        ".xlsx",
+                        ".xls",
+                        ".rtf",
+                        ".odt",
+                    ],
+                }
+
+                for key, default_value in stage_defaults.items():
+                    if key in stage_config and stage_config[key] == default_value:
+                        del stage_config[key]
+
+        for stage in stages_to_remove:
+            del pipeline[stage]
+
+    # Handle model_roles - if all roles use the same single model, remove it
+    if "model_roles" in sanitized:
+        model_roles = sanitized["model_roles"]
+        # Get all unique models across all roles
+        all_models = set()
+        for role_models in model_roles.values():
+            if isinstance(role_models, list):
+                all_models.update(role_models)
+
+        # If there's only one model used everywhere, remove model_roles entirely
+        if len(all_models) <= 1:
+            del sanitized["model_roles"]
+
+    # Remove debug: false as it's the default
+    if sanitized.get("debug") is False:
+        del sanitized["debug"]
+
     return yaml.safe_dump(sanitized, sort_keys=False, default_flow_style=False)
 
 
