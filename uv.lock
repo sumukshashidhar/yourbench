@@ -2078,7 +2078,7 @@ wheels = [
 
 [[package]]
 name = "yourbench"
-version = "0.4.3"
+version = "0.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "asyncio" },
