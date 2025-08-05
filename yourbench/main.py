@@ -139,7 +139,7 @@ def run_yourbench(
         model_config = ModelConfig(model_name=model_name, max_concurrent_requests=max_concurrent_requests or 32)
 
         # Set output directory
-        local_output_dir = output_dir or Path("yourbench_output")
+        local_output_dir = output_dir or Path("output")
 
         # Create HuggingFace configuration
         hf_config = HuggingFaceConfig(

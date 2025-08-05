@@ -34,9 +34,9 @@ def run(config: YourbenchConfig) -> None:
         if not file_path.is_file():
             continue
         
-        # Skip files in yourbench_output directories to prevent recursive processing
-        if "yourbench_output" in str(file_path):
-            logger.debug(f"Skipping file in yourbench_output directory: {file_path}")
+        # Skip files in output directories to prevent recursive processing
+        if "output" in str(file_path):
+            logger.debug(f"Skipping file in output directory: {file_path}")
             continue
         
         # Skip files in the output directory to prevent recursive processing
