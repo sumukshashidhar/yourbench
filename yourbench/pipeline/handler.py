@@ -115,6 +115,14 @@ def run_pipeline(config_file_path: str, debug: bool = False, **kwargs) -> None:
         return
 
     stage_order = get_stage_order()
+
+    # Debug logging
+    if debug:
+        logger.debug(f"Pipeline stages found: {[s for s in stage_order if hasattr(pipeline, s)]}")
+        logger.debug(
+            f"Ingestion config: run={pipeline.ingestion.run}, source_dir={pipeline.ingestion.source_documents_dir}"
+        )
+
     for stage in stage_order:
         try:
             stage_config = pipeline.get_stage_config(stage)
