@@ -111,6 +111,7 @@ class TestEnvironmentVariableEdgeCases:
 class TestConfigurationEdgeCases:
     """Test edge cases in configuration handling."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_model_config_with_none_values(self):
         """Test ModelConfig with None values."""
         config = ModelConfig(
@@ -126,6 +127,7 @@ class TestConfigurationEdgeCases:
         assert config.api_key is None
         assert config.provider == "auto"  # Auto-assigned when no base_url
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_model_config_auto_provider_logic(self):
         """Test auto provider assignment logic."""
         # With base_url, no auto provider
@@ -157,6 +159,7 @@ class TestConfigurationEdgeCases:
         assert config.model_list == []
         assert len(config.model_roles) == 0
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_yourbench_config_model_without_name(self):
         """Test YourbenchConfig with model that has no name."""
         model = ModelConfig(model_name=None)
@@ -171,6 +174,7 @@ class TestConfigurationEdgeCases:
 class TestYAMLHandlingEdgeCases:
     """Test edge cases in YAML handling."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_yaml_with_null_values(self):
         """Test YAML loading with null values."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -227,6 +231,7 @@ class TestYAMLHandlingEdgeCases:
             assert config.model_list == []
             assert hasattr(config.pipeline_config, "ingestion")
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_yaml_with_unexpected_keys(self):
         """Test YAML loading with unexpected/unknown keys."""
         with tempfile.TemporaryDirectory() as tmpdir:

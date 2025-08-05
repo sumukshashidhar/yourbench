@@ -165,6 +165,7 @@ class TestEnvFileWriting:
 class TestConfigSaveLoad:
     """Test configuration saving and loading."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_save_config_basic(self):
         """Test basic configuration saving."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -204,6 +205,7 @@ class TestConfigSaveLoad:
             assert config_path.exists()
             assert config_path.parent.exists()
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_save_config_none_value_cleanup(self):
         """Test that None values are cleaned up in saved config."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -223,6 +225,7 @@ class TestConfigSaveLoad:
             # base_url should not be present since it was None
             assert "base_url" not in saved_data["model_list"][0]
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_load_config(self):
         """Test configuration loading."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -318,6 +321,7 @@ class TestConfigCreation:
 class TestConfigurationSystem:
     """Integration tests for the entire configuration system."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_full_config_cycle(self):
         """Test complete configuration creation, saving, and loading cycle."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -373,6 +377,7 @@ class TestConfigurationSystem:
                 assert loaded_config.hf_configuration.hf_organization == "test_org"
                 assert loaded_config.model_list[0].api_key == "test_token"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_config_validation_errors(self):
         """Test that configuration validation catches errors."""
         with tempfile.TemporaryDirectory() as tmpdir:

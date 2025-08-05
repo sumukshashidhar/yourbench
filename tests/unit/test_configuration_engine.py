@@ -244,6 +244,7 @@ class TestYourbenchConfig:
         assert config.model_roles == {}
         assert config.debug is False
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_model_role_assignment(self):
         """Test automatic model role assignment."""
         model = ModelConfig(model_name="test-model")
@@ -254,6 +255,7 @@ class TestYourbenchConfig:
             assert stage in config.model_roles
             assert config.model_roles[stage] == ["test-model"]
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_get_model_for_stage(self):
         """Test getting model for specific stage."""
         model = ModelConfig(model_name="test-model")
@@ -290,6 +292,7 @@ class TestYourbenchConfig:
             finally:
                 os.unlink(f.name)
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_from_yaml_legacy_models_field(self):
         """Test loading from legacy YAML with 'models' instead of 'model_list'."""
         yaml_content = {"models": [{"model_name": "test-model"}]}
