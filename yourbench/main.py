@@ -151,7 +151,7 @@ def run_yourbench(
             local_dataset_dir=local_output_dir / "dataset",
             local_saving=local_saving,
             export_jsonl=export_jsonl,
-            jsonl_export_dir=jsonl_export_dir or Path.cwd(),
+            jsonl_export_dir=jsonl_export_dir or Path.cwd() / "output",
         )
 
         # Prepare documents directory

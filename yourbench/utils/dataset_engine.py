@@ -268,18 +268,38 @@ def _export_to_jsonl(dataset: Dataset | DatasetDict, export_dir: Path, subset: s
             for row in dataset:
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
         logger.success(f"Exported {len(dataset)} rows to {file_path}")
+        
+        # Special handling for prepared_lighteval subset - create simplified questions_and_answers.jsonl
+        if subset == "prepared_lighteval":
+            # Also export simplified version to questions_and_answers.jsonl in current directory
+            qa_file_path = Path.cwd() / "questions_and_answers.jsonl"
+            
+            logger.info(f"Creating simplified Q&A dataset at: {qa_file_path}")
+            with open(qa_file_path, "w", encoding="utf-8") as f:
+                for row in dataset:
+                    # Create a filtered row without document/summary/chunks
+                    filtered_row = {
+                        "question": row.get("question", ""),
+                        "ground_truth_answer": row.get("ground_truth_answer", ""),
+                        "question_category": row.get("question_category", ""),
+                        "kind": row.get("kind", ""),
+                        "estimated_difficulty": row.get("estimated_difficulty", 5),
+                        "citations": row.get("citations", []),
+                        "document_id": row.get("document_id", ""),
+                        "chunk_ids": row.get("chunk_ids", []),
+                        "question_generating_model": row.get("question_generating_model", ""),
+                        "choices": row.get("choices", []),
+                        "gold": row.get("gold", []),
+                    }
+                    f.write(json.dumps(filtered_row, ensure_ascii=False) + "\n")
+            logger.success(f"Created simplified questions_and_answers.jsonl with {len(dataset)} Q&A pairs")
 
     elif isinstance(dataset, DatasetDict):
         # Multiple subsets - export each to separate file
         logger.info(f"Exporting DatasetDict with {len(dataset)} subsets to JSONL")
         for subset_name, subset_data in dataset.items():
-            file_path = export_dir / f"{subset_name}.jsonl"
-
-            logger.info(f"Exporting subset '{subset_name}' to {file_path}")
-            with open(file_path, "w", encoding="utf-8") as f:
-                for row in subset_data:
-                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
-            logger.success(f"Exported {len(subset_data)} rows to {file_path}")
+            # Use recursive call for all subsets to handle prepared_lighteval specially
+            _export_to_jsonl(subset_data, export_dir, subset_name)
 
         # Create an index file listing all subsets
         index_path = export_dir / "index.json"
