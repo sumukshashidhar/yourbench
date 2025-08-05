@@ -737,7 +737,7 @@ class YourbenchConfig(BaseModel):
         if "model_list" in config_dict:
             for model in config_dict["model_list"]:
                 if "api_key" in model and model["api_key"]:
-                        model["api_key"] = "$HF_TOKEN"
+                    model["api_key"] = "$HF_TOKEN"
 
         with open(path, "w", encoding="utf-8") as fh:
             yaml.dump(config_dict, fh, default_flow_style=False, indent=2, sort_keys=False)
