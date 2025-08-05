@@ -8,15 +8,14 @@ import time
 from typing import Optional
 from pathlib import Path
 
-
-# Track startup time
-startup_time = time.perf_counter()
-
 import typer
 from dotenv import load_dotenv
 from loguru import logger
 from randomname import get_name as get_random_name
 
+
+# Track startup time
+startup_time = time.perf_counter()
 
 # Early startup logging
 logger.info("YourBench starting up...")
