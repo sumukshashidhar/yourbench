@@ -136,7 +136,18 @@ def run_yourbench(
             raise typer.Exit(1)
 
         # Determine model configuration
-        model_config = ModelConfig(model_name=model_name, max_concurrent_requests=max_concurrent_requests or 32)
+        if "gpt" in model_name.lower():
+            api_key = "$OPENAI_API_KEY"
+            if not os.getenv("OPENAI_API_KEY"):
+                logger.warning("OPENAI_API_KEY not set. Please set it with: export OPENAI_API_KEY=your_key")
+        else:
+            api_key = "$HF_TOKEN"
+        
+        model_config = ModelConfig(
+            model_name=model_name, 
+            api_key=api_key,
+            max_concurrent_requests=max_concurrent_requests or 32
+        )
 
         # Set output directory
         local_output_dir = output_dir or Path("output")
