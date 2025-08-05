@@ -313,6 +313,7 @@ class TestErrorHandlingEdgeCases:
             finally:
                 os.chdir(old_cwd)
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_model_config_edge_cases(self):
         """Test create_model_config edge cases."""
         # These tests require mocking user input since the function is interactive
@@ -369,6 +370,7 @@ class TestTypeHandlingEdgeCases:
             # Should load empty content and strip it
             assert config.pdf_llm_prompt == ""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_configuration_with_unicode(self):
         """Test configuration handling with Unicode characters."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -400,6 +402,7 @@ class TestTypeHandlingEdgeCases:
 class TestConcurrencyAndStateEdgeCases:
     """Test edge cases related to concurrency and state management."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_model_config_concurrent_requests_edge_cases(self):
         """Test edge cases for concurrent request settings."""
         # Test with very low values

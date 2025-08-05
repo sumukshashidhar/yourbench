@@ -409,6 +409,7 @@ class TestConfigurationSystemIntegration:
 class TestConfigurationCLIIntegration:
     """Test CLI integration with the configuration system."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     @patch("yourbench.config_builder.console")
     def test_cli_create_simple(self, mock_console):
         """Test CLI config creation in simple mode."""

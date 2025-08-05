@@ -103,6 +103,7 @@ class TestLoadPromptOrString:
 class TestModelConfig:
     """Test ModelConfig validation."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_default_values(self):
         """Test default model configuration."""
         config = ModelConfig()
@@ -112,12 +113,13 @@ class TestModelConfig:
         assert config.encoding_name == "cl100k_base"
         assert config.provider == "auto"  # Set in model_validator
 
-    @patch.dict(os.environ, {"API_KEY": "test_key"})
+    @patch.dict(os.environ, {"API_KEY": "test_key", "HF_TOKEN": "test_token"})
     def test_api_key_expansion(self):
         """Test API key environment variable expansion."""
         config = ModelConfig(api_key="$API_KEY")
         assert config.api_key == "test_key"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_max_concurrent_requests_validation(self):
         """Test max_concurrent_requests validation."""
         with pytest.raises(ValueError):
@@ -273,6 +275,7 @@ class TestYourbenchConfig:
         assert config.is_stage_enabled("summarization") is False
         assert config.is_stage_enabled("nonexistent_stage") is False
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_from_yaml_simple(self):
         """Test loading from YAML."""
         yaml_content = {
