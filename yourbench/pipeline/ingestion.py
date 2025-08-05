@@ -33,12 +33,12 @@ def run(config: YourbenchConfig) -> None:
     for file_path in source_dir.rglob("*"):
         if not file_path.is_file():
             continue
-        
+
         # Skip files in output directories to prevent recursive processing
         if "output" in str(file_path):
             logger.debug(f"Skipping file in output directory: {file_path}")
             continue
-        
+
         # Skip files in the output directory to prevent recursive processing
         try:
             if output_dir.resolve() in file_path.resolve().parents or file_path.resolve() == output_dir.resolve():

@@ -126,7 +126,7 @@ def run_yourbench(
 
         # Use model or default from example config (zai-org/GLM-4.5)
         model_name = model or "zai-org/GLM-4.5"
-        
+
         # Check HF_TOKEN early for HF models (models without explicit base URL)
         if not os.getenv("HF_TOKEN"):
             logger.error(
