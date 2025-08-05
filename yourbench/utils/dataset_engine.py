@@ -793,15 +793,14 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
     except ImportError:
         raise ImportError("PyYAML is required for config serialization")
     from copy import deepcopy
-    import os
-    
+
     # Load default prompts to compare against
     from yourbench.utils.configuration_engine import _load_prompt_from_package
-    
+
     # Map of prompt fields to their default package paths
     default_prompt_paths = {
         "pdf_llm_prompt": "ingestion/pdf_llm_prompt.md",
-        "summarization_user_prompt": "summarization/summarization_user_prompt.md", 
+        "summarization_user_prompt": "summarization/summarization_user_prompt.md",
         "combine_summaries_user_prompt": "summarization/combine_summaries_user_prompt.md",
         "single_shot_system_prompt": "question_generation/single_shot_system_prompt.md",
         "single_shot_system_prompt_multi": "question_generation/single_shot_system_prompt_multi.md",
@@ -811,7 +810,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
         "question_rewriting_system_prompt": "question_rewriting/question_rewriting_system_prompt.md",
         "question_rewriting_user_prompt": "question_rewriting/question_rewriting_user_prompt.md",
     }
-    
+
     # Load default prompts for comparison
     default_prompts = {}
     for field, path in default_prompt_paths.items():
@@ -832,10 +831,10 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             # If it's already relative, return as is
             if not path.is_absolute():
                 return path_str
-                
+
             # For absolute paths, try to make relative to cwd
             cwd = Path.cwd()
-            
+
             # Handle paths that might not exist yet
             if path.exists():
                 abs_path = path.resolve()
@@ -848,15 +847,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                 # For non-existent paths, do string-based relative conversion
                 cwd_str = str(cwd)
                 if path_str.startswith(cwd_str):
-                    return path_str[len(cwd_str):].lstrip("/\\")
-                    
+                    return path_str[len(cwd_str) :].lstrip("/\\")
+
             # If we can't make it relative, return just the last parts
             # This helps avoid exposing full system paths
             parts = path.parts
             if len(parts) > 3:
                 # Keep last 3 parts for context
                 return str(Path(*parts[-3:]))
-            
+
             return path_str
         except Exception:
             # If all else fails, return as is
@@ -871,7 +870,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                 if sanitized_value is not None and sanitized_value != "":
                     sanitized_dict[k] = sanitized_value
             return sanitized_dict if sanitized_dict else None
-        
+
         if isinstance(obj, list):
             # Handle model_list specially
             if key == "model_list" and all(isinstance(item, dict) for item in obj):
@@ -881,21 +880,21 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                     # All models are the same or only one model, skip the list
                     return None
             return [_sanitize(v, key, parent_key) for v in obj]
-        
+
         if isinstance(obj, Path):
             # Convert Path objects to relative strings
             return _make_relative_path(str(obj))
-        
+
         if isinstance(obj, str):
             # Keep placeholders
             if obj.startswith("$"):
                 return obj
-                
+
             # Handle paths - make them relative
             if key and any(path_key in key.lower() for path_key in ["path", "dir", "directory"]):
                 if "/" in obj or "\\" in obj:
                     return _make_relative_path(obj)
-            
+
             # Handle prompt fields
             if key and "prompt" in key.lower():
                 # Check if it's a default prompt
@@ -905,17 +904,17 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                         return f"yourbench/prompts/{default_prompt_paths[key]}"
                     else:
                         return "<default_prompt>"
-                
+
                 # For custom prompts, check if it's a file path or inline content
                 if "\n" in obj or len(obj) > 300:
                     # It's inline content, keep first line and indicate it's custom
                     first_line = obj.split("\n")[0][:50]
                     return f"<custom_prompt: {first_line}...>"
-                
+
                 # If it looks like a file path, make it relative
                 if any(ext in obj for ext in [".md", ".txt", ".prompt"]):
                     return _make_relative_path(obj)
-            
+
             # Mask api_key arguments
             if key and "api_key" in key.lower():
                 return "$API_KEY"
@@ -926,15 +925,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             if obj.startswith("hf_"):
                 return "$HF_TOKEN"
             return obj
-        
+
         # Explicitly return boolean, integer, float values unchanged
         if isinstance(obj, (bool, int, float)):
             return obj
-        
+
         # Return None for None values (will be filtered out)
         if obj is None:
             return None
-            
+
         return obj
 
     # Convert YourbenchConfig to dict if needed
@@ -948,7 +947,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
 
     # First pass sanitization
     sanitized = _sanitize(deepcopy(config_dict))
-    
+
     # Remove empty dictionaries and None values recursively
     def _remove_empty(obj):
         if isinstance(obj, dict):
@@ -963,9 +962,9 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             return [item for item in cleaned if item is not None]
         else:
             return obj
-    
+
     sanitized = _remove_empty(sanitized)
-    
+
     # Filter out default values from hf_configuration
     if "hf_configuration" in sanitized:
         hf_config = sanitized["hf_configuration"]
@@ -980,7 +979,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
         for key, default_value in defaults_to_remove.items():
             if key in hf_config and hf_config[key] == default_value:
                 del hf_config[key]
-    
+
     # Filter out default values from pipeline stages
     if "pipeline_config" in sanitized:
         pipeline = sanitized["pipeline_config"]
@@ -994,14 +993,14 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                 # Remove run: true as it's redundant when stage is present
                 elif stage_config.get("run") is True:
                     del stage_config["run"]
-                
+
                 # Remove other stage-specific defaults
                 stage_defaults = {
                     # Ingestion defaults
                     "upload_to_hub": True,
                     "llm_ingestion": False,
                     "pdf_dpi": 300,
-                    # Summarization defaults  
+                    # Summarization defaults
                     "max_tokens": 32768,
                     "token_overlap": 512,
                     "encoding_name": "cl100k_base",
@@ -1013,16 +1012,30 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                     # Question generation defaults
                     "question_mode": "open-ended",
                     # Default file extensions
-                    "supported_file_extensions": [".md", ".txt", ".html", ".htm", ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", ".rtf", ".odt"],
+                    "supported_file_extensions": [
+                        ".md",
+                        ".txt",
+                        ".html",
+                        ".htm",
+                        ".pdf",
+                        ".docx",
+                        ".doc",
+                        ".pptx",
+                        ".ppt",
+                        ".xlsx",
+                        ".xls",
+                        ".rtf",
+                        ".odt",
+                    ],
                 }
-                
+
                 for key, default_value in stage_defaults.items():
                     if key in stage_config and stage_config[key] == default_value:
                         del stage_config[key]
-        
+
         for stage in stages_to_remove:
             del pipeline[stage]
-    
+
     # Handle model_roles - if all roles use the same single model, remove it
     if "model_roles" in sanitized:
         model_roles = sanitized["model_roles"]
@@ -1031,15 +1044,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
         for role_models in model_roles.values():
             if isinstance(role_models, list):
                 all_models.update(role_models)
-        
+
         # If there's only one model used everywhere, remove model_roles entirely
         if len(all_models) <= 1:
             del sanitized["model_roles"]
-    
+
     # Remove debug: false as it's the default
     if sanitized.get("debug") is False:
         del sanitized["debug"]
-    
+
     return yaml.safe_dump(sanitized, sort_keys=False, default_flow_style=False)
 
 
