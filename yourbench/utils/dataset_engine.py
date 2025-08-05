@@ -268,12 +268,12 @@ def _export_to_jsonl(dataset: Dataset | DatasetDict, export_dir: Path, subset: s
             for row in dataset:
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
         logger.success(f"Exported {len(dataset)} rows to {file_path}")
-        
+
         # Special handling for prepared_lighteval subset - create simplified questions_and_answers.jsonl
         if subset == "prepared_lighteval":
             # Also export simplified version to questions_and_answers.jsonl in current directory
             qa_file_path = Path.cwd() / "questions_and_answers.jsonl"
-            
+
             logger.info(f"Creating simplified Q&A dataset at: {qa_file_path}")
             with open(qa_file_path, "w", encoding="utf-8") as f:
                 for row in dataset:
