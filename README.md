@@ -32,7 +32,7 @@ Yourbench is a structured data generation library for building better AI systems
 You can use yourbench without installation instantly with [uv](https://docs.astral.sh/uv/getting-started/installation/)! Simply run:
 
 ```
-uvx yourbench --model gpt-4o-mini <YOUR_FILE_DIRECTORY_HERE>
+uvx yourbench <YOUR_FILE_DIRECTORY_HERE> --model openai/gpt-oss-120b
 ```
 
 You will see the dataset appear locally! If a valid `HF_TOKEN` is set, you will also see the dataset appear on your Hugging Face Hub!
