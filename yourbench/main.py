@@ -2,24 +2,28 @@
 """YourBench CLI - Dynamic Evaluation Set Generation with Large Language Models."""
 
 from __future__ import annotations
+
 import os
 import sys
 import time
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 import typer
 from dotenv import load_dotenv
 from loguru import logger
 from randomname import get_name as get_random_name
 
-
 # Track startup time
 startup_time = time.perf_counter()
 
+# Configure logging early
+logger.remove()
+logger.add(sys.stderr, level=os.getenv("YOURBENCH_LOG_LEVEL", "INFO"))
+
 # Early startup logging
-logger.info("YourBench starting up...")
-logger.info("Loading core modules...")
+logger.debug("YourBench starting up...")
+logger.debug("Loading core modules...")
 
 # Lazy imports - only import when needed
 run_pipeline = None
@@ -28,32 +32,40 @@ run_pipeline = None
 def _lazy_import_pipeline():
     global run_pipeline
     if run_pipeline is None:
-        logger.info("Loading pipeline components...")
+        logger.debug("Loading pipeline components...")
         from yourbench.pipeline.handler import run_pipeline as _run_pipeline
 
         run_pipeline = _run_pipeline
     return run_pipeline
 
 
-logger.info("Loading environment variables...")
+logger.debug("Loading environment variables...")
 load_dotenv()
 
 app = typer.Typer(
     name="yourbench",
     help="YourBench - Dynamic Evaluation Set Generation with Large Language Models.",
     pretty_exceptions_show_locals=False,
+    invoke_without_command=True,  # Allow direct invocation
 )
 
 # Log startup completion
-logger.success(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
+logger.debug(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
 
 
-@app.command()
-def run(
-    config_or_docs: Path = typer.Argument(..., help="Path to config file (YAML) or documents directory/file"),
+@app.callback()
+def main(
+    ctx: typer.Context,
+    config_or_docs: Optional[Path] = typer.Argument(None, help="Path to config file (YAML) or documents directory/file"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use (overrides config if set)"),
     single_shot_questions: Optional[bool] = typer.Option(
-        None, "--single-shot-questions/--no-single-shot-questions", help="Generate single-shot questions"
+        None, "--single-shot-questions/--no-single-shot-questions", help="Generate single-shot questions (default: True)"
+    ),
+    multi_hop_questions: bool = typer.Option(
+        False, "--multi-hop-questions", help="Generate multi-hop questions (default: False)"
+    ),
+    cross_doc_questions: bool = typer.Option(
+        False, "--cross-doc-questions", help="Generate cross-document questions (default: False)"
     ),
     additional_instructions: Optional[str] = typer.Option(
         None, "--additional-instructions", "-i", help="Additional instructions for question generation"
@@ -61,16 +73,32 @@ def run(
     push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Dataset name to push to HuggingFace Hub"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
     output_dir: Optional[Path] = typer.Option(None, "--output-dir", "-o", help="Local output directory"),
+    version: bool = typer.Option(False, "--version", "-v", help="Show version and exit"),
 ) -> None:
-    """Run YourBench pipeline with config file or generate Q&A pairs from documents."""
-    # Setup logging
-    logger.remove()
-    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
+    """YourBench - Generate Q&A pairs from documents or run with config file."""
+    # Handle version flag
+    if version:
+        show_version()
+        return
+
+    # If no subcommand and no argument, show help
+    if ctx.invoked_subcommand is None and config_or_docs is None:
+        logger.error("Please provide a config file or documents path")
+        raise typer.Exit(1)
+
+    # If subcommand exists, let it handle
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # Setup debug logging if requested
+    if debug:
+        logger.remove()
+        logger.add(sys.stderr, level="DEBUG")
 
     # Check if input is a YAML config file
     if config_or_docs.suffix in [".yaml", ".yml"] and config_or_docs.exists():
-        logger.info(f"Running with config file: {config_or_docs}")
-
+        logger.info(f"Running with config: {config_or_docs}")
+        
         # Run pipeline with existing config
         pipeline_func = _lazy_import_pipeline()
         try:
@@ -86,23 +114,25 @@ def run(
 
         # Import configuration classes
         from yourbench.utils.configuration_engine import (
-            ModelConfig,
             ChunkingConfig,
-            PipelineConfig,
+            CrossDocumentQuestionGenerationConfig,
+            HuggingFaceConfig,
             IngestionConfig,
             LightevalConfig,
-            YourbenchConfig,
-            HuggingFaceConfig,
-            SummarizationConfig,
+            ModelConfig,
+            MultiHopQuestionGenerationConfig,
+            PipelineConfig,
             SingleShotQuestionGenerationConfig,
+            SummarizationConfig,
+            YourbenchConfig,
         )
 
         # Create configuration programmatically
         dataset_name = push_to_hub if push_to_hub else get_random_name()
-
+        
         # Use model or default
         model_name = model or "gpt-4o-mini"
-
+        
         # Determine model configuration
         model_config = ModelConfig(model_name=model_name)
         if "gpt" in model_name.lower():
@@ -117,7 +147,7 @@ def run(
 
         # Set output directory
         local_output_dir = output_dir or Path("yourbench_output")
-
+        
         # Create HuggingFace configuration
         hf_config = HuggingFaceConfig(
             hf_dataset_name=dataset_name,
@@ -142,7 +172,7 @@ def run(
             # Directory - use absolute path
             raw_dir = config_or_docs.resolve()
 
-        # Create pipeline configuration
+        # Create pipeline configuration with proper defaults
         pipeline_config = PipelineConfig(
             ingestion=IngestionConfig(
                 run=True,
@@ -156,6 +186,12 @@ def run(
                 run=single_shot_questions if single_shot_questions is not None else True,
                 additional_instructions=additional_instructions or "Generate questions to test a curious adult",
             ),
+            multi_hop_question_generation=MultiHopQuestionGenerationConfig(
+                run=multi_hop_questions,
+            ),
+            cross_document_question_generation=CrossDocumentQuestionGenerationConfig(
+                run=cross_doc_questions,
+            ),
             prepare_lighteval=LightevalConfig(run=True),
         )
 
@@ -166,6 +202,7 @@ def run(
             "chunking": [model_name],
             "single_shot_question_generation": [model_name],
             "multi_hop_question_generation": [model_name],
+            "cross_document_question_generation": [model_name],
         }
 
         # Create final configuration
@@ -182,10 +219,11 @@ def run(
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config.to_yaml(config_path)
 
-        logger.info(f"Running YourBench with model: {model_name}")
         logger.info(f"Processing documents from: {config_or_docs}")
+        logger.debug(f"Using model: {model_name}")
+        logger.debug(f"Output directory: {local_output_dir}")
         if push_to_hub:
-            logger.info(f"Will push dataset to Hub as: {push_to_hub}")
+            logger.info(f"Will push to Hub as: {push_to_hub}")
 
         # Run the pipeline
         try:
@@ -210,17 +248,22 @@ def run(
 @app.command()
 def version() -> None:
     """Show YourBench version."""
+    show_version()
+
+
+def show_version() -> None:
+    """Display version information."""
     from importlib.metadata import version as get_version
 
     try:
         v = get_version("yourbench")
-        logger.info(f"YourBench version: {v}")
+        print(f"YourBench version: {v}")
     except Exception:
-        logger.info("YourBench version: development")
+        print("YourBench version: development")
 
 
 def main() -> None:
-    """Main entry point for the CLI."""
+    """Entry point for the CLI."""
     app()
 
 
