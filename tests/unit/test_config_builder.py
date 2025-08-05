@@ -266,6 +266,7 @@ class TestConfigCreation:
 
     @patch("yourbench.config_builder.console")
     @patch("yourbench.config_builder.get_random_name")
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_yourbench_config_simple(self, mock_get_name, mock_console):
         """Test creating a simple YourBench configuration."""
         mock_get_name.return_value = "test_dataset"
@@ -285,6 +286,7 @@ class TestConfigCreation:
     @patch("yourbench.config_builder.get_random_name")
     @patch("yourbench.config_builder.Confirm.ask")
     @patch("yourbench.config_builder.Prompt.ask")
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_yourbench_config_advanced_minimal(self, mock_prompt, mock_confirm, mock_get_name, mock_console):
         """Test creating an advanced configuration with minimal user input."""
         mock_get_name.return_value = "test_dataset"
@@ -296,6 +298,7 @@ class TestConfigCreation:
         assert isinstance(config, YourbenchConfig)
         assert config.hf_configuration.hf_dataset_name == "test_dataset"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_yourbench_config_integration(self):
         """Integration test for configuration creation."""
         # Test that the function can be called without mocking everything
