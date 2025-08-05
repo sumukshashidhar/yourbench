@@ -221,14 +221,7 @@ class ModelConfig(BaseModel):
     @model_validator(mode="after")
     def validate_api_keys(self):
         """Validate that required API keys are set."""
-        # Check OpenAI models
-        if self.model_name and "gpt" in self.model_name.lower():
-            if self.api_key == "$OPENAI_API_KEY" and not os.getenv("OPENAI_API_KEY"):
-                logger.warning(
-                    f"OpenAI model '{self.model_name}' requires OPENAI_API_KEY. Please set it with: export OPENAI_API_KEY=your_key"
-                )
-        # Check HF models - if base_url is None, it uses HF inference API which requires token
-        elif not self.base_url or self.api_key == "$HF_TOKEN":
+        if not self.base_url or self.api_key == "$HF_TOKEN":
             if not os.getenv("HF_TOKEN"):
                 error_msg = (
                     f"Model '{self.model_name}' requires HF_TOKEN since base_url is not set. "
