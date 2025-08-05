@@ -2078,7 +2078,7 @@ wheels = [
 
 [[package]]
 name = "yourbench"
-version = "0.4.2"
+version = "0.4.3"
 source = { editable = "." }
 dependencies = [
     { name = "asyncio" },
@@ -2088,7 +2088,7 @@ dependencies = [
     { name = "huggingface-hub", extra = ["hf-xet", "inference"] },
     { name = "jinja2" },
     { name = "loguru" },
-    { name = "markitdown" },
+    { name = "markitdown", extra = ["all"] },
     { name = "numpy" },
     { name = "pillow" },
     { name = "pydantic" },
@@ -2120,6 +2120,7 @@ llm = [
 dev = [
     { name = "build" },
     { name = "pytest" },
+    { name = "ruff" },
     { name = "twine" },
 ]
 
@@ -2133,7 +2134,7 @@ requires-dist = [
     { name = "huggingface-hub", extras = ["inference", "hf-xet"], specifier = ">=0.34.3" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "loguru", specifier = ">=0.7.3" },
-    { name = "markitdown", specifier = ">=0.0.2" },
+    { name = "markitdown", extras = ["all"], specifier = ">=0.0.2" },
     { name = "markitdown", extras = ["all"], marker = "extra == 'llm'", specifier = ">=0.0.2" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "pandas", marker = "extra == 'analysis'", specifier = ">=2.0.0" },
@@ -2157,6 +2158,7 @@ provides-extras = ["gui", "llm", "analysis"]
 dev = [
     { name = "build", specifier = ">=1.2.2.post1" },
     { name = "pytest", specifier = ">=8.4.1" },
+    { name = "ruff", specifier = ">=0.12.3" },
     { name = "twine", specifier = ">=6.1.0" },
 ]
 

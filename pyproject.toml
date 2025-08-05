@@ -1,6 +1,6 @@
 [project]
 name = "yourbench"
-version = "0.4.2"
+version = "0.4.3"
 authors = [
     { name = "Sumuk Shashidhar", email = "sumuks2@illinois.edu" },
     { name = "Alina Lozovskaia", email = "alina.lozovskaia@huggingface.co" },
@@ -18,7 +18,7 @@ dependencies = [
     "huggingface-hub[inference,hf_xet]>=0.34.3",
     "jinja2>=3.1.6",
     "loguru>=0.7.3",
-    "markitdown>=0.0.2",
+    "markitdown[all]>=0.0.2",
     "numpy>=1.24.0",
     "pillow>=11.2.1",
     "pydantic>=2.11.7",
@@ -80,5 +80,6 @@ line-ending = "auto"
 dev = [
     "build>=1.2.2.post1",
     "pytest>=8.4.1",
+    "ruff>=0.12.3",
     "twine>=6.1.0",
 ]

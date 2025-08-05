@@ -32,7 +32,7 @@ Yourbench is a structured data generation library for building better AI systems
 You can use yourbench without installation instantly with [uv](https://docs.astral.sh/uv/getting-started/installation/)! Simply run:
 
 ```
-uvx yourbench --model gpt-4o-mini --docs <YOUR_FILE_DIRECTORY_HERE>
+uvx yourbench --model gpt-4o-mini <YOUR_FILE_DIRECTORY_HERE>
 ```
 
 You will see the dataset appear locally! If a valid `HF_TOKEN` is set, you will also see the dataset appear on your Hugging Face Hub!
@@ -86,13 +86,9 @@ pip install yourbench
 # For example, create a .env file with required keys:
 # echo "OPENROUTER_API_KEY=<your_openrouter_api_key>" >> .env        # Example
 echo "HF_TOKEN=<your_huggingface_api_token>" >> .env              # Hugging Face token (for Hub datasets & inference)
-echo "HF_ORGANIZATION=<your_hf_username_or_org>" >> .env          # (Optional) Organization name for dataset pushing
 
-# 3. Run the pipeline on the provided example config (uses sample docs and models)
-yourbench run --config example/configs/simple_example.yaml
-
-# 4. (Optional) Run the pipeline on your own documents:
-yourbench run --config my_custom_config.yaml
+# 3. Run the pipeline on the provided example config (uses sample docs and models), or, use your own config file!
+yourbench example/configs/simple_example.yaml
 ```
 
 The **example configuration** `example/configs/simple_example.yaml` (included in the repository) demonstrates a basic setup. It specifies sample documents and default models for each stage of the pipeline. In step 3 above, YourBench will automatically ingest the example documents, generate a set of Q\&A pairs, and output a Hugging Face Dataset containing the evaluation questions and answers.

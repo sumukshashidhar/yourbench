@@ -712,6 +712,44 @@ class YourbenchConfig(BaseModel):
         except (AttributeError, ValueError):
             return False
 
+    def to_yaml(self, path: Union[str, Path]) -> None:
+        """Save configuration to YAML file with proper key names."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Convert to dict, handling Path objects and other types
+        config_dict = self.model_dump(mode="json", exclude_defaults=False)
+
+        # Rename pipeline_config to pipeline for compatibility with from_yaml
+        if "pipeline_config" in config_dict:
+            config_dict["pipeline"] = config_dict.pop("pipeline_config")
+
+        # Preserve environment variable references in HF configuration
+        if "hf_configuration" in config_dict:
+            hf_conf = config_dict["hf_configuration"]
+            # Always use environment variable references for sensitive data
+            if "hf_token" in hf_conf:
+                hf_conf["hf_token"] = "$HF_TOKEN"
+            if "hf_organization" in hf_conf and hf_conf.get("hf_organization"):
+                # Only preserve if it looks like it was originally an env var
+                if not hf_conf["hf_organization"].startswith("$"):
+                    # If we got an actual org name from whoami, keep it as $HF_ORGANIZATION
+                    hf_conf["hf_organization"] = "$HF_ORGANIZATION"
+
+        # Preserve environment variable references in model configurations
+        if "model_list" in config_dict:
+            for model in config_dict["model_list"]:
+                if "api_key" in model and model["api_key"]:
+                    # Determine which env var to use based on the original value or model name
+                    if model.get("model_name") and "gpt" in model["model_name"].lower():
+                        model["api_key"] = "$OPENAI_API_KEY"
+                    else:
+                        model["api_key"] = "$HF_TOKEN"
+
+        with open(path, "w", encoding="utf-8") as fh:
+            yaml.dump(config_dict, fh, default_flow_style=False, indent=2, sort_keys=False)
+        logger.info(f"Configuration saved to {path}")
+
     @classmethod
     def from_yaml(cls, path: Union[str, Path]) -> "YourbenchConfig":
         """
@@ -793,19 +831,6 @@ class YourbenchConfig(BaseModel):
         except Exception as e:
             logger.error(f"Configuration validation failed for {path}: {e}")
             raise ValueError(f"Invalid configuration: {e}") from e
-
-    def to_yaml(self, path: Union[str, Path]) -> None:
-        """Save configuration to YAML file."""
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Convert to dict, handling Path objects and other types
-        config_dict = self.model_dump(mode="json", exclude_defaults=False)
-
-        with open(path, "w", encoding="utf-8") as fh:
-            yaml.dump(config_dict, fh, default_flow_style=False, indent=2, sort_keys=False)
-
-        logger.info(f"Configuration saved to {path}")
 
     def model_dump_yaml(self) -> str:
         """Return configuration as YAML string."""

@@ -2,922 +2,416 @@
 """YourBench CLI - Dynamic Evaluation Set Generation with Large Language Models."""
 
 from __future__ import annotations
+import os
 import sys
 import time
 from typing import Optional
 from pathlib import Path
-from dataclasses import field, dataclass
+
+import typer
+from dotenv import load_dotenv
+from loguru import logger
+from randomname import get_name as get_random_name
 
 
 # Track startup time
 startup_time = time.perf_counter()
 
-import yaml  # noqa: E402
-import typer  # noqa: E402
-from dotenv import load_dotenv  # noqa: E402
-from loguru import logger  # noqa: E402
-from rich.table import Table  # noqa: E402
-from rich.prompt import Prompt, Confirm, IntPrompt, FloatPrompt  # noqa: E402
-from rich.console import Console  # noqa: E402
-
+# Configure logging early
+logger.remove()
+logger.add(sys.stderr, level=os.getenv("YOURBENCH_LOG_LEVEL", "INFO"))
 
 # Early startup logging
-logger.info("YourBench starting up...")
-logger.info("Loading core modules...")
+logger.debug("YourBench starting up...")
+logger.debug("Loading core modules...")
 
 # Lazy imports - only import when needed
-launch_ui = None
-run_analysis = None
 run_pipeline = None
-
-
-def _lazy_import_ui():
-    global launch_ui
-    if launch_ui is None:
-        logger.info("Loading Gradio UI components...")
-        from yourbench.app import launch_ui as _launch_ui
-
-        launch_ui = _launch_ui
-    return launch_ui
-
-
-def _lazy_import_analysis():
-    global run_analysis
-    if run_analysis is None:
-        from yourbench.analysis import run_analysis as _run_analysis
-
-        run_analysis = _run_analysis
-    return run_analysis
 
 
 def _lazy_import_pipeline():
     global run_pipeline
     if run_pipeline is None:
-        logger.info("Loading pipeline components...")
+        logger.debug("Loading pipeline components...")
         from yourbench.pipeline.handler import run_pipeline as _run_pipeline
 
         run_pipeline = _run_pipeline
     return run_pipeline
 
 
-logger.info("Loading environment variables...")
+logger.debug("Loading environment variables...")
 load_dotenv()
-
-# Configuration constants
-DEFAULT_CONCURRENT_REQUESTS_HF = 16
-DEFAULT_CONCURRENT_REQUESTS_API = 8
-DEFAULT_CHUNK_TOKENS = 256
-DEFAULT_MAX_TOKENS = 16384
-DEFAULT_TOKEN_OVERLAP = 128
-DEFAULT_H_MIN = 2
-DEFAULT_H_MAX = 5
-DEFAULT_MULTIHOP_FACTOR = 2
 
 app = typer.Typer(
     name="yourbench",
     help="YourBench - Dynamic Evaluation Set Generation with Large Language Models.",
     pretty_exceptions_show_locals=False,
-    invoke_without_command=True,
+    add_completion=False,
 )
-console = Console()
 
 # Log startup completion
-logger.success(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
-
-# Global state for quick mode
-_quick_mode_state = {
-    "model": None,
-    "docs": None,
-    "push_to_hub": None,
-    "debug": False,
-}
-
-
-@app.callback()
-def main_callback(
-    ctx: typer.Context,
-    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use for generation (e.g., gpt-4o)"),
-    docs: Optional[Path] = typer.Option(None, "--docs", "-d", help="Path to documents (PDF, TXT, etc.)"),
-    push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Push dataset to HuggingFace Hub"),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
-):
-    """Main callback to handle quick mode options."""
-    if ctx.invoked_subcommand is None and model and docs:
-        # Quick mode - run directly without subcommand
-        _run_quick_mode(model, docs, push_to_hub, debug, False)
-        raise typer.Exit(0)
-    elif ctx.invoked_subcommand is None:
-        # No subcommand and no quick mode args - show help
-        console.print(ctx.get_help())
-        raise typer.Exit(0)
-    else:
-        # Store state for subcommands if needed
-        _quick_mode_state["model"] = model
-        _quick_mode_state["docs"] = docs
-        _quick_mode_state["push_to_hub"] = push_to_hub
-        _quick_mode_state["debug"] = debug
-
-
-@dataclass
-class ConfigBuilder:
-    """Builder for creating YourBench configuration files."""
-
-    # HF Configuration
-    hf_dataset_name: str = ""
-    hf_organization: str = "$HF_ORGANIZATION"
-    hf_token: str = "$HF_TOKEN"
-    private: bool = False
-    concat_if_exist: bool = False
-    local_dataset_dir: Optional[str] = None
-    local_saving: bool = False
-
-    # Models and pipeline
-    models: list[dict] = field(default_factory=list)
-    model_roles: dict = field(default_factory=dict)
-    pipeline_config: dict = field(default_factory=dict)
-
-    def build(self) -> dict:
-        """Build the configuration dictionary."""
-        config = {
-            "hf_configuration": {
-                "hf_dataset_name": self.hf_dataset_name,
-                "hf_organization": self.hf_organization,
-                "token": self.hf_token,
-                "private": self.private,
-                "concat_if_exist": self.concat_if_exist,
-            }
-        }
-
-        # Add local dataset options if configured
-        if self.local_dataset_dir:
-            config["hf_configuration"]["local_dataset_dir"] = self.local_dataset_dir
-            config["hf_configuration"]["local_saving"] = self.local_saving
-
-        config["model_list"] = self.models
-
-        if self.model_roles:
-            config["model_roles"] = self.model_roles
-
-        config["pipeline"] = self.pipeline_config
-
-        return config
-
-
-def validate_api_key_format(api_key: str) -> tuple[bool, str]:
-    """Validate API key format - should be env variable or empty."""
-    if not api_key:
-        return True, ""
-
-    if api_key.startswith("$"):
-        return True, api_key
-
-    # Check if it looks like a real API key
-    if len(api_key) > 10 and any(c in api_key for c in ["sk-", "key-", "api-", "hf_"]):
-        return False, "Please use environment variable format (e.g., $OPENAI_API_KEY)"
-
-    return True, api_key
-
-
-def write_env_file(api_keys: dict[str, str]) -> None:
-    """Write API keys to .env file if they don't exist."""
-    env_path = Path(".env")
-    existing_vars = {}
-
-    # Read existing .env if it exists
-    try:
-        if env_path.exists():
-            with open(env_path, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        key, value = line.split("=", 1)
-                        existing_vars[key.strip()] = value.strip()
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Could not read .env file: {e}")
-        return
-
-    # Add new keys if they don't exist
-    new_keys = []
-    for var_name, example_value in api_keys.items():
-        if var_name not in existing_vars:
-            new_keys.append((var_name, example_value))
-
-    if new_keys:
-        try:
-            with open(env_path, "a") as f:
-                if existing_vars:  # Add newline if file has content
-                    f.write("\n")
-                f.write("# API Keys added by YourBench\n")
-                for var, val in new_keys:
-                    f.write(f"{var}={val}\n")
-            console.print(f"[green]✓[/green] Added {len(new_keys)} API key(s) to .env file")
-            console.print("[yellow]Remember to update .env with your actual API keys![/yellow]")
-        except (OSError, PermissionError) as e:
-            logger.error(f"Could not write to .env file: {e}")
-            console.print("[red]Warning: Could not create/update .env file. Add these manually:[/red]")
-            for var, val in new_keys:
-                console.print(f"  {var}={val}")
-
-
-def create_model_config(existing_models: list[str]) -> dict:
-    """Interactive model configuration with smart provider logic."""
-    console.print("\n[bold cyan]Model Configuration[/bold cyan]")
-
-    model_name = Prompt.ask("Model name", default="Qwen/Qwen3-30B-A3B")
-
-    # Provider type selection
-    console.print("\nSelect inference type:")
-    console.print("1. Hugging Face Inference (default)")
-    console.print("2. OpenAI Compatible API (vLLM, etc.)")
-    console.print("3. OpenAI API")
-    console.print("4. Google Gemini API")
-    console.print("5. Custom API endpoint")
-
-    choice = IntPrompt.ask("Choice", default=1)
-
-    config = {"model_name": model_name}
-    api_keys_to_env = {}
-
-    if choice == 1:  # Hugging Face
-        # Only for HF, ask about provider
-        if Confirm.ask("Use a specific provider?", default=False):
-            console.print("\nAvailable providers:")
-            console.print("- fireworks-ai")
-            console.print("- together-ai")
-            console.print("- deepinfra")
-            console.print("- huggingface (default)")
-            provider = Prompt.ask("Provider", default="huggingface")
-            if provider != "huggingface":
-                config["provider"] = provider
-
-    elif choice == 2:  # OpenAI Compatible
-        config["base_url"] = Prompt.ask("Base URL", default="http://localhost:8000/v1")
-        while True:
-            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$VLLM_API_KEY")
-            valid, msg = validate_api_key_format(api_key)
-            if valid:
-                config["api_key"] = api_key
-                if api_key.startswith("$"):
-                    api_keys_to_env[api_key[1:]] = "your-vllm-api-key-here"
-                break
-            else:
-                console.print(f"[red]Error: {msg}[/red]")
-
-    elif choice == 3:  # OpenAI
-        config["base_url"] = "https://api.openai.com/v1"
-        config["model_name"] = Prompt.ask("Model name", default="gpt-4")
-        while True:
-            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$OPENAI_API_KEY")
-            valid, msg = validate_api_key_format(api_key)
-            if valid:
-                config["api_key"] = api_key
-                if api_key.startswith("$"):
-                    api_keys_to_env[api_key[1:]] = "sk-..."
-                break
-            else:
-                console.print(f"[red]Error: {msg}[/red]")
-
-    elif choice == 4:  # Gemini
-        config["base_url"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
-        config["model_name"] = Prompt.ask("Model name", default="gemini-2.5-flash-preview")
-        while True:
-            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$GEMINI_API_KEY")
-            valid, msg = validate_api_key_format(api_key)
-            if valid:
-                config["api_key"] = api_key
-                if api_key.startswith("$"):
-                    api_keys_to_env[api_key[1:]] = "your-gemini-api-key-here"
-                break
-            else:
-                console.print(f"[red]Error: {msg}[/red]")
-
-    else:  # Custom
-        config["base_url"] = Prompt.ask("Base URL")
-        while True:
-            api_key = Prompt.ask("API key (use $VAR for env variables)", default="$API_KEY")
-            valid, msg = validate_api_key_format(api_key)
-            if valid:
-                config["api_key"] = api_key
-                if api_key.startswith("$"):
-                    api_keys_to_env[api_key[1:]] = "your-api-key-here"
-                break
-            else:
-                console.print(f"[red]Error: {msg}[/red]")
-
-    # Write API keys to .env if needed
-    if api_keys_to_env:
-        write_env_file(api_keys_to_env)
-
-    # Advanced options
-    if Confirm.ask("\nConfigure advanced options?", default=False):
-        config["max_concurrent_requests"] = IntPrompt.ask(
-            "Max concurrent requests", default=DEFAULT_CONCURRENT_REQUESTS_HF
-        )
-        if Confirm.ask("Use custom tokenizer?", default=False):
-            config["encoding_name"] = Prompt.ask("Encoding name", default="cl100k_base")
-    else:
-        config["max_concurrent_requests"] = (
-            DEFAULT_CONCURRENT_REQUESTS_HF if choice == 1 else DEFAULT_CONCURRENT_REQUESTS_API
-        )
-
-    return config
-
-
-def configure_model_roles(models: list[dict]) -> dict:
-    """Configure which models to use for each pipeline stage."""
-    if not models:
-        return {}
-
-    if len(models) == 1:
-        # Single model - use for everything except chunking
-        model_name = models[0]["model_name"]
-        return {
-            "ingestion": [model_name],
-            "summarization": [model_name],
-            "single_shot_question_generation": [model_name],
-            "multi_hop_question_generation": [model_name],
-        }
-
-    console.print("\n[bold cyan]Model Role Assignment[/bold cyan]")
-    console.print("Assign models to pipeline stages:")
-
-    # Show available models
-    table = Table(title="Available Models")
-    table.add_column("Index", style="cyan")
-    table.add_column("Model", style="green")
-    for i, model in enumerate(models, 1):
-        table.add_row(str(i), model["model_name"])
-    console.print(table)
-
-    roles = {}
-    stages = [
-        ("ingestion", "Document parsing & conversion"),
-        ("summarization", "Document summarization"),
-        ("single_shot_question_generation", "Single-hop questions"),
-        ("multi_hop_question_generation", "Multi-hop questions"),
-    ]
-
-    for stage, desc in stages:
-        console.print(f"\n[yellow]{stage}[/yellow]: {desc}")
-        indices = Prompt.ask("Model indices (comma-separated, e.g., 1,2)", default="1")
-        selected = []
-        for idx in indices.split(","):
-            try:
-                i = int(idx.strip()) - 1
-                if 0 <= i < len(models):
-                    selected.append(models[i]["model_name"])
-                else:
-                    logger.warning(f"Model index {idx} is out of range (1-{len(models)})")
-            except ValueError:
-                logger.warning(f"Invalid model index '{idx}' - expected a number")
-        if selected:
-            roles[stage] = selected
-
-    return roles
-
-
-def configure_ingestion(enabled: bool) -> dict:
-    """Configure ingestion stage."""
-    config = {"run": enabled}
-
-    if not enabled:
-        return config
-
-    if Confirm.ask("\nConfigure ingestion paths?", default=False):
-        config["source_documents_dir"] = Prompt.ask("Source documents directory", default="data/raw")
-        config["output_dir"] = Prompt.ask("Output directory", default="data/processed")
-    else:
-        config["source_documents_dir"] = "data/raw"
-        config["output_dir"] = "data/processed"
-
-    return config
-
-
-def configure_summarization(enabled: bool) -> dict:
-    """Configure summarization stage."""
-    config = {"run": enabled}
-
-    if not enabled:
-        return config
-
-    if Confirm.ask("\nConfigure summarization options?", default=False):
-        config["max_tokens"] = IntPrompt.ask("Max tokens per chunk", default=DEFAULT_MAX_TOKENS)
-        config["token_overlap"] = IntPrompt.ask("Token overlap", default=DEFAULT_TOKEN_OVERLAP)
-        config["encoding_name"] = Prompt.ask("Tokenizer encoding", default="cl100k_base")
-
-    return config
-
-
-def configure_chunking(enabled: bool) -> dict:
-    """Configure chunking stage."""
-    config = {"run": enabled}
-
-    if not enabled:
-        return config
-
-    if Confirm.ask("\nConfigure chunking parameters?", default=False):
-        chunk_config = {}
-        chunk_config["l_max_tokens"] = IntPrompt.ask("Max tokens per chunk", default=DEFAULT_CHUNK_TOKENS)
-        chunk_config["token_overlap"] = IntPrompt.ask("Token overlap", default=0)
-        chunk_config["encoding_name"] = Prompt.ask("Tokenizer encoding", default="cl100k_base")
-
-        # Multi-hop configuration
-        if Confirm.ask("Configure multi-hop parameters?", default=True):
-            chunk_config["h_min"] = IntPrompt.ask("Min chunks for multi-hop", default=DEFAULT_H_MIN)
-            chunk_config["h_max"] = IntPrompt.ask("Max chunks for multi-hop", default=DEFAULT_H_MAX)
-            chunk_config["num_multihops_factor"] = IntPrompt.ask("Multi-hop factor", default=DEFAULT_MULTIHOP_FACTOR)
-
-        config["chunking_configuration"] = chunk_config
-    else:
-        config["chunking_configuration"] = {
-            "l_max_tokens": DEFAULT_CHUNK_TOKENS,
-            "token_overlap": 0,
-            "encoding_name": "cl100k_base",
-            "h_min": DEFAULT_H_MIN,
-            "h_max": DEFAULT_H_MAX,
-            "num_multihops_factor": DEFAULT_MULTIHOP_FACTOR,
-        }
-
-    return config
-
-
-def configure_question_generation(stage_name: str, enabled: bool) -> dict:
-    """Configure question generation stages."""
-    config = {"run": enabled}
-
-    if not enabled:
-        return config
-
-    if Confirm.ask(f"\nConfigure {stage_name.replace('_', ' ')} options?", default=False):
-        # Question type
-        console.print("\nQuestion type:")
-        console.print("1. Open-ended (default)")
-        console.print("2. Multiple choice")
-        q_type = IntPrompt.ask("Choice", default=1)
-        config["question_type"] = "multi-choice" if q_type == 2 else "open-ended"
-
-        # Additional instructions
-        config["additional_instructions"] = Prompt.ask(
-            "Additional instructions", default="Generate questions to test a curious adult"
-        )
-
-        # Chunk sampling
-        if Confirm.ask("Configure chunk sampling?", default=False):
-            sampling = {}
-            console.print("\nSampling mode:")
-            console.print("1. All chunks (default)")
-            console.print("2. Sample by count")
-            console.print("3. Sample by percentage")
-            mode = IntPrompt.ask("Choice", default=1)
-
-            if mode == 2:
-                sampling["mode"] = "count"
-                sampling["value"] = IntPrompt.ask("Number of chunks", default=10)
-            elif mode == 3:
-                sampling["mode"] = "percentage"
-                sampling["value"] = FloatPrompt.ask("Percentage (0-1)", default=0.5)
-            else:
-                sampling["mode"] = "all"
-
-            if mode in [2, 3]:
-                sampling["random_seed"] = IntPrompt.ask("Random seed", default=42)
-
-            config["chunk_sampling"] = sampling
-
-    return config
-
-
-def configure_pipeline_stages() -> dict:
-    """Configure all pipeline stages with cascading options."""
-    console.print("\n[bold cyan]Pipeline Configuration[/bold cyan]")
-
-    stages = {
-        "ingestion": ("Convert documents to markdown", configure_ingestion),
-        "upload_ingest_to_hub": ("Upload to Hugging Face Hub", lambda x: {"run": x}),
-        "summarization": ("Generate document summaries", configure_summarization),
-        "chunking": ("Split documents into chunks", configure_chunking),
-        "single_shot_question_generation": ("Generate single-hop questions", configure_question_generation),
-        "multi_hop_question_generation": ("Generate multi-hop questions", configure_question_generation),
-        "lighteval": ("Create evaluation dataset", lambda x: {"run": x}),
-        "citation_score_filtering": ("Add citation scores", lambda x: {"run": x}),
-    }
-
-    pipeline_config = {}
-
-    # First, ask which stages to enable
-    console.print("Select pipeline stages to enable:")
-    enabled_stages = {}
-
-    for stage, (desc, _) in stages.items():
-        enabled = Confirm.ask(f"  {stage} - {desc}", default=True)
-        enabled_stages[stage] = enabled
-
-    # Then configure each enabled stage
-    for stage, (desc, configure_fn) in stages.items():
-        if stage in ["single_shot_question_generation", "multi_hop_question_generation"]:
-            pipeline_config[stage] = configure_fn(stage, enabled_stages[stage])
-        else:
-            pipeline_config[stage] = configure_fn(enabled_stages[stage])
-
-    return pipeline_config
-
-
-@app.command()
-def run(
-    config_path: Optional[Path] = typer.Argument(
-        None,
-        help="Path to configuration file (YAML/JSON)",
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-    ),
-    config: Optional[Path] = typer.Option(
-        None,
-        "--config",
-        "-c",
-        help="[LEGACY] Path to configuration file",
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-    ),
-    plot_stage_timing: bool = typer.Option(
-        False,
-        "--plot-stage-timing",
-        help="Generate stage timing chart",
-    ),
-    gradio: bool = typer.Option(False, "--gradio", help="Launch the Gradio UI"),
+logger.debug(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
+
+
+def run_yourbench(
+    config_or_docs: str,
+    model: Optional[str] = None,
+    single_shot_questions: Optional[bool] = None,
+    multi_hop_questions: bool = False,
+    cross_doc_questions: bool = False,
+    additional_instructions: Optional[str] = None,
+    push_to_hub: Optional[str] = None,
+    debug: bool = False,
+    output_dir: Optional[Path] = None,
+    # Additional pipeline configuration options
+    question_mode: Optional[str] = None,
+    max_tokens: Optional[int] = None,
+    token_overlap: Optional[int] = None,
+    l_max_tokens: Optional[int] = None,
+    h_min: Optional[int] = None,
+    h_max: Optional[int] = None,
+    pdf_dpi: Optional[int] = None,
+    llm_ingestion: bool = False,
+    question_rewriting: bool = False,
+    private_dataset: bool = True,
+    local_saving: bool = True,
+    export_jsonl: bool = True,
+    jsonl_export_dir: Optional[Path] = None,
+    max_concurrent_requests: Optional[int] = None,
 ) -> None:
-    """Run the YourBench pipeline with a configuration file or launch the Gradio UI."""
-    if gradio:
-        ui_func = _lazy_import_ui()
-        ui_func()
-        return
+    """Core function to run YourBench pipeline."""
+    # Setup debug logging if requested
+    if debug:
+        logger.remove()
+        logger.add(sys.stderr, level="DEBUG")
 
-    # Get debug flag from global state if running from main command
-    debug = _quick_mode_state.get("debug", False)
+    # Convert to Path
+    config_or_docs_path = Path(config_or_docs)
 
-    # Handle both new positional and legacy --config
-    final_config = config_path or config
+    # Check if input is a YAML config file
+    if config_or_docs_path.suffix in [".yaml", ".yml"] and config_or_docs_path.exists():
+        logger.info(f"Running with config: {config_or_docs_path}")
 
-    if not final_config:
-        console.print("[red]Error:[/red] Please provide a configuration file")
-        console.print("Usage: yourbench run CONFIG_FILE")
-        raise typer.Exit(1)
-
-    # Setup logging
-    logger.remove()
-    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
-
-    logger.info(f"Running pipeline with config: {final_config}")
-
-    try:
+        # Run pipeline with existing config
         pipeline_func = _lazy_import_pipeline()
-        pipeline_func(
-            config_file_path=str(final_config),
-            debug=debug,
-            plot_stage_timing=plot_stage_timing,
-        )
-    except Exception as e:
-        logger.exception(f"Pipeline failed: {e}")
-        raise typer.Exit(1)
-
-
-@app.command()
-def create(
-    output: Path = typer.Argument(
-        "config.yaml",
-        help="Output configuration file path",
-    ),
-    simple: bool = typer.Option(
-        False,
-        "--simple",
-        "-s",
-        help="Create a simple configuration with minimal options",
-    ),
-) -> None:
-    """Create a new YourBench configuration file interactively."""
-    console.print("[bold green]YourBench Configuration Creator[/bold green]\n")
-
-    builder = ConfigBuilder()
-
-    # Basic configuration
-    console.print("[bold cyan]Basic Configuration[/bold cyan]")
-    builder.hf_dataset_name = Prompt.ask("Hugging Face dataset name", default="my-yourbench-dataset")
-
-    if simple:
-        # Simple mode - minimal questions
-        builder.models = [
-            {
-                "model_name": "Qwen/Qwen3-30B-A3B",
-                "provider": "fireworks-ai",
-            }
-        ]
-        builder.pipeline_config = {
-            "ingestion": {
-                "run": True,
-                "source_documents_dir": "data/raw",
-                "output_dir": "data/processed",
-            },
-            "upload_ingest_to_hub": {"run": True},
-            "summarization": {"run": True},
-            "chunking": {"run": True},
-            "single_shot_question_generation": {"run": True},
-            "multi_hop_question_generation": {"run": True},
-            "lighteval": {"run": True},
-            "citation_score_filtering": {"run": True},
-        }
+        try:
+            pipeline_func(config_file_path=str(config_or_docs_path), debug=debug)
+        except Exception as e:
+            logger.exception(f"Pipeline failed: {e}")
+            raise typer.Exit(1)
     else:
-        # Advanced configuration
-        if Confirm.ask("Configure Hugging Face options?", default=True):
-            builder.hf_organization = Prompt.ask("Organization (use $VAR for env)", default="$HF_ORGANIZATION")
-            builder.hf_token = Prompt.ask("HF Token (use $VAR for env)", default="$HF_TOKEN")
-            builder.private = Confirm.ask("Make dataset private?", default=False)
-            builder.concat_if_exist = Confirm.ask("Concatenate if dataset exists?", default=False)
+        # Generate config dynamically for document path
+        if not config_or_docs_path.exists():
+            logger.error(f"Path does not exist: {config_or_docs}")
+            raise typer.Exit(1)
 
-            # Local dataset options
-            if Confirm.ask("Configure local dataset storage?", default=False):
-                builder.local_dataset_dir = Prompt.ask("Local dataset directory", default="data/datasets")
-                builder.local_saving = Confirm.ask("Save dataset locally?", default=True)
+        # Import configuration classes
+        from yourbench.utils.configuration_engine import (
+            ModelConfig,
+            ChunkingConfig,
+            PipelineConfig,
+            IngestionConfig,
+            LightevalConfig,
+            YourbenchConfig,
+            HuggingFaceConfig,
+            SummarizationConfig,
+            QuestionRewritingConfig,
+            MultiHopQuestionGenerationConfig,
+            SingleShotQuestionGenerationConfig,
+            CrossDocumentQuestionGenerationConfig,
+        )
 
-        # Model configuration
-        console.print("\n[bold cyan]Model Configuration[/bold cyan]")
-        add_models = Confirm.ask("Add models?", default=True)
+        # Create configuration programmatically
+        dataset_name = push_to_hub if push_to_hub else get_random_name()
 
-        while add_models:
-            model = create_model_config([m["model_name"] for m in builder.models])
-            builder.models.append(model)
-            add_models = Confirm.ask("\nAdd another model?", default=False)
+        # Use model or default from example config (zai-org/GLM-4.5)
+        model_name = model or "zai-org/GLM-4.5"
 
-        # Model roles
-        if len(builder.models) > 1 and Confirm.ask("\nAssign models to specific stages?", default=True):
-            builder.model_roles = configure_model_roles(builder.models)
-        elif builder.models:
-            # Single model or default assignment - NO chunking model
-            model_name = builder.models[0]["model_name"]
-            builder.model_roles = {
-                "ingestion": [model_name],
-                "summarization": [model_name],
-                "single_shot_question_generation": [model_name],
-                "multi_hop_question_generation": [model_name],
-            }
+        # Determine model configuration
+        model_config = ModelConfig(model_name=model_name, max_concurrent_requests=max_concurrent_requests or 32)
+        if "gpt" in model_name.lower():
+            model_config.base_url = "https://api.openai.com/v1/"
+            model_config.api_key = "$OPENAI_API_KEY"
+            if not os.getenv("OPENAI_API_KEY"):
+                logger.warning("OPENAI_API_KEY not set. Please set it with: export OPENAI_API_KEY=your_key")
+        else:
+            model_config.api_key = "$HF_TOKEN"
+            if not os.getenv("HF_TOKEN"):
+                logger.warning("HF_TOKEN not set. Please set it with: export HF_TOKEN=your_token")
 
-        # Pipeline stages
-        builder.pipeline_config = configure_pipeline_stages()
+        # Set output directory
+        local_output_dir = output_dir or Path("yourbench_output")
 
-    # Build and save configuration
-    config = builder.build()
+        # Create HuggingFace configuration
+        hf_config = HuggingFaceConfig(
+            hf_dataset_name=dataset_name,
+            hf_organization="$HF_ORGANIZATION",
+            hf_token="$HF_TOKEN",  # This will be expanded from environment
+            private=private_dataset,
+            local_dataset_dir=local_output_dir / "dataset",
+            local_saving=local_saving,
+            export_jsonl=export_jsonl,
+            jsonl_export_dir=jsonl_export_dir or Path.cwd(),
+        )
 
-    # Write to file with error handling
-    try:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with open(output, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False, width=120)
-        console.print(f"\n[green]✓[/green] Configuration saved to: {output}")
-    except (OSError, PermissionError) as e:
-        logger.error(f"Failed to write configuration file: {e}")
-        console.print(f"[red]Error: Could not write to {output}[/red]")
-        console.print(f"[red]Details: {e}[/red]")
-        console.print("\n[yellow]Please check file permissions or choose a different location.[/yellow]")
-        raise typer.Exit(1)
-
-    # Show next steps
-    console.print("\n[bold]Next steps:[/bold]")
-    if config["pipeline"].get("ingestion", {}).get("run", False):
-        src_dir = config["pipeline"]["ingestion"].get("source_documents_dir", "data/raw")
-        console.print(f"1. Place your documents in: {src_dir}")
-    console.print(f"2. Run: [cyan]yourbench run {output}[/cyan]")
-
-    # Remind about .env if API keys were used
-    if any(m.get("api_key", "").startswith("$") for m in builder.models):
-        console.print("\n[yellow]Don't forget to update your .env file with actual API keys![/yellow]")
-
-
-@app.command()
-def analyze(
-    analysis_name: str = typer.Argument(..., help="Name of the analysis to run"),
-    args: list[str] = typer.Argument(None, help="Additional arguments"),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
-) -> None:
-    """Run a specific analysis by name."""
-    logger.remove()
-    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
-
-    logger.info(f"Running analysis '{analysis_name}' with arguments: {args}")
-
-    try:
-        analysis_func = _lazy_import_analysis()
-        analysis_func(analysis_name, args, debug=debug)
-    except Exception as e:
-        logger.exception(f"Analysis '{analysis_name}' failed: {e}")
-        raise typer.Exit(1)
-
-
-@app.command()
-def gui() -> None:
-    """Launch the Gradio UI."""
-    ui_func = _lazy_import_ui()
-    ui_func()
-
-
-@app.command()
-def help() -> None:
-    """Show detailed help information for all YourBench commands."""
-    console.print("[bold green]YourBench CLI Help[/bold green]\n")
-
-    console.print("YourBench is a dynamic evaluation set generation tool using Large Language Models.")
-    console.print("It converts documents into comprehensive evaluation datasets with questions and answers.\n")
-
-    # Commands table
-    table = Table(title="Available Commands", show_header=True, header_style="bold magenta")
-    table.add_column("Command", style="cyan", width=12)
-    table.add_column("Description", style="white", width=50)
-    table.add_column("Usage", style="green", width=30)
-
-    commands = [
-        (
-            "run",
-            "Execute the YourBench pipeline with a configuration file. Processes documents through ingestion, summarization, chunking, and question generation stages.",
-            "yourbench run config.yaml",
-        ),
-        (
-            "create",
-            "Interactive configuration file creator. Guides you through setting up models, pipeline stages, and Hugging Face integration.",
-            "yourbench create [--simple]",
-        ),
-        (
-            "analyze",
-            "Run specific analysis scripts on generated datasets. Includes various evaluation and visualization tools.",
-            "yourbench analyze ANALYSIS_NAME",
-        ),
-        ("gui", "Launch the Gradio web interface for YourBench (not yet implemented).", "yourbench gui"),
-        ("help", "Show this detailed help information about all commands.", "yourbench help"),
-    ]
-
-    for cmd, desc, usage in commands:
-        table.add_row(cmd, desc, usage)
-
-    console.print(table)
-
-    # Quick start section
-    console.print("\n[bold cyan]Quick Start:[/bold cyan]")
-    console.print("1. [green]yourbench create[/green] - Create a configuration file")
-    console.print("2. Place documents in [yellow]data/raw/[/yellow] directory")
-    console.print("3. [green]yourbench run config.yaml[/green] - Process documents")
-
-    # Examples section
-    console.print("\n[bold cyan]Examples:[/bold cyan]")
-    console.print("• Create simple config:    [green]yourbench create --simple[/green]")
-    console.print("• Run with debug:          [green]yourbench run config.yaml --debug[/green]")
-    console.print("• Show stage timing:       [green]yourbench run config.yaml --plot-stage-timing[/green]")
-    console.print("• Run citation analysis:   [green]yourbench analyze citation_score[/green]")
-
-    console.print("\n[bold cyan]For More Help:[/bold cyan]")
-    console.print("• Use [green]yourbench COMMAND --help[/green] for command-specific options")
-    console.print("• Visit the documentation for detailed guides and examples")
-
-
-def _run_quick_mode(
-    model: str,
-    docs_path: Path,
-    push_to_hub: Optional[str],
-    debug: bool,
-    plot_stage_timing: bool,
-) -> None:
-    """Run YourBench in quick mode with minimal configuration."""
-
-    from randomname import get_name as get_random_name
-
-    # Setup logging
-    logger.remove()
-    logger.add(sys.stderr, level="DEBUG" if debug else "INFO")
-
-    # Validate docs path
-    if not docs_path.exists():
-        console.print(f"[red]Error:[/red] Documents path does not exist: {docs_path}")
-        raise typer.Exit(1)
-
-    # Create processing directory
-    processing_dir = Path("yourbench_processing")
-    processing_dir.mkdir(exist_ok=True)
-
-    # Use dataset name as subdirectory
-    dataset_name = push_to_hub if push_to_hub else get_random_name()
-    temp_path = processing_dir / dataset_name
-    temp_path.mkdir(exist_ok=True)
-
-    try:
         # Prepare documents directory
-        if docs_path.is_file():
+        if config_or_docs_path.is_file():
             # Single file - create a directory and copy it
-            raw_dir = temp_path / "raw"
-            raw_dir.mkdir(parents=True)
+            raw_dir = local_output_dir / "raw"
+            raw_dir.mkdir(parents=True, exist_ok=True)
             import shutil
 
-            shutil.copy2(docs_path, raw_dir)
+            shutil.copy2(config_or_docs_path, raw_dir)
         else:
-            # Directory - resolve to absolute path to avoid issues
-            raw_dir = docs_path.resolve()
+            # Directory - use absolute path
+            raw_dir = config_or_docs_path.resolve()
 
-        # Create configuration matching default_example structure
-        config = {
-            "hf_configuration": {
-                "hf_dataset_name": dataset_name,
-                "hf_organization": "$HF_ORGANIZATION",
-                "hf_token": "$HF_TOKEN",
-                "private": True,
-                "local_dataset_dir": str(temp_path / "dataset"),
-                "local_saving": True,
-                "export_jsonl": True,
-                "jsonl_export_dir": str(Path.cwd()),  # Export to current directory
-            },
-            "model_list": [
-                {
-                    "model_name": model,
-                    "base_url": "https://api.openai.com/v1/" if "gpt" in model.lower() else None,
-                    "api_key": "$OPENAI_API_KEY" if "gpt" in model.lower() else "$HF_TOKEN",
-                    "max_concurrent_requests": 16,
-                }
-            ],
-            "pipeline": {
-                "ingestion": {
-                    "run": True,
-                    "source_documents_dir": str(raw_dir),
-                    "output_dir": str(temp_path / "processed"),
-                },
-                "summarization": {
-                    "run": True,
-                },
-                "chunking": {
-                    "run": True,
-                },
-                "single_shot_question_generation": {
-                    "run": True,
-                },
-                "prepare_lighteval": {
-                    "run": True,
-                },
-            },
+        # Create pipeline configuration with proper defaults
+        # Set up ingestion config
+        ingestion_config = IngestionConfig(
+            run=True,
+            source_documents_dir=raw_dir,
+            output_dir=local_output_dir / "processed",
+            upload_to_hub=True,  # Always upload to hub for pipeline to work
+            llm_ingestion=llm_ingestion,
+            pdf_dpi=pdf_dpi or 300,
+        )
+
+        # Set up summarization config
+        summarization_config = SummarizationConfig(
+            run=True,
+            max_tokens=max_tokens or 32768,
+            token_overlap=token_overlap or 512,
+        )
+
+        # Set up chunking config
+        chunking_config = ChunkingConfig(
+            run=True,
+            l_max_tokens=l_max_tokens or 8192,
+            token_overlap=token_overlap or 512,
+            h_min=h_min or 2,
+            h_max=h_max or 5,
+        )
+
+        # Set up question generation configs
+        single_shot_config = SingleShotQuestionGenerationConfig(
+            run=single_shot_questions if single_shot_questions is not None else True,
+            question_mode=question_mode or "open-ended",
+            additional_instructions=additional_instructions or "",
+        )
+
+        multi_hop_config = MultiHopQuestionGenerationConfig(
+            run=multi_hop_questions,
+            question_mode=question_mode or "open-ended",
+            additional_instructions=additional_instructions or "",
+        )
+
+        cross_doc_config = CrossDocumentQuestionGenerationConfig(
+            run=cross_doc_questions,
+            question_mode=question_mode or "open-ended",
+            additional_instructions=additional_instructions or "",
+        )
+
+        # Set up question rewriting config
+        question_rewriting_config = QuestionRewritingConfig(
+            run=question_rewriting,
+        )
+
+        pipeline_config = PipelineConfig(
+            ingestion=ingestion_config,
+            summarization=summarization_config,
+            chunking=chunking_config,
+            single_shot_question_generation=single_shot_config,
+            multi_hop_question_generation=multi_hop_config,
+            cross_document_question_generation=cross_doc_config,
+            question_rewriting=question_rewriting_config,
+            prepare_lighteval=LightevalConfig(run=True),
+        )
+
+        # Model roles mapping
+        model_roles = {
+            "ingestion": [model_name],
+            "summarization": [model_name],
+            "chunking": [model_name],
+            "single_shot_question_generation": [model_name],
+            "multi_hop_question_generation": [model_name],
+            "cross_document_question_generation": [model_name],
+            "question_rewriting": [model_name],
         }
 
-        # Add model roles mapping
-        config["model_roles"] = {
-            "ingestion": [model],
-            "summarization": [model],
-            "chunking": [model],
-            "single_shot_question_generation": [model],
-            "multi_hop_question_generation": [model],
-        }
+        # Create final configuration
+        config = YourbenchConfig(
+            hf_configuration=hf_config,
+            pipeline_config=pipeline_config,
+            model_list=[model_config],
+            model_roles=model_roles,
+            debug=debug,
+        )
 
-        # If push_to_hub is specified, enable it
+        # Save config to temporary file for the pipeline
+        config_path = local_output_dir / "config.yaml"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config.to_yaml(config_path)
+
+        logger.info(f"Processing documents from: {config_or_docs_path}")
+        logger.debug(f"Using model: {model_name}")
+        logger.debug(f"Output directory: {local_output_dir}")
         if push_to_hub:
-            config["pipeline"]["upload_ingest_to_hub"] = {"run": True}
-
-        # Save config to temporary file
-        config_path = temp_path / "config.yaml"
-        with open(config_path, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-
-        logger.info(f"Running YourBench with model: {model}")
-        logger.info(f"Processing documents from: {docs_path}")
-        if push_to_hub:
-            logger.info(f"Will push dataset to Hub as: {push_to_hub}")
+            logger.info(f"Will push to Hub as: {push_to_hub}")
 
         # Run the pipeline
         try:
             pipeline_func = _lazy_import_pipeline()
-            pipeline_func(
-                config_file_path=str(config_path),
-                debug=debug,
-                plot_stage_timing=plot_stage_timing,
-            )
+            pipeline_func(config_file_path=str(config_path), debug=debug)
 
-            # Check for JSONL files in current directory
+            # Check for JSONL files
             jsonl_files = list(Path.cwd().glob("*.jsonl"))
             if jsonl_files:
-                console.print("\n[green]✓[/green] Generated JSONL files:")
+                logger.success("Generated JSONL files:")
                 for file in jsonl_files:
-                    console.print(f"  - {file.name}")
+                    logger.info(f"  - {file.name}")
 
             if push_to_hub:
-                console.print(f"\n[green]✓[/green] Dataset pushed to: https://huggingface.co/datasets/{push_to_hub}")
+                logger.success(f"Dataset pushed to: https://huggingface.co/datasets/{push_to_hub}")
 
         except Exception as e:
             logger.exception(f"Pipeline failed: {e}")
             raise typer.Exit(1)
-    finally:
-        # Keep the processing directory for inspection
-        logger.info(f"Processing files saved in: {temp_path}")
+
+
+@app.command()
+def run(
+    config_or_docs: str = typer.Argument(..., help="Path to config file (YAML) or documents directory/file"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use (default: zai-org/GLM-4.5)"),
+    single_shot_questions: Optional[bool] = typer.Option(
+        None,
+        "--single-shot-questions/--no-single-shot-questions",
+        help="Generate single-shot questions (default: True)",
+    ),
+    multi_hop_questions: bool = typer.Option(
+        False, "--multi-hop-questions", help="Generate multi-hop questions (default: False)"
+    ),
+    cross_doc_questions: bool = typer.Option(
+        False, "--cross-doc-questions", help="Generate cross-document questions (default: False)"
+    ),
+    additional_instructions: Optional[str] = typer.Option(
+        None, "--additional-instructions", "-i", help="Additional instructions for question generation"
+    ),
+    push_to_hub: Optional[str] = typer.Option(None, "--push-to-hub", help="Dataset name to push to HuggingFace Hub"),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+    output_dir: Optional[Path] = typer.Option(None, "--output-dir", "-o", help="Local output directory"),
+    # Additional pipeline configuration options
+    question_mode: Optional[str] = typer.Option(
+        None, "--question-mode", help="Question mode: open-ended or multi-choice (default: open-ended)"
+    ),
+    max_tokens: Optional[int] = typer.Option(
+        None, "--max-tokens", help="Max tokens for summarization (default: 32768)"
+    ),
+    token_overlap: Optional[int] = typer.Option(
+        None, "--token-overlap", help="Token overlap for chunking/summarization (default: 512)"
+    ),
+    l_max_tokens: Optional[int] = typer.Option(
+        None, "--chunk-max-tokens", help="Max tokens per chunk (default: 8192)"
+    ),
+    h_min: Optional[int] = typer.Option(None, "--h-min", help="Min hop distance for multi-hop questions (default: 2)"),
+    h_max: Optional[int] = typer.Option(None, "--h-max", help="Max hop distance for multi-hop questions (default: 5)"),
+    pdf_dpi: Optional[int] = typer.Option(None, "--pdf-dpi", help="DPI for PDF processing (default: 300)"),
+    llm_ingestion: bool = typer.Option(False, "--llm-ingestion", help="Use LLM for PDF ingestion (default: False)"),
+    question_rewriting: bool = typer.Option(
+        False, "--question-rewriting", help="Enable question rewriting (default: False)"
+    ),
+    private_dataset: bool = typer.Option(
+        True, "--private/--public", help="Make dataset private on HuggingFace Hub (default: True)"
+    ),
+    local_saving: bool = typer.Option(
+        True, "--save-local/--no-save-local", help="Save dataset locally (default: True)"
+    ),
+    export_jsonl: bool = typer.Option(
+        True, "--export-jsonl/--no-export-jsonl", help="Export dataset as JSONL (default: True)"
+    ),
+    jsonl_export_dir: Optional[Path] = typer.Option(
+        None, "--jsonl-export-dir", help="Directory for JSONL export (default: current directory)"
+    ),
+    max_concurrent_requests: Optional[int] = typer.Option(
+        None, "--max-concurrent-requests", help="Max concurrent API requests (default: 32)"
+    ),
+) -> None:
+    """YourBench - Generate Q&A pairs from documents or run with config file."""
+    run_yourbench(
+        config_or_docs=config_or_docs,
+        model=model,
+        single_shot_questions=single_shot_questions,
+        multi_hop_questions=multi_hop_questions,
+        cross_doc_questions=cross_doc_questions,
+        additional_instructions=additional_instructions,
+        push_to_hub=push_to_hub,
+        debug=debug,
+        output_dir=output_dir,
+        question_mode=question_mode,
+        max_tokens=max_tokens,
+        token_overlap=token_overlap,
+        l_max_tokens=l_max_tokens,
+        h_min=h_min,
+        h_max=h_max,
+        pdf_dpi=pdf_dpi,
+        llm_ingestion=llm_ingestion,
+        question_rewriting=question_rewriting,
+        private_dataset=private_dataset,
+        local_saving=local_saving,
+        export_jsonl=export_jsonl,
+        jsonl_export_dir=jsonl_export_dir,
+        max_concurrent_requests=max_concurrent_requests,
+    )
+
+
+@app.command("version")
+def version_command() -> None:
+    """Show YourBench version."""
+    show_version()
+
+
+def show_version() -> None:
+    """Display version information."""
+    from importlib.metadata import version as get_version
+
+    try:
+        v = get_version("yourbench")
+        print(f"YourBench version: {v}")
+    except Exception:
+        print("YourBench version: development")
 
 
 def main() -> None:
-    """Main entry point for the CLI."""
-    # Check if running without arguments (show help)
+    """Entry point for the CLI that handles special cases."""
+    import sys
+
+    # Handle version flag specially
+    if "--version" in sys.argv or "-v" in sys.argv:
+        show_version()
+        return
+
+    # For backward compatibility, if no arguments provided, show help
     if len(sys.argv) == 1:
-        app(["--help"])
-    else:
         app()
+        return
+
+    # Check if first real argument (after script name) looks like a path
+    if len(sys.argv) > 1:
+        first_arg = sys.argv[1]
+        # If first arg is an option, use normal processing
+        if first_arg.startswith("-"):
+            app()
+            return
+
+        # If we have a path argument (config file or data directory)
+        # directly call the run function without the 'run' command
+        # This allows: yourbench config.yaml or yourbench data_dir
+        if first_arg not in ["run", "version"]:
+            # Insert 'run' command to make it work with typer
+            new_args = [sys.argv[0], "run"] + sys.argv[1:]
+            sys.argv = new_args
+
+    app()
 
 
 if __name__ == "__main__":
