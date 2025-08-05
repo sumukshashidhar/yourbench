@@ -1,0 +1,26 @@
+# This is an example configuration for running the pipeline on a local VLLM server.
+# It uses the Magistral-Small-2506 model from Mistral AI.
+hf_configuration:
+  hf_dataset_name: aws_bedrock_documentation_demo
+  hf_organization: yourbench
+  private: false
+
+model_list:
+  - model_name: openai/gpt-oss-120b
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/aws_support_documentation/data
+    output_dir: example/aws_support_documentation/processed
+  summarization:
+  chunking:
+  single_shot_question_generation:
+    single_shot_system_prompt: example/aws_support_documentation/custom_prompts/single_shot_system_prompt.md
+  multi_hop_question_generation:
+    multi_hop_system_prompt: example/aws_support_documentation/custom_prompts/multi_hop_system_prompt.md
+  cross_document_question_generation:
+    cross_document_system_prompt: example/aws_support_documentation/custom_prompts/multi_hop_system_prompt.md
+  prepare_lighteval:
+  citation_score_filtering:

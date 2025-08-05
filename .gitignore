@@ -16,6 +16,7 @@ yourbench_processing/
 test_output/
 yourbench_output/
 output/
+*.html
 # C extensions
 *.so
 
