@@ -130,7 +130,6 @@ def run_yourbench(
         # Determine model configuration
         model_config = ModelConfig(model_name=model_name, max_concurrent_requests=max_concurrent_requests or 32)
         if "gpt" in model_name.lower():
-            model_config.base_url = "https://api.openai.com/v1/"
             model_config.api_key = "$OPENAI_API_KEY"
             if not os.getenv("OPENAI_API_KEY"):
                 logger.warning("OPENAI_API_KEY not set. Please set it with: export OPENAI_API_KEY=your_key")
