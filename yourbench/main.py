@@ -835,7 +835,6 @@ def _run_quick_mode(
             "model_list": [
                 {
                     "model_name": model,
-                    "base_url": "https://api.openai.com/v1/" if "gpt" in model.lower() else None,
                     "api_key": "$OPENAI_API_KEY" if "gpt" in model.lower() else "$HF_TOKEN",
                     "max_concurrent_requests": 16,
                 }
