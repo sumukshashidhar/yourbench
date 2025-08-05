@@ -127,19 +127,30 @@ def run_yourbench(
         # Use model or default from example config (zai-org/GLM-4.5)
         model_name = model or "zai-org/GLM-4.5"
 
+        # Check HF_TOKEN early for HF models (models without explicit base URL)
+        if not os.getenv("HF_TOKEN"):
+            logger.error(
+                f"HF_TOKEN environment variable is required for model '{model_name}'. "
+                "Please set it with: export HF_TOKEN=your_token . You can get your token from https://huggingface.co/settings/tokens"
+            )
+            raise typer.Exit(1)
+
         # Determine model configuration
-        model_config = ModelConfig(model_name=model_name, max_concurrent_requests=max_concurrent_requests or 32)
         if "gpt" in model_name.lower():
-            model_config.api_key = "$OPENAI_API_KEY"
+            api_key = "$OPENAI_API_KEY"
             if not os.getenv("OPENAI_API_KEY"):
                 logger.warning("OPENAI_API_KEY not set. Please set it with: export OPENAI_API_KEY=your_key")
         else:
-            model_config.api_key = "$HF_TOKEN"
-            if not os.getenv("HF_TOKEN"):
-                logger.warning("HF_TOKEN not set. Please set it with: export HF_TOKEN=your_token")
+            api_key = "$HF_TOKEN"
+        
+        model_config = ModelConfig(
+            model_name=model_name, 
+            api_key=api_key,
+            max_concurrent_requests=max_concurrent_requests or 32
+        )
 
         # Set output directory
-        local_output_dir = output_dir or Path("yourbench_output")
+        local_output_dir = output_dir or Path("output")
 
         # Create HuggingFace configuration
         hf_config = HuggingFaceConfig(

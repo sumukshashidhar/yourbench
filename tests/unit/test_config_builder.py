@@ -165,6 +165,7 @@ class TestEnvFileWriting:
 class TestConfigSaveLoad:
     """Test configuration saving and loading."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_save_config_basic(self):
         """Test basic configuration saving."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -204,6 +205,7 @@ class TestConfigSaveLoad:
             assert config_path.exists()
             assert config_path.parent.exists()
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_save_config_none_value_cleanup(self):
         """Test that None values are cleaned up in saved config."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -223,6 +225,7 @@ class TestConfigSaveLoad:
             # base_url should not be present since it was None
             assert "base_url" not in saved_data["model_list"][0]
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_load_config(self):
         """Test configuration loading."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -266,6 +269,7 @@ class TestConfigCreation:
 
     @patch("yourbench.config_builder.console")
     @patch("yourbench.config_builder.get_random_name")
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_yourbench_config_simple(self, mock_get_name, mock_console):
         """Test creating a simple YourBench configuration."""
         mock_get_name.return_value = "test_dataset"
@@ -285,6 +289,7 @@ class TestConfigCreation:
     @patch("yourbench.config_builder.get_random_name")
     @patch("yourbench.config_builder.Confirm.ask")
     @patch("yourbench.config_builder.Prompt.ask")
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_yourbench_config_advanced_minimal(self, mock_prompt, mock_confirm, mock_get_name, mock_console):
         """Test creating an advanced configuration with minimal user input."""
         mock_get_name.return_value = "test_dataset"
@@ -296,6 +301,7 @@ class TestConfigCreation:
         assert isinstance(config, YourbenchConfig)
         assert config.hf_configuration.hf_dataset_name == "test_dataset"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_create_yourbench_config_integration(self):
         """Integration test for configuration creation."""
         # Test that the function can be called without mocking everything
@@ -315,6 +321,7 @@ class TestConfigCreation:
 class TestConfigurationSystem:
     """Integration tests for the entire configuration system."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_full_config_cycle(self):
         """Test complete configuration creation, saving, and loading cycle."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -370,6 +377,7 @@ class TestConfigurationSystem:
                 assert loaded_config.hf_configuration.hf_organization == "test_org"
                 assert loaded_config.model_list[0].api_key == "test_token"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_config_validation_errors(self):
         """Test that configuration validation catches errors."""
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -15,6 +15,7 @@ from yourbench.utils.configuration_engine import YourbenchConfig
 class TestConfigurationSystemIntegration:
     """Test the complete configuration system end-to-end."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_simple_config_creation_and_use(self):
         """Test creating a simple config and using it in pipeline."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -35,7 +36,8 @@ class TestConfigurationSystemIntegration:
             assert "pipeline" in yaml_data
 
             # Load back and verify
-            loaded_config = load_config(config_path)
+            with patch.dict(os.environ, {"HF_TOKEN": "test_token"}):
+                loaded_config = load_config(config_path)
             assert isinstance(loaded_config, YourbenchConfig)
             assert loaded_config.model_list[0].model_name == "Qwen/Qwen3-30B-A3B"
 
@@ -84,6 +86,7 @@ class TestConfigurationSystemIntegration:
                 assert config.hf_configuration.hf_organization == "test_org"
                 assert config.model_list[0].api_key == "hf_test_token_12345"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_config_validation_and_defaults(self):
         """Test that configuration validation and defaults work correctly."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -114,6 +117,7 @@ class TestConfigurationSystemIntegration:
             assert config.model_list[0].encoding_name == "cl100k_base"  # Default
             assert not config.pipeline_config.ingestion.run  # Default when not specified
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_config_roundtrip_preservation(self):
         """Test that config data is preserved through save/load cycles."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -127,7 +131,8 @@ class TestConfigurationSystemIntegration:
 
             # Save and load
             save_config(original_config, config_path)
-            loaded_config = load_config(config_path)
+            with patch.dict(os.environ, {"HF_TOKEN": "test_token"}):
+                loaded_config = load_config(config_path)
 
             # Verify preservation
             assert loaded_config.hf_configuration.private
@@ -135,6 +140,7 @@ class TestConfigurationSystemIntegration:
             assert loaded_config.model_list[0].max_concurrent_requests == 24
             assert loaded_config.model_list[0].model_name == "Qwen/Qwen3-30B-A3B"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token", "OPENAI_API_KEY": "test_openai_key"})
     def test_multiple_models_configuration(self):
         """Test configuration with multiple models and role assignments."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -182,6 +188,7 @@ class TestConfigurationSystemIntegration:
             assert config.model_roles["ingestion"] == ["vision_model"]
             assert config.model_roles["summarization"] == ["text_model"]
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_pipeline_stage_configuration(self):
         """Test comprehensive pipeline stage configuration."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -281,6 +288,7 @@ class TestConfigurationSystemIntegration:
             assert config.pipeline_config.question_rewriting.run
             assert config.pipeline_config.question_rewriting.additional_instructions == "Make questions more engaging"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_backward_compatibility(self):
         """Test that old configuration format still works."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -361,6 +369,7 @@ class TestConfigurationSystemIntegration:
                     # Should fallback to whoami result
                     assert config.hf_configuration.hf_organization == "fallback_user"
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_path_object_handling(self):
         """Test that Path objects are handled correctly."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -400,6 +409,7 @@ class TestConfigurationSystemIntegration:
 class TestConfigurationCLIIntegration:
     """Test CLI integration with the configuration system."""
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     @patch("yourbench.config_builder.console")
     def test_cli_create_simple(self, mock_console):
         """Test CLI config creation in simple mode."""
@@ -415,6 +425,7 @@ class TestConfigurationCLIIntegration:
             loaded_config = load_config(config_path)
             assert isinstance(loaded_config, YourbenchConfig)
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_config_integration_with_main_module(self):
         """Test that the main module can load and use configurations."""
         with tempfile.TemporaryDirectory() as tmpdir:
