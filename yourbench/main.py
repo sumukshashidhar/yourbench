@@ -128,10 +128,7 @@ def run_yourbench(
         model_name = model or "zai-org/GLM-4.5"
 
         # Determine model configuration
-        model_config = ModelConfig(
-            model_name=model_name,
-            max_concurrent_requests=max_concurrent_requests or 32
-        )
+        model_config = ModelConfig(model_name=model_name, max_concurrent_requests=max_concurrent_requests or 32)
         if "gpt" in model_name.lower():
             model_config.base_url = "https://api.openai.com/v1/"
             model_config.api_key = "$OPENAI_API_KEY"
@@ -287,7 +284,9 @@ def run(
     config_or_docs: str = typer.Argument(..., help="Path to config file (YAML) or documents directory/file"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use (default: zai-org/GLM-4.5)"),
     single_shot_questions: Optional[bool] = typer.Option(
-        None, "--single-shot-questions/--no-single-shot-questions", help="Generate single-shot questions (default: True)"
+        None,
+        "--single-shot-questions/--no-single-shot-questions",
+        help="Generate single-shot questions (default: True)",
     ),
     multi_hop_questions: bool = typer.Option(
         False, "--multi-hop-questions", help="Generate multi-hop questions (default: False)"
@@ -314,18 +313,10 @@ def run(
     l_max_tokens: Optional[int] = typer.Option(
         None, "--chunk-max-tokens", help="Max tokens per chunk (default: 8192)"
     ),
-    h_min: Optional[int] = typer.Option(
-        None, "--h-min", help="Min hop distance for multi-hop questions (default: 2)"
-    ),
-    h_max: Optional[int] = typer.Option(
-        None, "--h-max", help="Max hop distance for multi-hop questions (default: 5)"
-    ),
-    pdf_dpi: Optional[int] = typer.Option(
-        None, "--pdf-dpi", help="DPI for PDF processing (default: 300)"
-    ),
-    llm_ingestion: bool = typer.Option(
-        False, "--llm-ingestion", help="Use LLM for PDF ingestion (default: False)"
-    ),
+    h_min: Optional[int] = typer.Option(None, "--h-min", help="Min hop distance for multi-hop questions (default: 2)"),
+    h_max: Optional[int] = typer.Option(None, "--h-max", help="Max hop distance for multi-hop questions (default: 5)"),
+    pdf_dpi: Optional[int] = typer.Option(None, "--pdf-dpi", help="DPI for PDF processing (default: 300)"),
+    llm_ingestion: bool = typer.Option(False, "--llm-ingestion", help="Use LLM for PDF ingestion (default: False)"),
     question_rewriting: bool = typer.Option(
         False, "--question-rewriting", help="Enable question rewriting (default: False)"
     ),
