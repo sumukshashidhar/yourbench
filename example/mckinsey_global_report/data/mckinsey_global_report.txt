@@ -1,0 +1,376 @@
+Skip to main content
+McKinsey Global Institute
+McKinsey Global Institute
+Overview
+About us
+Our People
+Research
+Events
+Contact Us
+Sign In
+Subscribe
+The great trade rearrangement
+
+Share
+Print
+
+Download
+Save
+
+McKinsey Global Institute
+The great trade rearrangement
+June 25, 2025 | Article
+By 
+Olivia White
+, Jeffrey Condon, 
+Chris Bradley
+, 
+Michael Birshan
+, 
+Sven Smit
+, and Camillo Lamanna
+
+Share
+Print
+
+Download
+Save
+A newly defined “rearrangement ratio” gauges the potential to rearrange US imports from China and how this could ripple across the globe.
+
+DOWNLOADS
+Article (31 pages)
+At a glance
+Potential to rearrange US–China trade
+Tracking the tariff cost curve
+Broad rearrangement patterns
+Reduce, replace, ramp up—or rearrange?
+
+At a glance
+Amid pressure on US–China trade, firms may look to rearrange sourcing to alternative suppliers. If they cannot, firms might instead reduce purchases, replace imported products with something similar, or ramp up domestic production. These alternatives require a combination of sacrifice, resources, know-how, and time.
+We introduce a “rearrangement ratio” to quantify how hard the change might be. Thirty-five percent of US imports from China have a ratio less than 0.1, signifying a global available export market ten times larger than current US imports from China—think T-shirts or logic chips. For higher ratios, rearrangement becomes harder, and for the 5 percent of trade with a ratio greater than 1.0—for example, rare earth magnets—US imports from China exceed available global exports.
+Consumer goods are harder to rearrange than business inputs. Sixty-one percent of business input imports have a rearrangement ratio less than 0.1, versus 16 percent of consumer goods. Major products like laptops, smartphones, and toys are harder to rearrange.
+Europe emerges as the fulcrum of trade rearrangement. Across nine varied simulations, European imports from China and exports to the United States both go up by nearly $200 billion. As intra-European trade shifts to the United States, it leaves holes filled by increased Chinese exports—assuming Europe does not choose to alter its own trade policies. Others will be affected, too: exports to the United States from as many as 70 countries may increase by more than 10 percent.
+Prepare for resilience in a reordering world. Strategies will need to handle continued uncertainty and ongoing shifts. Customers will buy new things from new sources and use them in new ways. Granularity is key. Shifts across many thousands of products will reshape the geometry of global trade.
+Tariffs have surged into the public spotlight. On April 2, 2025, the United States unveiled country-specific tariffs, defined by a formula based on goods trade deficits. Tariffs have substantially receded from those highs since and may continue to shift in the coming weeks and months as negotiations and court challenges unfold.
+
+Yet substantial trade tensions between the United States and China could be here to stay.1 When combined with prior policy measures, tariffs and geopolitics clearly correspond: economies that are more “geopolitically distant” from the United States, particularly China, tend to face the highest tariffs (Exhibit 1). If current settings persist, US imports may shift from China to countries that face lower tariffs and historically have been more geopolitically aligned with the United States.
+
+Exhibit 1
+Tariffs rise with geopolitical distance from the United States.
+Image description:
+
+A line graph with four lines shows an upward, left-to-right trend in US trade-weighted average tariffs as the geopolitical distance from the United States increases. The horizontal axis, ranging from 0 to 10, represents the geopolitical distance from the US, with selected economies like Canada, South Korea, Mexico, Brazil, Nigeria, Vietnam, and China marked. The vertical axis, ranging from 0 percent to 110 percent, shows the US trade-weighted average tariff percentage. The graph includes data points for the years 2017, 2024, and two specific dates in 2025: April 2, when reciprocal tariffs were announced, and May 14, when China's reciprocal tariff was reduced to 10 percent. The graph highlights a notable spike during the period of retaliatory tariffs between the US and China from April 9 to May 13, 2025.
+
+End of image description.
+
+Even before 2025, the geometry of trade had been shifting along geopolitical lines. The average geopolitical distance of global goods started to compress beginning around 2018, particularly for the United States and China—evidence of so-called friendshoring. US imports from China fell by about 20 percent, or more than $100 billion, between 2018 and 2024, while total US imports rose by almost 30 percent over the same period.
+
+How relevant and useful is this article for you?
+
+
+
+
+
+Most Popular Insights
+McKinsey Technology Trends Outlook 2025
+The state of AI: How organizations are rewiring to capture value
+What to read next: McKinsey’s 2025 annual book recommendations
+Superagency in the workplace: Empowering people to unlock AI’s full potential
+The CEO’s role as chief storyteller
+Recent events may accelerate this realignment. Many US firms are urgently considering alternative sources of supply. Without a shift to different sources, prices may rise, and US companies and consumers might need to reduce—making do with fewer products or inputs—or replace, substituting one product for another sufficiently similar one. The higher the tariffs, the more significant the potential reduction or replacement.
+
+An alternative is to ramp up existing US manufacturing capabilities (cars) and rebuild dormant ones (chips and ships). This change could happen in other countries, too. But it takes time, money, and know-how. And at least in the case of the United States, where wages are high, it may not be economically viable in some sectors.
+
+
+Share
+
+Sidebar
+Reduce, replace, ramp up, or rearrange? Changing trade patterns
+Is it instead possible to rearrange trade in the nearer term, with the United States finding new suppliers and China finding new buyers? How feasible and costly is this path compared with reduction, replacement, and ramp-up? (see sidebar “Reduce, replace, ramp up, or rearrange? Changing trade patterns”). In this article, we introduce a “rearrangement ratio” to explore the potential for rearranging trade across a granular array of products and to examine how the geometry of global trade might shift.
+
+1. Examining the potential to rearrange US–China trade
+We define a rearrangement ratio to quantify how readily a country might shift its imports from one trading partner to others. For any given product, this ratio expresses the country’s imports from that trading partner as a share of the total available remaining global export market. Higher rearrangement ratios imply greater difficulty sourcing a product from other countries (see sidebar “Understanding the rearrangement ratio”).
+
+
+Share
+
+Sidebar
+Understanding the rearrangement ratio
+The basic intuition is that if imports are small compared with all available global exports, rearrangement should be relatively easy. For example, the United States imports roughly $4 million worth of chocolate bars from China each year, while the available global export market—exports from all countries other than China and going to all countries other than the United States—is nearly $6 billion. Correspondingly, the rearrangement ratio is close to zero ($4 million of imports divided by a $6 billion available market). High tariffs on Chinese chocolates will not disrupt Americans’ access to the confection.
+
+But for ratios greater than 1.0, a country’s imports exceed available global exports, making simple rearrangement impossible. For example, the United States sources about $3 billion in Christmas decorations from China. The total available global export market (that is, all Christmas decorations currently exported by economies other than China to countries other than the United States) is only $600 million. That leaves a huge gap, even if all available exports were diverted to the United States.
+
+
+Share
+
+Sidebar
+Rearrangement ratio calculation: Approach and limitations
+A high rearrangement ratio for US Christmas decorations might dampen the yuletide mood but does not pose major risks to lives or livelihoods. Disruptions in the supply of products such as semiconductors and lithium-ion batteries would have more meaningful consequences. Cutting back on consumption is not a good option. And some products, such as biologic medicines and semiconductor manufacturing equipment, require substantial investment and scarce know-how to produce, meaning that ramping up production is less feasible, at least in the short term.2 For essential or complex products, if smooth rearrangement of trade is not possible, importers and end customers may need to absorb tariffs and pay more (see sidebar “Rearrangement ratio calculation: Approach and limitations”).
+
+Electronics and contract manufacturing are harder to rearrange
+The average US China-rearrangement ratio is about 0.4, but the figure varies widely across sectors. It is lowest for pharmaceutical products (roughly 0.03), midrange (between 0.3 and 0.5) for electronics and textiles, and highest (more than 0.9) for “other manufacturing”—a catch-all category encompassing products from yoga mats to staplers to lawn furniture to knitting needles. These products are often contract (made-to-order) goods (Exhibit 2).
+
+Exhibit 2
+Ease of rearrangement varies across products. Cotton T-shirts? Fairly easy. Fireworks? Impossible.
+Image description:
+
+A bubble chart with 13 rows of different-sized circles displays the rearrangement ratio for products imported by the United States from China, organized by sector for 2023. The horizontal axis shows the US-China-rearrangement ratio, ranging from 0 to over 1.25, indicating the ease of rearrangement from easier to impossible. The vertical axis lists sectors such as electronics, textiles, machinery, metals, and more. Each bubble's size represents the value of imports from China, with larger bubbles indicating higher import values. Key products like smartphones, laptops, and toys are highlighted with larger bubbles, signifying significant import values. Sectors are ordered by total US import value from China in 2023, with the top 20 products for each sector displayed.
+
+End of image description.
+
+Play Video
+Video
+Sector averages mask large variation. Imports of consumer electronics are more difficult to rearrange than the intermediate components within them, like semiconductors. Almost all intermediate components have ratios lower than 0.3. In contrast, the most-imported consumer electronics have ratios ranging from about 0.3 to 1.0.
+
+Consider smartphones, which are at the lower end of the consumer electronics range, with a ratio of about 0.4. While 80 percent of US imports come from China, manufacturers such as Vietnam and India currently export smartphones in sizable quantities to the non-US global market and so, in principle, could service the US market—if consumers were brand agnostic. For laptops, on the other hand, the rearrangement ratio is nearly 1.0. The United States imports more than $45 billion worth of laptops each year, more than 20 times more than it exports. China supplies about $35 billion of this total, roughly equal to all exports from Europe (the 27 member states of the European Union plus Norway, Switzerland, and the United Kingdom) and Asia to non-US markets.
+
+The range is also broad for textiles. In general, apparel such as T-shirts, jerseys, and trousers is exported by a wide range of economies, with rearrangement ratios generally less than 0.1. Indeed, China has been shifting away from this category and moved from representing nearly 45 percent of global apparel exports in 2010 to 25 percent in 2023. However, rearrangement ratios are greater than 0.5 for other products ranging from synthetic-fiber socks to face masks and surgical drapes.
+
+Products within the other manufacturing category have rearrangement ratios from near zero to well past 1.0. Metal chairs and vacuum flasks are examples.
+
+Of course, this is all approximation. The trousers shipped from Bangladesh may have a different cut, stitching, and fabric from those shipped from Italy. The cell phone manufactured in China may not be the same brand as the one made in South Korea. The coffee from Indonesia may taste more earthy, and that from Ethiopia, fruitier. But for our calculations, we treat products with the same classification, known as HS 6 codes, as interchangeable without considering quality factors or price.
+
+US consumer goods imports from China are generally harder to rearrange than business inputs
+Rearrangement is relatively easier for the roughly 35 percent of all US imports from China that have a rearrangement ratio less than 0.1 (Exhibit 3).3 In practice, this means that to replace Chinese imports, US buyers would need to attract up to 10 percent of the currently available global export market. Even this would be a substantial undertaking. New input sources need to be found, product requirements specified, and contracts negotiated.
+
+About 60 percent of intermediate goods—those used in production processes—fall into this easier-to-rearrange bucket. Examples include semiconductors and auto parts. An additional roughly 30 percent of intermediate goods have rearrangement ratios less than 0.25. The United States tends to import a large fraction of these types of products from economies other than mainland China, and an additional supply base that might be tapped exists.
+
+Exhibit 3
+Substituting US imports from China requires a major rearrangement of global trade.
+Image description:
+
+Four horizontal stacked bar charts show the distribution of the United States' imports from China by rearrangement ratio, emphasizing the complexity of substituting these imports, with a column on the right side indicating the share of US imports from China, totaling 100 percent. The charts correspond to four categories: all US imports from China, goods for final consumption, intermediate goods, and capital goods. Each category is represented by a bar segmented into six parts, indicating the US China-rearrangement ratio, from 0.1 (easier to rearrange) to over 1.25 (impossible to rearrange). For all US imports from China, 36 percent fall into the 0 to 0.1 range, while 5 percent are in the 1.25+ range. Goods for final consumption show 34 percent in the 0.25 to 0.5 range. Intermediate goods are predominantly in the 0 to 0.1 range at 61 percent, and capital goods have 40 percent in the 0 to 0.1 range.
+
+End of image description.
+
+On the other end of the spectrum, full rearrangement is currently impossible for the 5 percent of US imports that have a ratio greater than 1.0. These tend to be goods for final consumption—products that people buy for personal use—including consumer electronics as well as various forms of textiles and other manufacturing. In many cases, China has gained enormous cost advantages in producing these goods, making it both difficult and unappealing to compete.
+
+Some specific critical intermediate products also have a ratio greater than 1.0. Examples include rare earth magnets, which are used in electric vehicles, wind turbines, and defense applications, as well as some chemicals used in pharmaceutical manufacturing.4 In the case of rare earth magnets, more than 90 percent are produced in China, and China correspondingly supplies about 85 percent of US imports, so rearranging US imports to secure exclusively non-China sources of rare earth magnets is, at the moment, impossible. But supply chains that are less reliant on China are being ramped up.5
+
+The fact that more critical minerals do not emerge with high rearrangement ratios may be surprising. China leads the refinement of a host of minerals from antimony to zinc, so one would think that finding alternative suppliers would be challenging. While true for some minerals, this is not always the case. Sometimes that’s because US imports, for example magnesium, already skew to suppliers other than mainland China. In other cases, critical minerals are embodied in products the United States typically imports from economies other than mainland China, such as gallium embodied in gallium-containing semiconductors, which the United States mainly imports from Taiwan, China.
+
+For the remaining roughly 60 percent of US imports from China that have rearrangement ratios between 0.1 and 1.0, rearrangement is more difficult but not impossible. This middle category contains a large slug of both goods for final consumption as well as capital goods—the physical assets that support business production. By value, almost all of the capital goods with ratios higher than 0.5 are electronics, mostly laptops.6 On the other hand, in the machinery and equipment sector, almost all capital goods have ratios under 0.25.
+
+
+Share
+
+Sidebar
+Both US and China rearrangement ratios have increased gradually over time
+Overall, the average US China-rearrangement ratio has crept up slowly over time, nearly doubling since 1995 (see sidebar “Both US and China rearrangement ratios have increased gradually over time”). Most of that increase has come from an expanding fraction of products with rearrangement ratios near or greater than 1.0.
+
+China’s imports from the United States are easier to rearrange than US imports from China
+A different picture emerges from the China US-rearrangement ratio, which considers how readily China might reconfigure its imports to non-US suppliers (Exhibit 4). This ratio is less than 0.1 for 75 percent of China’s imports from the United States (recall that the equivalent share for the United States is about 35 percent), suggesting that China can more easily find alternate sources. This is partly because China imports a lot less from the United States than it exports to the United States—so there is less trade to rearrange. In addition, many of China’s largest imports from the United States, such as crude oil, midsize cars, and corn, are widely exported by other countries, too.
+
+Exhibit 4
+Substituting China's US imports requires less trade rearrangement.
+Image description:
+
+This exhibit format mirrors the previous exhibit, using stacked bar charts to highlight the challenges in rearranging trade dependencies. The right side of the chart indicates the share of China's imports from the United States, with all imports totaling 100 percent. For all of China's US imports, 75 percent fall into the 0 to 0.1 range, while 4 percent are in the 1.25+ range. Goods for final consumption show 92 percent in the 0 to 0.1 range. Intermediate goods are predominantly in the 0 to 0.1 range at 67 percent, and capital goods have 86 percent in the 0 to 0.1 range.
+
+End of image description.
+
+Agriculture and chemicals make up nearly 70 percent of China’s imports from the United States, with rearrangement ratios greater than 0.1. Soybeans—China’s largest US import—have a rearrangement ratio of about 0.7, suggesting that reconfiguration is possible but challenging. The United States is the major global supplier of ethane, which China’s petrochemical industry uses as a feedstock, leading to a rearrangement ratio greater than 1.0.
+
+Overall, replacing China’s imports from the United States through rearrangement is impossible for the 4 percent of imports that have a rearrangement ratio greater than 1—a similar share as the United States. However, while for the United States these products cover a range of lower-complexity consumer products, for China, they are limited to a few specific intermediate inputs.
+
+2. Tracking the tariff cost curve
+The current environment encourages rearrangement of trade between the United States and China. Differential tariffs across countries create a “tariff cost curve.” For example, China still faces higher rates than other economies, even excluding those levied under the International Emergency Economic Powers Act, which are currently under legal debate (Exhibit 5).
+
+Of course, the tariff cost curve is not fixed—it has shifted significantly over the first months of 2025 and may continue to do so. But as long as some countries see higher tariffs (or other trade barriers) than others, it provides an impetus for US firms to consider shifting sourcing from higher-tariff economies on the left of the curve to lower-tariff countries on the right.
+
+Exhibit 5a
+Recent announcements create a US tariff cost curve.
+Image description:
+
+A vertical stacked bar chart shows economies in columns, with the tallest bar on the left and the shortest on the right. The height of the bars corresponds with US tariff levels, with segments corresponding to when portions of the tariffs were announced or implemented over 2025. The width of the bars corresponds with the value of US imports from each economy. The bar for Mainland China is tallest at the left with a tariff of about 55% and imports of about $450 billion. A horizontal line across the chart at 19% on the vertical axis indicates the average tariff globally, using April 2 settings, if they are implemented as announced. Bars labeled on the chart above that 19% level include Vietnam, Japan, India, South Korea, and Germany. Others below that level include Italy, Taiwan, China, UK, Mexico, Ireland, and Canada.
+
+End of image description.
+
+Exhibit 5b
+
+We strive to provide individuals with disabilities equal access to our website. If you would like information about this content we will be happy to work with you. Please email us at: McKinsey_Website_Accessibility@mckinsey.com
+The cost curve varies by sector and by individual product, and it may continue to shift over time. But the same idea remains. As an example based on tariffs slated to start on August 12 (and subject to litigation and negotiation), if tariffs on cotton T-shirts from China were at 78 percent, a T-shirt exported to the United States from China would cost 1.78 times more than its pre-tariff price. A T-shirt imported from Guatemala would cost only 1.1 times more, reflecting Guatemala’s 10 percent tariff (also subject to legal proceedings) and preexisting trade agreements. As long as the all-in cost of the Guatemalan version is less than 1.6 times China’s—accounting for any differences in factors including local production costs, transportation,7 and profit margins—it would be less expensive. This same logic applies under different potential future tariff trajectories, even if specific numbers shift.
+
+Currently announced tariffs are higher in sectors where rearrangement is harder
+US tariff rates announced on April 2, 2025, vary significantly by sector, even though they largely were set on a country-specific basis. Basic manufacturing sectors, including textiles, rubber and plastic, and other manufacturing, tend to face higher tariffs. Many major exporters of these types of products are low- and middle-income countries that tend to run trade surpluses with the United States and so had higher country-specific tariffs.
+
+""
+Explore McKinsey Global Institute research on global trade
+Discover more with our Global Trade Explorer data visualizations
+Basic manufacturing sectors also tend to have higher US China-rearrangement ratios because the United States is often an outsize buyer, and China is an outsize seller. As a result, the tariff pressure to rearrange trade may be highest in those sectors where rearrangement is likely to be the most challenging (Exhibit 6).
+
+Exhibit 6
+Hard-to-rearrange sectors face higher tariffs.
+Image description:
+
+A scatterplot chart displays 17 circles representing the sectors featured in the article text, showing the relationship between US trade-weighted average tariffs and the US-China-rearrangement ratio as of April 2, 2025. The vertical axis indicates the US trade-weighted average tariff, ranging from 0 to 50 percent, while the horizontal axis shows the US-China-rearrangement ratio for 2023, ranging from 0 to 1. The circles vary in size, indicating the value of total US imports in 2024, and are colored to represent sector types: advanced manufacturing, basic manufacturing, or resources. The circles are scattered across the chart, with sectors like textiles and transportation equipment positioned higher on the vertical axis, indicating higher tariffs, while sectors like agriculture and energy resources are lower, indicating lower tariffs. A bar chart on the right shows US imports in sectors within each tariff range for 2024, with values in billions of dollars. The largest bars representing the most value fall in the 10 to 30 percent tariff range.
+
+End of image description.
+
+Most advanced manufacturing goods, including electronics and machinery, are exported in meaningful amounts by China as well as a range of advanced—and geopolitically closer—economies in Europe and Asia that do not have such large trade imbalances with the United States. Therefore, advanced manufacturing sectors would see relatively smaller tariffs, if these are set based on goods trade deficits, and also may be relatively easier to rearrange. Consumer electronics is the biggest exception.8
+
+3. However rearrangement plays out, broad patterns hold
+Most countries would feel knock-on effects if the United States and China rearranged trade away from each other. Some would export more to the United States, making up for previous supply from China. This could leave a supply vacuum elsewhere, which China’s exports might fill.
+
+For example, the United States receives about 70 percent of its $20 billion in lithium-ion battery imports from China. Poland is the second-largest exporter of lithium-ion batteries, accounting for about $12 billion annually. Roughly 80 percent of this total remains within Europe. Were Poland to rearrange exports to the United States, this would go a long way toward meeting US demand. But there would be a shortfall in European supply, which might be met by an increase in the number of batteries shipped from China to Europe.
+
+
+Share
+
+Sidebar
+Trade rearrangement approaches: Definitions and limitations
+Rearrangement could occur in many ways. We explored a range of simulations for how US imports from China might rearrange (Exhibit 7). These are not real-world scenarios—for example, each assumes the same approach for rearrangement across all products—but together they cover a broad landscape of potential approaches (see sidebar “Trade rearrangement approaches: Definitions and limitations”). And despite this variety, some striking common patterns emerge:
+
+Europe plays a key role in trade rearrangement, both as exporter and importer.
+Southeast Asia plays a significant part making up for China’s electronics exports.
+Canada and Mexico see a surprisingly small impact on exports from rearrangement.
+The United States may turn to its own export supply, disrupting key trade partners.
+Product shortfalls and excess supply may rattle consumer electronics and other sectors.
+Exhibit 7
+Europe emerges at the center of trade rearrangement.
+Image description:
+
+A grouping of 18 stacked horizontal bar charts illustrates the potential rearrangement of $440 billion of US imports from China across nine different scenarios, organized into nine rows and two main sections, which are represented as columns. The bars are segmented by region, indicating which economies would fill the trade gap. The left column represents US imports from China if they came from elsewhere and the right column represents China’s exports to US if they went elsewhere. The bars represent multiple scenarios, including whether US importers or Chinese exporters are the first movers, and whether the approach is geopolitical distance minimizing, tariff minimizing, or rearrangement minimizing. Across all scenarios, the bar segment for Europe is the largest or second largest, indicating that the US and China would increase trade with Europe.
+
+End of image description.
+
+
+Share
+
+Sidebar
+Rearranging US imports requires sourcing from many economies
+These patterns, such as how Europe’s exports and imports evolve, are constant across a range of rearrangement possibilities. Initially, US buyers need to decide how they source alternative supply, which affects the resulting global rearrangement patterns. For example, do they look to the lowest-tariff countries first? Do they seek stability by looking to countries that are closest geopolitically to the United States? Do they prioritize rearrangement simplicity by approaching sellers with the largest potential supply in order to minimize the number of new commercial relationships they need to form (see sidebar “Rearranging US imports requires sourcing from many economies”)?
+
+There is also a range of possibilities for current US exports. To what degree might they help replace imports from China, as either a first choice or a last resort? Could US producers manage to boost production and thereby reduce the country’s trade deficit by filling the gap from Chinese imports at home while continuing to sell abroad? Of course, this last option requires ramp-up of production and so goes beyond pure rearrangement.
+
+US importers may not be the first to act: China’s exporters might make the first move by shifting from the United States to other markets. In the battery example above, this would entail China turning from the United States and selling more to Europe. Polish manufacturers could then face relative oversupply in their local regional market—but also increased demand in the United States, which would receive fewer imports from China. Polish manufacturers could therefore elect to sell more to the United States.
+
+Europe emerges as the focal point of rearrangement as both exporter to the United States and importer from China
+Across simulations, Europe9 sees substantial changes as both importer and exporter. It is a significant producer of many of the products the United States buys from China; on average, Europe supplies 55 percent of the available global export market for products that the United States imports from China. So it might rearrange its exports toward the United States.
+
+Across most of our simulations, European exports to the United States substitute about 30 to 65 percent of China’s current exports, and Europe’s US exports go up meaningfully, even in our simulation with a high US tariff on European imports. This would increase Europe’s trade surplus with the United States—unless it simultaneously increased its purchases from the United States—with potential implications for future tariffs and trade negotiations.
+
+At the same time, Europe’s imports from China also stand to go up substantially, at least given current tariff and other policy settings. In most simulations, Europe absorbs between 35 and 55 percent of what China is currently sending to the United States. Large supply chain vacuums might occur in Europe, whose exports under the simulations are rearranged from being mostly intra-European toward supplying the US market. Since European and US imports share similar profiles, it is a natural replacement market for China’s exports if they do not face significant trade barriers.
+
+Europe is central in the trade rearrangement across most sectors (Exhibit 8). The three largest US import sectors from China—electronics, other manufacturing, and textiles—contribute most to overall rearrangement. Across simulations, Europe increases its US exports in these areas. By value, electronics rise the most. Exports of some products in other sectors also rise substantially. Toys are an example: American kids may play with Czech and German toys rather than toys from China, and European kids may play with Chinese toys instead of toys from Germany and the Czech Republic.
+
+This all underscores the potential deepening trade interdependence between Europe and China. Another stark effect: China would overtake Germany as the largest exporter to the United Kingdom and the Netherlands.
+
+Exhibit 8
+Europe's central role plays out across sectors.
+Image description:
+
+A series of dot plots, divided into four main categories: Electronics, Other Manufacturing, Textiles, and Remaining 13 Sectors, with respective values of $191 billion, $52 billion, $45 billion, and $152 billion to rearrange, illustrate the regional share of rearranged US–China trade across different regions. Each category is divided into two columns, showing “US imports from China if they came from elsewhere” and “China’s exports to United States if they went elsewhere,” both represented as percentages on the horizontal axis. The vertical axis lists five regions: Europe, ASEAN, Other Asia–Pacific, Canada and Mexico, and All other regions. Each dot represents one of nine simulations, indicating the range of percentage shares for each region. The plots highlight Europe’s significant role across all sectors, consistently showing a high percentage share in the potential rearrangement of trade, ranging from approximately 20 to 80 percent, depending on the sector. ASEAN and Other Asia–Pacific regions also show notable shares, generally ranging from 10 to 40 percent, while Canada and Mexico, along with All other regions, typically range from 5 to 30 percent.
+
+End of image description.
+
+ASEAN plays a significant role in making up for China’s electronics exports
+Association of Southeast Asian Nations (ASEAN) member states also play a meaningful role in making up for China’s exports, but it is less broad based and more sector specific than in Europe. Across the rearrangement approaches we explore, ASEAN exports to the United States replace up to about 20 percent of China’s current exports.
+
+Much of this effect comes from a single sector, electronics, with most of the rise driven by exports from Vietnam. Indeed, Vietnam accounts for more than 80 percent of the increase in ASEAN’s electronics exports in most of the simulations we run, becoming the largest supplier of US laptop and smartphone imports as a result.
+
+ASEAN members could also replace a substantial share of China’s textile exports to the United States, but this is more dependent on the specifics of rearrangement. For example, with tariffs as outlined on April 2, 2025—which are typically higher for ASEAN members—a tariff-minimizing approach results in US textile imports coming more from economies such as Morocco and Türkiye. ASEAN members substitute only about 5 percent of US imports from China. Conversely, under some rearrangement-minimizing approaches, this share rises to nearly 40 percent.
+
+Rearrangement may leave some big US trading partners’ exports largely untouched
+Not everyone would export more to the United States. On the surface, one of the more surprising findings from rearrangement is that the country’s neighbors and biggest trading partners, Canada and Mexico, do not see much of a lift in exports to the United States. This reflects similar export profiles and the already high integration of North American manufacturing. The vast majority of Canada’s and Mexico’s goods exports—more than 80 percent—already go to the United States, leaving less untapped rearrangement potential than in other regions. This is reflected at the sector level, too. For example, Mexico experiences relatively small textile gains across simulations, as more than 90 percent of these exports already go to the United States.
+
+Exports to the United States from Japan and South Korea also typically rise very little, by only about 5 percent, across most simulations. These economies lean toward exporting complex intermediates rather than the final goods that the United States typically buys from China. For example, while China currently exports about $120 billion in laptops to the world, Japan exports less than $400 million worth.
+
+Exports from a range of other locations also remain relatively constant. For example, Sub-Saharan Africa, Latin America, and the Middle East and North Africa each substitute about 1 percent of China’s exports across simulations. While not a big deal for an economy the size of the United States, such increases can be meaningful for a smaller country’s exports. In the US rearrangement-minimizing simulations, for example, about 40 countries experience increases in their exports to the United States of more than 10 percent. About half of these countries are in Europe, and the remainder in the developing world. In the tariff-minimizing simulations, it’s broader based. About 70 countries—with the additional ones mostly in Africa, Latin America, and the grouping of countries in “Other Europe and Central Asia”10—register increases greater than 10 percent in their exports to the United States.
+
+The United States may keep more of its exports home to replace Chinese imports
+A significant swing factor influencing rearrangement dynamics is the degree to which current United States exports make up for imports from China.
+
+In 2023, the United States imported roughly $440 billion in goods from China and exported $1.7 trillion across the world.11 Product-level analysis suggests that the United States might draw on about $180 billion worth of those existing exports before seeking potentially more expensive overseas alternatives. As a result, the country may itself be the largest source of goods to make up for those that are no longer imported from China.
+
+One example: in 2023, the United States imported about $2 billion in electrical cables from China, but it also exported more than $2 billion worth. It could just keep that $2 billion in cables home. In reality, it is unlikely that a cable from China could be fully swapped for a US-made one.12 This would require retooling of existing manufacturing.
+
+How the United States adjusts affects other economies. If the United States does not draw on its existing exports then, as discussed above, European exports to the United States may increase substantially, given their similar profile. In contrast, if it does draw on its own potential exports to meet domestic demand, then Canada and Mexico might experience notable increases in their imports from China, as China comes to supply goods that Canada and Mexico currently buy from the United States. Latin America exhibits a similar pattern.
+
+If the United States ramps up production to provide for its own domestic needs while continuing to export, then the shift is even more extreme for China. In most simulations, China’s surplus exports amount to about $20 billion that cannot be rearranged to other partners. In the US ramp-up case, this figure rises to almost $200 billion, meaning an extra $180 billion of Chinese exports that don’t have a home. This implies an equivalent decrease in China’s trade surplus, and a reduction in the US trade deficit.
+
+The United States may face a $100 billion supply gap, and global markets a similar oversupply, on goods like laptops and smartphones
+Rearranging trade at a large scale poses significant challenges. New suppliers need to be located, manufacturing specifications met, and multiyear contracts negotiated. For example, automotive inputs contracts, including parts for original equipment manufacturers and critical mineral deals for battery production, have had durations of about three to five years, and sometimes more. Generally, for contracts with an average duration of four years, roughly one-quarter would likely come up for negotiation each year. So, for a product with a ratio of 0.25, full rearrangement within 12 months would require shifting roughly all contracts up for negotiation that year—a tall order.
+
+In the case that, for each product, the United States secures only 25 percent of the available global export market, it would see an import shortfall of more than $100 billion, and other countries throughout the world might see surplus exports from China of the same amount. Products at the center of modern life including laptops, computer monitors, and smartphones may be affected, as might a range of common items from toys to kitchenware to golf carts to quilts (Exhibit 9). Many of these may be nice, or even important, to have but aren’t necessarily essential. In that case, one response from US customers may be to turn their household budgets away from the now higher-priced imports.
+
+As an example, if the United States no longer imported laptops from China, this could result in a supply shortfall of nearly $26 billion. Consumers and businesses may experience higher prices as a result. The global, non-US market could be oversupplied by the same amount, equivalent to about 25 percent of additional supply. This may lead to lower prices outside the United States, bringing potential benefits for consumers, but challenges for manufacturers.
+
+Exhibit 9
+Global supply of some products could increase substantially, depending on rearrangement.
+Image description:
+
+A horizontal bar chart with 20 rows shows the global oversupply of select products, indicating potential increases in supply depending on the rearrangement of global exports to meet US demand. The horizontal axis measures global oversupply in billions of dollars, p to 27 billion dollars. Each product is represented by a bar divided into three segments, showing the amount if 100 percent, 50 percent, and 25 percent of available global exports were rearranged. Products listed include laptops, smartphones, toys, video game consoles, Christmas decorations, and more The total across all products is noted as 78 billion dollars, with a total across all products of 113 billion dollars. The chart also includes a table on the right, showing shifts in supply if only 25 percent of available exports were rearranged, with columns for global oversupply percentage and US supply gap percentage.
+
+End of image description.
+
+But rearrangement would not materially affect all of China’s major exports. Many do not go to the United States in significant quantities, in part because of historical US tariff policies.13 For example, the United States imports between $15 billion and $35 billion annually in the categories of electric vehicles (EVs), logic chips, solar panels, and steel mill products—all of which are also some of China’s largest exports. However, China supplies less than 3 percent of US imports for all of these.
+
+Of course, shortages and surpluses aren’t guaranteed. This analysis looks at the geometry of global trade and its potential to accommodate rearrangement but not changes in capacity and domestic consumption that will surely follow.
+
+4. Reduce, replace, ramp up—or rearrange?
+Multinational corporations may have to navigate an environment in which the geopolitical distance of US trade shortens, the China–Europe trading relationship deepens, and product-level surpluses and shortages emerge across countries, at least in the near term. Smaller firms and national champions will have an opportunity to enter an upended market in new ways.
+
+That said, the pain of tariffs may be substantial for some firms, and uncertainty is high for everyone, with readings of policy uncertainty hitting near-record levels. Changing course requires up-front investment, and so some firms are waiting to act in hopes that conditions become more certain. But at the same time, acting first can have advantages. Firms may consider actions across reduction, replacement, ramping up, and rearrangement to respond to potential trade disruptions, bearing in mind that their upstream suppliers, downstream customers, and competitors all face the same range of choices. Of course, governments themselves may also shift the trade landscape over time. Questions to consider include the following:
+
+Reduce. Where the United States is hit by shortages of certain products, reduction may be the only choice in the immediate term. It can also be a strategic option. Can needs be reduced through efficiency improvements? Is it the right moment to sell less but adjust the pricing approach or target customer segment? Should this be a trigger to dial down certain business lines?
+Replace. This can also be an immediate option, and some substitutions are straightforward with little sacrifice on quality. But unplanned, last-minute replacement can be costly and suboptimal. Which of the products that firms buy or sell should have a replacement contingency plan? More strategically, can products or production processes be updated so replacement becomes structurally easier? As with reduction, is there an opportunity to shift pricing, segment, or business focus?
+Ramp up. In certain scenarios, the United States may face ongoing supply disruptions, creating opportunities for suppliers both domestically and overseas. What conditions need to be met in order for the economics of ramping up to work, considering up-front costs, steady-state economics, market opportunity, tariffs, and level of certainty about all these factors? Are there contingency plans for ramping up or for working with a supplier who can, including a planned trigger for action? Might preemptive ramping up give first-mover advantages?
+Rearrange. Since rearrangement ripples across the globe, it raises questions from many interconnected perspectives, including those of US firms importing, foreign firms looking to export either more or less to the United States, and firms that don’t interact with the United States directly but operate in markets where other firms do. Competition among US firms may be high to secure supply from the lowest-tariff countries—with specifics depending on the future trajectory of tariffs—or from domestic alternatives. How large is the first-mover advantage, and how can buyers ensure that they are better placed than competitors in any forthcoming rearrangement?
+
+Some exporters, in countries facing lower tariffs, may be looking to double down on the US market. How can such firms position themselves, and in which specific product and customer segments? Other firms that currently ship to the United States may be seeking to reorient to places where they face lower tariffs or less uncertainty. Where are these non-US markets, will they face intensified sales competition, and how can businesses prepare?
+
+Even firms that do not buy from or sell to the United States may explore whether they will feel ripple effects. Certain markets may experience surpluses in some products if Chinese or other exporters pivot to them from the United States. In this case, is there an opportunity to negotiate lower prices? Are there products where supply may be reduced if their sellers have newly turned toward the United States? How can buyers prepare for this form of disruption, and how can sellers take advantage of potential gaps?
+
+When thinking about these questions, firms need to consider approaches that are resilient to—potentially ongoing—shifts in policy. If rearrangement is sufficiently easy and the required sunk cost is low, it may be preferable to the three alternatives. On the other hand, the highest rearrangement ratios signal which products carry the strongest incentives for a different form of adaptation.
+
+No matter the balance between rearranging—or reducing, replacing, and ramping up—the current disruption suggests that customers will buy new things, from new sources, and use them in new ways. US consumers may switch brands more frequently and try new products from home or abroad. Producers may take margin or market share in the domestic market. Global sellers could get a chance to crack the US consumer market. Chinese producers may have greater opportunities to expand into markets that are currently served by others. Flexible payments systems, diversified currency baskets, and liquidity measures might grow more important. Strategy certainly will.
+
+Specifics matter. Shifts may look very different across the many thousands of products that make up the global web of trade. When making strategic decisions for their organizations, leaders should examine fine-grained product market dynamics to understand where there may be surpluses or shortages, price sensitivity or rigidity, and granular pockets of decline or growth.
+
+Trade rearrangement promises to reshape the geometry of global trade, setting the backdrop as firms build resilience in a reordering world.
+
+How relevant and useful is this article for you?
+
+
+
+
+
+About the author(s)
+Olivia White is a director of the McKinsey Global Institute (MGI) and a senior partner in McKinsey’s Bay Area office, Jeffrey Condon is a senior knowledge expert in the Atlanta office, Chris Bradley is a director of MGI and a senior partner in the Sydney office, Michael Birshan is a senior partner and member of the MGI Council in London, Sven Smit is the MGI chairman and a senior partner in the Amsterdam office, and Camillo Lamanna is a fellow at MGI in the Sydney office.
+
+The authors wish to thank Alexander Brotschi, Daniel Soto, Jonas Oxgaard, Mario Rojas, Shreyangi Prasad, Tiago Devesa, and Tejesh Pradhan for their contributions to this article. We are also grateful to academic adviser Matthew J. Slaughter, Dean of the Tuck School of Business, Dartmouth College, for sharing his insights.
+
+This article was edited by MGI senior editor Brian Blackstone with data visualizations by Chuck Burke.
+
+Talk to us
+Explore a career with us
+Search openings
+Related Articles
+Three people in high-visibility vests walking in a shipping yard, amidst stacks of colorful shipping containers. The scene suggests a meeting in a bustling port or logistics area.
+Article
+In a moment of tariffs, can the world find balance and trust to thrive?
+A sliced layered blue sphere on a dark blue gradiated background.
+Article - MGI Research
+Geopolitics and the geometry of global trade: 2025 update
+An image of several container ships navigating a vast expanse of blue ocean under a sky filled with fluffy white clouds.
+Article
+A new trade paradigm: How shifts in trade corridors could affect business
+Subscribe
+Select topics and stay current with our latest insights
+
+Email address
+Submit
+Contact us
+Scam warning
+FAQ
+Privacy policy
+Your privacy choices
+Cookie preferences
+Terms of use
+Local language information
+Accessibility statement
+McKinsey Insights - Get our latest thinking on your iPhone, iPad, or Android device.
+Download on the App Store
+Download Android app on Google Play
+© 1996-2025 McKinsey & Company
