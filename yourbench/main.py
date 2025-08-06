@@ -136,11 +136,9 @@ def run_yourbench(
             raise typer.Exit(1)
 
         api_key = "$HF_TOKEN"
-        
+
         model_config = ModelConfig(
-            model_name=model_name, 
-            api_key=api_key,
-            max_concurrent_requests=max_concurrent_requests or 32
+            model_name=model_name, api_key=api_key, max_concurrent_requests=max_concurrent_requests or 32
         )
 
         # Set output directory
