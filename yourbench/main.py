@@ -133,7 +133,7 @@ def run_yourbench(
         model_name = model or "zai-org/GLM-4.5"
 
         # Import url utilities
-        from yourbench.utils.url_utils import is_openai_url, is_anthropic_url, get_api_key_for_url
+        from yourbench.utils.url_utils import get_api_key_for_url, validate_api_key_for_url
 
         # Special handling for OpenAI model names - automatically route to OpenAI
         # This is a superficial/temporary routing at the CLI level only
@@ -152,26 +152,13 @@ def run_yourbench(
             model_api_key = get_api_key_for_url(base_url)
 
             # Validate that the required environment variable is set
-            if is_openai_url(base_url) and not os.getenv("OPENAI_API_KEY"):
-                logger.error(
-                    "OPENAI_API_KEY environment variable is required for OpenAI base URL. "
-                    "Please set it with: export OPENAI_API_KEY=your_token"
-                )
-                raise typer.Exit(1)
-            elif is_anthropic_url(base_url) and not os.getenv("ANTHROPIC_API_KEY"):
-                logger.error(
-                    "ANTHROPIC_API_KEY environment variable is required for Anthropic base URL. "
-                    "Please set it with: export ANTHROPIC_API_KEY=your_token"
-                )
-                raise typer.Exit(1)
-            elif model_api_key == "$HF_TOKEN" and not os.getenv("HF_TOKEN"):
-                if base_url:
+            is_valid, error_msg = validate_api_key_for_url(base_url, model_api_key, model_name)
+            if not is_valid:
+                if base_url and model_api_key == "$HF_TOKEN":
+                    # For custom base URLs with no specific API key, just warn
                     logger.warning(f"No specific API key for base URL '{base_url}'. Using HF_TOKEN if available.")
                 else:
-                    logger.error(
-                        f"HF_TOKEN environment variable is required for model '{model_name}'. "
-                        "Please set it with: export HF_TOKEN=your_token . You can get your token from https://huggingface.co/settings/tokens"
-                    )
+                    logger.error(error_msg)
                     raise typer.Exit(1)
 
         # Create model configuration with all CLI overrides
