@@ -383,6 +383,7 @@ class TestIntegration:
             assert isinstance(config, YourbenchConfig)
             assert len(config.model_list) > 0
 
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_end_to_end_workflow(self):
         """Test a complete configuration workflow."""
         # Create a config
