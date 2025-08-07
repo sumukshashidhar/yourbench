@@ -56,6 +56,9 @@ logger.debug(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
 def run_yourbench(
     config_or_docs: str,
     model: Optional[str] = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    provider: Optional[str] = None,
     single_shot_questions: Optional[bool] = None,
     multi_hop_questions: bool = False,
     cross_doc_questions: bool = False,
@@ -78,6 +81,8 @@ def run_yourbench(
     export_jsonl: bool = True,
     jsonl_export_dir: Optional[Path] = None,
     max_concurrent_requests: Optional[int] = None,
+    encoding_name: Optional[str] = None,
+    bill_to: Optional[str] = None,
 ) -> None:
     """Core function to run YourBench pipeline."""
     # Setup debug logging if requested
@@ -127,18 +132,44 @@ def run_yourbench(
         # Use model or default from example config (zai-org/GLM-4.5)
         model_name = model or "zai-org/GLM-4.5"
 
-        # Check HF_TOKEN early for HF models (models without explicit base URL)
-        if not os.getenv("HF_TOKEN"):
-            logger.error(
-                f"HF_TOKEN environment variable is required for model '{model_name}'. "
-                "Please set it with: export HF_TOKEN=your_token . You can get your token from https://huggingface.co/settings/tokens"
-            )
-            raise typer.Exit(1)
+        # Import url utilities
+        from yourbench.utils.url_utils import get_api_key_for_url, validate_api_key_for_url
 
-        api_key = "$HF_TOKEN"
+        # Special handling for OpenAI model names - automatically route to OpenAI
+        # This is a superficial/temporary routing at the CLI level only
+        openai_model_prefixes = ["gpt-4", "o1", "o3", "o4", "gpt-5"]
+        if not base_url and any(model_name.startswith(prefix) for prefix in openai_model_prefixes):
+            # Auto-route to OpenAI for these specific model names
+            base_url = "https://api.openai.com/v1"
+            logger.info(f"Auto-routing model '{model_name}' to OpenAI API")
 
+        # Determine API key based on base_url if not explicitly provided
+        if api_key:
+            # Use the explicitly provided API key
+            model_api_key = api_key
+        else:
+            # Determine API key based on URL
+            model_api_key = get_api_key_for_url(base_url)
+
+            # Validate that the required environment variable is set
+            is_valid, error_msg = validate_api_key_for_url(base_url, model_api_key, model_name)
+            if not is_valid:
+                if base_url and model_api_key == "$HF_TOKEN":
+                    # For custom base URLs with no specific API key, just warn
+                    logger.warning(f"No specific API key for base URL '{base_url}'. Using HF_TOKEN if available.")
+                else:
+                    logger.error(error_msg)
+                    raise typer.Exit(1)
+
+        # Create model configuration with all CLI overrides
         model_config = ModelConfig(
-            model_name=model_name, api_key=api_key, max_concurrent_requests=max_concurrent_requests or 32
+            model_name=model_name,
+            base_url=base_url,
+            api_key=model_api_key,
+            provider=provider,
+            max_concurrent_requests=max_concurrent_requests or 32,
+            encoding_name=encoding_name or "cl100k_base",
+            bill_to=bill_to,
         )
 
         # Set output directory
@@ -285,6 +316,13 @@ def run_yourbench(
 def run(
     config_or_docs: str = typer.Argument(..., help="Path to config file (YAML) or documents directory/file"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Model to use (default: zai-org/GLM-4.5)"),
+    base_url: Optional[str] = typer.Option(None, "--base-url", help="Base URL for the model API"),
+    api_key: Optional[str] = typer.Option(
+        None, "--api-key", help="API key for the model (default: uses HF_TOKEN or OPENAI_API_KEY based on base_url)"
+    ),
+    provider: Optional[str] = typer.Option(
+        None, "--provider", help="Provider for the model (e.g., openai, anthropic, auto)"
+    ),
     single_shot_questions: Optional[bool] = typer.Option(
         None,
         "--single-shot-questions/--no-single-shot-questions",
@@ -337,11 +375,18 @@ def run(
     max_concurrent_requests: Optional[int] = typer.Option(
         None, "--max-concurrent-requests", help="Max concurrent API requests (default: 32)"
     ),
+    encoding_name: Optional[str] = typer.Option(
+        None, "--encoding-name", help="Encoding name for tokenization (default: cl100k_base)"
+    ),
+    bill_to: Optional[str] = typer.Option(None, "--bill-to", help="Billing information for the model"),
 ) -> None:
     """YourBench - Generate Q&A pairs from documents or run with config file."""
     run_yourbench(
         config_or_docs=config_or_docs,
         model=model,
+        base_url=base_url,
+        api_key=api_key,
+        provider=provider,
         single_shot_questions=single_shot_questions,
         multi_hop_questions=multi_hop_questions,
         cross_doc_questions=cross_doc_questions,
@@ -363,6 +408,8 @@ def run(
         export_jsonl=export_jsonl,
         jsonl_export_dir=jsonl_export_dir,
         max_concurrent_requests=max_concurrent_requests,
+        encoding_name=encoding_name,
+        bill_to=bill_to,
     )
 
 
