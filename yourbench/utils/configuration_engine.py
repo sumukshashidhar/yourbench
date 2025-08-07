@@ -19,6 +19,7 @@ from pydantic import (
 from randomname import get_name as get_random_name
 
 from huggingface_hub import whoami
+from yourbench.utils.url_utils import is_openai_url, is_anthropic_url, get_api_key_for_url
 
 
 if TYPE_CHECKING:
@@ -220,9 +221,27 @@ class ModelConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_api_keys(self):
-        """Validate that required API keys are set."""
-        if not self.base_url or self.api_key == "$HF_TOKEN":
-            if not os.getenv("HF_TOKEN"):
+        """Validate that required API keys are set based on base_url."""
+        # Check if the appropriate API key is set based on the URL
+        if is_openai_url(self.base_url):
+            if self.api_key == "$OPENAI_API_KEY" and not os.getenv("OPENAI_API_KEY"):
+                error_msg = (
+                    "OPENAI_API_KEY environment variable is required for OpenAI base URL. "
+                    "Please set it with: export OPENAI_API_KEY=your_token"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+        elif is_anthropic_url(self.base_url):
+            if self.api_key == "$ANTHROPIC_API_KEY" and not os.getenv("ANTHROPIC_API_KEY"):
+                error_msg = (
+                    "ANTHROPIC_API_KEY environment variable is required for Anthropic base URL. "
+                    "Please set it with: export ANTHROPIC_API_KEY=your_token"
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+        elif not self.base_url:
+            # No base_url, default to HF_TOKEN validation
+            if self.api_key == "$HF_TOKEN" and not os.getenv("HF_TOKEN"):
                 error_msg = (
                     f"Model '{self.model_name}' requires HF_TOKEN since base_url is not set. "
                     "Please set it with: export HF_TOKEN=your_token"
@@ -736,8 +755,10 @@ class YourbenchConfig(BaseModel):
         # Preserve environment variable references in model configurations
         if "model_list" in config_dict:
             for model in config_dict["model_list"]:
-                if "api_key" in model and model["api_key"]:
-                    model["api_key"] = "$HF_TOKEN"
+                if "api_key" in model:
+                    # Determine the appropriate API key env var based on base_url
+                    base_url = model.get("base_url", "")
+                    model["api_key"] = get_api_key_for_url(base_url)
 
         with open(path, "w", encoding="utf-8") as fh:
             yaml.dump(config_dict, fh, default_flow_style=False, indent=2, sort_keys=False)
