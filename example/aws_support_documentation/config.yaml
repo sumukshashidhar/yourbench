@@ -20,5 +20,10 @@ pipeline:
     multi_hop_system_prompt: example/aws_support_documentation/custom_prompts/multi_hop_system_prompt.md
   cross_document_question_generation:
     cross_document_system_prompt: example/aws_support_documentation/custom_prompts/multi_hop_system_prompt.md
+    max_combinations: 10 # default is 100
+    chunks_per_document: 1 # default is 1
+    num_docs_per_combination:
+    - 2 # default is 2
+    - 4 # default is 5
   prepare_lighteval:
   citation_score_filtering:
