@@ -1,5 +1,3 @@
-# This is an example configuration for running the pipeline on a local VLLM server.
-# It uses the Magistral-Small-2506 model from Mistral AI.
 hf_configuration:
   hf_dataset_name: aws_bedrock_documentation_demo
   hf_organization: yourbench

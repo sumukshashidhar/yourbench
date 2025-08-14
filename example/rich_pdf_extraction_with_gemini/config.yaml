@@ -1,4 +1,3 @@
-# This example config
 hf_configuration:
   hf_dataset_name: mckinsey_state_of_ai_doc_understanding
   hf_organization: yourbench
