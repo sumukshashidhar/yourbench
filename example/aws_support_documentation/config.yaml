@@ -1,7 +1,7 @@
 hf_configuration:
   hf_dataset_name: aws_bedrock_documentation_demo
-  hf_organization: yourbench
-  private: false
+  hf_organization: $HF_ORGANIZATION
+  private: true # Set to true if you want to keep the dataset private
 
 model_list:
   - model_name: openai/gpt-oss-120b
