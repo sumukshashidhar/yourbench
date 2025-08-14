@@ -88,10 +88,10 @@ pip install yourbench
 echo "HF_TOKEN=<your_huggingface_api_token>" >> .env              # Hugging Face token (for Hub datasets & inference)
 
 # 3. Run the pipeline on the provided example config (uses sample docs and models), or, use your own config file!
-yourbench example/configs/simple_example.yaml
+yourbench example/default_example/config.yaml
 ```
 
-The **example configuration** `example/configs/simple_example.yaml` (included in the repository) demonstrates a basic setup. It specifies sample documents and default models for each stage of the pipeline. In step 3 above, YourBench will automatically ingest the example documents, generate a set of Q\&A pairs, and output a Hugging Face Dataset containing the evaluation questions and answers.
+The **example configuration** `example/default_example/config.yaml` (included in the repository) demonstrates a basic setup. It specifies sample documents and default models for each stage of the pipeline. In step 3 above, YourBench will automatically ingest the example documents, generate a set of Q\&A pairs, and output a Hugging Face Dataset containing the evaluation questions and answers.
 
 For your own data, you can create a YAML config pointing to your documents and preferred models. For instance, you might specify a folder of PDFs or text files under a `documents` field, and choose which LLM to use for question generation. **YourBench is fully configurable** – you can easily **toggle stages** on or off and swap in different models. *For example: you could disable the summarization stage for very short texts, or use a powerful, large, API model for question generation while using a faster local model for summarization.* The possibilities are endless! Simply adjust the YAML, and the pipeline will accommodate it. (See the [usage example](https://github.com/huggingface/yourbench/blob/main/example/configs/advanced_example.yaml) for all available options!)
 
