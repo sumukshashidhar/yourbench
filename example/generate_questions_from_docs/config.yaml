@@ -1,6 +1,5 @@
 hf_configuration:
   hf_dataset_name: yourbench-custom-prompts-example
-  hf_organization: yourbench
 
 model_list:
   - model_name: gpt-4.1

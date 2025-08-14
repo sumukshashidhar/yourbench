@@ -1,6 +1,5 @@
 hf_configuration:
   hf_dataset_name: childrens_books_questions
-  hf_organization: yourbench
   private: false
 
 model_list:
