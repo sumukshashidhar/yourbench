@@ -1,6 +1,6 @@
 ## Process Flow
 
-![YourBench pipeline process flow diagram – from document ingestion to evaluation](docs/assets/yourbench_pipeline.png)
+![YourBench pipeline process flow diagram – from document ingestion to evaluation](assets/yourbench_pipeline.png)
 
 Under the hood, YourBench follows a multi-stage pipeline to turn raw documents into a ready-to-use benchmark dataset:
 
