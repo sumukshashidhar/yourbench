@@ -2,7 +2,7 @@
 # It uses the Magistral-Small-2506 model from Mistral AI.
 hf_configuration:
   hf_dataset_name: reachy_mini_info_benchmark
-  hf_organization: yourbench
+  hf_organization: $HF_ORGANIZATION
   private: false
 
 model_list:

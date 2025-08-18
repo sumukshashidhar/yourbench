@@ -1,7 +1,6 @@
-# This example config
 hf_configuration:
   hf_dataset_name: mckinsey_state_of_ai_doc_understanding
-  hf_organization: yourbench
+  hf_organization: $HF_ORGANIZATION
   private: false
 
 model_list:

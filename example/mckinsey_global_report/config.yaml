@@ -1,8 +1,6 @@
-# This is an example configuration for running the pipeline on a local VLLM server.
-# It uses the Magistral-Small-2506 model from Mistral AI.
 hf_configuration:
   hf_dataset_name: mckinsey_great_trade_global_report
-  hf_organization: yourbench
+  hf_organization: $HF_ORGANIZATION
   private: false
 
 model_list:
