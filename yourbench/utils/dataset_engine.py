@@ -1069,7 +1069,18 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
     if sanitized.get("debug") is False:
         del sanitized["debug"]
 
-    return yaml.safe_dump(sanitized, sort_keys=False, default_flow_style=False)
+    # Reorder sections: hf_configuration, model_list, model_roles, then everything else
+    ordered_config = {}
+    if "hf_configuration" in sanitized:
+        ordered_config["hf_configuration"] = sanitized.pop("hf_configuration")
+    if "model_list" in sanitized:
+        ordered_config["model_list"] = sanitized.pop("model_list")
+    if "model_roles" in sanitized:
+        ordered_config["model_roles"] = sanitized.pop("model_roles")
+    # Add remaining sections
+    ordered_config.update(sanitized)
+
+    return yaml.safe_dump(ordered_config, sort_keys=False, default_flow_style=False)
 
 
 def _get_pipeline_subset_info(config: Union[dict[str, Any], "YourbenchConfig"]) -> str:
