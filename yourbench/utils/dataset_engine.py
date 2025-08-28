@@ -892,13 +892,6 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             return sanitized_dict if sanitized_dict else None
 
         if isinstance(obj, list):
-            # Handle model_list specially
-            if key == "model_list" and all(isinstance(item, dict) for item in obj):
-                # Check if all models are the same
-                model_names = [item.get("model_name") for item in obj if item.get("model_name")]
-                if len(set(model_names)) <= 1:
-                    # All models are the same or only one model, skip the list
-                    return None
             return [_sanitize(v, key, parent_key) for v in obj]
 
         if isinstance(obj, Path):
