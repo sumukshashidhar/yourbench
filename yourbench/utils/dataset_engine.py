@@ -944,6 +944,9 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             # Mask HuggingFace tokens
             if obj.startswith("hf_"):
                 return "$HF_TOKEN"
+            # Mask HF organization/username in hf_organization field
+            if key == "hf_organization" and not obj.startswith("$"):
+                return "$HF_ORGANISATION"
             return obj
 
         # Explicitly return boolean, integer, float values unchanged
