@@ -991,14 +991,33 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             "local_saving": True,
             "upload_card": True,
             "export_jsonl": False,
+            "local_dataset_dir": "data/saved_dataset",
+            "jsonl_export_dir": "data/jsonl_export",
         }
         for key, default_value in defaults_to_remove.items():
             if key in hf_config and hf_config[key] == default_value:
                 del hf_config[key]
+    
+    # Filter out default values from model_list
+    if "model_list" in sanitized:
+        model_list = sanitized["model_list"]
+        if isinstance(model_list, list):
+            for model in model_list:
+                if isinstance(model, dict):
+                    # Remove model-level defaults
+                    model_defaults = {
+                        "max_concurrent_requests": 32,
+                        "encoding_name": "cl100k_base",
+                    }
+                    for key, default_value in model_defaults.items():
+                        if key in model and model[key] == default_value:
+                            del model[key]
 
     # Filter out default values from pipeline stages
-    if "pipeline_config" in sanitized:
-        pipeline = sanitized["pipeline_config"]
+    # Handle both 'pipeline' and 'pipeline_config' keys for backward compatibility
+    pipeline_key = "pipeline_config" if "pipeline_config" in sanitized else "pipeline"
+    if pipeline_key in sanitized:
+        pipeline = sanitized[pipeline_key]
         # Remove stages that are not enabled
         stages_to_remove = []
         for stage, stage_config in pipeline.items():
@@ -1025,6 +1044,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                     "h_min": 2,
                     "h_max": 5,
                     "num_multihops_factor": 1,
+                    # Cross-document defaults
+                    "max_combinations": 100,
+                    "chunks_per_document": 1,
+                    "num_docs_per_combination": [2, 5],
+                    "random_seed": 42,
+                    # Citation filtering defaults
+                    "subset": "prepared_lighteval",
+                    "alpha": 0.7,
+                    "beta": 0.3,
                     # Question generation defaults
                     "question_mode": "open-ended",
                     # Default file extensions
