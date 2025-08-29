@@ -912,21 +912,11 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             if key and "prompt" in key.lower():
                 # Check if it's a default prompt
                 if _is_default_prompt(obj, key):
-                    # Return the filename/path instead of the content
-                    if key in default_prompt_paths:
-                        return f"yourbench/prompts/{default_prompt_paths[key]}"
-                    else:
-                        return "<default_prompt>"
-
-                # For custom prompts, check if it's a file path or inline content
-                if "\n" in obj or len(obj) > 300:
-                    # It's inline content, keep first line and indicate it's custom
-                    first_line = obj.split("\n")[0][:50]
-                    return f"<custom_prompt: {first_line}...>"
-
-                # If it looks like a file path, make it relative
-                if any(ext in obj for ext in [".md", ".txt", ".prompt"]):
-                    return _make_relative_path(obj)
+                    # Return None to filter out default prompts entirely
+                    return None
+                
+                # All non-default prompts are custom
+                return f"custom_{key}.md"
 
             # Mask api_key arguments
             if key and "api_key" in key.lower():
