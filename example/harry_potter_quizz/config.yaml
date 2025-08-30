@@ -1,0 +1,24 @@
+hf_configuration:
+  hf_dataset_name: harry-potter-quizz
+  private: true
+
+model_list:
+  - model_name: openai/gpt-oss-120b
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+    max_concurrent_requests: 8
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/harry_potter_quizz/data
+    output_dir: example/harry_potter_quizz/processed
+  summarization:
+  chunking:
+    l_max_tokens: 1024      # Maximum chunk size
+    token_overlap: 256      # Overlap between chunks
+    encoding_name: cl100k_base
+    h_min: 2               # Minimum hop distance
+    h_max: 5               # Maximum hop distance
+    num_multihops_factor: 1  # Multi-hop generation factor
+  single_shot_question_generation:
+    question_mode: multi-choice # or open-ended
