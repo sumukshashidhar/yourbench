@@ -170,6 +170,8 @@ The `single_shot_questions` subset contains the following relevant columns for o
 
 **Congratulations!** We've successfully created a grounded, high-quality benchmark dataset from raw documents. The magic of YourBench has transformed the Harry Potter Wikipedia Plots PDF into a comprehensive quiz dataset that would make even Hermione proud! 🧙‍♀️✨
 
+Liked it? Give us a star on [GitHub](https://github.com/huggingface/yourbench) 🌟
+
 <details>
 <summary><strong>Want to know more about the columns in the other dataset subsets?</strong></summary>
 
