@@ -3,7 +3,7 @@ Module handles everything related to the configuration of the pipeline.
 """
 
 import os
-from typing import TYPE_CHECKING, Union, ClassVar
+from typing import TYPE_CHECKING, Any, Union, ClassVar
 from pathlib import Path
 from importlib.resources import files
 
@@ -202,6 +202,7 @@ class ModelConfig(BaseModel):
     encoding_name: str = "cl100k_base"
     provider: str | None = None
     bill_to: str | None = None
+    extra_parameters: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("api_key")
     @classmethod

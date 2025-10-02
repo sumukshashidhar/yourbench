@@ -1,6 +1,7 @@
 """Modern configuration builder using configuration_engine dataclasses."""
 
 from __future__ import annotations
+import json
 from typing import Any
 from pathlib import Path
 
@@ -214,6 +215,16 @@ def create_model_config(existing_models: list[str]) -> ModelConfig:
         )
         if Confirm.ask("Use custom tokenizer?", default=False):
             config.encoding_name = Prompt.ask("Encoding name", default="cl100k_base")
+
+    if Confirm.ask("Add custom provider parameters as JSON?", default=False):
+        raw_params = Prompt.ask('Enter JSON object (e.g. {"reasoning": {"effort": "medium"}})', default="{}")
+        try:
+            parsed = json.loads(raw_params)
+            if not isinstance(parsed, dict):
+                raise ValueError("Extra parameters must be a JSON object")
+            config.extra_parameters = parsed
+        except (json.JSONDecodeError, ValueError) as exc:
+            console.print(f"[red]Invalid JSON for extra parameters: {exc}. Ignoring input.[/red]")
 
     return config
 
@@ -443,12 +454,15 @@ def save_config(config: YourbenchConfig, output_path: Path) -> None:
         },
         "model_list": [
             {
-                "model_name": model.model_name,
-                "base_url": model.base_url,
-                "api_key": model.api_key,
-                "max_concurrent_requests": model.max_concurrent_requests,
-                "encoding_name": model.encoding_name,
-                "provider": model.provider,
+                **{
+                    "model_name": model.model_name,
+                    "base_url": model.base_url,
+                    "api_key": model.api_key,
+                    "max_concurrent_requests": model.max_concurrent_requests,
+                    "encoding_name": model.encoding_name,
+                    "provider": model.provider,
+                },
+                **({"extra_parameters": model.extra_parameters} if model.extra_parameters else {}),
             }
             for model in config.model_list
         ],

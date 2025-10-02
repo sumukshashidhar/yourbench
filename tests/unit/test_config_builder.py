@@ -93,6 +93,31 @@ class TestEnvFileWriting:
             finally:
                 os.chdir(old_cwd)
 
+
+class TestSaveConfig:
+    """Tests related to saving configuration files."""
+
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
+    def test_save_config_includes_extra_parameters(self):
+        """Ensure extra_parameters are persisted when present."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "config.yaml"
+            config = YourbenchConfig(
+                hf_configuration=HuggingFaceConfig(hf_dataset_name="with-extra"),
+                model_list=[
+                    ModelConfig(
+                        model_name="openrouter/model",
+                        extra_parameters={"reasoning": {"effort": "low"}},
+                    )
+                ],
+            )
+
+            save_config(config, output_path)
+
+            raw = yaml.safe_load(output_path.read_text())
+            saved_model = raw["model_list"][0]
+            assert saved_model["extra_parameters"] == {"reasoning": {"effort": "low"}}
+
     def test_write_env_file_existing_file(self):
         """Test writing to an existing .env file."""
         with tempfile.TemporaryDirectory() as tmpdir:
