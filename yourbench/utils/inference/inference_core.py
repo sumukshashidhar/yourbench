@@ -2,7 +2,7 @@ import os
 import time
 import uuid
 import asyncio
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from dataclasses import field, dataclass
 
 from loguru import logger
@@ -35,6 +35,7 @@ class Model:
     bill_to: str | None = None
     max_concurrent_requests: int = 16
     encoding_name: str = "cl100k_base"
+    extra_parameters: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.api_key is None:
@@ -60,6 +61,7 @@ class InferenceCall:
     tags: List[str] = field(default_factory=lambda: ["dev"])  # Tags will identify the 'stage'
     max_retries: int = 12
     seed: Optional[int] = None
+    extra_parameters: Dict[str, Any] = field(default_factory=dict)
 
 
 def _load_models(base_config: YourbenchConfig, step_name: str) -> List[Model]:
@@ -87,6 +89,7 @@ def _load_models(base_config: YourbenchConfig, step_name: str) -> List[Model]:
                 bill_to=first_model_config.bill_to,
                 max_concurrent_requests=first_model_config.max_concurrent_requests,
                 encoding_name=first_model_config.encoding_name,
+                extra_parameters=dict(first_model_config.extra_parameters or {}),
             )
         ]
 
@@ -102,6 +105,7 @@ def _load_models(base_config: YourbenchConfig, step_name: str) -> List[Model]:
                 bill_to=m_config.bill_to,
                 max_concurrent_requests=m_config.max_concurrent_requests,
                 encoding_name=m_config.encoding_name,
+                extra_parameters=dict(m_config.extra_parameters or {}),
             )
             matched.append(model_instance)
 
@@ -167,12 +171,24 @@ async def _get_response(
         )
 
         logger.debug(f"Making request with ID: {request_id}")
+        extra_body: Dict[str, Any] | None = None
+        if model.extra_parameters:
+            extra_body = dict(model.extra_parameters)
+        if inference_call.extra_parameters:
+            if extra_body is None:
+                extra_body = {}
+            extra_body.update(inference_call.extra_parameters)
 
-        response = await client.chat_completion(
-            model=model.model_name,
-            messages=inference_call.messages,
-            temperature=inference_call.temperature,
-        )
+        chat_kwargs: Dict[str, Any] = {
+            "model": model.model_name,
+            "messages": inference_call.messages,
+        }
+        if inference_call.temperature is not None:
+            chat_kwargs["temperature"] = inference_call.temperature
+        if extra_body:
+            chat_kwargs["extra_body"] = extra_body
+
+        response = await client.chat_completion(**chat_kwargs)
 
         # Safe-guarding in case the response is missing .choices
         if not response or not response.choices:

@@ -120,6 +120,13 @@ class TestModelConfig:
         assert config.api_key == "test_key"
 
     @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
+    def test_extra_parameters_preserved(self):
+        """Ensure provider-specific parameters are stored without modification."""
+        params = {"reasoning": {"effort": "medium"}, "metadata": {"trace": True}}
+        config = ModelConfig(extra_parameters=params)
+        assert config.extra_parameters == params
+
+    @patch.dict(os.environ, {"HF_TOKEN": "test_token"})
     def test_max_concurrent_requests_validation(self):
         """Test max_concurrent_requests validation."""
         with pytest.raises(ValueError):

@@ -23,6 +23,8 @@ def get_api_key_for_url(base_url: str | None) -> str:
         return "$OPENAI_API_KEY"
     elif hostname.endswith(".anthropic.com"):
         return "$ANTHROPIC_API_KEY"
+    elif hostname.endswith("openrouter.ai"):
+        return "$OPENROUTER_API_KEY"
     else:
         return "$HF_TOKEN"
 
@@ -57,6 +59,14 @@ def is_anthropic_url(base_url: str | None) -> bool:
     return hostname.endswith(".anthropic.com")
 
 
+def is_openrouter_url(base_url: str | None) -> bool:
+    """Check if a URL is an OpenRouter API endpoint."""
+    if not base_url:
+        return False
+    hostname = get_hostname_from_url(base_url)
+    return hostname.endswith("openrouter.ai")
+
+
 def validate_api_key_for_url(
     base_url: str | None, api_key: str | None, model_name: str | None = None
 ) -> tuple[bool, str | None]:
@@ -82,6 +92,12 @@ def validate_api_key_for_url(
             return False, (
                 "ANTHROPIC_API_KEY environment variable is required for Anthropic base URL. "
                 "Please set it with: export ANTHROPIC_API_KEY=your_token"
+            )
+    elif is_openrouter_url(base_url):
+        if api_key == "$OPENROUTER_API_KEY" and not os.getenv("OPENROUTER_API_KEY"):
+            return False, (
+                "OPENROUTER_API_KEY environment variable is required for OpenRouter base URL. "
+                "Please set it with: export OPENROUTER_API_KEY=your_token"
             )
     elif not base_url:
         # No base_url, default to HF_TOKEN validation

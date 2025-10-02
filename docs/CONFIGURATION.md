@@ -87,6 +87,9 @@ model_list:
     encoding_name: cl100k_base
     provider: auto  # Automatically set if not specified
     bill_to: optional-billing-id
+    extra_parameters:
+      reasoning:
+        effort: medium
 ```
 
 **Supported Fields:**
@@ -96,6 +99,17 @@ model_list:
 - `max_concurrent_requests`: Rate limiting (1-100)
 - `encoding_name`: Tokenizer encoding
 - `provider`: Provider type (auto-detected if not set)
+- `extra_parameters`: Arbitrary JSON payload merged into every chat completion request (useful for provider-specific features like OpenRouter `reasoning` objects)
+
+You can also provide these parameters from the CLI when running against a folder of documents using:
+
+```bash
+yourbench run ./docs --model openrouter/your-model \
+  --base-url https://openrouter.ai/api/v1 \
+  --model-extra-parameters '{"reasoning": {"effort": "medium"}}'
+```
+
+The flag accepts either an inline JSON object or a path to a JSON file.
 
 ### Pipeline Configuration
 

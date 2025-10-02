@@ -914,7 +914,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                 if _is_default_prompt(obj, key):
                     # Return None to filter out default prompts entirely
                     return None
-                
+
                 # All non-default prompts are custom
                 return f"custom_{key}.md"
 
@@ -987,7 +987,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
         for key, default_value in defaults_to_remove.items():
             if key in hf_config and hf_config[key] == default_value:
                 del hf_config[key]
-    
+
     # Filter out default values from model_list
     if "model_list" in sanitized:
         model_list = sanitized["model_list"]

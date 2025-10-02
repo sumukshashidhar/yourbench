@@ -4,6 +4,7 @@
 from __future__ import annotations
 import os
 import sys
+import json
 import time
 from typing import Optional
 from pathlib import Path
@@ -53,11 +54,40 @@ app = typer.Typer(
 logger.debug(f"YourBench loaded in {time.perf_counter() - startup_time:.2f}s")
 
 
+def _parse_extra_parameters(raw_value: Optional[str]) -> dict:
+    """Parse CLI-supplied JSON for model extra parameters."""
+    if not raw_value:
+        return {}
+
+    candidate = raw_value.strip()
+    if not candidate:
+        return {}
+
+    # Allow passing a file path for convenience
+    possible_path = Path(candidate)
+    if possible_path.exists() and possible_path.is_file():
+        try:
+            candidate = possible_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            raise typer.BadParameter(f"Failed to read extra parameter file '{candidate}': {exc}")
+
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"Invalid JSON for model extra parameters: {exc}") from exc
+
+    if not isinstance(parsed, dict):
+        raise typer.BadParameter("Model extra parameters JSON must decode to a JSON object")
+
+    return parsed
+
+
 def run_yourbench(
     config_or_docs: str,
     model: Optional[str] = None,
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
+    model_extra_parameters: Optional[str] = None,
     provider: Optional[str] = None,
     single_shot_questions: Optional[bool] = None,
     multi_hop_questions: bool = False,
@@ -96,6 +126,8 @@ def run_yourbench(
     # Check if input is a YAML config file
     if config_or_docs_path.suffix in [".yaml", ".yml"] and config_or_docs_path.exists():
         logger.info(f"Running with config: {config_or_docs_path}")
+        if model_extra_parameters:
+            logger.warning("Ignoring --model-extra-parameters because an explicit configuration file was provided")
 
         # Run pipeline with existing config
         pipeline_func = _lazy_import_pipeline()
@@ -170,6 +202,7 @@ def run_yourbench(
             max_concurrent_requests=max_concurrent_requests or 32,
             encoding_name=encoding_name or "cl100k_base",
             bill_to=bill_to,
+            extra_parameters=_parse_extra_parameters(model_extra_parameters),
         )
 
         # Set output directory
@@ -320,6 +353,13 @@ def run(
     api_key: Optional[str] = typer.Option(
         None, "--api-key", help="API key for the model (default: uses HF_TOKEN or OPENAI_API_KEY based on base_url)"
     ),
+    model_extra_parameters: Optional[str] = typer.Option(
+        None,
+        "--model-extra-parameters",
+        help=(
+            "JSON string or path to JSON file with provider-specific payload options to include in chat completions"
+        ),
+    ),
     provider: Optional[str] = typer.Option(
         None, "--provider", help="Provider for the model (e.g., openai, anthropic, auto)"
     ),
@@ -386,6 +426,7 @@ def run(
         model=model,
         base_url=base_url,
         api_key=api_key,
+        model_extra_parameters=model_extra_parameters,
         provider=provider,
         single_shot_questions=single_shot_questions,
         multi_hop_questions=multi_hop_questions,
