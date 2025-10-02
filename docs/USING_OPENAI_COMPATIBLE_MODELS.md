@@ -2,6 +2,30 @@
 
 YourBench supports using any OpenAI-compatible model by configuring the `base_url` parameter in your YAML configuration.
 
+## OpenRouter Example
+
+OpenRouter exposes an OpenAI-compatible API. You can target it by setting the `base_url` and using the `OPENROUTER_API_KEY` environment variable. Provider-specific options like `reasoning` can be passed via `extra_parameters`.
+
+```yaml
+model_list:
+  - model_name: x-ai/grok-4-fast:free
+    base_url: "https://openrouter.ai/api/v1"
+    api_key: $OPENROUTER_API_KEY
+    max_concurrent_requests: 16
+    extra_parameters:
+      reasoning:
+        effort: medium
+```
+
+From the CLI when running against a folder of documents:
+
+```bash
+export OPENROUTER_API_KEY=your_openrouter_key
+yourbench run ./docs --model "x-ai/grok-4-fast:free" \
+  --base-url https://openrouter.ai/api/v1 \
+  --model-extra-parameters '{"reasoning": {"effort": "medium"}}'
+```
+
 ## Configuration
 
 Add your OpenAI-compatible model to the `model_list` section of your configuration YAML:
@@ -12,6 +36,9 @@ model_list:
     base_url: "https://api.openai.com/v1"  # Default OpenAI API URL
     api_key: $OPENAI_API_KEY
     max_concurrent_requests: 10
+    extra_parameters:
+      reasoning:
+        effort: medium
 
   # Example for an Anthropic Server
   - model_name: claude-3-7-sonnet-20250219
@@ -29,6 +56,8 @@ Set the required API keys as environment variables. For example:
 export OPENAI_API_KEY=your_openai_api_key
 export ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
+
+If your provider exposes additional request fields (for example OpenRouter's `reasoning` settings), set them in `extra_parameters` or supply them via `--model-extra-parameters` when using the CLI.
 
 ## Model Roles
 
