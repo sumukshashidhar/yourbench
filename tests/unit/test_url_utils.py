@@ -2,11 +2,11 @@ import os
 from unittest.mock import patch
 
 from yourbench.utils.url_utils import (
-    get_api_key_for_url,
-    validate_api_key_for_url,
     is_openai_url,
     is_anthropic_url,
     is_openrouter_url,
+    get_api_key_for_url,
+    validate_api_key_for_url,
 )
 
 

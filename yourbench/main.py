@@ -2,9 +2,9 @@
 """YourBench CLI - Dynamic Evaluation Set Generation with Large Language Models."""
 
 from __future__ import annotations
-import json
 import os
 import sys
+import json
 import time
 from typing import Optional
 from pathlib import Path

@@ -1,7 +1,7 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from yourbench.utils.inference.inference_core import InferenceCall, Model, _get_response
+from yourbench.utils.inference.inference_core import Model, InferenceCall, _get_response
 
 
 class _DummyResponse:
