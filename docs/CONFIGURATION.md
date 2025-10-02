@@ -277,7 +277,7 @@ model_list:
 ```
 
 **Special Behavior:**
-- If `$HF_ORGANIZATION` is not set, YourBench attempts to retrieve it from the Hugging Face token
+- If `$HF_ORGANIZATION` is not set, YourBench attempts to retrieve it from the Hugging Face token. If the token is not associated with an organization but a user, the username is used.
 
 ### Custom Prompts
 

@@ -892,13 +892,6 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             return sanitized_dict if sanitized_dict else None
 
         if isinstance(obj, list):
-            # Handle model_list specially
-            if key == "model_list" and all(isinstance(item, dict) for item in obj):
-                # Check if all models are the same
-                model_names = [item.get("model_name") for item in obj if item.get("model_name")]
-                if len(set(model_names)) <= 1:
-                    # All models are the same or only one model, skip the list
-                    return None
             return [_sanitize(v, key, parent_key) for v in obj]
 
         if isinstance(obj, Path):
@@ -919,21 +912,11 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             if key and "prompt" in key.lower():
                 # Check if it's a default prompt
                 if _is_default_prompt(obj, key):
-                    # Return the filename/path instead of the content
-                    if key in default_prompt_paths:
-                        return f"yourbench/prompts/{default_prompt_paths[key]}"
-                    else:
-                        return "<default_prompt>"
-
-                # For custom prompts, check if it's a file path or inline content
-                if "\n" in obj or len(obj) > 300:
-                    # It's inline content, keep first line and indicate it's custom
-                    first_line = obj.split("\n")[0][:50]
-                    return f"<custom_prompt: {first_line}...>"
-
-                # If it looks like a file path, make it relative
-                if any(ext in obj for ext in [".md", ".txt", ".prompt"]):
-                    return _make_relative_path(obj)
+                    # Return None to filter out default prompts entirely
+                    return None
+                
+                # All non-default prompts are custom
+                return f"custom_{key}.md"
 
             # Mask api_key arguments
             if key and "api_key" in key.lower():
@@ -944,6 +927,9 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             # Mask HuggingFace tokens
             if obj.startswith("hf_"):
                 return "$HF_TOKEN"
+            # Mask HF organization/username in hf_organization field
+            if key == "hf_organization" and not obj.startswith("$"):
+                return "$HF_ORGANISATION"
             return obj
 
         # Explicitly return boolean, integer, float values unchanged
@@ -995,14 +981,33 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             "local_saving": True,
             "upload_card": True,
             "export_jsonl": False,
+            "local_dataset_dir": "data/saved_dataset",
+            "jsonl_export_dir": "data/jsonl_export",
         }
         for key, default_value in defaults_to_remove.items():
             if key in hf_config and hf_config[key] == default_value:
                 del hf_config[key]
+    
+    # Filter out default values from model_list
+    if "model_list" in sanitized:
+        model_list = sanitized["model_list"]
+        if isinstance(model_list, list):
+            for model in model_list:
+                if isinstance(model, dict):
+                    # Remove model-level defaults
+                    model_defaults = {
+                        "max_concurrent_requests": 32,
+                        "encoding_name": "cl100k_base",
+                    }
+                    for key, default_value in model_defaults.items():
+                        if key in model and model[key] == default_value:
+                            del model[key]
 
     # Filter out default values from pipeline stages
-    if "pipeline_config" in sanitized:
-        pipeline = sanitized["pipeline_config"]
+    # Handle both 'pipeline' and 'pipeline_config' keys for backward compatibility
+    pipeline_key = "pipeline_config" if "pipeline_config" in sanitized else "pipeline"
+    if pipeline_key in sanitized:
+        pipeline = sanitized[pipeline_key]
         # Remove stages that are not enabled
         stages_to_remove = []
         for stage, stage_config in pipeline.items():
@@ -1029,6 +1034,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                     "h_min": 2,
                     "h_max": 5,
                     "num_multihops_factor": 1,
+                    # Cross-document defaults
+                    "max_combinations": 100,
+                    "chunks_per_document": 1,
+                    "num_docs_per_combination": [2, 5],
+                    "random_seed": 42,
+                    # Citation filtering defaults
+                    "subset": "prepared_lighteval",
+                    "alpha": 0.7,
+                    "beta": 0.3,
                     # Question generation defaults
                     "question_mode": "open-ended",
                     # Default file extensions
@@ -1073,7 +1087,24 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
     if sanitized.get("debug") is False:
         del sanitized["debug"]
 
-    return yaml.safe_dump(sanitized, sort_keys=False, default_flow_style=False)
+    # Rename pipeline_config to pipeline for YAML compatibility
+    if "pipeline_config" in sanitized:
+        sanitized["pipeline"] = sanitized.pop("pipeline_config")
+
+    # Reorder sections: hf_configuration, model_list, model_roles, pipeline, then everything else
+    ordered_config = {}
+    if "hf_configuration" in sanitized:
+        ordered_config["hf_configuration"] = sanitized.pop("hf_configuration")
+    if "model_list" in sanitized:
+        ordered_config["model_list"] = sanitized.pop("model_list")
+    if "model_roles" in sanitized:
+        ordered_config["model_roles"] = sanitized.pop("model_roles")
+    if "pipeline" in sanitized:
+        ordered_config["pipeline"] = sanitized.pop("pipeline")
+    # Add remaining sections
+    ordered_config.update(sanitized)
+
+    return yaml.safe_dump(ordered_config, sort_keys=False, default_flow_style=False)
 
 
 def _get_pipeline_subset_info(config: Union[dict[str, Any], "YourbenchConfig"]) -> str:
