@@ -217,5 +217,5 @@ def _upload_to_hub(config: YourbenchConfig, md_files: list[Path]):
         return
 
     dataset = Dataset.from_list(docs)
-    custom_save_dataset(dataset, config, subset="ingested")
+    custom_save_dataset(dataset, config, subset="ingested", push_to_hub=config.hf_configuration.push_to_hub)
     logger.info(f"Uploaded {len(docs)} documents to Hub")
