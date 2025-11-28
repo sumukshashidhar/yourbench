@@ -31,6 +31,7 @@ def mock_config(temp_dir):
             "local_dataset_dir": temp_dir,
             "local_saving": True,
             "upload_card": False,
+            "push_to_hub": False,
         },
         "model_list": [
             {

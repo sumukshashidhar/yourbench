@@ -22,6 +22,7 @@ class HFConfig:
     upload_card: bool = True
     export_jsonl: bool = False
     jsonl_export_dir: str = "data/jsonl_export"
+    push_to_hub: bool = True
 
 
 @dataclass

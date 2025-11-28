@@ -22,8 +22,8 @@ from yourbench.utils.inference.inference_core import (
 def run(config) -> None:
     """Convert documents to markdown and optionally upload to Hub."""
     ingestion_config = config.pipeline.ingestion
-    source_dir = ingestion_config.source_documents_dir
-    output_dir = ingestion_config.output_dir
+    source_dir = Path(ingestion_config.source_documents_dir)
+    output_dir = Path(ingestion_config.output_dir)
 
     # Process files
     processor = _get_processor(config)
