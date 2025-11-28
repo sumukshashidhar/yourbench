@@ -5,12 +5,13 @@ These dataclasses define the expected config structure and provide
 sensible defaults. OmegaConf merges user configs with these defaults.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import field, dataclass
 
 
 @dataclass
 class HFConfig:
     """HuggingFace dataset configuration."""
+
     hf_dataset_name: str = ""
     hf_organization: str = ""
     hf_token: str = ""
@@ -26,6 +27,7 @@ class HFConfig:
 @dataclass
 class ModelConfig:
     """Model configuration."""
+
     model_name: str = ""
     base_url: str | None = None
     api_key: str | None = None
@@ -39,6 +41,7 @@ class ModelConfig:
 @dataclass
 class ChunkSamplingConfig:
     """Chunk sampling configuration."""
+
     enable: bool = False
     num_samples: int = 100
     strategy: str = "random"
@@ -48,6 +51,7 @@ class ChunkSamplingConfig:
 @dataclass
 class IngestionConfig:
     """Ingestion stage configuration."""
+
     run: bool = False
     source_documents_dir: str = "data/raw"
     output_dir: str = "data/processed"
@@ -61,6 +65,7 @@ class IngestionConfig:
 @dataclass
 class SummarizationConfig:
     """Summarization stage configuration."""
+
     run: bool = False
     max_tokens: int = 32768
     token_overlap: int = 512
@@ -72,6 +77,7 @@ class SummarizationConfig:
 @dataclass
 class ChunkingConfig:
     """Chunking stage configuration."""
+
     run: bool = False
     l_max_tokens: int = 8192
     token_overlap: int = 512
@@ -84,6 +90,7 @@ class ChunkingConfig:
 @dataclass
 class SingleShotConfig:
     """Single-shot question generation configuration."""
+
     run: bool = False
     question_mode: str = "open-ended"
     additional_instructions: str = ""
@@ -96,6 +103,7 @@ class SingleShotConfig:
 @dataclass
 class MultiHopConfig:
     """Multi-hop question generation configuration."""
+
     run: bool = False
     question_mode: str = "open-ended"
     additional_instructions: str = ""
@@ -107,6 +115,7 @@ class MultiHopConfig:
 @dataclass
 class CrossDocConfig:
     """Cross-document question generation configuration."""
+
     run: bool = False
     question_mode: str = "open-ended"
     additional_instructions: str = ""
@@ -122,6 +131,7 @@ class CrossDocConfig:
 @dataclass
 class QuestionRewritingConfig:
     """Question rewriting configuration."""
+
     run: bool = False
     question_rewriting_system_prompt: str = ""
     question_rewriting_user_prompt: str = ""
@@ -131,6 +141,7 @@ class QuestionRewritingConfig:
 @dataclass
 class LightevalConfig:
     """Lighteval preparation configuration."""
+
     run: bool = False
     single_shot_subset: str = "single_shot_questions"
     multi_hop_subset: str = "multi_hop_questions"
@@ -143,6 +154,7 @@ class LightevalConfig:
 @dataclass
 class CitationFilteringConfig:
     """Citation score filtering configuration."""
+
     run: bool = False
     subset: str = "prepared_lighteval"
     alpha: float = 0.7
@@ -152,6 +164,7 @@ class CitationFilteringConfig:
 @dataclass
 class PipelineConfig:
     """Pipeline configuration with all stages."""
+
     ingestion: IngestionConfig = field(default_factory=IngestionConfig)
     summarization: SummarizationConfig = field(default_factory=SummarizationConfig)
     chunking: ChunkingConfig = field(default_factory=ChunkingConfig)
@@ -167,9 +180,9 @@ class PipelineConfig:
 @dataclass
 class YourbenchConfig:
     """Root configuration schema."""
+
     hf_configuration: HFConfig = field(default_factory=HFConfig)
     model_list: list = field(default_factory=list)
     model_roles: dict = field(default_factory=dict)
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
     debug: bool = False
-

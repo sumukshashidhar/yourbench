@@ -8,10 +8,11 @@ import os
 from pathlib import Path
 
 from loguru import logger
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf, DictConfig
 
+from yourbench.conf.schema import ModelConfig, YourbenchConfig
 from yourbench.conf.prompts import DEFAULT_PROMPTS, load_prompt
-from yourbench.conf.schema import YourbenchConfig, ModelConfig
+
 
 STAGE_ORDER = [
     "ingestion",
@@ -32,13 +33,19 @@ PROMPT_FIELDS = [
     (("pipeline", "summarization", "summarization_user_prompt"), "summarization_user_prompt"),
     (("pipeline", "summarization", "combine_summaries_user_prompt"), "combine_summaries_user_prompt"),
     (("pipeline", "single_shot_question_generation", "single_shot_system_prompt"), "single_shot_system_prompt"),
-    (("pipeline", "single_shot_question_generation", "single_shot_system_prompt_multi"), "single_shot_system_prompt_multi"),
+    (
+        ("pipeline", "single_shot_question_generation", "single_shot_system_prompt_multi"),
+        "single_shot_system_prompt_multi",
+    ),
     (("pipeline", "single_shot_question_generation", "single_shot_user_prompt"), "single_shot_user_prompt"),
     (("pipeline", "multi_hop_question_generation", "multi_hop_system_prompt"), "multi_hop_system_prompt"),
     (("pipeline", "multi_hop_question_generation", "multi_hop_system_prompt_multi"), "multi_hop_system_prompt_multi"),
     (("pipeline", "multi_hop_question_generation", "multi_hop_user_prompt"), "multi_hop_user_prompt"),
     (("pipeline", "cross_document_question_generation", "multi_hop_system_prompt"), "multi_hop_system_prompt"),
-    (("pipeline", "cross_document_question_generation", "multi_hop_system_prompt_multi"), "multi_hop_system_prompt_multi"),
+    (
+        ("pipeline", "cross_document_question_generation", "multi_hop_system_prompt_multi"),
+        "multi_hop_system_prompt_multi",
+    ),
     (("pipeline", "cross_document_question_generation", "multi_hop_user_prompt"), "multi_hop_user_prompt"),
     (("pipeline", "question_rewriting", "question_rewriting_system_prompt"), "question_rewriting_system_prompt"),
     (("pipeline", "question_rewriting", "question_rewriting_user_prompt"), "question_rewriting_user_prompt"),
@@ -105,6 +112,7 @@ def _expand_env_vars(cfg: DictConfig) -> None:
                 if token:
                     try:
                         from huggingface_hub import whoami
+
                         return whoami(token).get("name", "")
                     except Exception:
                         pass

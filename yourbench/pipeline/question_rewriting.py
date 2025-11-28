@@ -168,7 +168,7 @@ def _process_question_rewriting_responses(
 
 
 def _process_question_type(
-    config: YourbenchConfig,
+    config,
     question_type: str,
     load_subset: str,
     save_subset: str,

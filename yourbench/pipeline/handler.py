@@ -1,11 +1,11 @@
 """Pipeline orchestrator for Yourbench."""
 
-import importlib
 import time
+import importlib
 
 from loguru import logger
 
-from yourbench.conf.loader import STAGE_ORDER, get_enabled_stages
+from yourbench.conf.loader import get_enabled_stages
 
 
 # Stage function overrides for question generation
@@ -17,10 +17,11 @@ def _get_stage_overrides():
     global _stage_overrides
     if not _stage_overrides:
         from yourbench.pipeline.question_generation import (
-            run_cross_document,
             run_multi_hop,
             run_single_shot,
+            run_cross_document,
         )
+
         _stage_overrides = {
             "single_shot_question_generation": run_single_shot,
             "multi_hop_question_generation": run_multi_hop,
@@ -86,6 +87,7 @@ def run_pipeline_with_config(config, debug: bool = False) -> None:
     # Upload dataset card
     try:
         from yourbench.utils.dataset_engine import upload_dataset_card
+
         upload_dataset_card(config)
     except Exception as e:
         logger.warning(f"Failed to upload dataset card: {e}")

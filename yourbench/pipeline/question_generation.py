@@ -136,9 +136,7 @@ def run_cross_document(config) -> None:
         )
 
 
-def _process_questions(
-    dataset: Dataset, label: str, system_msg: dict, stage_cfg: Any, config, step_name: str
-) -> None:
+def _process_questions(dataset: Dataset, label: str, system_msg: dict, stage_cfg: Any, config, step_name: str) -> None:
     """Process and save a set of questions."""
     if not dataset or len(dataset) == 0:
         logger.warning(f"No valid {label} dataset")

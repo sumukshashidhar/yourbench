@@ -4,7 +4,6 @@ import math
 import random
 import shutil
 import tempfile
-
 from typing import Any, Set, List, TypeVar, Sequence
 from pathlib import Path
 from contextlib import suppress
@@ -928,12 +927,14 @@ def _serialize_config_for_card(config: Any) -> str:
 
     # Convert config to dict for serialization
     from omegaconf import OmegaConf, DictConfig
+
     if isinstance(config, DictConfig):
         config_dict = OmegaConf.to_container(config, resolve=True)
     elif hasattr(config, "model_dump"):
         config_dict = config.model_dump()
     elif hasattr(config, "__dataclass_fields__"):
         from dataclasses import asdict
+
         config_dict = {k: v for k, v in asdict(config).items() if not k.startswith("_")}
     else:
         config_dict = dict(config) if hasattr(config, "items") else config
@@ -1141,9 +1142,7 @@ def _get_pipeline_subset_info(config: Any) -> str:
     return "\n".join(lines)
 
 
-def _generate_and_upload_dataset_card(
-    config: Any, template_path: str | None = None
-) -> None:
+def _generate_and_upload_dataset_card(config: Any, template_path: str | None = None) -> None:
     """
     Internal implementation that generates and uploads a dataset card to Hugging Face Hub.
 
@@ -1198,9 +1197,13 @@ def _generate_and_upload_dataset_card(
 
         # Get hf_configuration (supports both attribute and dict access)
         hf_config = getattr(config, "hf_configuration", None) or config.get("hf_configuration", {})
-        
+
         # Get pretty_name or generate from dataset name
-        pretty_name = getattr(hf_config, "pretty_name", None) if hasattr(hf_config, "pretty_name") else hf_config.get("pretty_name")
+        pretty_name = (
+            getattr(hf_config, "pretty_name", None)
+            if hasattr(hf_config, "pretty_name")
+            else hf_config.get("pretty_name")
+        )
         if not pretty_name:
             dataset_name = dataset_repo_name.split("/")[-1]
             pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
@@ -1210,6 +1213,7 @@ def _generate_and_upload_dataset_card(
 
         # Get YourBench version
         from importlib.metadata import PackageNotFoundError, version
+
         try:
             version_str = version("yourbench")
         except PackageNotFoundError:
@@ -1265,7 +1269,11 @@ def upload_dataset_card(config: Any) -> None:
     try:
         # Check if card upload is enabled in config
         hf_config = getattr(config, "hf_configuration", None) or config.get("hf_configuration", {})
-        upload_card = getattr(hf_config, "upload_card", None) if hasattr(hf_config, "upload_card") else hf_config.get("upload_card", True)
+        upload_card = (
+            getattr(hf_config, "upload_card", None)
+            if hasattr(hf_config, "upload_card")
+            else hf_config.get("upload_card", True)
+        )
         if upload_card is None:
             upload_card = True
 

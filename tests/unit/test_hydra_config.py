@@ -1,7 +1,5 @@
 """Unit tests for configuration loading."""
 
-from pathlib import Path
-
 from omegaconf import OmegaConf
 
 from yourbench.conf.loader import load_config, get_enabled_stages
@@ -113,6 +111,6 @@ pipeline:
     )
 
     cfg = load_config(yaml_path)
-    
+
     # model_roles should be auto-assigned
     assert cfg.model_roles.ingestion == ["my-model"]

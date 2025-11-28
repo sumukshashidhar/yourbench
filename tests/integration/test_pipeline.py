@@ -32,16 +32,18 @@ def mock_config(temp_dir):
             "local_saving": True,
             "upload_card": False,
         },
-        "model_list": [{
-            "model_name": "fake_model",
-            "provider": None,
-            "api_key": "fake_key",
-            "base_url": "http://localhost:8000/v1",
-            "max_concurrent_requests": 1,
-            "encoding_name": "cl100k_base",
-            "bill_to": None,
-            "extra_parameters": {},
-        }],
+        "model_list": [
+            {
+                "model_name": "fake_model",
+                "provider": None,
+                "api_key": "fake_key",
+                "base_url": "http://localhost:8000/v1",
+                "max_concurrent_requests": 1,
+                "encoding_name": "cl100k_base",
+                "bill_to": None,
+                "extra_parameters": {},
+            }
+        ],
         "model_roles": {
             "ingestion": ["fake_model"],
             "summarization": ["fake_model"],
@@ -209,15 +211,17 @@ def test_single_shot_question_generation_stage(mock_config):
         patch("yourbench.utils.parsing_engine.parse_qa_pairs_from_response") as mock_parse,
     ):
         mock_run_inference.return_value = {"fake_model": ["Question generation response"]}
-        mock_parse.return_value = [{
-            "question": "Test question?",
-            "answer": "Test answer",
-            "estimated_difficulty": 5,
-            "question_type": "factual",
-            "question_mode": "open-ended",
-            "thought_process": "Reasoning",
-            "citations": ["citation"],
-        }]
+        mock_parse.return_value = [
+            {
+                "question": "Test question?",
+                "answer": "Test answer",
+                "estimated_difficulty": 5,
+                "question_type": "factual",
+                "question_mode": "open-ended",
+                "thought_process": "Reasoning",
+                "citations": ["citation"],
+            }
+        ]
 
         from yourbench.pipeline.question_generation import run_single_shot
 
@@ -257,10 +261,12 @@ def test_lighteval_stage(mock_config):
     chunked_ds = Dataset.from_dict({
         "document_id": ["doc1"],
         "document_text": ["Full document text"],
-        "chunks": [[
-            {"chunk_id": "chunk1", "chunk_text": "Chunk 1 text"},
-            {"chunk_id": "chunk2", "chunk_text": "Chunk 2 text"},
-        ]],
+        "chunks": [
+            [
+                {"chunk_id": "chunk1", "chunk_text": "Chunk 1 text"},
+                {"chunk_id": "chunk2", "chunk_text": "Chunk 2 text"},
+            ]
+        ],
     })
 
     summarized_ds = Dataset.from_dict({

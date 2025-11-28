@@ -462,9 +462,7 @@ async def _run_inference_async_helper(
     return responses
 
 
-def run_inference(
-    config, step_name: str, inference_calls: List[InferenceCall]
-) -> Dict[str, List[str]]:
+def run_inference(config, step_name: str, inference_calls: List[InferenceCall]) -> Dict[str, List[str]]:
     """
     Run inference in parallel for the given step_name and inference_calls with enhanced tracking.
 
