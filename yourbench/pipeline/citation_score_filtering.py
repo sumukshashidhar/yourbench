@@ -96,5 +96,7 @@ def run(config) -> None:
     lighteval_ds = replace_dataset_columns(lighteval_ds, columns_data)
 
     logger.info("Saving updated dataset with new citation score columns...")
-    custom_save_dataset(dataset=lighteval_ds, config=config, subset=stage_cfg.subset)
+    custom_save_dataset(
+        dataset=lighteval_ds, config=config, subset=stage_cfg.subset, push_to_hub=config.hf_configuration.push_to_hub
+    )
     logger.success("citation_score_filtering stage completed successfully.")

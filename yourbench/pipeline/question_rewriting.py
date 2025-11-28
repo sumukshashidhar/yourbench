@@ -212,7 +212,9 @@ def _process_question_type(
             return
 
         rewritten_ds = Dataset.from_list(rewritten_rows)
-        custom_save_dataset(dataset=rewritten_ds, config=config, subset=save_subset)
+        custom_save_dataset(
+            dataset=rewritten_ds, config=config, subset=save_subset, push_to_hub=config.hf_configuration.push_to_hub
+        )
         logger.success(f"Saved {len(rewritten_rows)} rewritten {question_type} questions.")
 
     except Exception as e:

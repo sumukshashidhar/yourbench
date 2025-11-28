@@ -62,7 +62,9 @@ def _save_questions(rows: list[dict], config, subset: str) -> None:
         return
 
     logger.info(f"Saving {len(clean_rows)} {subset}")
-    custom_save_dataset(Dataset.from_list(clean_rows), config=config, subset=subset)
+    custom_save_dataset(
+        Dataset.from_list(clean_rows), config=config, subset=subset, push_to_hub=config.hf_configuration.push_to_hub
+    )
 
 
 def run_single_shot(config) -> None:

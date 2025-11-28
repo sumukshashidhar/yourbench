@@ -116,7 +116,9 @@ def run(config) -> None:
     # Add to dataset and save
     dataset = dataset.add_column("chunks", all_chunks)
     dataset = dataset.add_column("multihop_chunks", all_multihops)
-    custom_save_dataset(dataset=dataset, config=config, subset="chunked")
+    custom_save_dataset(
+        dataset=dataset, config=config, subset="chunked", push_to_hub=config.hf_configuration.push_to_hub
+    )
 
     # Log statistics
     total_chunks = sum(len(c) for c in all_chunks)
