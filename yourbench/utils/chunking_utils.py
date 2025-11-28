@@ -48,16 +48,13 @@ def split_into_token_chunks(
 
 def get_sampling_cfg(cfg: Any) -> ChunkSamplingConfig:
     """Extract and return the chunk sampling config as a ChunkSamplingConfig dataclass"""
-    if hasattr(cfg, "chunk_sampling"):
-        chunk_sampling = cfg.chunk_sampling
-        if isinstance(chunk_sampling, dict):
-            return ChunkSamplingConfig(**chunk_sampling)
-        else:
-            return ChunkSamplingConfig()
-    elif isinstance(cfg, dict):
-        return ChunkSamplingConfig(**cfg.get("chunk_sampling", {}))
-    else:
-        return ChunkSamplingConfig()
+    cs = cfg.chunk_sampling
+    # Map schema fields to local ChunkSamplingConfig
+    return ChunkSamplingConfig(
+        mode=CHUNK_MODE_ALL,
+        value=1.0,
+        random_seed=cs.random_seed if hasattr(cs, "random_seed") else 42,
+    )
 
 
 def safe_sample(lst: list[Any], k: int) -> list[Any]:

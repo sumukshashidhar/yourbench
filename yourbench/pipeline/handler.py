@@ -70,7 +70,7 @@ def run_pipeline(config_path: str, debug: bool = False) -> None:
 
 def run_pipeline_with_config(config, debug: bool = False) -> None:
     """Run the pipeline with a pre-loaded config object."""
-    if debug and hasattr(config, "debug"):
+    if debug:
         config.debug = True
 
     enabled = get_enabled_stages(config)

@@ -79,12 +79,12 @@ def run(config) -> None:
     logger.info("Saving lighteval compatible dataset")
 
     # Use configurable subset names with fallbacks
-    single_shot_subset = getattr(stage_cfg, "single_shot_subset", "single_shot_questions")
-    multi_hop_subset = getattr(stage_cfg, "multi_hop_subset", "multi_hop_questions")
-    cross_doc_subset = getattr(stage_cfg, "cross_doc_subset", "cross_document_questions")
-    chunked_subset = getattr(stage_cfg, "chunked_subset", "chunked")
-    summarized_subset = getattr(stage_cfg, "summarized_subset", "summarized")
-    output_subset = getattr(stage_cfg, "output_subset", "prepared_lighteval")
+    single_shot_subset = stage_cfg.single_shot_subset
+    multi_hop_subset = stage_cfg.multi_hop_subset
+    cross_doc_subset = stage_cfg.cross_doc_subset
+    chunked_subset = stage_cfg.chunked_subset
+    summarized_subset = stage_cfg.summarized_subset
+    output_subset = stage_cfg.output_subset
 
     # Load datasets
     try:
@@ -181,9 +181,9 @@ def run(config) -> None:
         stage_cfg_local = config.pipeline.single_shot_question_generation
         gold = (
             [ord(gold) - ord("A")]
-            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
+            if stage_cfg_local.question_mode == "multi-choice" and gold
             else [0]
-            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice"
+            if stage_cfg_local.question_mode == "multi-choice"
             else [gold]
         )
 
@@ -226,9 +226,9 @@ def run(config) -> None:
         stage_cfg_local = config.pipeline.multi_hop_question_generation
         gold = (
             [ord(gold) - ord("A")]
-            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
+            if stage_cfg_local.question_mode == "multi-choice" and gold
             else [0]
-            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice"
+            if stage_cfg_local.question_mode == "multi-choice"
             else [gold]
         )
 
@@ -265,9 +265,9 @@ def run(config) -> None:
         stage_cfg_local = config.pipeline.cross_document_question_generation
         gold = (
             [ord(gold) - ord("A")]
-            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
+            if stage_cfg_local.question_mode == "multi-choice" and gold
             else [0]
-            if getattr(stage_cfg_local, "question_mode", None) == "multi-choice"
+            if stage_cfg_local.question_mode == "multi-choice"
             else [gold]
         )
 

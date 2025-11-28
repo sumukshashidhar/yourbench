@@ -64,13 +64,13 @@ def _expand_var(value: str, field: str) -> str:
 def _extract_settings(config) -> HFSettings:
     """Parse and validate configuration (OmegaConf DictConfig or dict)."""
     # Get hf_configuration - works with both attribute and dict access
-    hf = getattr(config, "hf_configuration", None) or config.get("hf_configuration", {})
+    hf = config.hf_configuration
     if not hf:
         raise ConfigurationError("'hf_configuration' section missing")
 
     # Helper to get value from hf config (supports both dict and DictConfig)
     def get_val(key, default=None):
-        return getattr(hf, key, None) if hasattr(hf, key) else hf.get(key, default)
+        return getattr(hf, key, default)
 
     dataset_name = get_val("hf_dataset_name", "")
     if not dataset_name:
@@ -495,51 +495,12 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
         A new Dataset with cross-document combinations, preserving a similar schema but with an aggregated summary.
     """
     # Extract and validate configuration
-    max_combinations = int(
-        getattr(stage_cfg, "max_combinations", 100)
-        if hasattr(stage_cfg, "max_combinations")
-        else stage_cfg.get("max_combinations", 100)
-        if isinstance(stage_cfg, dict)
-        else 100
-    )
-    chunks_per_document = int(
-        getattr(stage_cfg, "chunks_per_document", 1)
-        if hasattr(stage_cfg, "chunks_per_document")
-        else stage_cfg.get("chunks_per_document", 1)
-        if isinstance(stage_cfg, dict)
-        else 1
-    )
-    num_docs_range = (
-        getattr(stage_cfg, "num_docs_per_combination", [2, 5])
-        if hasattr(stage_cfg, "num_docs_per_combination")
-        else stage_cfg.get("num_docs_per_combination", [2, 5])
-        if isinstance(stage_cfg, dict)
-        else [2, 5]
-    )
-    random_seed = int(
-        getattr(stage_cfg, "random_seed", 42)
-        if hasattr(stage_cfg, "random_seed")
-        else stage_cfg.get("random_seed", 42)
-        if isinstance(stage_cfg, dict)
-        else 42
-    )
+    max_combinations = stage_cfg.max_combinations
+    chunks_per_document = stage_cfg.chunks_per_document
+    num_docs_range = stage_cfg.num_docs_per_combination
+    random_seed = stage_cfg.random_seed
 
-    # Validate num_docs_range
-    if not isinstance(num_docs_range, list) or len(num_docs_range) != 2:
-        raise ValueError("num_docs_per_combination must be a list of exactly 2 integers")
-
-    if not all(isinstance(x, int) for x in num_docs_range):
-        raise ValueError("num_docs_per_combination must contain only integers")
-
-    min_docs, max_docs = num_docs_range[0], num_docs_range[1]
-
-    if min_docs < 2:
-        raise ValueError("min_docs must be at least 2 for cross-document combinations")
-    if max_docs < min_docs:
-        raise ValueError("max_docs must be >= min_docs")
-
-    if chunks_per_document < 1:
-        raise ValueError("chunks_per_document must be at least 1")
+    min_docs, max_docs = num_docs_range
 
     # Check for required column
     if "multihop_chunks" not in dataset.column_names:
@@ -1121,7 +1082,7 @@ def _get_pipeline_subset_info(config: Any) -> str:
         "citation_score_filtering": "Compute overlap-based citation scores and filter QA pairs accordingly",
     }
     # Get pipeline config - supports both attribute and dict access
-    pipeline = getattr(config, "pipeline", None) or config.get("pipeline", {})
+    pipeline = config.pipeline
     lines = []
     for stage_name in [
         "ingestion",
@@ -1133,9 +1094,9 @@ def _get_pipeline_subset_info(config: Any) -> str:
         "lighteval",
         "citation_score_filtering",
     ]:
-        stage_cfg = getattr(pipeline, stage_name, None) if hasattr(pipeline, stage_name) else pipeline.get(stage_name)
+        stage_cfg = getattr(pipeline, stage_name, None)
         if stage_cfg:
-            is_enabled = getattr(stage_cfg, "run", None) if hasattr(stage_cfg, "run") else stage_cfg.get("run", False)
+            is_enabled = stage_cfg.run if stage_cfg else False
             if is_enabled:
                 desc = mapping.get(stage_name, stage_name.replace("_", " ").title())
                 lines.append(f"- **{stage_name}**: {desc}")
@@ -1196,14 +1157,10 @@ def _generate_and_upload_dataset_card(config: Any, template_path: str | None = N
         logger.info(f"Extracted dataset_info section, length: {len(config_data) if config_data else 0} characters")
 
         # Get hf_configuration (supports both attribute and dict access)
-        hf_config = getattr(config, "hf_configuration", None) or config.get("hf_configuration", {})
+        hf_config = config.hf_configuration
 
         # Get pretty_name or generate from dataset name
-        pretty_name = (
-            getattr(hf_config, "pretty_name", None)
-            if hasattr(hf_config, "pretty_name")
-            else hf_config.get("pretty_name")
-        )
+        pretty_name = getattr(hf_config, "pretty_name", None)
         if not pretty_name:
             dataset_name = dataset_repo_name.split("/")[-1]
             pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
@@ -1220,7 +1177,7 @@ def _generate_and_upload_dataset_card(config: Any, template_path: str | None = N
             version_str = "dev"
 
         # Get footer
-        footer = getattr(hf_config, "footer", None) if hasattr(hf_config, "footer") else hf_config.get("footer")
+        footer = getattr(hf_config, "footer", None)
         if not footer:
             footer = "*(This dataset card was automatically generated by YourBench)*"
 
@@ -1268,12 +1225,8 @@ def upload_dataset_card(config: Any) -> None:
     """
     try:
         # Check if card upload is enabled in config
-        hf_config = getattr(config, "hf_configuration", None) or config.get("hf_configuration", {})
-        upload_card = (
-            getattr(hf_config, "upload_card", None)
-            if hasattr(hf_config, "upload_card")
-            else hf_config.get("upload_card", True)
-        )
+        hf_config = config.hf_configuration
+        upload_card = getattr(hf_config, "upload_card", True)
         if upload_card is None:
             upload_card = True
 

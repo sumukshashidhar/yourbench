@@ -73,7 +73,10 @@ def run_single_shot(config) -> None:
         logger.info("single_shot_question_generation disabled")
         return
 
-    mode = _validate_mode(getattr(stage_cfg, "question_mode", "open-ended"))
+    mode = stage_cfg.question_mode.strip().lower() if stage_cfg.question_mode else "open-ended"
+    if mode not in {"open-ended", "multi-choice"}:
+        logger.warning(f"Invalid question_mode '{mode}', defaulting to 'open-ended'")
+        mode = "open-ended"
     logger.info(f"Single-shot mode: {mode}")
 
     system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode)}
@@ -94,7 +97,10 @@ def run_multi_hop(config) -> None:
         logger.info("Multi-hop question generation disabled")
         return
 
-    mode = _validate_mode(getattr(stage_cfg, "question_mode", "open-ended"))
+    mode = stage_cfg.question_mode.strip().lower() if stage_cfg.question_mode else "open-ended"
+    if mode not in {"open-ended", "multi-choice"}:
+        logger.warning(f"Invalid question_mode '{mode}', defaulting to 'open-ended'")
+        mode = "open-ended"
     system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode, is_multi=True)}
 
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
@@ -113,7 +119,10 @@ def run_cross_document(config) -> None:
         logger.info("Cross-document question generation disabled")
         return
 
-    mode = _validate_mode(getattr(stage_cfg, "question_mode", "open-ended"))
+    mode = stage_cfg.question_mode.strip().lower() if stage_cfg.question_mode else "open-ended"
+    if mode not in {"open-ended", "multi-choice"}:
+        logger.warning(f"Invalid question_mode '{mode}', defaulting to 'open-ended'")
+        mode = "open-ended"
     system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode, is_multi=True)}
 
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
