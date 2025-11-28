@@ -1,12 +1,13 @@
 """Unit tests for schema validation."""
 
 import pytest
+
 from yourbench.conf.schema import (
-    ConfigValidationError,
-    SummarizationConfig,
+    ModelConfig,
     ChunkingConfig,
     CrossDocConfig,
-    ModelConfig,
+    SummarizationConfig,
+    ConfigValidationError,
     CitationFilteringConfig,
 )
 
