@@ -38,7 +38,9 @@ def run(config: YourbenchConfig) -> None:
     # Save results
     dataset = dataset.add_column("document_summary", final_summaries)
     dataset = dataset.add_column("summarization_model", [model_name] * len(dataset))
-    custom_save_dataset(dataset=dataset, config=config, subset="summarized")
+    custom_save_dataset(
+        dataset=dataset, config=config, subset="summarized", push_to_hub=config.hf_configuration.push_to_hub
+    )
     logger.success(f"Summarization complete for {len(dataset)} documents")
 
 

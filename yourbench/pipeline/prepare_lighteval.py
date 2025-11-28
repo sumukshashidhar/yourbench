@@ -144,7 +144,9 @@ def run(config: YourbenchConfig) -> None:
             "related_chunks": [],
             "type": [],
         })
-        custom_save_dataset(empty_dataset, config=config, subset="prepared_lighteval")
+        custom_save_dataset(
+            empty_dataset, config=config, subset="prepared_lighteval", push_to_hub=config.hf_configuration.push_to_hub
+        )
         return
 
     # Prepare lookups from chunked dataset
@@ -308,5 +310,7 @@ def run(config: YourbenchConfig) -> None:
         return
 
     # Save dataset
-    custom_save_dataset(dataset=final_ds, config=config, subset=output_subset)
+    custom_save_dataset(
+        dataset=final_ds, config=config, subset=output_subset, push_to_hub=config.hf_configuration.push_to_hub
+    )
     logger.success("Prepared Lighteval dataset saved successfully.")

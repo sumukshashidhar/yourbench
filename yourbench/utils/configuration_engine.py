@@ -158,6 +158,7 @@ class HuggingFaceConfig(BaseModel):
     upload_card: bool = True
     export_jsonl: bool = False
     jsonl_export_dir: Path | None = Path("data/jsonl_export")
+    push_to_hub: bool = True
 
     @field_validator("hf_organization", "hf_token")
     @classmethod
