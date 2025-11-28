@@ -9,7 +9,6 @@ from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
 
 from huggingface_hub import AsyncInferenceClient
-from yourbench.utils.configuration_engine import YourbenchConfig
 from yourbench.utils.inference.inference_tracking import (
     InferenceMetrics,
     _count_tokens,
@@ -64,7 +63,7 @@ class InferenceCall:
     extra_parameters: Dict[str, Any] = field(default_factory=dict)
 
 
-def _load_models(base_config: YourbenchConfig, step_name: str) -> List[Model]:
+def _load_models(base_config, step_name: str) -> List[Model]:
     """
     Load only the models assigned to this step from the config's 'model_list' and 'model_roles'.
     If no model role is defined for the step, use the first model from model_list.
@@ -463,9 +462,7 @@ async def _run_inference_async_helper(
     return responses
 
 
-def run_inference(
-    config: YourbenchConfig, step_name: str, inference_calls: List[InferenceCall]
-) -> Dict[str, List[str]]:
+def run_inference(config, step_name: str, inference_calls: List[InferenceCall]) -> Dict[str, List[str]]:
     """
     Run inference in parallel for the given step_name and inference_calls with enhanced tracking.
 

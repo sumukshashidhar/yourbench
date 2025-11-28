@@ -7,7 +7,6 @@ from loguru import logger
 from thefuzz import fuzz
 
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, replace_dataset_columns
-from yourbench.utils.configuration_engine import YourbenchConfig
 
 
 @dataclass(slots=True)
@@ -18,13 +17,13 @@ class StageConfig:
     beta: float = 0.3
 
 
-def _get_stage_config(config: YourbenchConfig) -> StageConfig:
-    stage_cfg = config.pipeline_config.citation_score_filtering
+def _get_stage_config(config) -> StageConfig:
+    stage_cfg = config.pipeline.citation_score_filtering
     return StageConfig(
         run=stage_cfg.run,
-        subset=getattr(stage_cfg, "subset", "prepared_lighteval"),
-        alpha=getattr(stage_cfg, "alpha", 0.7),
-        beta=getattr(stage_cfg, "beta", 0.3),
+        subset=stage_cfg.subset,
+        alpha=stage_cfg.alpha,
+        beta=stage_cfg.beta,
     )
 
 
@@ -51,7 +50,7 @@ class CitationScoreCalculator:
         return avg_ans, avg_chunk, final
 
 
-def run(config: YourbenchConfig) -> None:
+def run(config) -> None:
     """Entry point for the citation score filtering stage."""
     stage_cfg = _get_stage_config(config)
     if not stage_cfg.run:

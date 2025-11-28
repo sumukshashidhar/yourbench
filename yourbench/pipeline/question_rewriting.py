@@ -20,7 +20,6 @@ from datasets import Dataset
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
 from yourbench.utils.question_models import QuestionRow
-from yourbench.utils.configuration_engine import YourbenchConfig
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
 
@@ -169,7 +168,7 @@ def _process_question_rewriting_responses(
 
 
 def _process_question_type(
-    config: YourbenchConfig,
+    config,
     question_type: str,
     load_subset: str,
     save_subset: str,
@@ -222,7 +221,7 @@ def _process_question_type(
         logger.error(f"Error processing {question_type} questions: {e}")
 
 
-def run(config: YourbenchConfig) -> None:
+def run(config) -> None:
     """
     Main entry point for the question_rewriting pipeline stage.
 
@@ -232,7 +231,7 @@ def run(config: YourbenchConfig) -> None:
     3. Parses the rewritten questions
     4. Saves new datasets with rewritten questions
     """
-    stage_cfg = config.pipeline_config.question_rewriting
+    stage_cfg = config.pipeline.question_rewriting
     if not stage_cfg.run:
         logger.info("question_rewriting stage is disabled. Skipping.")
         return
