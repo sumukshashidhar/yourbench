@@ -12,7 +12,6 @@ from markitdown import MarkItDown
 from datasets import Dataset
 from huggingface_hub import InferenceClient
 from yourbench.utils.dataset_engine import custom_save_dataset
-from yourbench.utils.configuration_engine import YourbenchConfig
 from yourbench.utils.inference.inference_core import (
     InferenceCall,
     _load_models,
@@ -20,9 +19,9 @@ from yourbench.utils.inference.inference_core import (
 )
 
 
-def run(config: YourbenchConfig) -> None:
+def run(config) -> None:
     """Convert documents to markdown and optionally upload to Hub."""
-    ingestion_config = config.pipeline_config.ingestion
+    ingestion_config = config.pipeline.ingestion
     source_dir = ingestion_config.source_documents_dir
     output_dir = ingestion_config.output_dir
 
@@ -62,14 +61,14 @@ def run(config: YourbenchConfig) -> None:
 
     logger.info(f"Processed {len(successful_outputs)} files")
 
-    # Upload to hub if configured - only upload successfully converted files
-    if ingestion_config.upload_to_hub and successful_outputs:
+    # Save dataset locally and/or upload to Hub
+    if successful_outputs:
         _upload_to_hub(config, successful_outputs)
 
 
-def _get_processor(config: YourbenchConfig) -> MarkItDown:
+def _get_processor(config) -> MarkItDown:
     """Initialize markdown processor with optional LLM support."""
-    if not config.pipeline_config.ingestion.llm_ingestion or not config.model_list:
+    if not config.pipeline.ingestion.llm_ingestion or not config.model_list:
         return MarkItDown()
 
     # Use the first model in the list for non-PDF LLM-based ingestion.
@@ -83,9 +82,9 @@ def _get_processor(config: YourbenchConfig) -> MarkItDown:
         return MarkItDown()
 
 
-def _convert_file(file_path: Path, config: YourbenchConfig, processor: MarkItDown) -> str | None:
+def _convert_file(file_path: Path, config, processor: MarkItDown) -> str | None:
     """Convert file to markdown based on type."""
-    ingestion_config = config.pipeline_config.ingestion
+    ingestion_config = config.pipeline.ingestion
     supported_extensions = set(ingestion_config.supported_file_extensions)
 
     file_ext = file_path.suffix.lower()
@@ -103,7 +102,7 @@ def _convert_file(file_path: Path, config: YourbenchConfig, processor: MarkItDow
         # Fallback to MarkItDown
         return processor.convert(str(file_path)).text_content
 
-    if file_ext == ".pdf" and config.pipeline_config.ingestion.llm_ingestion:
+    if file_ext == ".pdf" and config.pipeline.ingestion.llm_ingestion:
         content = _process_pdf_llm(file_path, config)
         if content is not None:
             return content
@@ -123,10 +122,10 @@ def _extract_html(path: Path) -> str | None:
         return None
 
 
-def _process_pdf_llm(pdf_path: Path, config: YourbenchConfig) -> str | None:
+def _process_pdf_llm(pdf_path: Path, config) -> str | None:
     """Convert every page of a PDF to Markdown using an LLM."""
     models = _load_models(config, "ingestion")
-    ingestion_config = config.pipeline_config.ingestion
+    ingestion_config = config.pipeline.ingestion
 
     if not models:
         logger.warning(f"No LLM models configured for PDF ingestion of {pdf_path.name}.")
@@ -193,7 +192,7 @@ def _img_to_b64(image: Image.Image) -> str:
         return base64.b64encode(buffer.getvalue()).decode()
 
 
-def _upload_to_hub(config: YourbenchConfig, md_files: list[Path]):
+def _upload_to_hub(config, md_files: list[Path]):
     """Upload markdown files to Hugging Face Hub."""
     if not md_files:
         logger.warning("No markdown files to upload")

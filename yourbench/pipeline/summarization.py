@@ -5,13 +5,12 @@ from datasets import Dataset
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
-from yourbench.utils.configuration_engine import YourbenchConfig
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
 
-def run(config: YourbenchConfig) -> None:
+def run(config) -> None:
     """Execute hierarchical document summarization."""
-    cfg = config.pipeline_config.summarization
+    cfg = config.pipeline.summarization
     dataset = custom_load_dataset(config=config, subset="ingested")
     if not dataset:
         logger.warning("No documents to summarize")

@@ -11,7 +11,6 @@ from yourbench.utils.parsing_engine import (
     _remove_duplicate_questions,
     parse_single_shot_responses,
 )
-from yourbench.utils.configuration_engine import YourbenchConfig
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,
@@ -36,7 +35,7 @@ def _validate_mode(mode: str) -> str:
 
 
 def _build_and_run_inference(
-    dataset: Dataset, system_msg: dict, stage_cfg: Any, builder_func: callable, step_name: str, config: YourbenchConfig
+    dataset: Dataset, system_msg: dict, stage_cfg: Any, builder_func: callable, step_name: str, config
 ) -> tuple[dict, list]:
     """Common pattern: build calls, run inference, return responses + index map."""
     sampling_cfg = (
@@ -57,7 +56,7 @@ def _build_and_run_inference(
     return responses, index_map
 
 
-def _save_questions(rows: list[dict], config: YourbenchConfig, subset: str) -> None:
+def _save_questions(rows: list[dict], config, subset: str) -> None:
     """Save question rows after deduplication."""
     if not (clean_rows := _remove_duplicate_questions(rows)):
         return
@@ -66,9 +65,9 @@ def _save_questions(rows: list[dict], config: YourbenchConfig, subset: str) -> N
     custom_save_dataset(Dataset.from_list(clean_rows), config=config, subset=subset)
 
 
-def run_single_shot(config: YourbenchConfig) -> None:
+def run_single_shot(config) -> None:
     """Generate single-hop questions from individual chunks."""
-    if not (stage_cfg := config.pipeline_config.single_shot_question_generation).run:
+    if not (stage_cfg := config.pipeline.single_shot_question_generation).run:
         logger.info("single_shot_question_generation disabled")
         return
 
@@ -86,9 +85,9 @@ def run_single_shot(config: YourbenchConfig) -> None:
         _save_questions(rows, config, "single_shot_questions")
 
 
-def run_multi_hop(config: YourbenchConfig) -> None:
+def run_multi_hop(config) -> None:
     """Generate multi-hop questions."""
-    stage_cfg = config.pipeline_config.multi_hop_question_generation
+    stage_cfg = config.pipeline.multi_hop_question_generation
     if not stage_cfg.run:
         logger.info("Multi-hop question generation disabled")
         return
@@ -105,9 +104,9 @@ def run_multi_hop(config: YourbenchConfig) -> None:
     )
 
 
-def run_cross_document(config: YourbenchConfig) -> None:
+def run_cross_document(config) -> None:
     """Generate cross-document questions."""
-    stage_cfg = config.pipeline_config.cross_document_question_generation
+    stage_cfg = config.pipeline.cross_document_question_generation
     if not stage_cfg.run:
         logger.info("Cross-document question generation disabled")
         return
@@ -136,7 +135,7 @@ def run_cross_document(config: YourbenchConfig) -> None:
 
 
 def _process_questions(
-    dataset: Dataset, label: str, system_msg: dict, stage_cfg: Any, config: YourbenchConfig, step_name: str
+    dataset: Dataset, label: str, system_msg: dict, stage_cfg: Any, config, step_name: str
 ) -> None:
     """Process and save a set of questions."""
     if not dataset or len(dataset) == 0:

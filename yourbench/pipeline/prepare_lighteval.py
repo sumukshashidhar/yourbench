@@ -45,10 +45,7 @@ from loguru import logger
 
 from datasets import Dataset
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
-from yourbench.utils.configuration_engine import YourbenchConfig
-
-
-def run(config: YourbenchConfig) -> None:
+def run(config) -> None:
     """
     Main entry point for the lighteval pipeline stage.
 
@@ -67,7 +64,7 @@ def run(config: YourbenchConfig) -> None:
       10. chunks
       11. document
 
-    The result is saved under the subset name specified in config.pipeline_config.lighteval.
+    The result is saved under the subset name specified in config.pipeline.lighteval.
 
     Args:
         config (YourbenchConfig): The entire pipeline configuration.
@@ -75,7 +72,7 @@ def run(config: YourbenchConfig) -> None:
     Returns:
         None. The merged dataset is saved to disk or HF Hub as configured.
     """
-    stage_cfg = config.pipeline_config.prepare_lighteval
+    stage_cfg = config.pipeline.prepare_lighteval
 
     logger.info("Saving lighteval compatible dataset")
 
@@ -177,7 +174,7 @@ def run(config: YourbenchConfig) -> None:
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg_local = config.pipeline_config.single_shot_question_generation
+        stage_cfg_local = config.pipeline.single_shot_question_generation
         gold = (
             [ord(gold) - ord("A")]
             if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
@@ -222,7 +219,7 @@ def run(config: YourbenchConfig) -> None:
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg_local = config.pipeline_config.multi_hop_question_generation
+        stage_cfg_local = config.pipeline.multi_hop_question_generation
         gold = (
             [ord(gold) - ord("A")]
             if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
@@ -261,7 +258,7 @@ def run(config: YourbenchConfig) -> None:
         if not gold:
             logger.warning("Row has empty answer line")
 
-        stage_cfg_local = config.pipeline_config.cross_document_question_generation
+        stage_cfg_local = config.pipeline.cross_document_question_generation
         gold = (
             [ord(gold) - ord("A")]
             if getattr(stage_cfg_local, "question_mode", None) == "multi-choice" and gold
