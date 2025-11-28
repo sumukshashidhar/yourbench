@@ -193,8 +193,7 @@ index.json
 yourbench_processing/
 
 # Local development files
-scripts/output/
-scripts/data/
+scripts/
 example/default_example/config2.yaml
 
 # Test configs with local/personal data
