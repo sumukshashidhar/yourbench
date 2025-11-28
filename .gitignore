@@ -17,6 +17,12 @@ test_output/
 yourbench_output/
 output/
 *.html
+AGENTS.md
+data/
+.ai/
+
+EXAMPLES.md
+
 # C extensions
 *.so
 
@@ -185,3 +191,12 @@ cython_debug/
 *.jsonl
 index.json
 yourbench_processing/
+
+# Local development files
+scripts/output/
+scripts/data/
+example/default_example/config2.yaml
+
+# Test configs with local/personal data
+tests/integration/test_default_example_output.py
+tests/integration/test_existing_output.py
