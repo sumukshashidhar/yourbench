@@ -14,6 +14,18 @@ from yourbench.conf.schema import ModelConfig, YourbenchConfig
 from yourbench.conf.prompts import DEFAULT_PROMPTS, load_prompt
 
 
+def _validate_config(cfg: DictConfig) -> None:
+    """Validate config by converting to dataclasses, triggering __post_init__ checks."""
+    from yourbench.conf.schema import ConfigValidationError
+
+    try:
+        OmegaConf.to_object(cfg)
+    except ConfigValidationError:
+        raise
+    except Exception as e:
+        raise ConfigValidationError(f"Config validation failed: {e}") from e
+
+
 STAGE_ORDER = [
     "ingestion",
     "summarization",
@@ -92,6 +104,9 @@ def load_config(yaml_path: str | Path) -> DictConfig:
 
     # Resolve any remaining interpolations
     OmegaConf.resolve(cfg)
+
+    # Validate the config by triggering __post_init__ on all dataclasses
+    _validate_config(cfg)
 
     return cfg
 

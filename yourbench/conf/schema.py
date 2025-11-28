@@ -8,6 +8,12 @@ sensible defaults. OmegaConf merges user configs with these defaults.
 from dataclasses import field, dataclass
 
 
+class ConfigValidationError(ValueError):
+    """Raised when configuration validation fails."""
+
+    pass
+
+
 @dataclass
 class HFConfig:
     """HuggingFace dataset configuration."""
@@ -38,6 +44,10 @@ class ModelConfig:
     bill_to: str | None = None
     extra_parameters: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        if self.max_concurrent_requests < 1:
+            raise ConfigValidationError(f"max_concurrent_requests must be >= 1, got {self.max_concurrent_requests}")
+
 
 @dataclass
 class ChunkSamplingConfig:
@@ -47,6 +57,10 @@ class ChunkSamplingConfig:
     num_samples: int = 100
     strategy: str = "random"
     random_seed: int = 42
+
+    def __post_init__(self):
+        if self.num_samples < 1:
+            raise ConfigValidationError(f"num_samples must be >= 1, got {self.num_samples}")
 
 
 @dataclass
@@ -74,6 +88,16 @@ class SummarizationConfig:
     summarization_user_prompt: str = ""
     combine_summaries_user_prompt: str = ""
 
+    def __post_init__(self):
+        if self.max_tokens <= 0:
+            raise ConfigValidationError(f"max_tokens must be > 0, got {self.max_tokens}")
+        if self.token_overlap < 0:
+            raise ConfigValidationError(f"token_overlap must be >= 0, got {self.token_overlap}")
+        if self.token_overlap >= self.max_tokens:
+            raise ConfigValidationError(
+                f"token_overlap ({self.token_overlap}) must be < max_tokens ({self.max_tokens})"
+            )
+
 
 @dataclass
 class ChunkingConfig:
@@ -86,6 +110,18 @@ class ChunkingConfig:
     h_min: int = 2
     h_max: int = 5
     num_multihops_factor: int = 1
+
+    def __post_init__(self):
+        if self.l_max_tokens <= 0:
+            raise ConfigValidationError(f"l_max_tokens must be > 0, got {self.l_max_tokens}")
+        if self.token_overlap < 0:
+            raise ConfigValidationError(f"token_overlap must be >= 0, got {self.token_overlap}")
+        if self.h_min < 1:
+            raise ConfigValidationError(f"h_min must be >= 1, got {self.h_min}")
+        if self.h_max < self.h_min:
+            raise ConfigValidationError(f"h_max ({self.h_max}) must be >= h_min ({self.h_min})")
+        if self.num_multihops_factor < 1:
+            raise ConfigValidationError(f"num_multihops_factor must be >= 1, got {self.num_multihops_factor}")
 
 
 @dataclass
@@ -100,6 +136,14 @@ class SingleShotConfig:
     single_shot_user_prompt: str = ""
     chunk_sampling: ChunkSamplingConfig = field(default_factory=ChunkSamplingConfig)
 
+    def __post_init__(self):
+        valid_modes = {"open-ended", "multi-choice", ""}
+        mode = self.question_mode.strip().lower() if self.question_mode else ""
+        if mode and mode not in valid_modes:
+            raise ConfigValidationError(
+                f"question_mode must be 'open-ended' or 'multi-choice', got '{self.question_mode}'"
+            )
+
 
 @dataclass
 class MultiHopConfig:
@@ -111,6 +155,14 @@ class MultiHopConfig:
     multi_hop_system_prompt: str = ""
     multi_hop_system_prompt_multi: str = ""
     multi_hop_user_prompt: str = ""
+
+    def __post_init__(self):
+        valid_modes = {"open-ended", "multi-choice", ""}
+        mode = self.question_mode.strip().lower() if self.question_mode else ""
+        if mode and mode not in valid_modes:
+            raise ConfigValidationError(
+                f"question_mode must be 'open-ended' or 'multi-choice', got '{self.question_mode}'"
+            )
 
 
 @dataclass
@@ -127,6 +179,27 @@ class CrossDocConfig:
     chunks_per_document: int = 1
     num_docs_per_combination: list = field(default_factory=lambda: [2, 5])
     random_seed: int = 42
+
+    def __post_init__(self):
+        valid_modes = {"open-ended", "multi-choice", ""}
+        mode = self.question_mode.strip().lower() if self.question_mode else ""
+        if mode and mode not in valid_modes:
+            raise ConfigValidationError(
+                f"question_mode must be 'open-ended' or 'multi-choice', got '{self.question_mode}'"
+            )
+        if self.max_combinations < 1:
+            raise ConfigValidationError(f"max_combinations must be >= 1, got {self.max_combinations}")
+        if self.chunks_per_document < 1:
+            raise ConfigValidationError(f"chunks_per_document must be >= 1, got {self.chunks_per_document}")
+        if not isinstance(self.num_docs_per_combination, list) or len(self.num_docs_per_combination) != 2:
+            raise ConfigValidationError(
+                f"num_docs_per_combination must be a list of 2 elements, got {self.num_docs_per_combination}"
+            )
+        min_docs, max_docs = self.num_docs_per_combination
+        if min_docs < 2:
+            raise ConfigValidationError(f"num_docs_per_combination[0] must be >= 2, got {min_docs}")
+        if max_docs < min_docs:
+            raise ConfigValidationError(f"num_docs_per_combination[1] ({max_docs}) must be >= [0] ({min_docs})")
 
 
 @dataclass
@@ -160,6 +233,12 @@ class CitationFilteringConfig:
     subset: str = "prepared_lighteval"
     alpha: float = 0.7
     beta: float = 0.3
+
+    def __post_init__(self):
+        if not (0.0 <= self.alpha <= 1.0):
+            raise ConfigValidationError(f"alpha must be in [0, 1], got {self.alpha}")
+        if not (0.0 <= self.beta <= 1.0):
+            raise ConfigValidationError(f"beta must be in [0, 1], got {self.beta}")
 
 
 @dataclass
