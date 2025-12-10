@@ -156,7 +156,7 @@ def _process_question_rewriting_responses(
                 "question_rewriting_rationale": rewritten.question_rewriting_rationale,
                 "raw_question_rewriting_response": response,
             })
-            
+
             # Ensure question_mode is present (required by QuestionRow but may be missing from older datasets)
             if "question_mode" not in new_row_dict:
                 new_row_dict["question_mode"] = "open-ended"  # Default for older datasets
@@ -195,7 +195,7 @@ def _process_question_type(
     """
     try:
         logger.info(f"Processing {question_type} questions...")
-        try: # skipping question rewriting if subset not found
+        try:  # skipping question rewriting if subset not found
             dataset = custom_load_dataset(config=config, subset=load_subset)
         except Exception as e:
             if "not found" in str(e).lower():
