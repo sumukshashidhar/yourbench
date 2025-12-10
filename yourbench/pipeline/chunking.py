@@ -9,7 +9,6 @@ from tqdm.auto import tqdm
 
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
-from yourbench.utils.configuration_engine import YourbenchConfig
 
 
 @cache
@@ -95,11 +94,11 @@ def _process_document(row: dict, cfg) -> tuple[list[dict], list[dict]]:
     return chunks, multihop_chunks
 
 
-def run(config: YourbenchConfig) -> None:
+def run(config) -> None:
     """Execute chunking pipeline stage."""
 
     logger.info("Starting chunking stage...")
-    cfg = config.pipeline_config.chunking
+    cfg = config.pipeline.chunking
 
     # Load dataset
     dataset = custom_load_dataset(config=config, subset="summarized")
@@ -117,7 +116,9 @@ def run(config: YourbenchConfig) -> None:
     # Add to dataset and save
     dataset = dataset.add_column("chunks", all_chunks)
     dataset = dataset.add_column("multihop_chunks", all_multihops)
-    custom_save_dataset(dataset=dataset, config=config, subset="chunked")
+    custom_save_dataset(
+        dataset=dataset, config=config, subset="chunked", push_to_hub=config.hf_configuration.push_to_hub
+    )
 
     # Log statistics
     total_chunks = sum(len(c) for c in all_chunks)

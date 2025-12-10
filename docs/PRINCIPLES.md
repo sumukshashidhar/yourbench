@@ -17,6 +17,10 @@ Under the hood, YourBench follows a multi-stage pipeline to turn raw documents i
 
 Throughout this process, **YourBench ensures the questions are grounded in your provided documents**, rather than what an LLM might already know. By using documents (and even an optional fresh document dataset like *Tempora-0325* for time-sensitive topics), the pipeline minimizes reliance on a model’s parametric memory, yielding more truthful and up-to-date evaluation queries.
 
+Want to understand **how to configure the pipeline?** Check out the [Configuration Guide](./CONFIGURATION.md).
+
+Want to know more about the **columns in the output dataset?** Check out the [Dataset Columns](./DATASET_COLUMNS_DESCRIPTION.md).
+
 
 ## Highlights
 

@@ -4,9 +4,7 @@ import math
 import random
 import shutil
 import tempfile
-
-# TYPE_CHECKING import to avoid circular imports
-from typing import TYPE_CHECKING, Any, Set, List, Union, TypeVar, Sequence
+from typing import Any, Set, List, TypeVar, Sequence
 from pathlib import Path
 from contextlib import suppress
 from dataclasses import dataclass
@@ -16,10 +14,6 @@ from loguru import logger
 from datasets import Dataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from huggingface_hub import HfApi, DatasetCard, DatasetCardData, whoami
 from huggingface_hub.utils import HFValidationError
-
-
-if TYPE_CHECKING:
-    from yourbench.utils.configuration_engine import YourbenchConfig
 
 
 __all__ = ["custom_load_dataset", "custom_save_dataset", "upload_dataset_card"]
@@ -67,65 +61,42 @@ def _expand_var(value: str, field: str) -> str:
     return value
 
 
-def _extract_settings(config: Union[dict[str, Any], "YourbenchConfig"]) -> HFSettings:
-    """Parse and validate configuration."""
-    # Handle both dict and YourbenchConfig
-    from yourbench.utils.configuration_engine import is_yourbench_config
+def _extract_settings(config) -> HFSettings:
+    """Parse and validate configuration (OmegaConf DictConfig or dict)."""
+    # Get hf_configuration - works with both attribute and dict access
+    hf = config.hf_configuration
+    if not hf:
+        raise ConfigurationError("'hf_configuration' section missing")
 
-    if is_yourbench_config(config):
-        # YourbenchConfig dataclass
-        hf = config.hf_configuration
-        dataset_name = _expand_var(hf.hf_dataset_name, "hf_dataset_name")
-        org_raw = hf.hf_organization
-        token = hf.hf_token or os.getenv("HF_TOKEN")
-        organization = _resolve_organization(org_raw, token)
-        local_dir = hf.local_dataset_dir
-        if local_dir and not isinstance(local_dir, Path):
-            local_dir = Path(local_dir).expanduser().resolve()
-        jsonl_export_dir = hf.jsonl_export_dir
-        if jsonl_export_dir and not isinstance(jsonl_export_dir, Path):
-            jsonl_export_dir = Path(jsonl_export_dir).expanduser().resolve()
-        return HFSettings(
-            dataset_name=dataset_name,
-            organization=organization,
-            token=token,
-            local_dir=local_dir,
-            concat_if_exist=hf.concat_if_exist,
-            private=hf.private,
-            export_jsonl=hf.export_jsonl,
-            jsonl_export_dir=jsonl_export_dir,
-        )
-    else:
-        # Legacy dict format
-        if "hf_configuration" not in config:
-            raise ConfigurationError("'hf_configuration' section missing")
+    # Helper to get value from hf config (supports both dict and DictConfig)
+    def get_val(key, default=None):
+        return getattr(hf, key, default)
 
-        hf = config["hf_configuration"]
-        if "hf_dataset_name" not in hf:
-            raise ConfigurationError("'hf_dataset_name' required")
+    dataset_name = get_val("hf_dataset_name", "")
+    if not dataset_name:
+        raise ConfigurationError("'hf_dataset_name' required")
+    dataset_name = _expand_var(dataset_name, "hf_dataset_name")
 
-        dataset_name = _expand_var(hf["hf_dataset_name"], "hf_dataset_name")
-        org_raw = hf.get("hf_organization")
-        token = hf.get("token") or os.getenv("HF_TOKEN")
+    org_raw = get_val("hf_organization", "")
+    token = get_val("hf_token", "") or os.getenv("HF_TOKEN")
+    organization = _resolve_organization(org_raw, token)
 
-        organization = _resolve_organization(org_raw, token)
+    local_raw = get_val("local_dataset_dir")
+    local_dir = Path(local_raw).expanduser().resolve() if local_raw else None
 
-        local_raw = config.get("local_dataset_dir") or hf.get("local_dataset_dir")
-        local_dir = Path(local_raw).expanduser().resolve() if local_raw else None
+    jsonl_raw = get_val("jsonl_export_dir")
+    jsonl_dir = Path(jsonl_raw).expanduser().resolve() if jsonl_raw else None
 
-        jsonl_export_raw = hf.get("jsonl_export_dir")
-        jsonl_export_dir = Path(jsonl_export_raw).expanduser().resolve() if jsonl_export_raw else None
-
-        return HFSettings(
-            dataset_name=dataset_name,
-            organization=organization,
-            token=token,
-            local_dir=local_dir,
-            concat_if_exist=hf.get("concat_if_exist", False),
-            private=hf.get("private", True),
-            export_jsonl=hf.get("export_jsonl", False),
-            jsonl_export_dir=jsonl_export_dir,
-        )
+    return HFSettings(
+        dataset_name=dataset_name,
+        organization=organization,
+        token=token,
+        local_dir=local_dir,
+        concat_if_exist=get_val("concat_if_exist", False),
+        private=get_val("private", True),
+        export_jsonl=get_val("export_jsonl", False),
+        jsonl_export_dir=jsonl_dir,
+    )
 
 
 def _resolve_organization(org: str | None, token: str | None) -> str | None:
@@ -312,12 +283,24 @@ def _export_to_jsonl(dataset: Dataset | DatasetDict, export_dir: Path, subset: s
         logger.info(f"Created index file: {index_path}")
 
 
-def custom_load_dataset(config: Union[dict[str, Any], "YourbenchConfig"], subset: str | None = None) -> Dataset:
+def custom_load_dataset(config: Any, subset: str | None = None) -> Dataset:
     """Load dataset subset from local path or Hub. Raises errors if data missing or invalid."""
     settings = _extract_settings(config)
 
-    if settings.local_dir and settings.local_dir.exists():
-        return _load_local(settings.local_dir, subset)
+    if settings.local_dir:
+        local_dir = settings.local_dir
+        try:
+            local_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.warning(f"Could not ensure local dataset dir exists: {e}")
+
+        if local_dir.exists() and any(local_dir.iterdir()):
+            try:
+                return _load_local(local_dir, subset)
+            except Exception as e:
+                logger.warning(f"Failed to load local dataset '{local_dir}': {e}. Will try remote.")
+        else:
+            logger.info(f"Local dataset dir '{local_dir}' is empty; will treat this run as fresh.")
 
     if _is_offline():
         raise RuntimeError("Offline mode enabled but no local dataset found")
@@ -328,7 +311,7 @@ def custom_load_dataset(config: Union[dict[str, Any], "YourbenchConfig"], subset
 
 def custom_save_dataset(
     dataset: Dataset,
-    config: Union[dict[str, Any], "YourbenchConfig"],
+    config: Any,
     subset: str | None = None,
     *,
     save_local: bool = True,
@@ -512,51 +495,12 @@ def create_cross_document_dataset(dataset: Dataset, stage_cfg: dict[str, Any]) -
         A new Dataset with cross-document combinations, preserving a similar schema but with an aggregated summary.
     """
     # Extract and validate configuration
-    max_combinations = int(
-        getattr(stage_cfg, "max_combinations", 100)
-        if hasattr(stage_cfg, "max_combinations")
-        else stage_cfg.get("max_combinations", 100)
-        if isinstance(stage_cfg, dict)
-        else 100
-    )
-    chunks_per_document = int(
-        getattr(stage_cfg, "chunks_per_document", 1)
-        if hasattr(stage_cfg, "chunks_per_document")
-        else stage_cfg.get("chunks_per_document", 1)
-        if isinstance(stage_cfg, dict)
-        else 1
-    )
-    num_docs_range = (
-        getattr(stage_cfg, "num_docs_per_combination", [2, 5])
-        if hasattr(stage_cfg, "num_docs_per_combination")
-        else stage_cfg.get("num_docs_per_combination", [2, 5])
-        if isinstance(stage_cfg, dict)
-        else [2, 5]
-    )
-    random_seed = int(
-        getattr(stage_cfg, "random_seed", 42)
-        if hasattr(stage_cfg, "random_seed")
-        else stage_cfg.get("random_seed", 42)
-        if isinstance(stage_cfg, dict)
-        else 42
-    )
+    max_combinations = stage_cfg.max_combinations
+    chunks_per_document = stage_cfg.chunks_per_document
+    num_docs_range = stage_cfg.num_docs_per_combination
+    random_seed = stage_cfg.random_seed
 
-    # Validate num_docs_range
-    if not isinstance(num_docs_range, list) or len(num_docs_range) != 2:
-        raise ValueError("num_docs_per_combination must be a list of exactly 2 integers")
-
-    if not all(isinstance(x, int) for x in num_docs_range):
-        raise ValueError("num_docs_per_combination must contain only integers")
-
-    min_docs, max_docs = num_docs_range[0], num_docs_range[1]
-
-    if min_docs < 2:
-        raise ValueError("min_docs must be at least 2 for cross-document combinations")
-    if max_docs < min_docs:
-        raise ValueError("max_docs must be >= min_docs")
-
-    if chunks_per_document < 1:
-        raise ValueError("chunks_per_document must be at least 1")
+    min_docs, max_docs = num_docs_range
 
     # Check for required column
     if "multihop_chunks" not in dataset.column_names:
@@ -804,7 +748,7 @@ def extract_dataset_info(repo_id: str, token: str | None = None) -> str:
         return ""
 
 
-def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"]) -> str:
+def _serialize_config_for_card(config: Any) -> str:
     """
     Sanitize and serialize pipeline config to YAML for inclusion in dataset card.
     """
@@ -815,7 +759,7 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
     from copy import deepcopy
 
     # Load default prompts to compare against
-    from yourbench.utils.configuration_engine import _load_prompt_from_package
+    from yourbench.conf.prompts import load_prompt_from_package as _load_prompt_from_package
 
     # Map of prompt fields to their default package paths
     default_prompt_paths = {
@@ -892,13 +836,6 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             return sanitized_dict if sanitized_dict else None
 
         if isinstance(obj, list):
-            # Handle model_list specially
-            if key == "model_list" and all(isinstance(item, dict) for item in obj):
-                # Check if all models are the same
-                model_names = [item.get("model_name") for item in obj if item.get("model_name")]
-                if len(set(model_names)) <= 1:
-                    # All models are the same or only one model, skip the list
-                    return None
             return [_sanitize(v, key, parent_key) for v in obj]
 
         if isinstance(obj, Path):
@@ -919,21 +856,11 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             if key and "prompt" in key.lower():
                 # Check if it's a default prompt
                 if _is_default_prompt(obj, key):
-                    # Return the filename/path instead of the content
-                    if key in default_prompt_paths:
-                        return f"yourbench/prompts/{default_prompt_paths[key]}"
-                    else:
-                        return "<default_prompt>"
+                    # Return None to filter out default prompts entirely
+                    return None
 
-                # For custom prompts, check if it's a file path or inline content
-                if "\n" in obj or len(obj) > 300:
-                    # It's inline content, keep first line and indicate it's custom
-                    first_line = obj.split("\n")[0][:50]
-                    return f"<custom_prompt: {first_line}...>"
-
-                # If it looks like a file path, make it relative
-                if any(ext in obj for ext in [".md", ".txt", ".prompt"]):
-                    return _make_relative_path(obj)
+                # All non-default prompts are custom
+                return f"custom_{key}.md"
 
             # Mask api_key arguments
             if key and "api_key" in key.lower():
@@ -944,6 +871,9 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             # Mask HuggingFace tokens
             if obj.startswith("hf_"):
                 return "$HF_TOKEN"
+            # Mask HF organization/username in hf_organization field
+            if key == "hf_organization" and not obj.startswith("$"):
+                return "$HF_ORGANISATION"
             return obj
 
         # Explicitly return boolean, integer, float values unchanged
@@ -956,14 +886,19 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
 
         return obj
 
-    # Convert YourbenchConfig to dict if needed
-    from yourbench.utils.configuration_engine import is_yourbench_config
+    # Convert config to dict for serialization
+    from omegaconf import OmegaConf, DictConfig
 
-    if is_yourbench_config(config):
-        # Convert YourbenchConfig Pydantic model to dict format for serialization
+    if isinstance(config, DictConfig):
+        config_dict = OmegaConf.to_container(config, resolve=True)
+    elif hasattr(config, "model_dump"):
         config_dict = config.model_dump()
+    elif hasattr(config, "__dataclass_fields__"):
+        from dataclasses import asdict
+
+        config_dict = {k: v for k, v in asdict(config).items() if not k.startswith("_")}
     else:
-        config_dict = config
+        config_dict = dict(config) if hasattr(config, "items") else config
 
     # First pass sanitization
     sanitized = _sanitize(deepcopy(config_dict))
@@ -995,14 +930,33 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
             "local_saving": True,
             "upload_card": True,
             "export_jsonl": False,
+            "local_dataset_dir": "data/saved_dataset",
+            "jsonl_export_dir": "data/jsonl_export",
         }
         for key, default_value in defaults_to_remove.items():
             if key in hf_config and hf_config[key] == default_value:
                 del hf_config[key]
 
+    # Filter out default values from model_list
+    if "model_list" in sanitized:
+        model_list = sanitized["model_list"]
+        if isinstance(model_list, list):
+            for model in model_list:
+                if isinstance(model, dict):
+                    # Remove model-level defaults
+                    model_defaults = {
+                        "max_concurrent_requests": 32,
+                        "encoding_name": "cl100k_base",
+                    }
+                    for key, default_value in model_defaults.items():
+                        if key in model and model[key] == default_value:
+                            del model[key]
+
     # Filter out default values from pipeline stages
-    if "pipeline_config" in sanitized:
-        pipeline = sanitized["pipeline_config"]
+    # Handle both 'pipeline' and 'pipeline_config' keys for backward compatibility
+    pipeline_key = "pipeline_config" if "pipeline_config" in sanitized else "pipeline"
+    if pipeline_key in sanitized:
+        pipeline = sanitized[pipeline_key]
         # Remove stages that are not enabled
         stages_to_remove = []
         for stage, stage_config in pipeline.items():
@@ -1029,6 +983,15 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
                     "h_min": 2,
                     "h_max": 5,
                     "num_multihops_factor": 1,
+                    # Cross-document defaults
+                    "max_combinations": 100,
+                    "chunks_per_document": 1,
+                    "num_docs_per_combination": [2, 5],
+                    "random_seed": 42,
+                    # Citation filtering defaults
+                    "subset": "prepared_lighteval",
+                    "alpha": 0.7,
+                    "beta": 0.3,
                     # Question generation defaults
                     "question_mode": "open-ended",
                     # Default file extensions
@@ -1073,10 +1036,27 @@ def _serialize_config_for_card(config: Union[dict[str, Any], "YourbenchConfig"])
     if sanitized.get("debug") is False:
         del sanitized["debug"]
 
-    return yaml.safe_dump(sanitized, sort_keys=False, default_flow_style=False)
+    # Rename pipeline_config to pipeline for YAML compatibility
+    if "pipeline_config" in sanitized:
+        sanitized["pipeline"] = sanitized.pop("pipeline_config")
+
+    # Reorder sections: hf_configuration, model_list, model_roles, pipeline, then everything else
+    ordered_config = {}
+    if "hf_configuration" in sanitized:
+        ordered_config["hf_configuration"] = sanitized.pop("hf_configuration")
+    if "model_list" in sanitized:
+        ordered_config["model_list"] = sanitized.pop("model_list")
+    if "model_roles" in sanitized:
+        ordered_config["model_roles"] = sanitized.pop("model_roles")
+    if "pipeline" in sanitized:
+        ordered_config["pipeline"] = sanitized.pop("pipeline")
+    # Add remaining sections
+    ordered_config.update(sanitized)
+
+    return yaml.safe_dump(ordered_config, sort_keys=False, default_flow_style=False)
 
 
-def _get_pipeline_subset_info(config: Union[dict[str, Any], "YourbenchConfig"]) -> str:
+def _get_pipeline_subset_info(config: Any) -> str:
     """
     Generate a formatted markdown list of enabled pipeline stages with descriptions.
     The resulting markdown is used in the dataset card to document
@@ -1101,41 +1081,29 @@ def _get_pipeline_subset_info(config: Union[dict[str, Any], "YourbenchConfig"]) 
         "lighteval": "Merge QA pairs and chunk metadata into a lighteval compatible dataset for quick model-based scoring",
         "citation_score_filtering": "Compute overlap-based citation scores and filter QA pairs accordingly",
     }
-    # Handle both dict and YourbenchConfig
-    from yourbench.utils.configuration_engine import is_yourbench_config
-
-    if is_yourbench_config(config):
-        # YourbenchConfig dataclass
-        pipeline_config = config.pipeline_config
-        lines = []
-        for stage_name in [
-            "ingestion",
-            "summarization",
-            "chunking",
-            "single_shot_question_generation",
-            "multi_hop_question_generation",
-            "question_rewriting",
-            "lighteval",
-            "citation_score_filtering",
-        ]:
-            stage_config = getattr(pipeline_config, stage_name, None)
-            if stage_config and getattr(stage_config, "run", False):
+    # Get pipeline config - supports both attribute and dict access
+    pipeline = config.pipeline
+    lines = []
+    for stage_name in [
+        "ingestion",
+        "summarization",
+        "chunking",
+        "single_shot_question_generation",
+        "multi_hop_question_generation",
+        "question_rewriting",
+        "lighteval",
+        "citation_score_filtering",
+    ]:
+        stage_cfg = getattr(pipeline, stage_name, None)
+        if stage_cfg:
+            is_enabled = stage_cfg.run if stage_cfg else False
+            if is_enabled:
                 desc = mapping.get(stage_name, stage_name.replace("_", " ").title())
                 lines.append(f"- **{stage_name}**: {desc}")
-    else:
-        # Legacy dict format
-        pipeline = config.get("pipeline", {})
-        lines = []
-        for stage, cfg in pipeline.items():
-            if isinstance(cfg, dict) and cfg.get("run"):
-                desc = mapping.get(stage, stage.replace("_", " ").title())
-                lines.append(f"- **{stage}**: {desc}")
     return "\n".join(lines)
 
 
-def _generate_and_upload_dataset_card(
-    config: Union[dict[str, Any], "YourbenchConfig"], template_path: str | None = None
-) -> None:
+def _generate_and_upload_dataset_card(config: Any, template_path: str | None = None) -> None:
     """
     Internal implementation that generates and uploads a dataset card to Hugging Face Hub.
 
@@ -1188,29 +1156,16 @@ def _generate_and_upload_dataset_card(
         config_data = extract_dataset_info(repo_id=dataset_repo_name, token=token)
         logger.info(f"Extracted dataset_info section, length: {len(config_data) if config_data else 0} characters")
 
-        # Use explicitly configured pretty_name or generate one from the dataset name
-        from yourbench.utils.configuration_engine import is_yourbench_config
+        # Get hf_configuration (supports both attribute and dict access)
+        hf_config = config.hf_configuration
 
-        if is_yourbench_config(config):
-            # YourbenchConfig dataclass
-            hf_config = config.hf_configuration
-            pretty_name = getattr(hf_config, "pretty_name", None)
-            if not pretty_name:
-                dataset_name = dataset_repo_name.split("/")[-1]
-                pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
-        else:
-            # Legacy dict format
-            hf_config = config.get("hf_configuration", {})
-            if "pretty_name" in hf_config:
-                pretty_name = hf_config["pretty_name"]
-            else:
-                dataset_name = dataset_repo_name.split("/")[-1]
-                pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
+        # Get pretty_name or generate from dataset name
+        pretty_name = getattr(hf_config, "pretty_name", None)
+        if not pretty_name:
+            dataset_name = dataset_repo_name.split("/")[-1]
+            pretty_name = dataset_name.replace("-", " ").replace("_", " ").title()
 
-        card_data_kwargs = {"pretty_name": pretty_name}
-
-        # Create DatasetCardData with our metadata
-        card_data = DatasetCardData(**card_data_kwargs)
+        card_data = DatasetCardData(pretty_name=pretty_name)
         logger.info(f"Created card data with pretty_name: {card_data.pretty_name}")
 
         # Get YourBench version
@@ -1219,8 +1174,12 @@ def _generate_and_upload_dataset_card(
         try:
             version_str = version("yourbench")
         except PackageNotFoundError:
-            # Fallback for development installs
             version_str = "dev"
+
+        # Get footer
+        footer = getattr(hf_config, "footer", None)
+        if not footer:
+            footer = "*(This dataset card was automatically generated by YourBench)*"
 
         # Prepare template variables
         template_vars = {
@@ -1228,10 +1187,8 @@ def _generate_and_upload_dataset_card(
             "yourbench_version": version_str,
             "config_yaml": _serialize_config_for_card(config),
             "pipeline_subsets": _get_pipeline_subset_info(config),
-            "config_data": config_data,  # Use the extracted dataset_info section
-            "footer": getattr(hf_config, "footer", "*(This dataset card was automatically generated by YourBench)*")
-            if is_yourbench_config(config)
-            else hf_config.get("footer", "*(This dataset card was automatically generated by YourBench)*"),
+            "config_data": config_data,
+            "footer": footer,
         }
 
         logger.info("Rendering dataset card from template")
@@ -1254,7 +1211,7 @@ def _generate_and_upload_dataset_card(
         logger.exception("Full traceback:")
 
 
-def upload_dataset_card(config: Union[dict[str, Any], "YourbenchConfig"]) -> None:
+def upload_dataset_card(config: Any) -> None:
     """
     Public interface to generate and upload a dataset card to Hugging Face Hub.
 
@@ -1268,16 +1225,10 @@ def upload_dataset_card(config: Union[dict[str, Any], "YourbenchConfig"]) -> Non
     """
     try:
         # Check if card upload is enabled in config
-        from yourbench.utils.configuration_engine import is_yourbench_config
-
-        if is_yourbench_config(config):
-            # YourbenchConfig dataclass
-            hf_config = config.hf_configuration
-            upload_card = getattr(hf_config, "upload_card", True)
-        else:
-            # Legacy dict format
-            hf_config = config.get("hf_configuration", {})
-            upload_card = hf_config.get("upload_card", True)
+        hf_config = config.hf_configuration
+        upload_card = getattr(hf_config, "upload_card", True)
+        if upload_card is None:
+            upload_card = True
 
         if not upload_card:
             logger.info("Dataset card upload disabled in configuration. Skipping card upload.")

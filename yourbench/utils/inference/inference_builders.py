@@ -90,11 +90,7 @@ def build_single_shot_inference_calls(dataset, system_msg, stage_cfg, sampling_c
                         continue
 
                     # Get additional instructions with fallback
-                    additional_instructions = ""
-                    if hasattr(stage_cfg, "additional_instructions"):
-                        additional_instructions = stage_cfg.additional_instructions
-                    elif isinstance(stage_cfg, dict):
-                        additional_instructions = stage_cfg.get("additional_instructions", "")
+                    additional_instructions = stage_cfg.additional_instructions
 
                     user_msg = {
                         "role": "user",
@@ -121,8 +117,8 @@ def build_single_shot_inference_calls(dataset, system_msg, stage_cfg, sampling_c
                     call = InferenceCall(
                         messages=[system_msg, user_msg],
                         tags=tags,
-                        temperature=getattr(stage_cfg, "temperature", None),
-                        max_retries=getattr(stage_cfg, "max_retries", 12),
+                        temperature=stage_cfg.temperature if hasattr(stage_cfg, "temperature") else None,
+                        max_retries=stage_cfg.max_retries if hasattr(stage_cfg, "max_retries") else 12,
                     )
 
                     calls.append(call)
@@ -193,11 +189,7 @@ def build_multi_hop_inference_calls(dataset, system_msg, stage_cfg):
                 continue
 
             # Get chunk sampling configuration
-            chunk_sampling = {}
-            if hasattr(stage_cfg, "chunk_sampling"):
-                chunk_sampling = stage_cfg.chunk_sampling
-            elif isinstance(stage_cfg, dict):
-                chunk_sampling = stage_cfg.get("chunk_sampling", {})
+            chunk_sampling = stage_cfg.chunk_sampling if hasattr(stage_cfg, "chunk_sampling") else {}
 
             groups = sample_multihop_groups(multihop_chunks, chunk_sampling)
 
@@ -222,11 +214,7 @@ def build_multi_hop_inference_calls(dataset, system_msg, stage_cfg):
                     full_text = "".join([f"<text_chunk_{i}>{t}</text_chunk_{i}>\n" for i, t in enumerate(texts)])
 
                     # Get additional instructions with fallback
-                    additional_instructions = ""
-                    if hasattr(stage_cfg, "additional_instructions"):
-                        additional_instructions = stage_cfg.additional_instructions
-                    elif isinstance(stage_cfg, dict):
-                        additional_instructions = stage_cfg.get("additional_instructions", "")
+                    additional_instructions = stage_cfg.additional_instructions
 
                     user_msg = {
                         "role": "user",
@@ -262,8 +250,8 @@ def build_multi_hop_inference_calls(dataset, system_msg, stage_cfg):
                     call = InferenceCall(
                         messages=[system_msg, user_msg],
                         tags=tags,
-                        temperature=getattr(stage_cfg, "temperature", None),
-                        max_retries=getattr(stage_cfg, "max_retries", 12),
+                        temperature=stage_cfg.temperature if hasattr(stage_cfg, "temperature") else None,
+                        max_retries=stage_cfg.max_retries if hasattr(stage_cfg, "max_retries") else 12,
                     )
 
                     calls.append(call)

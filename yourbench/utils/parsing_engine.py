@@ -263,6 +263,9 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
                 continue
 
             for pair in parsed_qa_pairs:
+                if not isinstance(pair, dict):
+                    logger.debug(f"Skipping non-dict item in single-shot response: {type(pair)}")
+                    continue
                 try:
                     pair = shuffle_mcq(pair)
                     pair["question_mode"] = question_mode
@@ -288,11 +291,7 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
                             chunk_id=index_map[i][2],
                             source_chunk_ids=None,
                             document_id=index_map[i][1],
-                            additional_instructions=getattr(stage_cfg, "additional_instructions", "")
-                            if hasattr(stage_cfg, "additional_instructions")
-                            else stage_cfg.get("additional_instructions", "")
-                            if isinstance(stage_cfg, dict)
-                            else "",
+                            additional_instructions=stage_cfg.additional_instructions,
                             question=str(pair.get("question", "")).strip(),
                             self_answer=str(pair.get("answer", "")).strip(),
                             choices=choices,
@@ -330,6 +329,9 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
         for i, raw in enumerate(replies):
             parsed = parse_qa_pairs_from_response(raw)
             for pair in parsed:
+                if not isinstance(pair, dict):
+                    logger.debug(f"Skipping non-dict item in multi-hop response: {type(pair)}")
+                    continue
                 try:
                     pair = shuffle_mcq(pair)
                     pair["question_mode"] = question_mode
@@ -355,11 +357,7 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
                             chunk_id=None,
                             source_chunk_ids=index_map[i][2],
                             document_id=index_map[i][1],
-                            additional_instructions=getattr(stage_cfg, "additional_instructions", "")
-                            if hasattr(stage_cfg, "additional_instructions")
-                            else stage_cfg.get("additional_instructions", "")
-                            if isinstance(stage_cfg, dict)
-                            else "",
+                            additional_instructions=stage_cfg.additional_instructions,
                             question=str(pair.get("question", "")).strip(),
                             self_answer=str(pair.get("answer", "")).strip(),
                             choices=choices,
