@@ -26,21 +26,19 @@ class TestQuestionRewritingFixes(unittest.TestCase):
 
     def test_inference_call_receives_flat_tags(self):
         """Test that InferenceCall receives tags as flat list, not nested.
-        
+
         This test verifies the fix for issue #178 where tags=[STAGE_TAG] created
         a nested list [["question_rewriting"]] instead of ["question_rewriting"],
         causing "sequence item 0: expected str instance, list found" error.
         """
-        dataset = Dataset.from_list(
-            [
-                {
-                    "question": "What is the capital?",
-                    "chunks": "Paris is the capital.",
-                    "document_summary": "Summary",
-                    "self_answer": "Paris",
-                }
-            ]
-        )
+        dataset = Dataset.from_list([
+            {
+                "question": "What is the capital?",
+                "chunks": "Paris is the capital.",
+                "document_summary": "Summary",
+                "self_answer": "Paris",
+            }
+        ])
 
         calls, indices = _build_question_rewriting_calls(
             dataset=dataset,
@@ -59,7 +57,7 @@ class TestQuestionRewritingFixes(unittest.TestCase):
 
     def test_question_mode_default_for_missing_field(self):
         """Test that question_mode defaults to 'open-ended' when missing from dataset.
-        
+
         This test verifies the fix where older datasets don't have question_mode field,
         causing QuestionRow validation to fail. The fix adds a default value before
         creating the QuestionRow object.
@@ -69,23 +67,21 @@ class TestQuestionRewritingFixes(unittest.TestCase):
 
         # Original dataset WITHOUT question_mode field (simulating old datasets)
         # Include all required QuestionRow fields
-        original_dataset = Dataset.from_list(
-            [
-                {
-                    "document_id": "doc1",
-                    "additional_instructions": "Test instructions",
-                    "question": "What is capital?",
-                    "self_answer": "Paris",
-                    "estimated_difficulty": 5,
-                    "self_assessed_question_type": "factual",
-                    "generating_model": "test-model",
-                    "thought_process": "Test thought",
-                    "raw_response": "Test response",
-                    "chunk_id": "chunk1",  # Required - either chunk_id or source_chunk_ids
-                    # Note: question_mode is missing - this is the bug we're fixing
-                }
-            ]
-        )
+        original_dataset = Dataset.from_list([
+            {
+                "document_id": "doc1",
+                "additional_instructions": "Test instructions",
+                "question": "What is capital?",
+                "self_answer": "Paris",
+                "estimated_difficulty": 5,
+                "self_assessed_question_type": "factual",
+                "generating_model": "test-model",
+                "thought_process": "Test thought",
+                "raw_response": "Test response",
+                "chunk_id": "chunk1",  # Required - either chunk_id or source_chunk_ids
+                # Note: question_mode is missing - this is the bug we're fixing
+            }
+        ])
 
         # Process responses - should not raise validation error
         rewritten_rows = _process_question_rewriting_responses(responses, indices, original_dataset)
@@ -95,7 +91,7 @@ class TestQuestionRewritingFixes(unittest.TestCase):
 
         # Verify the question was actually rewritten
         self.assertEqual(rewritten_rows[0]["question"], "What is the capital city?")
-        
+
         # Note: question_mode is NOT in to_dict() output, but it was used during validation
         # The important thing is that the row was processed successfully
 
@@ -104,7 +100,7 @@ class TestQuestionRewritingFixes(unittest.TestCase):
     @patch("yourbench.pipeline.question_rewriting.custom_save_dataset")
     def test_graceful_handling_missing_subset(self, mock_save, mock_inference, mock_load):
         """Test that missing subset is handled gracefully without crashing.
-        
+
         This test verifies the fix where multi_hop_questions subset might not exist
         in some datasets, and the pipeline should skip gracefully instead of crashing.
         """
@@ -145,7 +141,7 @@ class TestQuestionRewritingFixes(unittest.TestCase):
     @patch("yourbench.pipeline.question_rewriting.custom_load_dataset")
     def test_other_exceptions_are_caught_by_outer_handler(self, mock_load):
         """Test that non-missing-subset exceptions are caught by outer try-except.
-        
+
         Note: The function has an outer try-except that catches all exceptions
         and logs them, so even non-'not found' exceptions won't be raised.
         This test verifies that the inner try-except only catches 'not found' errors,
