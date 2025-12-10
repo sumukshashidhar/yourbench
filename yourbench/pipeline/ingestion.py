@@ -96,6 +96,9 @@ def _convert_file(file_path: Path, config, processor: MarkItDown) -> str | None:
     if file_ext == ".md":
         return file_path.read_text(encoding="utf-8")
 
+    if file_ext in {".txt", ".text"}:
+        return file_path.read_text(encoding="utf-8")
+
     if file_ext in {".html", ".htm"}:
         if content := _extract_html(file_path):
             return content
