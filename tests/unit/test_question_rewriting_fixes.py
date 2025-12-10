@@ -8,13 +8,14 @@ These tests verify:
 
 import unittest
 from unittest.mock import Mock, patch
+
+from datasets import Dataset
 from yourbench.pipeline.question_rewriting import (
+    STAGE_TAG,
+    _process_question_type,
     _build_question_rewriting_calls,
     _process_question_rewriting_responses,
-    _process_question_type,
-    STAGE_TAG,
 )
-from datasets import Dataset
 
 
 class TestQuestionRewritingFixes(unittest.TestCase):
