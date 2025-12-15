@@ -11,6 +11,7 @@ from yourbench.utils.parsing_engine import (
     _remove_duplicate_questions,
     parse_single_shot_responses,
 )
+from yourbench.utils.logging_context import log_step, log_stage
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,
@@ -69,25 +70,37 @@ def _save_questions(rows: list[dict], config, subset: str) -> None:
 
 def run_single_shot(config) -> None:
     """Generate single-hop questions from individual chunks."""
-    if not (stage_cfg := config.pipeline.single_shot_question_generation).run:
-        logger.info("single_shot_question_generation disabled")
-        return
+    with log_stage("single_shot_generation"):
+        if not (stage_cfg := config.pipeline.single_shot_question_generation).run:
+            logger.info("single_shot_question_generation disabled")
+            return
 
-    mode = stage_cfg.question_mode.strip().lower() if stage_cfg.question_mode else "open-ended"
-    if mode not in {"open-ended", "multi-choice"}:
-        logger.warning(f"Invalid question_mode '{mode}', defaulting to 'open-ended'")
-        mode = "open-ended"
-    logger.info(f"Single-shot mode: {mode}")
+        mode = stage_cfg.question_mode.strip().lower() if stage_cfg.question_mode else "open-ended"
+        if mode not in {"open-ended", "multi-choice"}:
+            logger.warning(f"Invalid question_mode '{mode}', defaulting to 'open-ended'")
+            mode = "open-ended"
+        logger.info(f"Single-shot mode: {mode}")
 
-    system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode)}
-    dataset = custom_load_dataset(config=config, subset="chunked")
+        system_msg = {"role": "system", "content": _get_system_prompt(stage_cfg, mode)}
 
-    responses, index_map = _build_and_run_inference(
-        dataset, system_msg, stage_cfg, build_single_shot_inference_calls, "single_shot_question_generation", config
-    )
+        with log_step("loading_dataset"):
+            dataset = custom_load_dataset(config=config, subset="chunked")
+            logger.debug(f"Loaded {len(dataset) if dataset else 0} documents")
 
-    if rows := parse_single_shot_responses(responses, index_map, stage_cfg):
-        _save_questions(rows, config, "single_shot_questions")
+        with log_step("generating_questions"):
+            responses, index_map = _build_and_run_inference(
+                dataset,
+                system_msg,
+                stage_cfg,
+                build_single_shot_inference_calls,
+                "single_shot_question_generation",
+                config,
+            )
+
+        with log_step("saving_questions"):
+            if rows := parse_single_shot_responses(responses, index_map, stage_cfg):
+                _save_questions(rows, config, "single_shot_questions")
+                logger.info(f"Saved {len(rows)} single-shot questions")
 
 
 def run_multi_hop(config) -> None:

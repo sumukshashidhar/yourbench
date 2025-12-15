@@ -9,6 +9,7 @@ from tqdm.auto import tqdm
 
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.logging_context import log_step, log_stage
 
 
 @cache
@@ -97,30 +98,34 @@ def _process_document(row: dict, cfg) -> tuple[list[dict], list[dict]]:
 def run(config) -> None:
     """Execute chunking pipeline stage."""
 
-    logger.info("Starting chunking stage...")
-    cfg = config.pipeline.chunking
+    with log_stage("chunking"):
+        logger.info("Starting chunking stage...")
+        cfg = config.pipeline.chunking
 
-    # Load dataset
-    dataset = custom_load_dataset(config=config, subset="summarized")
-    logger.info(f"Processing {len(dataset)} documents")
+        # Load dataset
+        with log_step("loading_dataset"):
+            dataset = custom_load_dataset(config=config, subset="summarized")
+            logger.info(f"Processing {len(dataset)} documents")
 
-    # Process all documents
-    all_chunks = []
-    all_multihops = []
+        # Process all documents
+        all_chunks = []
+        all_multihops = []
 
-    for row in tqdm(dataset, desc="Chunking"):
-        chunks, multihops = _process_document(row, cfg)
-        all_chunks.append(chunks)
-        all_multihops.append(multihops)
+        with log_step("chunking_documents", num_docs=len(dataset)):
+            for row in tqdm(dataset, desc="Chunking"):
+                chunks, multihops = _process_document(row, cfg)
+                all_chunks.append(chunks)
+                all_multihops.append(multihops)
 
-    # Add to dataset and save
-    dataset = dataset.add_column("chunks", all_chunks)
-    dataset = dataset.add_column("multihop_chunks", all_multihops)
-    custom_save_dataset(
-        dataset=dataset, config=config, subset="chunked", push_to_hub=config.hf_configuration.push_to_hub
-    )
+        # Add to dataset and save
+        with log_step("saving_chunked_dataset"):
+            dataset = dataset.add_column("chunks", all_chunks)
+            dataset = dataset.add_column("multihop_chunks", all_multihops)
+            custom_save_dataset(
+                dataset=dataset, config=config, subset="chunked", push_to_hub=config.hf_configuration.push_to_hub
+            )
 
-    # Log statistics
-    total_chunks = sum(len(c) for c in all_chunks)
-    total_multihop = sum(len(m) for m in all_multihops)
-    logger.success(f"Chunking complete: {total_chunks} chunks, {total_multihop} multihop combinations")
+            # Log statistics
+            total_chunks = sum(len(c) for c in all_chunks)
+            total_multihop = sum(len(m) for m in all_multihops)
+            logger.success(f"Chunking complete: {total_chunks} chunks, {total_multihop} multihop combinations")

@@ -12,6 +12,7 @@ from markitdown import MarkItDown
 from datasets import Dataset
 from huggingface_hub import InferenceClient
 from yourbench.utils.dataset_engine import custom_save_dataset
+from yourbench.utils.logging_context import log_step, log_stage, log_progress
 from yourbench.utils.inference.inference_core import (
     InferenceCall,
     _load_models,
@@ -21,49 +22,59 @@ from yourbench.utils.inference.inference_core import (
 
 def run(config) -> None:
     """Convert documents to markdown and optionally upload to Hub."""
-    ingestion_config = config.pipeline.ingestion
-    source_dir = Path(ingestion_config.source_documents_dir)
-    output_dir = Path(ingestion_config.output_dir)
+    with log_stage(
+        "ingestion",
+        source_dir=str(config.pipeline.ingestion.source_documents_dir),
+        output_dir=str(config.pipeline.ingestion.output_dir),
+    ):
+        ingestion_config = config.pipeline.ingestion
+        source_dir = Path(ingestion_config.source_documents_dir)
+        output_dir = Path(ingestion_config.output_dir)
 
-    # Process files
-    processor = _get_processor(config)
-    successful_outputs: list[Path] = []
+        # Process files
+        processor = _get_processor(config)
+        successful_outputs: list[Path] = []
 
-    for file_path in source_dir.rglob("*"):
-        if not file_path.is_file():
-            continue
+        # Collect all files to process
+        all_files = [f for f in source_dir.rglob("*") if f.is_file()]
+        logger.info(f"Found {len(all_files)} files to process")
 
-        # Skip files in output directories to prevent recursive processing
-        if "output" in str(file_path):
-            logger.debug(f"Skipping file in output directory: {file_path}")
-            continue
-
-        # Skip files in the output directory to prevent recursive processing
-        try:
-            if output_dir.resolve() in file_path.resolve().parents or file_path.resolve() == output_dir.resolve():
+        for idx, file_path in enumerate(all_files, 1):
+            # Skip files in output directories to prevent recursive processing
+            if "output" in str(file_path):
                 logger.debug(f"Skipping file in output directory: {file_path}")
                 continue
-        except Exception:
-            # If path resolution fails, skip the check
-            pass
 
-        try:
-            if content := _convert_file(file_path, config, processor):
-                # Preserve relative path to avoid filename collisions
-                relative_path = file_path.relative_to(source_dir)
-                output_path = output_dir / relative_path.with_suffix(".md")
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.write_text(content, encoding="utf-8")
-                logger.debug(f"Converted {file_path.name} → {output_path.name}")
-                successful_outputs.append(output_path)
-        except Exception as e:
-            logger.error(f"Failed to process {file_path.name}: {e}")
+            # Skip files in the output directory to prevent recursive processing
+            try:
+                if output_dir.resolve() in file_path.resolve().parents or file_path.resolve() == output_dir.resolve():
+                    logger.debug(f"Skipping file in output directory: {file_path}")
+                    continue
+            except Exception:
+                # If path resolution fails, skip the check
+                pass
 
-    logger.info(f"Processed {len(successful_outputs)} files")
+            log_progress(idx, len(all_files), f"file {file_path.name}")
 
-    # Save dataset locally and/or upload to Hub
-    if successful_outputs:
-        _upload_to_hub(config, successful_outputs)
+            with log_step(f"converting_{file_path.name}"):
+                try:
+                    if content := _convert_file(file_path, config, processor):
+                        # Preserve relative path to avoid filename collisions
+                        relative_path = file_path.relative_to(source_dir)
+                        output_path = output_dir / relative_path.with_suffix(".md")
+                        output_path.parent.mkdir(parents=True, exist_ok=True)
+                        output_path.write_text(content, encoding="utf-8")
+                        logger.debug(f"Converted {file_path.name} → {output_path.name}")
+                        successful_outputs.append(output_path)
+                except Exception as e:
+                    logger.error(f"Failed to process {file_path.name}: {e}")
+
+        logger.info(f"Processed {len(successful_outputs)} files")
+
+        # Save dataset locally and/or upload to Hub
+        if successful_outputs:
+            with log_step("uploading_to_hub"):
+                _upload_to_hub(config, successful_outputs)
 
 
 def _get_processor(config) -> MarkItDown:

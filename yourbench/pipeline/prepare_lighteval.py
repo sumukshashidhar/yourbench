@@ -45,6 +45,7 @@ from loguru import logger
 
 from datasets import Dataset
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
+from yourbench.utils.logging_context import log_stage
 
 
 def run(config) -> None:
@@ -53,29 +54,37 @@ def run(config) -> None:
 
     This stage merges single-shot and multi-hop question datasets with chunked
     document metadata into a unified "light evaluation" dataset containing the columns:
-
-      1. question
-      2. ground_truth_answer
-      3. question_category
-      4. kind
-      5. estimated_difficulty
-      6. citations
-      7. document_id
-      8. chunk_ids
-      9. question_generating_model
-      10. chunks
-      11. document
-
-    The result is saved under the subset name specified in config.pipeline.lighteval.
-
-    Args:
-        config (YourbenchConfig): The entire pipeline configuration.
-
-    Returns:
-        None. The merged dataset is saved to disk or HF Hub as configured.
+    question, ground_truth_answer, question_category, kind, difficulty, etc.
     """
-    stage_cfg = config.pipeline.prepare_lighteval
+    with log_stage("prepare_lighteval"):
+        _run_impl(config)
 
+
+def _run_impl(config) -> None:
+    #    """Implementation of the prepare_lighteval stage."""
+    #
+    #    1. question
+    #    2. ground_truth_answer
+    #    3. question_category
+    #    4. kind
+    #    5. estimated_difficulty
+    #    6. citations
+    #    7. document_id
+    #    8. chunk_ids
+    #    9. question_generating_model
+    #    10. chunks
+    #    11. document
+    #
+    #    The result is saved under the subset name specified in config.pipeline.lighteval.
+    #
+    #    Args:
+    #        config (YourbenchConfig): The entire pipeline configuration.
+    #
+    #    Returns:
+    #        None. The merged dataset is saved to disk or HF Hub as configured.
+    #    """
+    stage_cfg = config.pipeline.prepare_lighteval
+    #
     logger.info("Saving lighteval compatible dataset")
 
     # Use configurable subset names with fallbacks

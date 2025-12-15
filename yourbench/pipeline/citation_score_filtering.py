@@ -7,6 +7,7 @@ from loguru import logger
 from thefuzz import fuzz
 
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, replace_dataset_columns
+from yourbench.utils.logging_context import log_step, log_stage
 
 
 @dataclass(slots=True)
@@ -52,21 +53,24 @@ class CitationScoreCalculator:
 
 def run(config) -> None:
     """Entry point for the citation score filtering stage."""
-    stage_cfg = _get_stage_config(config)
-    if not stage_cfg.run:
-        logger.info("citation_score_filtering stage is disabled. Skipping.")
-        return
+    with log_stage("citation_score_filtering"):
+        stage_cfg = _get_stage_config(config)
+        if not stage_cfg.run:
+            logger.info("citation_score_filtering stage is disabled. Skipping.")
+            return
 
-    logger.info(f"Loading '{stage_cfg.subset}' subset for citation score filtering...")
-    try:
-        lighteval_ds = custom_load_dataset(config=config, subset=stage_cfg.subset)
-    except Exception as e:
-        logger.exception(f"Could not load subset '{stage_cfg.subset}': {e}")
-        return
+        with log_step("loading_dataset", subset=stage_cfg.subset):
+            logger.info(f"Loading '{stage_cfg.subset}' subset for citation score filtering...")
+            try:
+                lighteval_ds = custom_load_dataset(config=config, subset=stage_cfg.subset)
+            except Exception as e:
+                logger.exception(f"Could not load subset '{stage_cfg.subset}': {e}")
+                return
 
-    if len(lighteval_ds) == 0:
-        logger.warning("Dataset is empty; nothing to process.")
-        return
+            if len(lighteval_ds) == 0:
+                logger.warning("Dataset is empty; nothing to process.")
+                return
+            logger.debug(f"Loaded {len(lighteval_ds)} records")
 
     logger.debug(f"Computing citation scores for {len(lighteval_ds)} rows")
     scorer = CitationScoreCalculator(stage_cfg.alpha, stage_cfg.beta)
