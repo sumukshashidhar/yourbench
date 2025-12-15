@@ -86,7 +86,7 @@ def run_pipeline_with_config(config, debug: bool = False) -> None:
 
     # Upload dataset card
     try:
-        from yourbench.utils.dataset_engine import upload_dataset_card
+        from yourbench.utils.dataset_card import upload_dataset_card
 
         upload_dataset_card(config)
     except Exception as e:

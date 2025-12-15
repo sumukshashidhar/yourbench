@@ -4,7 +4,7 @@ from itertools import combinations
 
 import pytest
 
-from yourbench.utils.dataset_engine import _unrank_comb, _floyd_sample_indices, _sample_exact_combinations
+from yourbench.utils.cross_document_utils import _unrank_comb, _floyd_sample_indices, _sample_exact_combinations
 
 
 def test_comb_basic_cases():
