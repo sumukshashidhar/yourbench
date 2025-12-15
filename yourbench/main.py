@@ -3,18 +3,89 @@
 
 import os
 import sys
+import atexit
 from pathlib import Path
+from datetime import datetime
 
 import typer
 from dotenv import load_dotenv
 from loguru import logger
 
 
-# Configure logging
-logger.remove()
-logger.add(sys.stderr, level=os.getenv("YOURBENCH_LOG_LEVEL", "INFO"))
-
 load_dotenv()
+
+
+def configure_logging(debug: bool = False, log_dir: Path = None):
+    """Configure structured logging with file output."""
+    logger.remove()  # Remove default handler
+
+    # Get log level from environment or debug flag
+    log_level = "DEBUG" if debug else os.getenv("YOURBENCH_LOG_LEVEL", "INFO")
+
+    # Console handler with structured format for logs with stage
+    console_format = (
+        "<green>{time:HH:mm:ss}</green> | "
+        "<level>{level: <8}</level> | "
+        "<cyan>{extra[stage]: <16}</cyan> | "
+        "<level>{message}</level>"
+    )
+    logger.add(
+        sys.stderr,
+        format=console_format,
+        level=log_level,
+        filter=lambda record: "stage" in record["extra"],  # Only if stage is set
+        enqueue=True,  # Thread-safe, prevents I/O errors
+    )
+
+    # Fallback console handler for logs without stage
+    logger.add(
+        sys.stderr,
+        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        level=log_level,
+        filter=lambda record: "stage" not in record["extra"],
+        enqueue=True,
+    )
+
+    # File handler - JSON structured logs
+    if log_dir is None:
+        log_dir = Path(os.getenv("YOURBENCH_LOG_DIR", "logs"))
+    log_dir.mkdir(exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = log_dir / f"yourbench_{timestamp}.jsonl"
+
+    logger.add(
+        str(log_file),
+        format="{message}",
+        level="DEBUG",  # Always capture everything in files
+        serialize=True,  # JSON format
+        enqueue=True,
+        rotation="100 MB",  # Rotate large files
+    )
+
+    # Summary log file (INFO and above only)
+    summary_file = log_dir / f"yourbench_{timestamp}_summary.log"
+    logger.add(
+        str(summary_file),
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {extra} | {message}",
+        level="INFO",
+        filter=lambda record: record["level"].no >= 20,  # INFO and above
+        enqueue=True,
+    )
+
+    logger.info(f"Logging configured. JSON logs: {log_file}, Summary: {summary_file}")
+    return log_file, summary_file
+
+
+def cleanup_logging():
+    """Ensure all logs are flushed and closed."""
+    logger.complete()  # Flush all pending logs
+
+
+atexit.register(cleanup_logging)
+
+# Initialize logging with default configuration
+configure_logging()
 
 app = typer.Typer(
     name="yourbench",
@@ -31,8 +102,10 @@ def run(
 ) -> None:
     """Run YourBench pipeline with a config file."""
     if debug:
-        logger.remove()
-        logger.add(sys.stderr, level="DEBUG")
+        configure_logging(debug=True)
+
+    # Log at the global level first
+    logger.info(f"Starting YourBench with config: {config_path}")
 
     config_file = Path(config_path)
     if not config_file.exists():

@@ -19,6 +19,7 @@ from loguru import logger
 from datasets import Dataset
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from yourbench.utils.logging_context import log_stage
 from yourbench.utils.question_models import QuestionRow
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
@@ -242,12 +243,13 @@ def run(config) -> None:
     3. Parses the rewritten questions
     4. Saves new datasets with rewritten questions
     """
-    stage_cfg = config.pipeline.question_rewriting
-    if not stage_cfg.run:
-        logger.info("question_rewriting stage is disabled. Skipping.")
-        return
+    with log_stage("question_rewriting"):
+        stage_cfg = config.pipeline.question_rewriting
+        if not stage_cfg.run:
+            logger.info("question_rewriting stage is disabled. Skipping.")
+            return
 
-    logger.info("Starting question question_rewriting stage...")
+        logger.info("Starting question question_rewriting stage...")
 
     # Get prompts from configuration
     system_prompt = stage_cfg.question_rewriting_system_prompt

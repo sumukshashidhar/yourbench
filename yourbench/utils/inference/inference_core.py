@@ -9,6 +9,7 @@ from loguru import logger
 from tqdm.asyncio import tqdm_asyncio
 
 from huggingface_hub import AsyncInferenceClient
+from yourbench.utils.logging_context import log_step
 from yourbench.utils.inference.inference_tracking import (
     InferenceMetrics,
     _count_tokens,
@@ -473,34 +474,36 @@ def run_inference(config, step_name: str, inference_calls: List[InferenceCall]) 
             ...
         }
     """
-    logger.info(f"Starting inference for step '{step_name}' with {len(inference_calls)} calls")
+    with log_step(f"inference_{step_name}", num_calls=len(inference_calls)):
+        logger.info(f"Starting inference for step '{step_name}' with {len(inference_calls)} calls")
 
-    # Load relevant models for the pipeline step
-    models = _load_models(config, step_name)
-    if not models:
-        logger.warning("No models found for step '{}'. Returning empty dictionary.", step_name)
-        return {}
+        # Load relevant models for the pipeline step
+        models = _load_models(config, step_name)
+        if not models:
+            logger.warning("No models found for step '{}'. Returning empty dictionary.", step_name)
+            return {}
+        logger.debug(f"Loaded {len(models)} model configurations")
 
-    # Assign the step_name as a tag if not already present (for tracking)
-    for call in inference_calls:
-        if step_name not in call.tags:
-            call.tags.append(step_name)
+        # Assign the step_name as a tag if not already present (for tracking)
+        for call in inference_calls:
+            if step_name not in call.tags:
+                call.tags.append(step_name)
 
-    # Run the enhanced async helper
-    try:
-        start_time = time.time()
-        result = asyncio.run(_run_inference_async_helper(models, inference_calls))
-        total_time = time.time() - start_time
+        # Run the enhanced async helper
+        try:
+            start_time = time.time()
+            result = asyncio.run(_run_inference_async_helper(models, inference_calls))
+            total_time = time.time() - start_time
 
-        logger.success(
-            "Inference completed for step '{}' in {:.2f}s with {} models",
-            step_name,
-            total_time,
-            len(models),
-        )
+            logger.success(
+                "Inference completed for step '{}' in {:.2f}s with {} models",
+                step_name,
+                total_time,
+                len(models),
+            )
 
-        return result
+            return result
 
-    except Exception as e:
-        logger.critical("Error running inference for step '{}': {}", step_name, e)
-        return {}
+        except Exception as e:
+            logger.critical("Error running inference for step '{}': {}", step_name, e)
+            return {}

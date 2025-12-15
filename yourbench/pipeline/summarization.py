@@ -5,42 +5,51 @@ from datasets import Dataset
 from yourbench.utils.chunking_utils import split_into_token_chunks
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import extract_content_from_xml_tags
+from yourbench.utils.logging_context import log_step, log_stage
 from yourbench.utils.inference.inference_core import InferenceCall, run_inference
 
 
 def run(config) -> None:
     """Execute hierarchical document summarization."""
-    cfg = config.pipeline.summarization
-    dataset = custom_load_dataset(config=config, subset="ingested")
-    if not dataset:
-        logger.warning("No documents to summarize")
-        return
+    with log_stage("summarization"):
+        cfg = config.pipeline.summarization
+        dataset = custom_load_dataset(config=config, subset="ingested")
+        if not dataset:
+            logger.warning("No documents to summarize")
+            return
 
-    logger.info(f"Summarizing {len(dataset)} documents")
+        logger.info(f"Summarizing {len(dataset)} documents")
 
-    # Stage 1: Chunk summaries
-    calls, mapping = _build_calls(
-        dataset, cfg.max_tokens, cfg.token_overlap, cfg.encoding_name, cfg.summarization_user_prompt
-    )
-    responses = run_inference(config=config, step_name="summarization", inference_calls=calls)
-    model_name, chunks_by_doc = _parse_chunk_responses(responses, mapping, len(dataset))
+        # Stage 1: Chunk summaries
+        with log_step("chunk_summaries", num_docs=len(dataset)):
+            calls, mapping = _build_calls(
+                dataset, cfg.max_tokens, cfg.token_overlap, cfg.encoding_name, cfg.summarization_user_prompt
+            )
+            logger.debug(f"Created {len(calls)} summarization calls")
+            responses = run_inference(config=config, step_name="summarization", inference_calls=calls)
+            model_name, chunks_by_doc = _parse_chunk_responses(responses, mapping, len(dataset))
 
-    # Stage 2: Combine summaries for multi-chunk docs
-    combine_calls, combine_indices = _build_combine_calls(chunks_by_doc, cfg.combine_summaries_user_prompt)
-    if combine_calls:
-        combine_responses = run_inference(config=config, step_name="summarization", inference_calls=combine_calls)
-        combined = list(combine_responses.values())[0] if combine_responses else []
-        final_summaries = _merge_summaries(chunks_by_doc, combined, combine_indices)
-    else:
-        final_summaries = [chunks[0] if chunks else "" for chunks in chunks_by_doc]
+        # Stage 2: Combine summaries for multi-chunk docs
+        with log_step("combine_summaries"):
+            combine_calls, combine_indices = _build_combine_calls(chunks_by_doc, cfg.combine_summaries_user_prompt)
+            if combine_calls:
+                logger.debug(f"Combining summaries for {len(combine_calls)} multi-chunk documents")
+                combine_responses = run_inference(
+                    config=config, step_name="summarization", inference_calls=combine_calls
+                )
+                combined = list(combine_responses.values())[0] if combine_responses else []
+                final_summaries = _merge_summaries(chunks_by_doc, combined, combine_indices)
+            else:
+                final_summaries = [chunks[0] if chunks else "" for chunks in chunks_by_doc]
 
-    # Save results
-    dataset = dataset.add_column("document_summary", final_summaries)
-    dataset = dataset.add_column("summarization_model", [model_name] * len(dataset))
-    custom_save_dataset(
-        dataset=dataset, config=config, subset="summarized", push_to_hub=config.hf_configuration.push_to_hub
-    )
-    logger.success(f"Summarization complete for {len(dataset)} documents")
+        # Save results
+        with log_step("saving_results"):
+            dataset = dataset.add_column("document_summary", final_summaries)
+            dataset = dataset.add_column("summarization_model", [model_name] * len(dataset))
+            custom_save_dataset(
+                dataset=dataset, config=config, subset="summarized", push_to_hub=config.hf_configuration.push_to_hub
+            )
+            logger.success(f"Summarization complete for {len(dataset)} documents")
 
 
 def _build_calls(
