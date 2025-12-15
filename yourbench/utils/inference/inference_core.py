@@ -27,8 +27,11 @@ GLOBAL_TIMEOUT = 300
 @dataclass
 class Model:
     model_name: str
+    # You can find the list of available providers here: https://huggingface.co/docs/huggingface_hub/guides/inference#supported-providers-and-tasks
+    provider: str | None = None
     base_url: str | None = None
     api_key: str | None = field(default=None, repr=False)
+    bill_to: str | None = None
     max_concurrent_requests: int = 16
     encoding_name: str = "cl100k_base"
     extra_parameters: Dict[str, Any] = field(default_factory=dict)
@@ -79,8 +82,10 @@ def _load_models(base_config, step_name: str) -> List[Model]:
         return [
             Model(
                 model_name=first_model_config.model_name,
+                provider=first_model_config.provider,
                 base_url=first_model_config.base_url,
                 api_key=first_model_config.api_key,
+                bill_to=first_model_config.bill_to,
                 max_concurrent_requests=first_model_config.max_concurrent_requests,
                 encoding_name=first_model_config.encoding_name,
                 extra_parameters=dict(first_model_config.extra_parameters or {}),
@@ -93,8 +98,10 @@ def _load_models(base_config, step_name: str) -> List[Model]:
         if m_config.model_name in role_models:
             model_instance = Model(
                 model_name=m_config.model_name,
+                provider=m_config.provider,
                 base_url=m_config.base_url,
                 api_key=m_config.api_key,
+                bill_to=m_config.bill_to,
                 max_concurrent_requests=m_config.max_concurrent_requests,
                 encoding_name=m_config.encoding_name,
                 extra_parameters=dict(m_config.extra_parameters or {}),
@@ -156,6 +163,8 @@ async def _get_response(
         client = AsyncInferenceClient(
             base_url=model.base_url,
             api_key=model.api_key,
+            provider=model.provider,
+            bill_to=model.bill_to,
             timeout=GLOBAL_TIMEOUT,
             headers={"X-Request-ID": request_id},
         )
