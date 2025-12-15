@@ -157,35 +157,33 @@ def _expand_env_vars(cfg: DictConfig) -> None:
     walk(cfg)
 
 
-
-
 def _auto_load_openai_from_env(cfg: DictConfig) -> None:
     """Automatically create OpenAI model config from env vars if not specified."""
     # Only auto-load if no model_list is specified
     if cfg.get("model_list") or cfg.get("models"):
         return
-    
+
     # Check if OPENAI env vars are set
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return
-    
+
     # Create default OpenAI model config from env vars
     openai_model = {
         "model_name": os.getenv("OPENAI_MODEL", "gpt-4"),
         "api_key": "$OPENAI_API_KEY",
         "max_concurrent_requests": 8,
-        "model_type": "openai"
     }
-    
+
     # Add base_url if specified
     base_url = os.getenv("OPENAI_BASE_URL")
     if base_url:
         openai_model["base_url"] = base_url
-    
+
     # Create model_list with the auto-loaded model
     cfg["model_list"] = [openai_model]
     logger.info(f"Auto-loaded OpenAI model from environment: {openai_model['model_name']}")
+
 
 def _mark_enabled_stages(cfg: DictConfig) -> None:
     """Mark stages as run=True if present in user config (presence = enabled)."""
