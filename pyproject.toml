@@ -41,9 +41,7 @@ dependencies = [
 yourbench = "yourbench.main:main"
 
 [project.optional-dependencies]
-gui = ["gradio>=5.35.0"]
 llm = ["markitdown[all]>=0.0.2"]
-analysis = ["pandas>=2.0.0"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
