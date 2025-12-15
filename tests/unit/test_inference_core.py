@@ -26,10 +26,8 @@ def test_get_response_merges_extra_parameters():
 
     model = Model(
         model_name="openrouter/test",
-        provider=None,
         base_url="https://example.com/v1",
         api_key="token",
-        bill_to=None,
         max_concurrent_requests=2,
         encoding_name="cl100k_base",
         extra_parameters={"reasoning": {"effort": "medium"}},

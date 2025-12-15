@@ -40,8 +40,6 @@ class ModelConfig:
     api_key: str | None = None
     max_concurrent_requests: int = 32
     encoding_name: str = "cl100k_base"
-    provider: str | None = None
-    bill_to: str | None = None
     extra_parameters: dict = field(default_factory=dict)
 
     def __post_init__(self):
