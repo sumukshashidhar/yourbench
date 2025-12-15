@@ -5,13 +5,14 @@ from loguru import logger
 
 from datasets import Dataset
 from yourbench.utils.chunking_utils import get_sampling_cfg
-from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset, create_cross_document_dataset
+from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import (
     parse_multi_hop_responses,
     _remove_duplicate_questions,
     parse_single_shot_responses,
 )
 from yourbench.utils.logging_context import log_step, log_stage
+from yourbench.utils.cross_document_utils import create_cross_document_dataset
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,

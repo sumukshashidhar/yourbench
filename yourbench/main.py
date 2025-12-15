@@ -120,7 +120,7 @@ def run(
 
     from yourbench.conf.loader import load_config
     from yourbench.pipeline.handler import run_pipeline_with_config
-    from yourbench.utils.dataset_engine import upload_dataset_card
+    from yourbench.utils.dataset_card import upload_dataset_card
 
     try:
         config = load_config(config_file)
