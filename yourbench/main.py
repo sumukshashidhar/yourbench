@@ -120,17 +120,12 @@ def run(
 
     from yourbench.conf.loader import load_config
     from yourbench.pipeline.handler import run_pipeline_with_config
-    from yourbench.utils.dataset_card import upload_dataset_card
 
     try:
         config = load_config(config_file)
         if debug:
             config.debug = True
         run_pipeline_with_config(config, debug=debug)
-        try:
-            upload_dataset_card(config)
-        except Exception as e:
-            logger.warning(f"Failed to upload dataset card: {e}")
     except Exception as e:
         logger.exception(f"Pipeline failed: {e}")
         raise typer.Exit(1)
