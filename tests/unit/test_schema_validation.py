@@ -1,13 +1,13 @@
 """Unit tests for schema validation."""
 
 import pytest
+from pydantic import ValidationError
 
 from yourbench.conf.schema import (
     ModelConfig,
     ChunkingConfig,
     CrossDocConfig,
     SummarizationConfig,
-    ConfigValidationError,
     CitationFilteringConfig,
 )
 
@@ -18,15 +18,15 @@ class TestSummarizationConfig:
         assert cfg.max_tokens == 1000
 
     def test_invalid_max_tokens(self):
-        with pytest.raises(ConfigValidationError, match="max_tokens must be > 0"):
+        with pytest.raises(ValidationError, match="max_tokens must be > 0"):
             SummarizationConfig(max_tokens=0)
 
     def test_invalid_token_overlap(self):
-        with pytest.raises(ConfigValidationError, match="token_overlap must be >= 0"):
+        with pytest.raises(ValidationError, match="token_overlap must be >= 0"):
             SummarizationConfig(token_overlap=-1)
 
     def test_overlap_exceeds_max_tokens(self):
-        with pytest.raises(ConfigValidationError, match="token_overlap.*must be < max_tokens"):
+        with pytest.raises(ValidationError, match="token_overlap.*must be < max_tokens"):
             SummarizationConfig(max_tokens=100, token_overlap=100)
 
 
@@ -36,11 +36,11 @@ class TestChunkingConfig:
         assert cfg.h_min == 2
 
     def test_invalid_h_min(self):
-        with pytest.raises(ConfigValidationError, match="h_min must be >= 1"):
+        with pytest.raises(ValidationError, match="h_min must be >= 1"):
             ChunkingConfig(h_min=0)
 
     def test_h_max_less_than_h_min(self):
-        with pytest.raises(ConfigValidationError, match="h_max.*must be >= h_min"):
+        with pytest.raises(ValidationError, match="h_max.*must be >= h_min"):
             ChunkingConfig(h_min=5, h_max=2)
 
 
@@ -50,15 +50,15 @@ class TestCrossDocConfig:
         assert cfg.max_combinations == 100
 
     def test_invalid_num_docs_length(self):
-        with pytest.raises(ConfigValidationError, match="2 elements"):
+        with pytest.raises(ValidationError, match="2 elements"):
             CrossDocConfig(num_docs_per_combination=[2])
 
     def test_invalid_min_docs(self):
-        with pytest.raises(ConfigValidationError, match="must be >= 2"):
+        with pytest.raises(ValidationError, match="must be >= 2"):
             CrossDocConfig(num_docs_per_combination=[1, 5])
 
     def test_max_less_than_min(self):
-        with pytest.raises(ConfigValidationError, match="must be >="):
+        with pytest.raises(ValidationError, match="must be >="):
             CrossDocConfig(num_docs_per_combination=[5, 2])
 
 
@@ -68,7 +68,7 @@ class TestModelConfig:
         assert cfg.max_concurrent_requests == 16
 
     def test_invalid_concurrency(self):
-        with pytest.raises(ConfigValidationError, match="max_concurrent_requests must be >= 1"):
+        with pytest.raises(ValidationError, match="max_concurrent_requests must be >= 1"):
             ModelConfig(max_concurrent_requests=0)
 
 
@@ -78,9 +78,9 @@ class TestCitationFilteringConfig:
         assert cfg.alpha == 0.5
 
     def test_invalid_alpha(self):
-        with pytest.raises(ConfigValidationError, match="alpha must be in"):
+        with pytest.raises(ValidationError, match="alpha must be in"):
             CitationFilteringConfig(alpha=1.5)
 
     def test_invalid_beta(self):
-        with pytest.raises(ConfigValidationError, match="beta must be in"):
+        with pytest.raises(ValidationError, match="beta must be in"):
             CitationFilteringConfig(beta=-0.1)

@@ -8,40 +8,18 @@ from loguru import logger
 from yourbench.conf.loader import get_enabled_stages
 
 
-# Stage function overrides for question generation
-_stage_overrides = {}
-
-
-def _get_stage_overrides():
-    """Lazy load question generation functions."""
-    global _stage_overrides
-    if not _stage_overrides:
-        from yourbench.pipeline.question_generation import (
-            run_multi_hop,
-            run_single_shot,
-            run_cross_document,
-        )
-
-        _stage_overrides = {
-            "single_shot_question_generation": run_single_shot,
-            "multi_hop_question_generation": run_multi_hop,
-            "cross_document_question_generation": run_cross_document,
-        }
-    return _stage_overrides
+# Map stage names to module paths for stages that live in subfolders
+_STAGE_MODULE_MAP = {
+    "single_shot_question_generation": "question_generation.single_shot",
+    "multi_hop_question_generation": "question_generation.multi_hop",
+    "cross_document_question_generation": "question_generation.cross_document",
+}
 
 
 def _get_stage_function(stage: str):
     """Get the function for a pipeline stage."""
-    overrides = _get_stage_overrides()
-    if stage in overrides:
-        return overrides[stage]
-
-    # Handle legacy name
-    if stage == "lighteval":
-        logger.warning("'lighteval' is deprecated, use 'prepare_lighteval'")
-        stage = "prepare_lighteval"
-
-    module = importlib.import_module(f"yourbench.pipeline.{stage}")
+    module_path = _STAGE_MODULE_MAP.get(stage, stage)
+    module = importlib.import_module(f"yourbench.pipeline.{module_path}")
     return module.run
 
 

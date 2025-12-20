@@ -1,7 +1,5 @@
 """Unit tests for configuration loading."""
 
-from omegaconf import OmegaConf
-
 from yourbench.conf.loader import load_config, get_enabled_stages
 
 
@@ -91,7 +89,8 @@ hf_configuration:
     )
 
     cfg = load_config(yaml_path)
-    data = OmegaConf.to_container(cfg, resolve=True)
+    # Pydantic models use model_dump() instead of OmegaConf.to_container()
+    data = cfg.model_dump()
     assert data["hf_configuration"]["hf_dataset_name"] == "my-dataset"
 
 
@@ -112,5 +111,5 @@ pipeline:
 
     cfg = load_config(yaml_path)
 
-    # model_roles should be auto-assigned
-    assert cfg.model_roles.ingestion == ["my-model"]
+    # model_roles is a dict, access with bracket notation
+    assert cfg.model_roles["ingestion"] == ["my-model"]

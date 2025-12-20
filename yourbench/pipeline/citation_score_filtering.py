@@ -11,24 +11,6 @@ from yourbench.utils.logging_context import log_step, log_stage
 
 
 @dataclass(slots=True)
-class StageConfig:
-    run: bool = False
-    subset: str = "prepared_lighteval"
-    alpha: float = 0.7
-    beta: float = 0.3
-
-
-def _get_stage_config(config) -> StageConfig:
-    stage_cfg = config.pipeline.citation_score_filtering
-    return StageConfig(
-        run=stage_cfg.run,
-        subset=stage_cfg.subset,
-        alpha=stage_cfg.alpha,
-        beta=stage_cfg.beta,
-    )
-
-
-@dataclass(slots=True)
 class CitationScoreCalculator:
     alpha: float
     beta: float
@@ -54,17 +36,17 @@ class CitationScoreCalculator:
 def run(config) -> None:
     """Entry point for the citation score filtering stage."""
     with log_stage("citation_score_filtering"):
-        stage_cfg = _get_stage_config(config)
-        if not stage_cfg.run:
+        cfg = config.pipeline.citation_score_filtering
+        if not cfg.run:
             logger.info("citation_score_filtering stage is disabled. Skipping.")
             return
 
-        with log_step("loading_dataset", subset=stage_cfg.subset):
-            logger.info(f"Loading '{stage_cfg.subset}' subset for citation score filtering...")
+        with log_step("loading_dataset", subset=cfg.subset):
+            logger.info(f"Loading '{cfg.subset}' subset for citation score filtering...")
             try:
-                lighteval_ds = custom_load_dataset(config=config, subset=stage_cfg.subset)
+                lighteval_ds = custom_load_dataset(config=config, subset=cfg.subset)
             except Exception as e:
-                logger.exception(f"Could not load subset '{stage_cfg.subset}': {e}")
+                logger.exception(f"Could not load subset '{cfg.subset}': {e}")
                 return
 
             if len(lighteval_ds) == 0:
@@ -73,7 +55,7 @@ def run(config) -> None:
             logger.debug(f"Loaded {len(lighteval_ds)} records")
 
     logger.debug(f"Computing citation scores for {len(lighteval_ds)} rows")
-    scorer = CitationScoreCalculator(stage_cfg.alpha, stage_cfg.beta)
+    scorer = CitationScoreCalculator(cfg.alpha, cfg.beta)
 
     all_answer_citation_scores = []
     all_chunk_citation_scores = []
@@ -88,9 +70,7 @@ def run(config) -> None:
         all_answer_citation_scores.append(ans_score)
         all_chunk_citation_scores.append(chunk_score)
         all_final_scores.append(final_score)
-    # Use helper function to replace columns cleanly
-    # Note: This doesn't preserve original column metadata, but for computed float scores
-    # this is acceptable as type inference will correctly identify them as numeric
+
     columns_data = {
         "answer_citation_score": all_answer_citation_scores,
         "chunk_citation_score": all_chunk_citation_scores,
@@ -101,6 +81,6 @@ def run(config) -> None:
 
     logger.info("Saving updated dataset with new citation score columns...")
     custom_save_dataset(
-        dataset=lighteval_ds, config=config, subset=stage_cfg.subset, push_to_hub=config.hf_configuration.push_to_hub
+        dataset=lighteval_ds, config=config, subset=cfg.subset, push_to_hub=config.hf_configuration.push_to_hub
     )
     logger.success("citation_score_filtering stage completed successfully.")

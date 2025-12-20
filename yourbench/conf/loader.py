@@ -1,29 +1,23 @@
 """
-Unified configuration loader for yourbench.
+Simplified configuration loader using Pydantic for validation.
 
-Loads YAML configs and merges with schema defaults using OmegaConf.
+Loads YAML configs and validates against Pydantic schemas.
 """
 
 import os
+from typing import Any
 from pathlib import Path
 
+import yaml
 from loguru import logger
-from omegaconf import OmegaConf, DictConfig
 
-from yourbench.conf.schema import ModelConfig, YourbenchConfig
+from yourbench.conf.schema import (
+    ModelConfig,
+    YourbenchConfig,
+    ConfigValidationError,
+    _expand_env,
+)
 from yourbench.conf.prompts import DEFAULT_PROMPTS, load_prompt
-
-
-def _validate_config(cfg: DictConfig) -> None:
-    """Validate config by converting to dataclasses, triggering __post_init__ checks."""
-    from yourbench.conf.schema import ConfigValidationError
-
-    try:
-        OmegaConf.to_object(cfg)
-    except ConfigValidationError:
-        raise
-    except Exception as e:
-        raise ConfigValidationError(f"Config validation failed: {e}") from e
 
 
 STAGE_ORDER = [
@@ -35,7 +29,6 @@ STAGE_ORDER = [
     "cross_document_question_generation",
     "question_rewriting",
     "prepare_lighteval",
-    "lighteval",
     "citation_score_filtering",
 ]
 
@@ -64,211 +57,182 @@ PROMPT_FIELDS = [
 ]
 
 
-def load_config(yaml_path: str | Path) -> DictConfig:
-    """Load a yourbench config from YAML file, merged with schema defaults."""
+def load_config(yaml_path: str | Path) -> YourbenchConfig:
+    """Load a yourbench config from YAML file.
+
+    1. Parse YAML
+    2. Expand $VAR environment variables
+    3. Handle legacy field names
+    4. Mark enabled stages (presence = run)
+    5. Auto-load OpenAI from env if no models
+    6. Validate with Pydantic
+    7. Load prompts
+    8. Assign model roles
+    """
     yaml_path = Path(yaml_path)
     if not yaml_path.exists():
         raise FileNotFoundError(f"Config file not found: {yaml_path}")
 
-    # Load user config
-    user_cfg = OmegaConf.load(yaml_path)
+    # Load raw YAML
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f) or {}
 
-    # Handle legacy field renames before merging
-    if "models" in user_cfg and "model_list" not in user_cfg:
-        user_cfg["model_list"] = user_cfg.pop("models")
-        logger.debug("Renamed 'models' → 'model_list'")
+    # Transform the data
+    data = _handle_legacy_fields(data)
+    data = _expand_env_vars(data)
+    data = _mark_enabled_stages(data)
+    data = _auto_load_openai_from_env(data)
 
-    if "pipeline_config" in user_cfg and "pipeline" not in user_cfg:
-        user_cfg["pipeline"] = user_cfg.pop("pipeline_config")
+    # Validate with Pydantic
+    try:
+        config = YourbenchConfig.model_validate(data)
+    except Exception as e:
+        raise ConfigValidationError(f"Config validation failed: {e}") from e
 
-    # Expand $VAR environment variables in user config
-    _expand_env_vars(user_cfg)
+    # Post-processing (needs access to the validated config)
+    _load_prompts(config)
+    _assign_model_roles(config)
 
-    # Mark stages as run=True if they're present in user config
-    _mark_enabled_stages(user_cfg)
-
-    # Auto-load OpenAI model from env vars if no models configured
-    _auto_load_openai_from_env(user_cfg)
-
-    # Create schema with defaults
-    schema = OmegaConf.structured(YourbenchConfig)
-
-    # Merge: schema defaults + user overrides
-    cfg = OmegaConf.merge(schema, user_cfg)
-
-    # Set model defaults for each model in list
-    _set_model_defaults(cfg)
-
-    # Load prompts from files or package defaults
-    _load_prompts(cfg)
-
-    # Assign default model roles
-    _assign_model_roles(cfg)
-
-    # Resolve any remaining interpolations
-    OmegaConf.resolve(cfg)
-
-    # Validate the config by triggering __post_init__ on all dataclasses
-    _validate_config(cfg)
-
-    return cfg
+    return config
 
 
-def _expand_env_vars(cfg: DictConfig) -> None:
-    """Expand $VAR syntax to environment variable values (in-place)."""
+def _handle_legacy_fields(data: dict[str, Any]) -> dict[str, Any]:
+    """Handle legacy field renames."""
+    if "models" in data and "model_list" not in data:
+        data["model_list"] = data.pop("models")
+        logger.debug("Renamed 'models' -> 'model_list'")
 
-    def expand_value(value):
-        if not isinstance(value, str):
-            return value
-        if value.startswith("$") and not value.startswith("${"):
-            var_name = value[1:]
-            env_value = os.getenv(var_name)
-            if env_value is not None:
-                return env_value
-            if var_name == "HF_ORGANIZATION":
-                token = os.getenv("HF_TOKEN")
-                if token:
-                    try:
-                        from huggingface_hub import whoami
+    if "pipeline_config" in data and "pipeline" not in data:
+        data["pipeline"] = data.pop("pipeline_config")
 
-                        return whoami(token).get("name", "")
-                    except Exception:
-                        pass
-            logger.debug(f"Environment variable {var_name} not set")
-            return ""
-        return value
-
-    def walk(node):
-        if OmegaConf.is_dict(node):
-            for key in list(node.keys()):
-                val = node[key]
-                if OmegaConf.is_dict(val) or OmegaConf.is_list(val):
-                    walk(val)
-                else:
-                    node[key] = expand_value(val)
-        elif OmegaConf.is_list(node):
-            for i in range(len(node)):
-                val = node[i]
-                if OmegaConf.is_dict(val) or OmegaConf.is_list(val):
-                    walk(val)
-                else:
-                    node[i] = expand_value(val)
-
-    walk(cfg)
+    return data
 
 
-def _auto_load_openai_from_env(cfg: DictConfig) -> None:
-    """Automatically create OpenAI model config from env vars if not specified."""
-    # Only auto-load if no model_list is specified
-    if cfg.get("model_list") or cfg.get("models"):
-        return
+def _expand_env_vars(data: Any) -> Any:
+    """Recursively expand $VAR syntax in data."""
+    if isinstance(data, dict):
+        return {k: _expand_env_vars(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_expand_env_vars(item) for item in data]
+    elif isinstance(data, str):
+        return _expand_env(data)
+    return data
 
-    # Check if OPENAI env vars are set
+
+def _mark_enabled_stages(data: dict[str, Any]) -> dict[str, Any]:
+    """Mark stages as run=True if present in config (presence = enabled)."""
+    pipeline = data.get("pipeline", {})
+    if not pipeline:
+        return data
+
+    for stage in STAGE_ORDER:
+        if stage in pipeline:
+            stage_cfg = pipeline[stage]
+            if stage_cfg is None:
+                # Empty stage (e.g., "summarization:") means run=True
+                pipeline[stage] = {"run": True}
+            elif isinstance(stage_cfg, dict) and "run" not in stage_cfg:
+                stage_cfg["run"] = True
+
+    data["pipeline"] = pipeline
+    return data
+
+
+def _auto_load_openai_from_env(data: dict[str, Any]) -> dict[str, Any]:
+    """Create OpenAI model from env vars if no models configured."""
+    if data.get("model_list") or data.get("models"):
+        return data
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return
+        return data
 
-    # Create default OpenAI model config from env vars
     openai_model = {
         "model_name": os.getenv("OPENAI_MODEL", "gpt-4"),
         "api_key": "$OPENAI_API_KEY",
         "max_concurrent_requests": 8,
     }
 
-    # Add base_url if specified
     base_url = os.getenv("OPENAI_BASE_URL")
     if base_url:
         openai_model["base_url"] = base_url
 
-    # Create model_list with the auto-loaded model
-    cfg["model_list"] = [openai_model]
+    data["model_list"] = [openai_model]
     logger.info(f"Auto-loaded OpenAI model from environment: {openai_model['model_name']}")
+    return data
 
 
-def _mark_enabled_stages(cfg: DictConfig) -> None:
-    """Mark stages as run=True if present in user config (presence = enabled)."""
-    if "pipeline" not in cfg:
-        return
-
-    for stage in STAGE_ORDER:
-        if stage in cfg.pipeline:
-            stage_cfg = cfg.pipeline[stage]
-            if stage_cfg is None:
-                # Empty stage (e.g., "summarization:") means run=True
-                cfg.pipeline[stage] = {"run": True}
-            elif OmegaConf.is_dict(stage_cfg) and "run" not in stage_cfg:
-                stage_cfg["run"] = True
-
-
-def _set_model_defaults(cfg: DictConfig) -> None:
-    """Ensure each model has all required fields with defaults."""
-    model_schema = OmegaConf.structured(ModelConfig)
-
-    for i, model in enumerate(cfg.get("model_list", [])):
-        # Merge model schema defaults with user-provided values
-        cfg.model_list[i] = OmegaConf.merge(model_schema, model)
-
-
-def _load_prompts(cfg: DictConfig) -> None:
+def _load_prompts(config: YourbenchConfig) -> None:
     """Load prompt content from file paths or package defaults."""
     for path_tuple, default_key in PROMPT_FIELDS:
         try:
-            node = cfg
+            # Navigate to the parent object
+            obj = config
             for key in path_tuple[:-1]:
-                node = node[key]
+                obj = getattr(obj, key)
 
             field = path_tuple[-1]
-            current_value = node.get(field, "")
+            current_value = getattr(obj, field, "")
             default_path = DEFAULT_PROMPTS.get(default_key, "")
 
             if current_value:
                 # User provided a value - load from path or use as-is
-                node[field] = load_prompt(str(current_value), default_path)
+                new_value = load_prompt(str(current_value), default_path)
             elif default_path:
                 # No value - load default prompt
-                node[field] = load_prompt("", default_path)
+                new_value = load_prompt("", default_path)
+            else:
+                continue
+
+            # Set the value on the Pydantic model
+            setattr(obj, field, new_value)
         except Exception:
-            pass
+            pass  # Silently skip if path doesn't exist
 
 
-def _assign_model_roles(cfg: DictConfig) -> None:
+def _assign_model_roles(config: YourbenchConfig) -> None:
     """Assign default model to stages without explicit model_roles."""
-    if not cfg.get("model_list"):
+    if not config.model_list:
         return
 
-    default_model = cfg.model_list[0].get("model_name", "")
+    default_model = config.model_list[0].model_name
     if not default_model:
         return
 
     for stage in STAGE_ORDER:
-        if stage not in cfg.model_roles:
-            cfg.model_roles[stage] = [default_model]
+        if stage not in config.model_roles:
+            config.model_roles[stage] = [default_model]
 
 
 # Helper functions for config access
-def get_enabled_stages(cfg: DictConfig) -> list[str]:
+def get_enabled_stages(config: YourbenchConfig) -> list[str]:
     """Return list of enabled pipeline stages in execution order."""
-    return [s for s in STAGE_ORDER if cfg.pipeline.get(s, {}).get("run", False)]
+    return [
+        s
+        for s in STAGE_ORDER
+        if getattr(config.pipeline, s, None) and getattr(getattr(config.pipeline, s), "run", False)
+    ]
 
 
-def is_stage_enabled(cfg: DictConfig, stage: str) -> bool:
+def is_stage_enabled(config: YourbenchConfig, stage: str) -> bool:
     """Check if a pipeline stage is enabled."""
-    return cfg.pipeline.get(stage, {}).get("run", False)
+    stage_cfg = getattr(config.pipeline, stage, None)
+    return stage_cfg and getattr(stage_cfg, "run", False)
 
 
-def get_model_for_stage(cfg: DictConfig, stage: str) -> str | None:
+def get_model_for_stage(config: YourbenchConfig, stage: str) -> str | None:
     """Get the primary model name for a stage."""
-    models = cfg.get("model_roles", {}).get(stage, [])
+    models = config.model_roles.get(stage, [])
     if models:
         return models[0]
-    if cfg.get("model_list"):
-        return cfg.model_list[0].get("model_name")
+    if config.model_list:
+        return config.model_list[0].model_name
     return None
 
 
-def get_model_config(cfg: DictConfig, model_name: str) -> DictConfig | None:
+def get_model_config(config: YourbenchConfig, model_name: str) -> ModelConfig | None:
     """Get model config by name."""
-    for model in cfg.get("model_list", []):
-        if model.get("model_name") == model_name:
+    for model in config.model_list:
+        if model.model_name == model_name:
             return model
     return None
