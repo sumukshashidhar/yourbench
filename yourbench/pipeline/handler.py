@@ -18,11 +18,6 @@ _STAGE_MODULE_MAP = {
 
 def _get_stage_function(stage: str):
     """Get the function for a pipeline stage."""
-    # Handle legacy name
-    if stage == "lighteval":
-        logger.warning("'lighteval' is deprecated, use 'prepare_lighteval'")
-        stage = "prepare_lighteval"
-
     module_path = _STAGE_MODULE_MAP.get(stage, stage)
     module = importlib.import_module(f"yourbench.pipeline.{module_path}")
     return module.run

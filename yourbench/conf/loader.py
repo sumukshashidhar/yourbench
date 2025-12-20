@@ -35,7 +35,6 @@ STAGE_ORDER = [
     "cross_document_question_generation",
     "question_rewriting",
     "prepare_lighteval",
-    "lighteval",
     "citation_score_filtering",
 ]
 

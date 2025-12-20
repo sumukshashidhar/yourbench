@@ -253,7 +253,6 @@ class PipelineConfig:
     cross_document_question_generation: CrossDocConfig = field(default_factory=CrossDocConfig)
     question_rewriting: QuestionRewritingConfig = field(default_factory=QuestionRewritingConfig)
     prepare_lighteval: LightevalConfig = field(default_factory=LightevalConfig)
-    lighteval: LightevalConfig = field(default_factory=LightevalConfig)
     citation_score_filtering: CitationFilteringConfig = field(default_factory=CitationFilteringConfig)
 
 
