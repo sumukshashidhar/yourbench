@@ -1,6 +1,6 @@
 """Multi-hop question generation pipeline stage."""
 
-from yourbench.pipeline.question_generation import run_multi_hop
+from yourbench.pipeline.question_generation._core import run_multi_hop
 
 
 def run(config) -> None:

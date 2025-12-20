@@ -8,6 +8,14 @@ from loguru import logger
 from yourbench.conf.loader import get_enabled_stages
 
 
+# Map stage names to module paths for stages that live in subfolders
+_STAGE_MODULE_MAP = {
+    "single_shot_question_generation": "question_generation.single_shot",
+    "multi_hop_question_generation": "question_generation.multi_hop",
+    "cross_document_question_generation": "question_generation.cross_document",
+}
+
+
 def _get_stage_function(stage: str):
     """Get the function for a pipeline stage."""
     # Handle legacy name
@@ -15,7 +23,8 @@ def _get_stage_function(stage: str):
         logger.warning("'lighteval' is deprecated, use 'prepare_lighteval'")
         stage = "prepare_lighteval"
 
-    module = importlib.import_module(f"yourbench.pipeline.{stage}")
+    module_path = _STAGE_MODULE_MAP.get(stage, stage)
+    module = importlib.import_module(f"yourbench.pipeline.{module_path}")
     return module.run
 
 

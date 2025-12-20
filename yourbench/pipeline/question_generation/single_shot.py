@@ -1,6 +1,6 @@
 """Single-shot question generation pipeline stage."""
 
-from yourbench.pipeline.question_generation import run_single_shot
+from yourbench.pipeline.question_generation._core import run_single_shot
 
 
 def run(config) -> None:
