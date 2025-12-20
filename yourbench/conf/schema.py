@@ -1,11 +1,14 @@
 """
-Structured config schemas with defaults for YourBench.
+Pydantic config schemas with defaults for YourBench.
 
-These dataclasses define the expected config structure and provide
-sensible defaults. OmegaConf merges user configs with these defaults.
+Pydantic models define the expected config structure and provide
+sensible defaults with built-in validation.
 """
 
-from dataclasses import field, dataclass
+import os
+from typing import Any
+
+from pydantic import Field, BaseModel, model_validator
 
 
 class ConfigValidationError(ValueError):
@@ -14,8 +17,41 @@ class ConfigValidationError(ValueError):
     pass
 
 
-@dataclass
-class HFConfig:
+def _expand_env(value: Any) -> Any:
+    """Expand $VAR syntax in string values."""
+    if not isinstance(value, str):
+        return value
+    if value.startswith("$") and not value.startswith("${"):
+        var_name = value[1:]
+        env_value = os.getenv(var_name)
+        if env_value is not None:
+            return env_value
+        if var_name == "HF_ORGANIZATION":
+            token = os.getenv("HF_TOKEN")
+            if token:
+                from huggingface_hub import HfApi
+
+                api = HfApi(token=token)
+                user_info = api.whoami()
+                return user_info.get("name", "")
+        return ""
+    return value
+
+
+def _expand_env_in_dict(data: dict[str, Any]) -> dict[str, Any]:
+    """Recursively expand $VAR in dict values."""
+    result = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            result[k] = _expand_env_in_dict(v)
+        elif isinstance(v, list):
+            result[k] = [_expand_env(item) if isinstance(item, str) else item for item in v]
+        else:
+            result[k] = _expand_env(v)
+    return result
+
+
+class HFConfig(BaseModel):
     """HuggingFace dataset configuration."""
 
     hf_dataset_name: str = ""
@@ -30,9 +66,10 @@ class HFConfig:
     jsonl_export_dir: str = "data/jsonl_export"
     push_to_hub: bool = True
 
+    model_config = {"extra": "allow"}
 
-@dataclass
-class ModelConfig:
+
+class ModelConfig(BaseModel):
     """Model configuration."""
 
     model_name: str = ""
@@ -42,15 +79,18 @@ class ModelConfig:
     encoding_name: str = "cl100k_base"
     provider: str | None = None
     bill_to: str | None = None
-    extra_parameters: dict = field(default_factory=dict)
+    extra_parameters: dict[str, Any] = Field(default_factory=dict)
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_concurrency(self) -> "ModelConfig":
         if self.max_concurrent_requests < 1:
             raise ConfigValidationError(f"max_concurrent_requests must be >= 1, got {self.max_concurrent_requests}")
+        return self
 
 
-@dataclass
-class ChunkSamplingConfig:
+class ChunkSamplingConfig(BaseModel):
     """Chunk sampling configuration."""
 
     enable: bool = False
@@ -58,13 +98,16 @@ class ChunkSamplingConfig:
     strategy: str = "random"
     random_seed: int = 42
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_samples(self) -> "ChunkSamplingConfig":
         if self.num_samples < 1:
             raise ConfigValidationError(f"num_samples must be >= 1, got {self.num_samples}")
+        return self
 
 
-@dataclass
-class IngestionConfig:
+class IngestionConfig(BaseModel):
     """Ingestion stage configuration."""
 
     run: bool = False
@@ -74,11 +117,12 @@ class IngestionConfig:
     llm_ingestion: bool = False
     pdf_dpi: int = 300
     pdf_llm_prompt: str = ""
-    supported_file_extensions: list = field(default_factory=lambda: [".md", ".txt", ".pdf"])
+    supported_file_extensions: list[str] = Field(default_factory=lambda: [".md", ".txt", ".pdf"])
+
+    model_config = {"extra": "allow"}
 
 
-@dataclass
-class SummarizationConfig:
+class SummarizationConfig(BaseModel):
     """Summarization stage configuration."""
 
     run: bool = False
@@ -88,7 +132,10 @@ class SummarizationConfig:
     summarization_user_prompt: str = ""
     combine_summaries_user_prompt: str = ""
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_tokens(self) -> "SummarizationConfig":
         if self.max_tokens <= 0:
             raise ConfigValidationError(f"max_tokens must be > 0, got {self.max_tokens}")
         if self.token_overlap < 0:
@@ -97,10 +144,10 @@ class SummarizationConfig:
             raise ConfigValidationError(
                 f"token_overlap ({self.token_overlap}) must be < max_tokens ({self.max_tokens})"
             )
+        return self
 
 
-@dataclass
-class ChunkingConfig:
+class ChunkingConfig(BaseModel):
     """Chunking stage configuration."""
 
     run: bool = False
@@ -111,7 +158,10 @@ class ChunkingConfig:
     h_max: int = 5
     num_multihops_factor: int = 1
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_chunking(self) -> "ChunkingConfig":
         if self.l_max_tokens <= 0:
             raise ConfigValidationError(f"l_max_tokens must be > 0, got {self.l_max_tokens}")
         if self.token_overlap < 0:
@@ -122,10 +172,10 @@ class ChunkingConfig:
             raise ConfigValidationError(f"h_max ({self.h_max}) must be >= h_min ({self.h_min})")
         if self.num_multihops_factor < 1:
             raise ConfigValidationError(f"num_multihops_factor must be >= 1, got {self.num_multihops_factor}")
+        return self
 
 
-@dataclass
-class SingleShotConfig:
+class SingleShotConfig(BaseModel):
     """Single-shot question generation configuration."""
 
     run: bool = False
@@ -134,19 +184,22 @@ class SingleShotConfig:
     single_shot_system_prompt: str = ""
     single_shot_system_prompt_multi: str = ""
     single_shot_user_prompt: str = ""
-    chunk_sampling: ChunkSamplingConfig = field(default_factory=ChunkSamplingConfig)
+    chunk_sampling: ChunkSamplingConfig = Field(default_factory=ChunkSamplingConfig)
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_mode(self) -> "SingleShotConfig":
         valid_modes = {"open-ended", "multi-choice", ""}
         mode = self.question_mode.strip().lower() if self.question_mode else ""
         if mode and mode not in valid_modes:
             raise ConfigValidationError(
                 f"question_mode must be 'open-ended' or 'multi-choice', got '{self.question_mode}'"
             )
+        return self
 
 
-@dataclass
-class MultiHopConfig:
+class MultiHopConfig(BaseModel):
     """Multi-hop question generation configuration."""
 
     run: bool = False
@@ -156,17 +209,20 @@ class MultiHopConfig:
     multi_hop_system_prompt_multi: str = ""
     multi_hop_user_prompt: str = ""
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_mode(self) -> "MultiHopConfig":
         valid_modes = {"open-ended", "multi-choice", ""}
         mode = self.question_mode.strip().lower() if self.question_mode else ""
         if mode and mode not in valid_modes:
             raise ConfigValidationError(
                 f"question_mode must be 'open-ended' or 'multi-choice', got '{self.question_mode}'"
             )
+        return self
 
 
-@dataclass
-class CrossDocConfig:
+class CrossDocConfig(BaseModel):
     """Cross-document question generation configuration."""
 
     run: bool = False
@@ -177,10 +233,13 @@ class CrossDocConfig:
     multi_hop_user_prompt: str = ""
     max_combinations: int = 100
     chunks_per_document: int = 1
-    num_docs_per_combination: list = field(default_factory=lambda: [2, 5])
+    num_docs_per_combination: list[int] = Field(default_factory=lambda: [2, 5])
     random_seed: int = 42
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_cross_doc(self) -> "CrossDocConfig":
         valid_modes = {"open-ended", "multi-choice", ""}
         mode = self.question_mode.strip().lower() if self.question_mode else ""
         if mode and mode not in valid_modes:
@@ -200,10 +259,10 @@ class CrossDocConfig:
             raise ConfigValidationError(f"num_docs_per_combination[0] must be >= 2, got {min_docs}")
         if max_docs < min_docs:
             raise ConfigValidationError(f"num_docs_per_combination[1] ({max_docs}) must be >= [0] ({min_docs})")
+        return self
 
 
-@dataclass
-class QuestionRewritingConfig:
+class QuestionRewritingConfig(BaseModel):
     """Question rewriting configuration."""
 
     run: bool = False
@@ -211,9 +270,10 @@ class QuestionRewritingConfig:
     question_rewriting_user_prompt: str = ""
     additional_instructions: str = ""
 
+    model_config = {"extra": "allow"}
 
-@dataclass
-class LightevalConfig:
+
+class LightevalConfig(BaseModel):
     """Lighteval preparation configuration."""
 
     run: bool = False
@@ -224,9 +284,10 @@ class LightevalConfig:
     summarized_subset: str = "summarized"
     output_subset: str = "prepared_lighteval"
 
+    model_config = {"extra": "allow"}
 
-@dataclass
-class CitationFilteringConfig:
+
+class CitationFilteringConfig(BaseModel):
     """Citation score filtering configuration."""
 
     run: bool = False
@@ -234,34 +295,40 @@ class CitationFilteringConfig:
     alpha: float = 0.7
     beta: float = 0.3
 
-    def __post_init__(self):
+    model_config = {"extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_coefficients(self) -> "CitationFilteringConfig":
         if not (0.0 <= self.alpha <= 1.0):
             raise ConfigValidationError(f"alpha must be in [0, 1], got {self.alpha}")
         if not (0.0 <= self.beta <= 1.0):
             raise ConfigValidationError(f"beta must be in [0, 1], got {self.beta}")
+        return self
 
 
-@dataclass
-class PipelineConfig:
+class PipelineConfig(BaseModel):
     """Pipeline configuration with all stages."""
 
-    ingestion: IngestionConfig = field(default_factory=IngestionConfig)
-    summarization: SummarizationConfig = field(default_factory=SummarizationConfig)
-    chunking: ChunkingConfig = field(default_factory=ChunkingConfig)
-    single_shot_question_generation: SingleShotConfig = field(default_factory=SingleShotConfig)
-    multi_hop_question_generation: MultiHopConfig = field(default_factory=MultiHopConfig)
-    cross_document_question_generation: CrossDocConfig = field(default_factory=CrossDocConfig)
-    question_rewriting: QuestionRewritingConfig = field(default_factory=QuestionRewritingConfig)
-    prepare_lighteval: LightevalConfig = field(default_factory=LightevalConfig)
-    citation_score_filtering: CitationFilteringConfig = field(default_factory=CitationFilteringConfig)
+    ingestion: IngestionConfig = Field(default_factory=IngestionConfig)
+    summarization: SummarizationConfig = Field(default_factory=SummarizationConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    single_shot_question_generation: SingleShotConfig = Field(default_factory=SingleShotConfig)
+    multi_hop_question_generation: MultiHopConfig = Field(default_factory=MultiHopConfig)
+    cross_document_question_generation: CrossDocConfig = Field(default_factory=CrossDocConfig)
+    question_rewriting: QuestionRewritingConfig = Field(default_factory=QuestionRewritingConfig)
+    prepare_lighteval: LightevalConfig = Field(default_factory=LightevalConfig)
+    citation_score_filtering: CitationFilteringConfig = Field(default_factory=CitationFilteringConfig)
+
+    model_config = {"extra": "allow"}
 
 
-@dataclass
-class YourbenchConfig:
+class YourbenchConfig(BaseModel):
     """Root configuration schema."""
 
-    hf_configuration: HFConfig = field(default_factory=HFConfig)
-    model_list: list = field(default_factory=list)
-    model_roles: dict = field(default_factory=dict)
-    pipeline: PipelineConfig = field(default_factory=PipelineConfig)
+    hf_configuration: HFConfig = Field(default_factory=HFConfig)
+    model_list: list[ModelConfig] = Field(default_factory=list)
+    model_roles: dict[str, list[str]] = Field(default_factory=dict)
+    pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     debug: bool = False
+
+    model_config = {"extra": "allow"}
