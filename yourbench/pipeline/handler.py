@@ -8,34 +8,8 @@ from loguru import logger
 from yourbench.conf.loader import get_enabled_stages
 
 
-# Stage function overrides for question generation
-_stage_overrides = {}
-
-
-def _get_stage_overrides():
-    """Lazy load question generation functions."""
-    global _stage_overrides
-    if not _stage_overrides:
-        from yourbench.pipeline.question_generation import (
-            run_multi_hop,
-            run_single_shot,
-            run_cross_document,
-        )
-
-        _stage_overrides = {
-            "single_shot_question_generation": run_single_shot,
-            "multi_hop_question_generation": run_multi_hop,
-            "cross_document_question_generation": run_cross_document,
-        }
-    return _stage_overrides
-
-
 def _get_stage_function(stage: str):
     """Get the function for a pipeline stage."""
-    overrides = _get_stage_overrides()
-    if stage in overrides:
-        return overrides[stage]
-
     # Handle legacy name
     if stage == "lighteval":
         logger.warning("'lighteval' is deprecated, use 'prepare_lighteval'")
