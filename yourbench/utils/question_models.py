@@ -170,5 +170,5 @@ class QuestionRow:
     def _filter_empty(d: Dict[str, Any]) -> Dict[str, Any]:
         """Remove keys with empty/None values, preserving required fields."""
         # Fields that should always be included even if empty
-        required_fields = {"document_id", "question", "estimated_difficulty", "generating_model"}
+        required_fields = {"document_id", "question", "generating_model"}
         return {k: v for k, v in d.items() if k in required_fields or (v is not None and v != "" and v != [])}

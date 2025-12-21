@@ -82,6 +82,12 @@ def _extract_custom_fields(pair: dict) -> dict:
     return {key: value for key, value in pair.items() if key not in STANDARD_FIELDS}
 
 
+def _has_difficulty_field(pair: dict) -> bool:
+    """Check if the pair has any difficulty-related field."""
+    difficulty_fields = {"estimated_difficulty", "difficulty", "complexity"}
+    return bool(difficulty_fields & pair.keys())
+
+
 # JSON parsing functions
 
 
@@ -376,6 +382,9 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
                         raw_response=reply,
                         citations=citations,
                     ).to_dict(format="single-hop")
+                    # Remove estimated_difficulty if not explicitly provided in LLM response
+                    if not _has_difficulty_field(pair):
+                        base_row.pop("estimated_difficulty", None)
                     # Merge custom schema fields (preserves fields like probing_follow_ups, etc.)
                     custom_fields = _extract_custom_fields(pair)
                     if custom_fields:
@@ -447,6 +456,9 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
                         raw_response=raw,
                         citations=citations,
                     ).to_dict(format="multi-hop")
+                    # Remove estimated_difficulty if not explicitly provided in LLM response
+                    if not _has_difficulty_field(pair):
+                        base_row.pop("estimated_difficulty", None)
                     # Merge custom schema fields (preserves fields like probing_follow_ups, etc.)
                     custom_fields = _extract_custom_fields(pair)
                     if custom_fields:
