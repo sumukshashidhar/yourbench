@@ -1,11 +1,9 @@
 """Tests for field alias normalization in parsing engine."""
 
-import pytest
-
 from yourbench.utils.parsing_engine import (
-    _normalize_pair_fields,
     FIELD_ALIASES,
     DIFFICULTY_MAPPINGS,
+    _normalize_pair_fields,
 )
 
 
