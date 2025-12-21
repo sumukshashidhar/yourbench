@@ -10,7 +10,7 @@ from typing import Literal
 import pytest
 from pydantic import Field, BaseModel, ValidationError
 
-from yourbench.utils.schema_loader import SchemaLoadError, load_schema_from_spec
+from yourbench.utils.schema_loader import SCHEMA_CLASS_NAME, SchemaLoadError, load_schema_from_spec
 from yourbench.utils.parsing_engine import (
     FIELD_ALIASES,
     DIFFICULTY_MAPPINGS,
@@ -117,44 +117,44 @@ class TestSchemaLoader:
         assert load_schema_from_spec(None, "open-ended") == OpenEndedQuestion
         assert load_schema_from_spec(None, "multi-choice") == MultiChoiceQuestion
 
-    def test_invalid_format_raises(self):
-        with pytest.raises(SchemaLoadError, match="Expected format"):
-            load_schema_from_spec("no_colon.py", "open-ended")
-
     def test_missing_file_raises(self):
         with pytest.raises(SchemaLoadError, match="not found"):
-            load_schema_from_spec("/nonexistent/path.py:Schema", "open-ended")
+            load_schema_from_spec("/nonexistent/path.py", "open-ended")
 
     def test_non_python_raises(self):
-        with pytest.raises(SchemaLoadError, match="not found"):
-            load_schema_from_spec("schema.txt:Schema", "open-ended")
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as f:
+            f.write("not python\n")
+            f.flush()
+            with pytest.raises(SchemaLoadError, match="must be a Python file"):
+                load_schema_from_spec(f.name, "open-ended")
 
     def test_missing_class_raises(self):
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
             f.write("from pydantic import BaseModel\nclass Other(BaseModel): pass\n")
             f.flush()
-            with pytest.raises(SchemaLoadError, match="not found in"):
-                load_schema_from_spec(f"{f.name}:Missing", "open-ended")
+            with pytest.raises(SchemaLoadError, match=f"'{SCHEMA_CLASS_NAME}' not found in"):
+                load_schema_from_spec(f.name, "open-ended")
 
     def test_non_basemodel_raises(self):
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
-            f.write("class NotPydantic: pass\n")
+            f.write(f"class {SCHEMA_CLASS_NAME}: pass\n")
             f.flush()
             with pytest.raises(SchemaLoadError, match="must be a Pydantic"):
-                load_schema_from_spec(f"{f.name}:NotPydantic", "open-ended")
+                load_schema_from_spec(f.name, "open-ended")
 
     def test_valid_custom_schema(self):
+        code = f"from pydantic import BaseModel\nclass {SCHEMA_CLASS_NAME}(BaseModel):\n    question: str\n"
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
-            f.write("from pydantic import BaseModel\nclass CustomQ(BaseModel):\n    question: str\n")
+            f.write(code)
             f.flush()
-            schema = load_schema_from_spec(f"{f.name}:CustomQ", "open-ended")
-            assert schema.__name__ == "CustomQ"
+            schema = load_schema_from_spec(f.name, "open-ended")
+            assert schema.__name__ == SCHEMA_CLASS_NAME
 
     def test_load_complex_schema(self):
         """Test loading a schema with multiple fields and Literal types."""
-        code = """from typing import Literal
+        code = f"""from typing import Literal
 from pydantic import BaseModel, Field
-class TechQ(BaseModel):
+class {SCHEMA_CLASS_NAME}(BaseModel):
     reasoning: str = Field(description="Why")
     question: str
     difficulty: Literal["easy", "hard"] = Field(description="Level")
@@ -163,8 +163,8 @@ class TechQ(BaseModel):
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
             f.write(code)
             f.flush()
-            schema = load_schema_from_spec(f"{f.name}:TechQ", "open-ended")
-            assert schema.__name__ == "TechQ"
+            schema = load_schema_from_spec(f.name, "open-ended")
+            assert schema.__name__ == SCHEMA_CLASS_NAME
             assert "reasoning" in schema.model_fields
 
 

@@ -1,7 +1,7 @@
 """Utility for loading custom Pydantic schemas from file paths.
 
-Users can specify a path like `path/to/schema.py:ClassName` in their config
-to use a custom question schema.
+Schema files must export a Pydantic BaseModel named `DataFormat`.
+Users specify the path: `path/to/schema.py`
 """
 
 import importlib.util
@@ -14,6 +14,10 @@ from pydantic import BaseModel
 from yourbench.utils.question_schemas import get_default_schema
 
 
+# Standard class name that all schema files must export
+SCHEMA_CLASS_NAME = "DataFormat"
+
+
 class SchemaLoadError(ValueError):
     """Raised when schema loading fails."""
 
@@ -21,10 +25,10 @@ class SchemaLoadError(ValueError):
 
 
 def load_schema_from_spec(spec: str | None, question_mode: str) -> Type[BaseModel]:
-    """Load a Pydantic schema from a spec string or return the default.
+    """Load a Pydantic schema from a file path or return the default.
 
     Args:
-        spec: Schema specification in format `path/to/file.py:ClassName` or None.
+        spec: Path to schema file (must export `DataFormat` class), or None.
         question_mode: The question mode ('open-ended' or 'multi-choice').
 
     Returns:
@@ -36,12 +40,7 @@ def load_schema_from_spec(spec: str | None, question_mode: str) -> Type[BaseMode
     if not spec:
         return get_default_schema(question_mode)
 
-    if ":" not in spec:
-        raise SchemaLoadError(f"Invalid schema spec: '{spec}'. Expected format: 'path/to/file.py:ClassName'")
-
-    file_path_str, class_name = spec.rsplit(":", 1)
-    file_path = Path(file_path_str).resolve()
-
+    file_path = Path(spec).resolve()
     if not file_path.exists():
         raise SchemaLoadError(f"Schema file not found: {file_path}")
 
@@ -57,20 +56,20 @@ def load_schema_from_spec(spec: str | None, question_mode: str) -> Type[BaseMode
     module = importlib.util.module_from_spec(spec_loader)
     spec_loader.loader.exec_module(module)
 
-    # Get the class from the module
-    if not hasattr(module, class_name):
+    # Get the DataFormat class from the module
+    if not hasattr(module, SCHEMA_CLASS_NAME):
         raise SchemaLoadError(
-            f"Class '{class_name}' not found in {file_path}. "
+            f"Class '{SCHEMA_CLASS_NAME}' not found in {file_path}. "
             f"Available: {[n for n in dir(module) if not n.startswith('_')]}"
         )
 
-    schema_cls = getattr(module, class_name)
+    schema_cls = getattr(module, SCHEMA_CLASS_NAME)
 
     # Validate it's a Pydantic model
     if not isinstance(schema_cls, type) or not issubclass(schema_cls, BaseModel):
         raise SchemaLoadError(
-            f"'{class_name}' in {file_path} must be a Pydantic BaseModel subclass, got {type(schema_cls)}"
+            f"'{SCHEMA_CLASS_NAME}' in {file_path} must be a Pydantic BaseModel subclass, got {type(schema_cls)}"
         )
 
-    logger.info(f"Loaded custom schema: {class_name} from {file_path}")
+    logger.info(f"Loaded custom schema: {SCHEMA_CLASS_NAME} from {file_path}")
     return schema_cls
