@@ -186,6 +186,7 @@ class SingleShotConfig(BaseModel):
     single_shot_user_prompt: str = ""
     chunk_sampling: ChunkSamplingConfig = Field(default_factory=ChunkSamplingConfig)
 
+    question_schema: str | None = None
     model_config = {"extra": "allow"}
 
     @model_validator(mode="after")
@@ -209,6 +210,7 @@ class MultiHopConfig(BaseModel):
     multi_hop_system_prompt_multi: str = ""
     multi_hop_user_prompt: str = ""
 
+    question_schema: str | None = None
     model_config = {"extra": "allow"}
 
     @model_validator(mode="after")
@@ -237,6 +239,8 @@ class CrossDocConfig(BaseModel):
     random_seed: int = 42
 
     model_config = {"extra": "allow"}
+
+    question_schema: str | None = None
 
     @model_validator(mode="after")
     def validate_cross_doc(self) -> "CrossDocConfig":

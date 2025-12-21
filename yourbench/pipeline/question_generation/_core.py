@@ -1,9 +1,11 @@
 from __future__ import annotations
+import re
 from typing import Any
 
 from loguru import logger
 
 from datasets import Dataset
+from yourbench.utils.schema_loader import load_schema_from_spec
 from yourbench.utils.chunking_utils import get_sampling_cfg
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import (
@@ -13,6 +15,7 @@ from yourbench.utils.parsing_engine import (
 )
 from yourbench.utils.logging_context import log_step, log_stage
 from yourbench.utils.cross_document_utils import create_cross_document_dataset
+from yourbench.utils.schema_prompt_generator import generate_schema_instructions
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,
@@ -21,10 +24,30 @@ from yourbench.utils.inference.inference_builders import (
 
 
 def _get_system_prompt(stage_cfg: Any, mode: str, is_multi: bool = False) -> str:
-    """Get appropriate system prompt based on mode and stage type."""
+    """Get system prompt, injecting schema instructions if custom schema is specified."""
     prefix = "multi_hop_" if is_multi else "single_shot_"
     suffix = "_multi" if mode == "multi-choice" else ""
-    return getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
+    prompt = getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
+
+    # Load schema (default or custom) if question_schema is specified
+    schema_spec = getattr(stage_cfg, "question_schema", None)
+    if schema_spec:
+        schema_class = load_schema_from_spec(schema_spec, mode)
+        schema_instructions = generate_schema_instructions(schema_class)
+
+        # Replace hardcoded Python class schema in prompt with generated instructions
+        pattern = r"```python\nclass QuestionRow\(BaseModel\):[\s\S]*?```"
+        if re.search(pattern, prompt):
+            prompt = re.sub(pattern, f"```\n{schema_instructions}\n```", prompt)
+        else:
+            # If no schema block found, append instructions before example output
+            example_marker = "## Example Output"
+            if example_marker in prompt:
+                prompt = prompt.replace(
+                    example_marker, f"## Output Format\n\n{schema_instructions}\n\n{example_marker}"
+                )
+
+    return prompt
 
 
 def _validate_mode(mode: str) -> str:
