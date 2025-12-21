@@ -97,6 +97,8 @@ For your own data, you can create a YAML config pointing to your documents and p
 
 You may be interested in [How YourBench Works](./docs/PRINCIPLES.md)
 
+Want custom output formats? See [Custom Question Schemas](./docs/CUSTOM_SCHEMAS.md) to define your own Pydantic models for generated questions.
+
 ## Try it Online (Hugging Face Spaces)
 
 You can **try YourBench right away in your browser** – no installation needed:

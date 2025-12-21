@@ -1,0 +1,207 @@
+# Custom Question Schemas
+
+Define custom output formats for generated questions using Pydantic models.
+
+## Quick Start
+
+**1. Create a schema file:**
+
+```python
+# schemas/my_schema.py
+from pydantic import BaseModel, Field
+
+class DataFormat(BaseModel):
+    question: str = Field(description="The question text")
+    answer: str = Field(description="Complete answer")
+    citations: list[str] = Field(description="Source quotes from the document")
+```
+
+**2. Reference it in your config:**
+
+```yaml
+pipeline:
+  single_shot_question_generation:
+    question_schema: ./schemas/my_schema.py
+```
+
+**3. Run the pipeline:**
+
+```bash
+yourbench run config.yaml
+```
+
+Generated questions will use your schema format.
+
+## Schema Requirements
+
+| Requirement | Details |
+|-------------|--------|
+| Class name | Must be `DataFormat` |
+| Base class | Must inherit from `pydantic.BaseModel` |
+| Field descriptions | Use `Field(description=...)` to guide the LLM |
+| File extension | Must be `.py` |
+
+## Field Types
+
+Supported Pydantic field types:
+
+```python
+from typing import Literal
+from pydantic import BaseModel, Field
+
+class DataFormat(BaseModel):
+    # Basic types
+    question: str = Field(description="Question text")
+    answer: str = Field(description="Answer text")
+    
+    # Lists
+    citations: list[str] = Field(description="Source quotes")
+    keywords: list[str] = Field(description="Key terms")
+    
+    # Enums / Literals
+    difficulty: Literal["easy", "medium", "hard"] = Field(description="Difficulty")
+    category: Literal["factual", "analytical", "conceptual"] = Field(description="Type")
+    
+    # Integers with constraints
+    score: int = Field(ge=1, le=10, description="Quality score 1-10")
+    
+    # Optional fields with defaults
+    notes: str = Field(default="", description="Additional notes")
+```
+
+## Field Aliasing
+
+Certain field names are automatically mapped to standard output columns:
+
+| Your Field Name | Maps To | Notes |
+|-----------------|---------|-------|
+| `reasoning` | `thought_process` | Explanation field |
+| `explanation` | `thought_process` | Explanation field |
+| `difficulty` (string) | `estimated_difficulty` (int) | See mapping below |
+
+**Difficulty mapping:**
+
+| String Value | Integer Value |
+|--------------|---------------|
+| `beginner`, `easy` | 2 |
+| `intermediate`, `medium` | 5 |
+| `advanced`, `hard` | 7 |
+| `expert` | 9 |
+
+## Example Schemas
+
+### Technical Documentation
+
+```python
+from pydantic import BaseModel, Field
+from typing import Literal
+
+class DataFormat(BaseModel):
+    question: str = Field(description="Technical question about the API/code")
+    answer: str = Field(description="Detailed technical answer")
+    prerequisites: list[str] = Field(description="Required knowledge")
+    code_snippet: str = Field(default="", description="Code example if relevant")
+    difficulty: Literal["beginner", "intermediate", "advanced"] = Field(
+        description="Technical difficulty level"
+    )
+    citations: list[str] = Field(description="Source quotes")
+```
+
+### Educational Assessment
+
+```python
+from pydantic import BaseModel, Field
+from typing import Literal
+
+class DataFormat(BaseModel):
+    question: str = Field(description="Question testing comprehension")
+    answer: str = Field(description="Expected correct answer")
+    bloom_level: Literal[
+        "remember", "understand", "apply", "analyze", "evaluate", "create"
+    ] = Field(description="Bloom's taxonomy level")
+    marking_scheme: str = Field(description="How to evaluate responses")
+    common_mistakes: list[str] = Field(description="Typical student errors")
+    citations: list[str] = Field(description="Source material")
+```
+
+### Socratic Dialogue
+
+```python
+from pydantic import BaseModel, Field
+from typing import Literal
+
+class DataFormat(BaseModel):
+    question: str = Field(description="Probing question to stimulate thinking")
+    answer: str = Field(description="Ideal response demonstrating understanding")
+    dialectic_goal: str = Field(description="What insight should emerge")
+    follow_up_questions: list[str] = Field(description="Questions to dig deeper")
+    expected_reasoning: str = Field(description="Thought process to demonstrate")
+    depth_level: Literal["surface", "analytical", "philosophical"] = Field(
+        description="Conceptual depth required"
+    )
+    citations: list[str] = Field(description="Source material")
+```
+
+### Multiple Choice
+
+```python
+from pydantic import BaseModel, Field
+
+class DataFormat(BaseModel):
+    question: str = Field(description="Question stem")
+    choices: list[str] = Field(
+        min_length=4, max_length=4,
+        description="Four choices: (A) text, (B) text, (C) text, (D) text"
+    )
+    answer: str = Field(pattern=r"^[A-D]$", description="Correct letter A-D")
+    distractor_explanations: list[str] = Field(
+        description="Why each wrong answer is plausible but incorrect"
+    )
+    citations: list[str] = Field(description="Source material")
+```
+
+## Default Schema
+
+If no `question_schema` is specified, YourBench uses:
+
+**Open-ended mode:**
+```python
+class OpenEndedQuestion(BaseModel):
+    thought_process: str
+    question_type: Literal["analytical", "application-based", "clarification", ...]
+    question: str
+    answer: str
+    estimated_difficulty: int  # 1-10
+    citations: list[str]
+```
+
+**Multi-choice mode:**
+```python
+class MultiChoiceQuestion(BaseModel):
+    thought_process: str
+    question_type: Literal["analytical", "application-based", "clarification", ...]
+    question: str
+    choices: list[str]  # Exactly 4
+    answer: str  # A, B, C, or D
+    estimated_difficulty: int  # 1-10
+    citations: list[str]
+```
+
+## Troubleshooting
+
+**"Class 'DataFormat' not found"**
+- Your schema file must export a class named exactly `DataFormat`
+- Check for typos in the class name
+
+**"Must be a Pydantic BaseModel subclass"**
+- Ensure your class inherits from `pydantic.BaseModel`
+- Check your Pydantic import: `from pydantic import BaseModel`
+
+**"Schema file not found"**
+- Use a relative path from the config file location
+- Or use an absolute path
+
+**LLM produces wrong format**
+- Add more detailed `description` to each field
+- Use `Literal` types to constrain values
+- Add `additional_instructions` in the pipeline config
