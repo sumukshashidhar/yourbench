@@ -3,7 +3,7 @@
 Tests that the system works with very simple schemas.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import Field, BaseModel
 
 
 class MinimalQuestion(BaseModel):

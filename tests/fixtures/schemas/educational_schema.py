@@ -4,7 +4,8 @@ Designed for textbooks, learning materials, and instructional content.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class EducationalQuestion(BaseModel):

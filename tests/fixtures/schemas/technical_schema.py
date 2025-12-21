@@ -4,7 +4,8 @@ Designed for API docs, code tutorials, and technical specifications.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class TechnicalQuestion(BaseModel):

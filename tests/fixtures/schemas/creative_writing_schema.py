@@ -4,7 +4,8 @@ Designed for fiction, poetry, and literary criticism.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class LiteraryQuestion(BaseModel):

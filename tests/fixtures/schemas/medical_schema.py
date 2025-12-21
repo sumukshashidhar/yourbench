@@ -4,7 +4,8 @@ Designed for medical literature, clinical guidelines, and healthcare content.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class MedicalQuestion(BaseModel):

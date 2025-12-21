@@ -4,7 +4,8 @@ Designed for standardized test prep and exam-style questions.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class ExamQuestion(BaseModel):

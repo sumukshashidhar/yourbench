@@ -4,7 +4,8 @@ Demonstrates how to create MCQ-specific schemas with custom difficulty.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class CustomMCQ(BaseModel):

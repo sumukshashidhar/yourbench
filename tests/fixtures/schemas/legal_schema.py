@@ -4,7 +4,8 @@ Designed for contracts, regulations, case law, and legal documents.
 """
 
 from typing import Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field, BaseModel
 
 
 class LegalQuestion(BaseModel):
