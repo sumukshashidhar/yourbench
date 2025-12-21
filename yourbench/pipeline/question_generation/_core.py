@@ -15,7 +15,11 @@ from yourbench.utils.parsing_engine import (
 )
 from yourbench.utils.logging_context import log_step, log_stage
 from yourbench.utils.cross_document_utils import create_cross_document_dataset
-from yourbench.utils.schema_prompt_generator import generate_schema_instructions
+from yourbench.utils.schema_prompt_generator import (
+    generate_example_json,
+    generate_critical_reminders,
+    generate_schema_instructions,
+)
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,
@@ -24,28 +28,49 @@ from yourbench.utils.inference.inference_builders import (
 
 
 def _get_system_prompt(stage_cfg: Any, mode: str, is_multi: bool = False) -> str:
-    """Get system prompt, injecting schema instructions if custom schema is specified."""
+    """Get system prompt, injecting schema instructions if custom schema is specified.
+
+    When a custom schema is specified, we replace the schema definition, example output,
+    and critical reminders sections to use the custom schema's field names.
+    """
     prefix = "multi_hop_" if is_multi else "single_shot_"
     suffix = "_multi" if mode == "multi-choice" else ""
     prompt = getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
 
-    # Load schema (default or custom) if question_schema is specified
     schema_spec = getattr(stage_cfg, "question_schema", None)
-    if schema_spec:
-        schema_class = load_schema_from_spec(schema_spec, mode)
-        schema_instructions = generate_schema_instructions(schema_class)
+    if not schema_spec:
+        return prompt
 
-        # Replace hardcoded Python class schema in prompt with generated instructions
-        pattern = r"```python\nclass QuestionRow\(BaseModel\):[\s\S]*?```"
-        if re.search(pattern, prompt):
-            prompt = re.sub(pattern, f"```\n{schema_instructions}\n```", prompt)
-        else:
-            # If no schema block found, append instructions before example output
-            example_marker = "## Example Output"
-            if example_marker in prompt:
-                prompt = prompt.replace(
-                    example_marker, f"## Output Format\n\n{schema_instructions}\n\n{example_marker}"
-                )
+    schema_class = load_schema_from_spec(schema_spec, mode)
+    schema_instructions = generate_schema_instructions(schema_class)
+
+    # 1. Replace hardcoded Python class schema with generated instructions
+    schema_pattern = r"""```python\nclass QuestionRow\(BaseModel\):[\s\S]*?```"""
+    if re.search(schema_pattern, prompt):
+        prompt = re.sub(schema_pattern, f"```\n{schema_instructions}\n```", prompt)
+
+    # 2. Replace Example Output section with example using new schema
+    example_pattern = r"""## Example Output[\s\S]*?(?=\n## |\Z)"""
+    if re.search(example_pattern, prompt):
+        example_json = generate_example_json(schema_class)
+        replacement = f"""## Example Output
+
+<document_analysis>
+[Your analysis of the document content here]
+</document_analysis>
+
+<output_json>
+{example_json}
+</output_json>
+
+"""
+        prompt = re.sub(example_pattern, replacement, prompt)
+
+    # 3. Replace Critical Reminders to remove hardcoded field references
+    reminders_pattern = r"""## Critical Reminders[\s\S]*?\Z"""
+    if re.search(reminders_pattern, prompt):
+        new_reminders = generate_critical_reminders(schema_class)
+        prompt = re.sub(reminders_pattern, new_reminders, prompt)
 
     return prompt
 

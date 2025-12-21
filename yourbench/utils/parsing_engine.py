@@ -10,6 +10,42 @@ from loguru import logger
 from yourbench.utils.question_models import QuestionRow, validate_list, force_int_in_range
 
 
+# Field alias mapping for custom schemas
+# Maps custom field names to standard QuestionRow field names
+FIELD_ALIASES: dict[str, str] = {
+    "reasoning": "thought_process",
+    "explanation": "thought_process",
+    "rationale": "thought_process",
+    "thinking": "thought_process",
+    "difficulty": "estimated_difficulty",
+    "complexity": "estimated_difficulty",
+}
+
+# Maps string difficulty values to numeric values
+DIFFICULTY_MAPPINGS: dict[str, int] = {
+    "beginner": 2,
+    "easy": 2,
+    "intermediate": 5,
+    "medium": 5,
+    "advanced": 7,
+    "hard": 7,
+    "expert": 9,
+    "very hard": 9,
+}
+
+
+def _normalize_pair_fields(pair: dict) -> dict:
+    """Map custom schema fields to standard QuestionRow fields."""
+    normalized = dict(pair)
+    for old, new in FIELD_ALIASES.items():
+        if old in normalized and new not in normalized:
+            normalized[new] = normalized.pop(old)
+    # Convert string difficulty to numeric
+    if "estimated_difficulty" in normalized and isinstance(normalized["estimated_difficulty"], str):
+        normalized["estimated_difficulty"] = DIFFICULTY_MAPPINGS.get(normalized["estimated_difficulty"].lower(), 5)
+    return normalized
+
+
 # JSON parsing functions
 
 
@@ -268,6 +304,7 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
                     continue
                 try:
                     pair = shuffle_mcq(pair)
+                    pair = _normalize_pair_fields(pair)
                     pair["question_mode"] = question_mode
 
                     if question_mode == "open-ended":
@@ -334,6 +371,7 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
                     continue
                 try:
                     pair = shuffle_mcq(pair)
+                    pair = _normalize_pair_fields(pair)
                     pair["question_mode"] = question_mode
 
                     if question_mode == "open-ended":

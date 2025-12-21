@@ -141,3 +141,29 @@ def generate_example_json(schema: Type[BaseModel]) -> str:
             example[field_name] = "<value>"
 
     return json.dumps([example], indent=2)
+
+
+def generate_critical_reminders(schema: type[BaseModel]) -> str:
+    """Generate critical reminders section based on the schema fields."""
+    lines = [
+        "## Critical Reminders",
+        "- Your goal: Create questions that verify someone has truly understood the document",
+        "- Mix difficulty levels - include both straightforward and challenging questions",
+        "- Make questions interesting and engaging, not just mechanical recall",
+        '- Never use phrases like "according to the text" or "as mentioned in the document"',
+        "- Each question must be answerable without seeing the original text",
+    ]
+
+    field_names = list(schema.model_fields.keys())
+
+    # Add field-specific reminders
+    if "citations" in field_names:
+        lines.append("- Ensure all citations are verbatim quotes from the text_chunk")
+
+    # Add a reminder about required fields
+    required = [f for f, info in schema.model_fields.items() if info.is_required()]
+    if required:
+        fields_str = ", ".join(f"`{f}`" for f in required)
+        lines.append(f"- Always include all required fields: {fields_str}")
+
+    return "\n".join(lines)
