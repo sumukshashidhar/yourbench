@@ -12,7 +12,7 @@ from yourbench.conf.loader import load_config
 from yourbench.pipeline.question_generation._core import _get_system_prompt
 
 
-SCHEMAS_DIR = Path(".dev/custom_schema_tests/schemas")
+SCHEMAS_DIR = Path(__file__).parent.parent / "fixtures" / "schemas"
 
 
 class TestPromptInjection:
@@ -30,7 +30,7 @@ class TestPromptInjection:
 
     def test_technical_schema_replaces_default_fields(self):
         """Technical schema should replace thought_process with reasoning."""
-        config = load_config(".dev/custom_schema_tests/config_technical.yaml")
+        config = load_config("tests/fixtures/configs/config_technical.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         # Check custom field is present
@@ -42,7 +42,7 @@ class TestPromptInjection:
 
     def test_philosophical_schema_has_contemplation(self):
         """Philosophical schema should have contemplation field."""
-        config = load_config(".dev/custom_schema_tests/config_philosophical.yaml")
+        config = load_config("tests/fixtures/configs/config_philosophical.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         assert "contemplation" in prompt
@@ -50,7 +50,7 @@ class TestPromptInjection:
 
     def test_minimal_schema_has_only_core_fields(self):
         """Minimal schema should only have question, answer, citations."""
-        config = load_config(".dev/custom_schema_tests/config_minimal.yaml")
+        config = load_config("tests/fixtures/configs/config_minimal.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         # Core fields present
@@ -60,7 +60,7 @@ class TestPromptInjection:
 
     def test_research_schema_fields(self):
         """Research schema should have methodology-related fields."""
-        config = load_config(".dev/custom_schema_tests/config_research.yaml")
+        config = load_config("tests/fixtures/configs/config_research.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         assert "analytical_rationale" in prompt
@@ -69,7 +69,7 @@ class TestPromptInjection:
 
     def test_medical_schema_has_clinical_fields(self):
         """Medical schema should have clinical domain fields."""
-        config = load_config(".dev/custom_schema_tests/config_medical.yaml")
+        config = load_config("tests/fixtures/configs/config_medical.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         assert "clinical_reasoning" in prompt
@@ -78,7 +78,7 @@ class TestPromptInjection:
 
     def test_exam_schema_has_bloom_taxonomy(self):
         """Exam schema should have Bloom's taxonomy levels."""
-        config = load_config(".dev/custom_schema_tests/config_exam.yaml")
+        config = load_config("tests/fixtures/configs/config_exam.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         assert "bloom_taxonomy_level" in prompt
@@ -87,7 +87,7 @@ class TestPromptInjection:
 
     def test_socratic_schema_has_dialectic_fields(self):
         """Socratic schema should have dialectic learning fields."""
-        config = load_config(".dev/custom_schema_tests/config_socratic.yaml")
+        config = load_config("tests/fixtures/configs/config_socratic.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         assert "dialectic_goal" in prompt
@@ -96,7 +96,7 @@ class TestPromptInjection:
 
     def test_literary_schema_has_critical_analysis(self):
         """Literary schema should have literary analysis fields."""
-        config = load_config(".dev/custom_schema_tests/config_literary.yaml")
+        config = load_config("tests/fixtures/configs/config_literary.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         assert "critical_lens" in prompt
@@ -109,7 +109,7 @@ class TestSchemaFieldsInReminders:
 
     def test_technical_reminders_no_thought_process(self):
         """Technical schema reminders should not reference thought_process."""
-        config = load_config(".dev/custom_schema_tests/config_technical.yaml")
+        config = load_config("tests/fixtures/configs/config_technical.yaml")
         prompt = _get_system_prompt(config.pipeline.single_shot_question_generation, "open-ended")
 
         # The critical reminders section should use schema-appropriate language

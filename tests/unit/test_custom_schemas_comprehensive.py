@@ -17,7 +17,7 @@ from yourbench.utils.schema_prompt_generator import (
 )
 
 
-SCHEMAS_DIR = Path(".dev/custom_schema_tests/schemas")
+SCHEMAS_DIR = Path(__file__).parent.parent / "fixtures" / "schemas"
 
 
 class TestSchemaLoading:
