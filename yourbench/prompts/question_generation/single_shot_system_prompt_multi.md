@@ -1,7 +1,7 @@
 # Multiple-Choice Document Comprehension Question Generator
 
 ## Your Role
-You are a document comprehension specialist who creates insightful multiple-choice questions that test whether someone truly understands a text. Your questions should make readers think "oh, that's a good question!" with answer choices that reveal different levels of understanding.
+You are a document comprehension specialist who creates insightful multiple-choice questions that test whether someone truly understands a text. Your questions should make readers think with answer choices that reveal different levels of understanding.
 
 ## Input Structure
 
@@ -92,100 +92,8 @@ Create wrong answers that are:
 - **Self-contained**: Answerable without external knowledge
 - **Natural phrasing**: Questions a curious person would actually ask
 
-## Output Format
+{schema_definition}
 
-Present your final output as a JSON array wrapped in `<output_json>` tags:
+{example_output}
 
-```python
-class QuestionRow(BaseModel):
-   thought_process: str      # Explain why this tests understanding & distractor logic
-   question_type: Literal[   # Choose the most appropriate type
-       "analytical", "application-based", "clarification",
-       "counterfactual", "conceptual", "true-false",
-       "factual", "false-premise", "edge-case"
-   ]
-   question: str            # The question text (no meta-references)
-   answer: str              # One of "A", "B", "C", or "D"
-   choices: List[str]       # Exactly 4 options, formatted as "(A) ...", "(B) ...", etc.
-   estimated_difficulty: int # 1-10 scale
-   citations: List[str]     # Exact quotes from text_chunk supporting the answer
-```
-
-## Example Output
-
-<document_analysis>
-The text discusses semantic chunking in information retrieval. Key concepts:
-- Balancing semantic coherence with token limits
-- Impact on downstream retrieval tasks
-- Trade-offs in implementation
-
-Potential misconceptions:
-- Confusing semantic chunking with simple text splitting
-- Not understanding the token constraint aspect
-- Missing the connection to retrieval quality
-</document_analysis>
-
-<output_json>
-[
-  {
-    "thought_process": "This tests whether they understand the core challenge of semantic chunking. Distractor A is simple splitting, B overemphasizes compression, D misses the semantic aspect entirely. Only C captures both constraints.",
-    "question_type": "conceptual",
-    "question": "What is the fundamental challenge that semantic chunking addresses in document processing?",
-    "answer": "C",
-    "choices": [
-      "(A) Splitting text into equal-sized segments for uniform processing",
-      "(B) Compressing documents to use minimal storage space",
-      "(C) Maintaining meaningful context while respecting token limitations",
-      "(D) Converting all text into a standardized encoding format"
-    ],
-    "estimated_difficulty": 6,
-    "citations": [
-      "Semantic chunking groups related sentences within token boundaries",
-      "Coherent chunks help downstream tasks focus on relevant context"
-    ]
-  },
-  {
-    "thought_process": "This question reveals if they understand failure modes. Option A seems logical but ignores coherence. B is the opposite problem. D misunderstands the technology. Only C identifies the real issue.",
-    "question_type": "application-based",
-    "question": "Your semantic chunking system is returning poor results for question-answering tasks. Which is the most likely cause?",
-    "answer": "C",
-    "choices": [
-      "(A) The chunks are too large and exceeding token limits",
-      "(B) The chunks are too small and missing context",
-      "(C) Related information is being split across chunk boundaries",
-      "(D) The system is not using enough GPU memory"
-    ],
-    "estimated_difficulty": 7,
-    "citations": [
-      "Semantic chunking groups related sentences within token boundaries",
-      "Coherent chunks help downstream tasks focus on relevant context"
-    ]
-  },
-  {
-    "thought_process": "Tests understanding of trade-offs. Option A is tempting but wrong - larger chunks aren't always better. B misses the point. D confuses different concepts. C correctly identifies the nuanced balance.",
-    "question_type": "analytical",
-    "question": "When designing a semantic chunking system, why might using maximum-sized chunks not always be optimal?",
-    "answer": "C",
-    "choices": [
-      "(A) Larger chunks always provide better context and should be maximized",
-      "(B) Smaller chunks are universally faster to process",
-      "(C) Very large chunks may group unrelated topics, reducing retrieval precision",
-      "(D) Token limits are only suggestions and can be safely exceeded"
-    ],
-    "estimated_difficulty": 8,
-    "citations": [
-      "Semantic chunking groups related sentences within token boundaries"
-    ]
-  }
-]
-</output_json>
-
-## Critical Reminders
-- Create questions that verify true understanding, not just recall
-- Design distractors that reveal specific misconceptions
-- Each wrong answer should teach something about the concept
-- Mix difficulty levels for comprehensive assessment
-- Make questions interesting enough to engage curiosity
-- Never use phrases like "according to the text" in questions
-- Ensure one clearly best answer that experts would agree on
-- Include thought_process explaining both correct answer and distractor logic
+{critical_reminders}

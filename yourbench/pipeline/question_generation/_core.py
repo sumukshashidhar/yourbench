@@ -1,5 +1,4 @@
 from __future__ import annotations
-import re
 from typing import Any
 
 from loguru import logger
@@ -13,13 +12,9 @@ from yourbench.utils.parsing_engine import (
     _remove_duplicate_questions,
     parse_single_shot_responses,
 )
+from yourbench.utils.prompt_builder import build_system_prompt
 from yourbench.utils.logging_context import log_step, log_stage
 from yourbench.utils.cross_document_utils import create_cross_document_dataset
-from yourbench.utils.schema_prompt_generator import (
-    generate_example_json,
-    generate_critical_reminders,
-    generate_schema_instructions,
-)
 from yourbench.utils.inference.inference_core import run_inference
 from yourbench.utils.inference.inference_builders import (
     build_multi_hop_inference_calls,
@@ -28,51 +23,17 @@ from yourbench.utils.inference.inference_builders import (
 
 
 def _get_system_prompt(stage_cfg: Any, mode: str, is_multi: bool = False) -> str:
-    """Get system prompt, injecting schema instructions if custom schema is specified.
-
-    When a custom schema is specified, we replace the schema definition, example output,
-    and critical reminders sections to use the custom schema's field names.
-    """
+    """Get system prompt, substituting schema placeholders if custom schema is specified."""
     prefix = "multi_hop_" if is_multi else "single_shot_"
     suffix = "_multi" if mode == "multi-choice" else ""
-    prompt = getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
+    template = getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
 
     schema_spec = getattr(stage_cfg, "question_schema", None)
     if not schema_spec:
-        return prompt
+        return template
 
     schema_class = load_schema_from_spec(schema_spec, mode)
-    schema_instructions = generate_schema_instructions(schema_class)
-
-    # 1. Replace hardcoded Python class schema with generated instructions
-    schema_pattern = r"""```python\nclass QuestionRow\(BaseModel\):[\s\S]*?```"""
-    if re.search(schema_pattern, prompt):
-        prompt = re.sub(schema_pattern, f"```\n{schema_instructions}\n```", prompt)
-
-    # 2. Replace Example Output section with example using new schema
-    example_pattern = r"""## Example Output[\s\S]*?(?=\n## |\Z)"""
-    if re.search(example_pattern, prompt):
-        example_json = generate_example_json(schema_class)
-        replacement = f"""## Example Output
-
-<document_analysis>
-[Your analysis of the document content here]
-</document_analysis>
-
-<output_json>
-{example_json}
-</output_json>
-
-"""
-        prompt = re.sub(example_pattern, replacement, prompt)
-
-    # 3. Replace Critical Reminders to remove hardcoded field references
-    reminders_pattern = r"""## Critical Reminders[\s\S]*?\Z"""
-    if re.search(reminders_pattern, prompt):
-        new_reminders = generate_critical_reminders(schema_class)
-        prompt = re.sub(reminders_pattern, new_reminders, prompt)
-
-    return prompt
+    return build_system_prompt(template, schema_class)
 
 
 def _validate_mode(mode: str) -> str:
@@ -168,7 +129,6 @@ def run_multi_hop(config) -> None:
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
     logger.info(f"Loaded {len(chunked_ds)} documents for multi-hop")
 
-    # Process regular multi-hop
     _process_questions(
         chunked_ds, "multi_hop_questions", system_msg, stage_cfg, config, "multi_hop_question_generation"
     )
@@ -190,7 +150,6 @@ def run_cross_document(config) -> None:
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
     logger.info(f"Loaded {len(chunked_ds)} documents for cross-document")
 
-    # Create cross-document configuration dict for compatibility
     cross_cfg = {
         "enable": True,
         "max_combinations": stage_cfg.max_combinations,

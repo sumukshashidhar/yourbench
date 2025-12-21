@@ -250,3 +250,41 @@ class TestFieldNormalization:
     def test_all_aliases_defined(self):
         for alias in ["reasoning", "explanation", "rationale", "thinking", "difficulty", "complexity"]:
             assert alias in FIELD_ALIASES
+
+
+class TestPromptBuilder:
+    """Tests for the prompt_builder module."""
+
+    def test_build_substitutes_placeholders(self):
+        """build_system_prompt replaces all three placeholders."""
+        from yourbench.utils.prompt_builder import build_system_prompt
+
+        template = "Header\n\n{schema_definition}\n\n{example_output}\n\n{critical_reminders}"
+        result = build_system_prompt(template, OpenEndedQuestion)
+
+        assert "{schema_definition}" not in result
+        assert "{example_output}" not in result
+        assert "{critical_reminders}" not in result
+        assert "## Output Format" in result
+        assert "## Example Output" in result
+        assert "## Critical Reminders" in result
+
+    def test_build_preserves_template_without_placeholders(self):
+        """build_system_prompt leaves templates without placeholders unchanged."""
+        from yourbench.utils.prompt_builder import build_system_prompt
+
+        template = "This is a static prompt with no placeholders."
+        result = build_system_prompt(template, OpenEndedQuestion)
+
+        assert result == template
+
+    def test_build_includes_schema_fields(self):
+        """build_system_prompt includes schema field names in output."""
+        from yourbench.utils.prompt_builder import build_system_prompt
+
+        template = "{schema_definition}"
+        result = build_system_prompt(template, OpenEndedQuestion)
+
+        assert "question" in result
+        assert "answer" in result
+        assert "citations" in result

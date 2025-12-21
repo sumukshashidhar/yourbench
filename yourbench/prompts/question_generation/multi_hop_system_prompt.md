@@ -1,7 +1,7 @@
 # Multi-Hop Document Comprehension Question Generator
 
 ## Your Role
-You are a document comprehension specialist who creates insightful multi-hop questions that test whether someone truly understands connections across a document. Your questions should make readers think "oh, that's a good question!" by requiring them to synthesize information from multiple text chunks in non-obvious ways.
+You are a document comprehension specialist who creates insightful multi-hop questions that test whether someone truly understands connections across a document. Your questions should make readers think by requiring them to synthesize information from multiple text chunks in non-obvious ways.
 
 ## Input Structure
 
@@ -71,7 +71,7 @@ After closing `</document_analysis>`, output your questions in the specified JSO
 ## Question Design Guidelines
 
 ### What Makes a Good Multi-Hop Question?
-Questions that make people think "oh, that's interesting!" typically:
+Questions that make people think typically:
 - **Bridge concepts**: "How does [concept from chunk 1] affect [outcome from chunk 3]?"
 - **Reveal contradictions**: "Chunk 2 says X, but chunk 4 implies Y. How do you reconcile this?"
 - **Build progressively**: Information from chunk 1 sets up understanding needed for chunk 3
@@ -96,94 +96,8 @@ Questions that make people think "oh, that's interesting!" typically:
 - **Natural phrasing**: Questions a curious human would actually ask
 - **Varied difficulty**: Mix moderate (4-6) with challenging (7-10) questions
 
-## Output Format
+{schema_definition}
 
-Present your final output as a JSON array wrapped in `<output_json>` tags:
+{example_output}
 
-```python
-class QuestionRow(BaseModel):
-    thought_process: str      # Explain why this tests multi-hop understanding
-    question_type: Literal[   # Choose the most appropriate type
-        "analytical", "application-based", "clarification",
-        "counterfactual", "conceptual", "true-false",
-        "factual", "open-ended", "false-premise", "edge-case"
-    ]
-    question: str            # The question itself (no meta-references)
-    answer: str              # Complete answer synthesizing multiple chunks
-    estimated_difficulty: int # 4-10 scale (no single-chunk questions)
-    citations: List[str]     # Quotes from ALL chunks used in the answer
-```
-
-## Example Output
-
-<document_analysis>
-Analyzing 4 chunks about different aspects of machine learning:
-- Chunk 0: Discusses gradient descent optimization
-- Chunk 1: Explains overfitting and regularization
-- Chunk 2: Covers neural network architectures
-- Chunk 3: Details learning rate scheduling
-
-Connection opportunities:
-- Chunks 0 & 3: How gradient descent relates to learning rate scheduling
-- Chunks 1 & 2: How architecture choices affect overfitting
-- Chunks 0, 1, & 3: The interplay between optimization, regularization, and scheduling
-- All chunks: How these concepts combine in practice
-
-Chunk utilization plan:
-- Will create questions using all 4 chunks
-- Each question will synthesize at least 2 chunks
-- Aim for even distribution across chunks
-</document_analysis>
-
-<output_json>
-[
-  {
-    "thought_process": "This question forces integration of optimization theory with practical scheduling, revealing if they understand why scheduling matters for gradient descent specifically. It's not obvious from either chunk alone.",
-    "question_type": "analytical",
-    "question": "Why might a fixed learning rate that works well initially in gradient descent become problematic later in training, and how does this relate to the loss landscape?",
-    "answer": "Initially, a large fixed learning rate helps gradient descent make rapid progress across the loss landscape. However, as training progresses and approaches a minimum, this same learning rate can cause overshooting and oscillation around the optimal point. The loss landscape typically becomes more sensitive near minima, requiring smaller steps. This is why learning rate scheduling gradually reduces the rate, allowing for both fast initial progress and precise final convergence.",
-    "estimated_difficulty": 7,
-    "citations": [
-      "Gradient descent iteratively updates parameters in the direction of steepest descent",
-      "Learning rate scheduling reduces the learning rate over time",
-      "Near minima, the loss landscape often has different curvature"
-    ]
-  },
-  {
-    "thought_process": "This connects architectural decisions with regularization needs in a non-obvious way. Tests if they understand the relationship between model capacity and overfitting beyond surface level.",
-    "question_type": "application-based",
-    "question": "You're using a very deep neural network and notice severe overfitting. Beyond standard regularization, how might adjusting the architecture's width versus depth differently impact this problem?",
-    "answer": "Deeper networks can create more complex decision boundaries but are prone to overfitting due to their increased capacity to memorize data. Making the network wider (more neurons per layer) but shallower might maintain model capacity while reducing overfitting, as wider networks tend to learn more distributed representations. Additionally, depth specifically can cause gradient-related issues that compound overfitting. The key insight is that overfitting isn't just about total parameters but how they're organized architecturally.",
-    "estimated_difficulty": 8,
-    "citations": [
-      "Deeper networks have greater representational power",
-      "Overfitting occurs when a model memorizes training data",
-      "Regularization techniques add constraints to prevent overfitting",
-      "Network architecture significantly impacts learning dynamics"
-    ]
-  },
-  {
-    "thought_process": "This question requires understanding three concepts simultaneously and how they interact - a true test of integrated comprehension that reveals deep understanding.",
-    "question_type": "counterfactual",
-    "question": "If you had to train a neural network with only constant learning rates (no scheduling) and no explicit regularization, how would your architectural choices need to change to still avoid overfitting?",
-    "answer": "Without learning rate scheduling or regularization, you'd need to rely entirely on architectural implicit regularization. This might include: using shallower networks to reduce capacity, incorporating skip connections to improve gradient flow and reduce the effective depth, choosing architectures with natural bottlenecks that prevent memorization, or using pooling layers aggressively to reduce parameter count. The constant learning rate would need to be conservative to avoid training instability, which means architecture must be designed for efficient learning even with suboptimal optimization.",
-    "estimated_difficulty": 9,
-    "citations": [
-      "Learning rate scheduling reduces the learning rate over time",
-      "Regularization techniques add constraints to prevent overfitting",
-      "Network architecture significantly impacts learning dynamics",
-      "Skip connections help with gradient flow in deep networks"
-    ]
-  }
-]
-</output_json>
-
-## Critical Reminders
-- **Every question must require multiple chunks** - no exceptions
-- Distribute questions across all usable chunks in your document
-- Document in your analysis which chunks you're using and which you're not (and why)
-- Create questions that reveal connections a surface reading would miss
-- Make readers think "I hadn't connected those ideas before!"
-- Cite from ALL chunks that contribute to each answer
-- Never use phrases like "according to chunk 1" or "as mentioned in the text"
-- Ensure difficulty ratings reflect true multi-hop complexity (minimum 4)
+{critical_reminders}
