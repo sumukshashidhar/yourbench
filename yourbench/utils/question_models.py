@@ -134,7 +134,7 @@ class QuestionRow:
             citations=validate_list(pair.get("citations", [])),
         )
 
-    def to_dict(self, format: str = "unified") -> Dict[str, Any]:
+    def to_dict(self, format: str = "unified", exclude_empty: bool = True) -> Dict[str, Any]:
         base = {
             "document_id": self.document_id,
             "additional_instructions": self.additional_instructions,
@@ -156,15 +156,19 @@ class QuestionRow:
             base["choices"] = self.choices
 
         if format == "multi-hop":
-            return {
-                **base,
-                "source_chunk_ids": self.source_chunk_ids,
-            }
+            result = {**base, "source_chunk_ids": self.source_chunk_ids}
+        elif format == "single-hop":
+            result = {**base, "chunk_id": self.chunk_id}
+        else:
+            result = {**base, "chunk_id": self.chunk_id, "source_chunk_ids": self.source_chunk_ids}
 
-        if format == "single-hop":
-            return {
-                **base,
-                "chunk_id": self.chunk_id,
-            }
+        if exclude_empty:
+            result = self._filter_empty(result)
+        return result
 
-        return {**base, "chunk_id": self.chunk_id, "source_chunk_ids": self.source_chunk_ids}
+    @staticmethod
+    def _filter_empty(d: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove keys with empty/None values, preserving required fields."""
+        # Fields that should always be included even if empty
+        required_fields = {"document_id", "question", "estimated_difficulty", "generating_model"}
+        return {k: v for k, v in d.items() if k in required_fields or (v is not None and v != "" and v != [])}
