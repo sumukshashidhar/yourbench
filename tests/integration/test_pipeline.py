@@ -195,9 +195,9 @@ def test_chunking_stage(mock_config):
     })
 
     with (
-        patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset),
-        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
-        patch("yourbench.utils.chunking_utils.split_into_token_chunks") as mock_split,
+        patch("yourbench.pipeline.chunking.custom_load_dataset", return_value=mock_dataset),
+        patch("yourbench.pipeline.chunking.custom_save_dataset") as mock_save,
+        patch("yourbench.pipeline.chunking.split_into_token_chunks") as mock_split,
     ):
         mock_split.return_value = ["Chunk 1", "Chunk 2"]
         from yourbench.pipeline.chunking import run
@@ -220,9 +220,9 @@ def test_single_shot_question_generation_stage(mock_config):
     })
 
     with (
-        patch("yourbench.utils.dataset_engine.custom_load_dataset", return_value=mock_dataset),
-        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
-        patch("yourbench.utils.inference.inference_core.run_inference") as mock_run_inference,
+        patch("yourbench.pipeline.question_generation._core.custom_load_dataset", return_value=mock_dataset),
+        patch("yourbench.pipeline.question_generation._core.custom_save_dataset") as mock_save,
+        patch("yourbench.pipeline.question_generation._core.run_inference") as mock_run_inference,
         patch("yourbench.utils.parsing_engine.parse_qa_pairs_from_response") as mock_parse,
     ):
         mock_run_inference.return_value = {"fake_model": ["Question generation response"]}
@@ -290,8 +290,8 @@ def test_lighteval_stage(mock_config):
     })
 
     with (
-        patch("yourbench.utils.dataset_engine.custom_load_dataset") as mock_load,
-        patch("yourbench.utils.dataset_engine.custom_save_dataset") as mock_save,
+        patch("yourbench.pipeline.prepare_lighteval.custom_load_dataset") as mock_load,
+        patch("yourbench.pipeline.prepare_lighteval.custom_save_dataset") as mock_save,
         patch("datasets.Dataset.from_list") as mock_from_list,
     ):
 
