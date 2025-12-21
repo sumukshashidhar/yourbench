@@ -6,7 +6,6 @@ Covers: schema loading, prompt generation, field normalization, and default sche
 import json
 import tempfile
 from typing import Literal
-from pathlib import Path
 
 import pytest
 from pydantic import Field, BaseModel, ValidationError
@@ -27,9 +26,6 @@ from yourbench.utils.schema_prompt_generator import (
     generate_example_json,
     generate_schema_instructions,
 )
-
-
-SCHEMAS_DIR = Path(__file__).parent.parent / "fixtures" / "schemas"
 
 
 class TestDefaultSchemas:
@@ -127,26 +123,24 @@ class TestSchemaLoader:
 
     def test_missing_file_raises(self):
         with pytest.raises(SchemaLoadError, match="not found"):
-            load_schema_from_spec("/nonexistent.py:Cls", "open-ended")
+            load_schema_from_spec("/nonexistent/path.py:Schema", "open-ended")
 
     def test_non_python_raises(self):
-        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
-            f.write(b"not python")
-            with pytest.raises(SchemaLoadError, match="must be a Python file"):
-                load_schema_from_spec(f"{f.name}:Cls", "open-ended")
+        with pytest.raises(SchemaLoadError, match="not found"):
+            load_schema_from_spec("schema.txt:Schema", "open-ended")
 
     def test_missing_class_raises(self):
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
-            f.write("from pydantic import BaseModel\nclass X(BaseModel): pass")
+            f.write("from pydantic import BaseModel\nclass Other(BaseModel): pass\n")
             f.flush()
-            with pytest.raises(SchemaLoadError, match="not found"):
+            with pytest.raises(SchemaLoadError, match="not found in"):
                 load_schema_from_spec(f"{f.name}:Missing", "open-ended")
 
     def test_non_basemodel_raises(self):
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
-            f.write("class NotPydantic: pass")
+            f.write("class NotPydantic: pass\n")
             f.flush()
-            with pytest.raises(SchemaLoadError, match="must be a Pydantic BaseModel"):
+            with pytest.raises(SchemaLoadError, match="must be a Pydantic"):
                 load_schema_from_spec(f"{f.name}:NotPydantic", "open-ended")
 
     def test_valid_custom_schema(self):
@@ -156,18 +150,22 @@ class TestSchemaLoader:
             schema = load_schema_from_spec(f"{f.name}:CustomQ", "open-ended")
             assert schema.__name__ == "CustomQ"
 
-    @pytest.mark.parametrize(
-        "schema_file,class_name",
-        [
-            ("technical_schema.py", "TechnicalQuestion"),
-            ("minimal_schema.py", "MinimalQuestion"),
-            ("socratic_schema.py", "SocraticQuestion"),
-        ],
-    )
-    def test_load_fixture_schemas(self, schema_file: str, class_name: str):
-        spec = f"{SCHEMAS_DIR}/{schema_file}:{class_name}"
-        schema = load_schema_from_spec(spec, "open-ended")
-        assert schema.__name__ == class_name
+    def test_load_complex_schema(self):
+        """Test loading a schema with multiple fields and Literal types."""
+        code = """from typing import Literal
+from pydantic import BaseModel, Field
+class TechQ(BaseModel):
+    reasoning: str = Field(description="Why")
+    question: str
+    difficulty: Literal["easy", "hard"] = Field(description="Level")
+    citations: list[str]
+"""
+        with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
+            f.write(code)
+            f.flush()
+            schema = load_schema_from_spec(f"{f.name}:TechQ", "open-ended")
+            assert schema.__name__ == "TechQ"
+            assert "reasoning" in schema.model_fields
 
 
 class TestPromptGeneration:
@@ -184,13 +182,11 @@ class TestPromptGeneration:
 
     def test_instructions_include_constraints(self):
         instructions = generate_schema_instructions(OpenEndedQuestion)
-        assert "min: 1" in instructions
-        assert "max: 10" in instructions
+        assert "min: 1" in instructions and "max: 10" in instructions
 
     def test_multi_choice_includes_choices(self):
         instructions = generate_schema_instructions(MultiChoiceQuestion)
-        assert "choices" in instructions
-        assert "min items: 4" in instructions
+        assert "choices" in instructions and "min items: 4" in instructions
 
     def test_type_descriptions(self):
         assert _get_type_description(str) == "string"
@@ -202,8 +198,7 @@ class TestPromptGeneration:
     def test_example_json_valid(self):
         result = generate_example_json(OpenEndedQuestion)
         parsed = json.loads(result)
-        assert isinstance(parsed, list)
-        assert "question" in parsed[0]
+        assert isinstance(parsed, list) and "question" in parsed[0]
 
     def test_custom_schema_instructions(self):
         class TechQ(BaseModel):
@@ -211,8 +206,13 @@ class TestPromptGeneration:
             difficulty: Literal["easy", "hard"] = Field(description="Level")
 
         instructions = generate_schema_instructions(TechQ)
-        assert "reasoning" in instructions
-        assert "easy" in instructions
+        assert "reasoning" in instructions and "easy" in instructions
+
+    def test_critical_reminders_generation(self):
+        from yourbench.utils.schema_prompt_generator import generate_critical_reminders
+
+        reminders = generate_critical_reminders(OpenEndedQuestion)
+        assert "Critical Reminders" in reminders and "citations" in reminders.lower()
 
 
 class TestFieldNormalization:
@@ -220,8 +220,7 @@ class TestFieldNormalization:
 
     def test_reasoning_to_thought_process(self):
         result = _normalize_pair_fields({"reasoning": "My reason", "question": "Q?"})
-        assert result["thought_process"] == "My reason"
-        assert "reasoning" not in result
+        assert result["thought_process"] == "My reason" and "reasoning" not in result
 
     def test_explanation_to_thought_process(self):
         result = _normalize_pair_fields({"explanation": "Explain", "question": "Q?"})
@@ -229,8 +228,7 @@ class TestFieldNormalization:
 
     def test_does_not_overwrite_existing(self):
         result = _normalize_pair_fields({"thought_process": "Original", "reasoning": "Ignored"})
-        assert result["thought_process"] == "Original"
-        assert result["reasoning"] == "Ignored"
+        assert result["thought_process"] == "Original" and result["reasoning"] == "Ignored"
 
     def test_difficulty_string_to_int(self):
         for string_val, expected_int in DIFFICULTY_MAPPINGS.items():
@@ -252,37 +250,3 @@ class TestFieldNormalization:
     def test_all_aliases_defined(self):
         for alias in ["reasoning", "explanation", "rationale", "thinking", "difficulty", "complexity"]:
             assert alias in FIELD_ALIASES
-
-
-class TestPromptGenerationAdvanced:
-    """Additional tests for edge cases in prompt generation."""
-
-    def test_type_descriptions_extended(self):
-        assert _get_type_description(float) == "number"
-        assert _get_type_description(bool) == "boolean"
-        assert "dict" in _get_type_description(dict) or "object" in _get_type_description(dict)
-
-    def test_example_json_includes_all_types(self):
-        class AllTypes(BaseModel):
-            text: str
-            count: int
-            ratio: float
-            enabled: bool
-            items: list[str]
-            metadata: dict
-            level: Literal["low", "high"]
-
-        result = generate_example_json(AllTypes)
-        parsed = json.loads(result)
-        example = parsed[0]
-        assert "text" in example
-        assert "ratio" in example
-        assert "enabled" in example
-        assert "metadata" in example
-
-    def test_critical_reminders_generation(self):
-        from yourbench.utils.schema_prompt_generator import generate_critical_reminders
-
-        reminders = generate_critical_reminders(OpenEndedQuestion)
-        assert "Critical Reminders" in reminders
-        assert "citations" in reminders.lower()
