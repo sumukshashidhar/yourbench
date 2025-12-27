@@ -23,6 +23,8 @@
 
 </div>
 
+> **Note:** The canonical repository is maintained at [huggingface/yourbench](https://github.com/huggingface/yourbench). This mirror exists for convenience and may lag behind the upstream main branch.
+
 ---
 
 Generate high-quality QA pairs and evaluation datasets from any source documents. YourBench transforms your PDFs, Word docs, and text files into structured benchmark datasets with configurable output formats. Appearing at COLM 2025. **100% free and open source.**
