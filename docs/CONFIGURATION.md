@@ -21,7 +21,9 @@ YourBench uses YAML configuration files to define your pipeline settings. This g
 - [Advanced Features](#advanced-features)
   - [Environment Variables](#environment-variables)
   - [Custom Prompts](#custom-prompts)
+  - [Custom Question Schemas](#custom-question-schemas)
   - [Model Role Assignment](#model-role-assignment)
+- [Minimal Example](#minimal-example)
 - [Configuration Examples](#configuration-examples)
 
 ## Overview
@@ -56,6 +58,33 @@ Key points:
 - **Pipeline stages are enabled by presence** - if a stage appears in `pipeline:`, it runs
 - **Environment variables** can be used with `$VAR_NAME` syntax
 - **Model roles** are auto-assigned if not specified (uses first model in `model_list`)
+
+## Minimal Example
+
+Smallest working config (ingestion → chunking → single-shot → LightEval). Requires env vars in `.env` (`OPENAI_API_KEY`; optionally `OPENAI_BASE_URL`, `HF_TOKEN`, `HF_ORGANIZATION`).
+
+```yaml
+hf_configuration:
+  hf_dataset_name: my-dataset
+
+model_list:
+  - model_name: ${OPENAI_MODEL:-gpt-4o-mini}
+    api_key: $OPENAI_API_KEY
+    base_url: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/default_example/data
+  chunking:
+  single_shot_question_generation:
+  prepare_lighteval:
+```
+
+Run it:
+
+```bash
+uvx --from yourbench yourbench run minimal.yaml --debug
+```
 
 ## Core Components
 
@@ -127,16 +156,13 @@ pipeline:
     upload_to_hub: true                      # Default: true
     llm_ingestion: false                     # Use LLM for PDF processing
     pdf_dpi: 300                             # DPI for PDF rendering
-    pdf_llm_prompt: path/to/prompt.md        # Custom PDF processing prompt
-    supported_file_extensions:               # File types to process
-      - .md
-      - .txt
-      - .pdf
+    pdf_llm_prompt: path/to/prompt.md       # Custom PDF extraction prompt
+    supported_file_extensions: [".md", ".txt", ".pdf"]  # Default
 ```
 
 ### Summarization
 
-Creates hierarchical summaries of documents.
+Creates summaries of processed documents.
 
 ```yaml
 pipeline:
@@ -174,6 +200,7 @@ pipeline:
   single_shot_question_generation:
     question_mode: open-ended       # or multi-choice
     additional_instructions: ""     # Extra context for LLM
+    question_schema: path/to/schema.py  # Optional: custom output format
     single_shot_system_prompt: path/to/prompt.md
     single_shot_user_prompt: path/to/prompt.md
     chunk_sampling:
@@ -190,6 +217,7 @@ pipeline:
   multi_hop_question_generation:
     question_mode: open-ended
     additional_instructions: ""
+    question_schema: path/to/schema.py  # Optional: custom output format
     multi_hop_system_prompt: path/to/prompt.md
     multi_hop_user_prompt: path/to/prompt.md
 ```
@@ -201,6 +229,7 @@ pipeline:
   cross_document_question_generation:
     question_mode: open-ended
     additional_instructions: ""
+    question_schema: path/to/schema.py  # Optional: custom output format
     max_combinations: 100
     chunks_per_document: 1
     num_docs_per_combination: [2, 5]
@@ -272,6 +301,42 @@ pipeline:
 Prompts are loaded from:
 1. The specified file path (if exists)
 2. Package defaults (built-in prompts)
+
+### Custom Question Schemas
+
+Define custom output formats for generated questions using Pydantic models.
+
+**Config:**
+```yaml
+pipeline:
+  single_shot_question_generation:
+    question_schema: ./schemas/my_schema.py
+```
+
+**Schema file (must export `DataFormat` class):**
+```python
+# my_schema.py
+from pydantic import BaseModel, Field
+from typing import Literal
+
+class DataFormat(BaseModel):
+    question: str = Field(description="The question text")
+    answer: str = Field(description="Complete answer")
+    difficulty: Literal["easy", "medium", "hard"] = Field(description="Difficulty level")
+    citations: list[str] = Field(description="Source quotes")
+```
+
+**Key rules:**
+- Schema file must contain a class named `DataFormat`
+- Class must inherit from Pydantic `BaseModel`
+- Use `Field(description=...)` to guide the LLM
+- Custom fields are automatically preserved in output
+
+**Field aliasing:** Certain fields are automatically mapped:
+- `reasoning`, `explanation` → `thought_process`
+- String `difficulty` (easy/medium/hard) → integer `estimated_difficulty` (1-10)
+
+See [Custom Schemas Guide](./CUSTOM_SCHEMAS.md) for detailed examples.
 
 ### Model Role Assignment
 
@@ -364,6 +429,27 @@ pipeline:
     beta: 0.3
 
 debug: false
+```
+
+### Custom Schema Example
+
+```yaml
+hf_configuration:
+  hf_dataset_name: technical-benchmark
+
+model_list:
+  - model_name: gpt-4-turbo
+    base_url: $OPENAI_BASE_URL
+    api_key: $OPENAI_API_KEY
+
+pipeline:
+  ingestion:
+    source_documents_dir: data/raw
+  chunking:
+  single_shot_question_generation:
+    question_schema: ./schemas/technical.py
+    additional_instructions: "Focus on implementation details"
+  prepare_lighteval:
 ```
 
 ### OpenAI-Compatible Provider

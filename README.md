@@ -25,92 +25,145 @@
 
 ---
 
-Yourbench is a structured data generation library for building better AI systems. Generate high-quality QA pairs, training data, and evaluation datasets from any source documents with full control over the output format and complexity. The modular architecture lets you configure every aspect of the generation pipeline, from document parsing (with built-in converters for common formats to markdown) to chunking strategies to output schemas. Most eval frameworks force you into their structure; Yourbench adapts to yours. Use it to create domain-specific benchmarks, fine-tuning datasets, or systematic model evaluations. Peer-reviewed and appearing at COLM 2025. **100% free and open source, forever.**
+Generate high-quality QA pairs and evaluation datasets from any source documents. YourBench transforms your PDFs, Word docs, and text files into structured benchmark datasets with configurable output formats. Appearing at COLM 2025. **100% free and open source.**
+
+## Features
+
+- **Document Ingestion** – Parse PDFs, Word docs, HTML, and text files into standardized Markdown
+- **Question Generation** – Create single-hop and multi-hop questions with customizable schemas
+- **Custom Output Schemas** – Define your own Pydantic models for question/answer format
+- **Multi-Model Support** – Use different LLMs for different pipeline stages
+- **HuggingFace Integration** – Push datasets directly to the Hub or save locally
+- **Quality Filtering** – Citation scoring and deduplication built-in
 
 ## Quick Start
 
-You can use yourbench without installation instantly with [uv](https://docs.astral.sh/uv/getting-started/installation/)! Simply run:
+Use [uv](https://docs.astral.sh/uv/getting-started/installation/) to run the packaged CLI directly:
 
-```
-uvx yourbench <YOUR_FILE_DIRECTORY_HERE> --model openai/gpt-oss-120b
+```bash
+uvx --from yourbench yourbench run example/default_example/config.yaml --debug
 ```
 
-You will see the dataset appear locally! If a valid `HF_TOKEN` is set, you will also see the dataset appear on your Hugging Face Hub!
+The example config works out-of-the-box with env vars from `.env` (see `.env.template`).
+
+Install locally if you prefer:
+
+```bash
+uv pip install yourbench
+yourbench run example/default_example/config.yaml
+```
 
 ## Installation
 
-YourBench is available on PyPI and requires **Python 3.12+**. You can install it as follows:
+Requires **Python 3.12+**.
 
-* **Install via PyPI (stable release):**
+```bash
+# With uv (recommended)
+uv pip install yourbench
 
-  ```bash
-  # uv (recommended; get it here: https://docs.astral.sh/uv/getting-started/installation/)
-  uv venv --python 3.12
-  source .venv/bin/activate
-  uv pip install yourbench
+# With pip
+pip install yourbench
+```
 
-  # pip (standard support)
-  pip install yourbench
-  ```
+**From source:**
 
-  This will install the latest published version (e.g. `0.4.1`).
-
-* **Install from source (development version):**
-
-  ```bash
-  git clone https://github.com/huggingface/yourbench.git
-  cd yourbench
-  
-  # uv, recommended
-  uv venv --python 3.12
-  source .venv/bin/activate
-  uv pip install -e .
-
-  # pip
-  pip install -e .
-  ```
-
-  Installing from source is recommended if you want the latest updates or to run the included example configuration.
-
-> **Note:** If you plan to use models that require API access (e.g. OpenAI GPT-4o or Hugging Face Inference API), make sure to have the appropriate credentials. You’ll also need a Hugging Face token (to optionally to upload results). See below for how to configure these before running YourBench.
+```bash
+git clone https://github.com/huggingface/yourbench.git
+cd yourbench
+pip install -e .
+```
 
 ## Usage
 
-Once installed, YourBench can be run from the command line to generate a custom evaluation set. Here’s a quick example:
+**Minimal config:**
 
-```bash
-# 1. (Optional) If not done already, install YourBench
-pip install yourbench
+```yaml
+hf_configuration:
+  hf_dataset_name: my-benchmark
 
-# 2. Prepare your API credentials (for model inference and Hub access)
-# For example, create a .env file with required keys:
-# echo "OPENROUTER_API_KEY=<your_openrouter_api_key>" >> .env        # Example
-echo "HF_TOKEN=<your_huggingface_api_token>" >> .env              # Hugging Face token (for Hub datasets & inference)
+model_list:
+  - model_name: openai/gpt-4o-mini
+    api_key: $OPENAI_API_KEY
 
-# 3. Run the pipeline on the provided example config (uses sample docs and models), or, use your own config file!
-yourbench example/default_example/config.yaml
+pipeline:
+  ingestion:
+    source_documents_dir: ./my-documents
+  summarization:
+  chunking:
+  single_shot_question_generation:
+  prepare_lighteval:
 ```
 
-The **example configuration** `example/default_example/config.yaml` (included in the repository) demonstrates a basic setup. It specifies sample documents and default models for each stage of the pipeline. In step 3 above, YourBench will automatically ingest the example documents, generate a set of Q\&A pairs, and output a Hugging Face Dataset containing the evaluation questions and answers.
+```bash
+yourbench run config.yaml
+```
 
-For your own data, you can create a YAML config pointing to your documents and preferred models. For instance, you might specify a folder of PDFs or text files under a `documents` field, and choose which LLM to use for question generation. **YourBench is fully configurable** – you can easily **toggle stages** on or off and swap in different models. *For example: you could disable the summarization stage for very short texts, or use a powerful, large, API model for question generation while using a faster local model for summarization.* The possibilities are endless! Simply adjust the YAML, and the pipeline will accommodate it. (See all possible [configuration parameters](./docs/CONFIGURATION.md) for all available options!)
+**With custom output schema:**
 
-You may be interested in [How YourBench Works](./docs/PRINCIPLES.md)
+```yaml
+pipeline:
+  single_shot_question_generation:
+    question_schema: ./my_schema.py  # Must export DataFormat class
+```
 
-## Try it Online (Hugging Face Spaces)
+```python
+# my_schema.py
+from pydantic import BaseModel, Field
 
-You can **try YourBench right away in your browser** – no installation needed:
+class DataFormat(BaseModel):
+    question: str = Field(description="The question")
+    answer: str = Field(description="The answer")
+    difficulty: str = Field(description="easy, medium, or hard")
+```
 
-* **[YourBench Demo Space](https://huggingface.co/spaces/yourbench/demo)** – Use our ready-to-go web demo to upload a document (or paste text) and generate a custom evaluation set with **one click**, complete with an instant model leaderboard. **(This free demo will use a default set of models to answer the questions and show how different models perform.)**
-* **[YourBench Advanced Space](https://huggingface.co/spaces/yourbench/advanced)** – For power users, the advanced demo lets you provide a custom YAML config and plug in your own models or API endpoints. This gives you full control over the pipeline (choose specific models, adjust chunking parameters, etc.) via a convenient UI, right from the browser.
+## Documentation
 
-👉 Both hosted apps are available on Hugging Face Spaces under the **[yourbench](https://huggingface.co/yourbench)** organization. Give them a try to see how YourBench can generate benchmarks tailored to your use-case in minutes.
+| Guide | Description |
+|-------|-------------|
+| [Configuration](./docs/CONFIGURATION.md) | Full config reference with all options |
+| [Custom Schemas](./docs/CUSTOM_SCHEMAS.md) | Define your own output formats |
+| [How It Works](./docs/PRINCIPLES.md) | Pipeline architecture and stages |
+| [FAQ](./docs/FAQ.md) | Common questions and troubleshooting |
+| [OpenAI-Compatible Models](./docs/USING_OPENAI_COMPATIBLE_MODELS.md) | Use vLLM, Ollama, etc. |
+| [Dataset Columns](./docs/DATASET_COLUMNS_DESCRIPTION.md) | Output field descriptions |
+| [Academic Paper](./docs/academic/paper.pdf) | COLM 2025 submission |
+
+## Try Online
+
+No installation needed:
+
+- **[Demo Space](https://huggingface.co/spaces/yourbench/demo)** – Upload a document, get a benchmark
+- **[Advanced Space](https://huggingface.co/spaces/yourbench/advanced)** – Full config control in browser
+
+## Example Configs
+
+The `example/` folder contains ready-to-use configurations:
+
+- `default_example/` – Basic setup with sample documents
+- `harry_potter_quizz/` – Generate quiz questions from books
+- `aws_support_documentation/` – Technical documentation benchmark
+- `local_vllm_private_data/` – Use local models for private data
+
+Run any example:
+
+```bash
+yourbench run example/default_example/config.yaml
+```
+
+## API Keys
+
+Set in environment or `.env` file:
+
+```bash
+HF_TOKEN=hf_xxx              # For Hub upload
+OPENAI_API_KEY=sk-xxx        # For OpenAI models
+```
+
+Use `$VAR_NAME` in config to reference environment variables.
 
 ## Contributing
 
-Contributions are welcome!
-
-We actively review PRs and welcome improvements or fixes from the community. For major changes, feel free to open an issue first to discuss the idea.
+PRs welcome! Open an issue first for major changes.
 
 ## 📈 Progress
 
@@ -120,13 +173,11 @@ We actively review PRs and welcome improvements or fixes from the community. For
   </a>
 </div>
 
-## 📜  License
+## 📜 License
 
-This project is licensed under the Apache 2.0 License – see the [LICENSE](LICENSE) file for details. You are free to use, modify, and distribute YourBench in either commercial or academic projects under the terms of this license.
+Apache 2.0 – see [LICENSE](LICENSE).
 
 ## 📚 Citation
-
-If you use **YourBench** in your research or applications, please consider citing our paper:
 
 ```bibtex
 @misc{shashidhar2025yourbencheasycustomevaluation,

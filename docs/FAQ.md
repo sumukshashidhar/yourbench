@@ -67,10 +67,16 @@ You can control which stages run by toggling them in your config (e.g., `pipelin
    (If you plan to do semantic chunking or advanced tasks, you’ll need PyTorch, Transformers, etc. as indicated in the repository docs.)
 
 3. **Configure Your Environment Variables**  
-   If you plan to push to the Hugging Face Hub, set your Hugging Face token in an `.env` file or as an environment variable (`HF_TOKEN`).
+   Set required keys in `.env` or your shell. At minimum:
+   ```bash
+   OPENAI_API_KEY=...
+   OPENAI_BASE_URL=https://api.openai.com/v1  # or your provider
+   HF_TOKEN=...                               # needed to push datasets
+   HF_ORGANIZATION=...                        # optional; auto-detected if HF_TOKEN is set
+   ```
 
 4. **Prepare a Configuration File**  
-   You can start from `example/configs/simple_example.yaml` or `example/configs/advanced_example.yaml`. Adjust it to point at your source documents and specify the models you want to use.
+   Start from `example/default_example/config.yaml` (shipped with the repo) or the minimal example in `docs/CONFIGURATION.md`. Point `ingestion.source_documents_dir` at your documents and list your models in `model_list`.
 
 ---
 
@@ -82,13 +88,13 @@ You can control which stages run by toggling them in your config (e.g., `pipelin
    - Optionally specify which model(s) you want for each pipeline stage in `model_list` and `model_roles`.
 
 2. **Call the YourBench CLI**  
-   From within your repository directory, run:
+   From the repo, using uv (recommended):
    ```bash
-   python -m yourbench.main run --config path/to/your_config.yaml
+   uvx --from yourbench yourbench run path/to/your_config.yaml --debug
    ```
-   You can enable debug logging with this flag.
+   Or if installed locally:
    ```bash
-   python -m yourbench.main run --config path/to/your_config.yaml --debug
+   yourbench run path/to/your_config.yaml --debug
    ```
 
 3. **View the Outputs**  

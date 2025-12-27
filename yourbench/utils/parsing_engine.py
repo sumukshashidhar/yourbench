@@ -10,6 +10,84 @@ from loguru import logger
 from yourbench.utils.question_models import QuestionRow, validate_list, force_int_in_range
 
 
+# Field alias mapping for custom schemas
+# Maps custom field names to standard QuestionRow field names
+FIELD_ALIASES: dict[str, str] = {
+    "reasoning": "thought_process",
+    "explanation": "thought_process",
+    "rationale": "thought_process",
+    "thinking": "thought_process",
+    "difficulty": "estimated_difficulty",
+    "complexity": "estimated_difficulty",
+}
+
+# Maps string difficulty values to numeric values
+DIFFICULTY_MAPPINGS: dict[str, int] = {
+    "beginner": 2,
+    "easy": 2,
+    "intermediate": 5,
+    "medium": 5,
+    "advanced": 7,
+    "hard": 7,
+    "expert": 9,
+    "very hard": 9,
+}
+
+
+def _normalize_pair_fields(pair: dict) -> dict:
+    """Map custom schema fields to standard QuestionRow fields."""
+    normalized = dict(pair)
+    for old, new in FIELD_ALIASES.items():
+        if old in normalized and new not in normalized:
+            normalized[new] = normalized.pop(old)
+    # Convert string difficulty to numeric
+    if "estimated_difficulty" in normalized and isinstance(normalized["estimated_difficulty"], str):
+        normalized["estimated_difficulty"] = DIFFICULTY_MAPPINGS.get(normalized["estimated_difficulty"].lower(), 5)
+    return normalized
+
+
+# Standard fields that are part of QuestionRow - any field NOT in this set is a custom schema field
+STANDARD_FIELDS: set[str] = {
+    "question",
+    "answer",
+    "self_answer",
+    "thought_process",
+    "reasoning",
+    "explanation",
+    "rationale",
+    "thinking",
+    "question_type",
+    "self_assessed_question_type",
+    "estimated_difficulty",
+    "difficulty",
+    "complexity",
+    "citations",
+    "choices",
+    "question_mode",
+    "document_id",
+    "chunk_id",
+    "source_chunk_ids",
+    "generating_model",
+    "raw_response",
+    "additional_instructions",
+    "original_question",
+    "question_rewriting_model",
+    "question_rewriting_rationale",
+    "raw_question_rewriting_response",
+}
+
+
+def _extract_custom_fields(pair: dict) -> dict:
+    """Extract custom schema fields that are not part of the standard QuestionRow."""
+    return {key: value for key, value in pair.items() if key not in STANDARD_FIELDS}
+
+
+def _has_difficulty_field(pair: dict) -> bool:
+    """Check if the pair has any difficulty-related field."""
+    difficulty_fields = {"estimated_difficulty", "difficulty", "complexity"}
+    return bool(difficulty_fields & pair.keys())
+
+
 # JSON parsing functions
 
 
@@ -268,6 +346,7 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
                     continue
                 try:
                     pair = shuffle_mcq(pair)
+                    pair = _normalize_pair_fields(pair)
                     pair["question_mode"] = question_mode
 
                     if question_mode == "open-ended":
@@ -286,24 +365,31 @@ def parse_single_shot_responses(responses, index_map, stage_cfg):
 
                     citations = validate_list(pair.get("citations", []))
 
-                    rows.append(
-                        QuestionRow(
-                            chunk_id=index_map[i][2],
-                            source_chunk_ids=None,
-                            document_id=index_map[i][1],
-                            additional_instructions=stage_cfg.additional_instructions,
-                            question=str(pair.get("question", "")).strip(),
-                            self_answer=str(pair.get("answer", "")).strip(),
-                            choices=choices,
-                            estimated_difficulty=force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10),
-                            self_assessed_question_type=str(pair.get("question_type", "")).strip(),
-                            question_mode=pair["question_mode"],
-                            generating_model=model,
-                            thought_process=str(pair.get("thought_process", "")),
-                            raw_response=reply,
-                            citations=citations,
-                        ).to_dict(format="single-hop")
-                    )
+                    # Build standard QuestionRow output
+                    base_row = QuestionRow(
+                        chunk_id=index_map[i][2],
+                        source_chunk_ids=None,
+                        document_id=index_map[i][1],
+                        additional_instructions=stage_cfg.additional_instructions,
+                        question=str(pair.get("question", "")).strip(),
+                        self_answer=str(pair.get("answer", "")).strip(),
+                        choices=choices,
+                        estimated_difficulty=force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10),
+                        self_assessed_question_type=str(pair.get("question_type", "")).strip(),
+                        question_mode=pair["question_mode"],
+                        generating_model=model,
+                        thought_process=str(pair.get("thought_process", "")),
+                        raw_response=reply,
+                        citations=citations,
+                    ).to_dict(format="single-hop")
+                    # Remove estimated_difficulty if not explicitly provided in LLM response
+                    if not _has_difficulty_field(pair):
+                        base_row.pop("estimated_difficulty", None)
+                    # Merge custom schema fields (preserves fields like probing_follow_ups, etc.)
+                    custom_fields = _extract_custom_fields(pair)
+                    if custom_fields:
+                        base_row.update(custom_fields)
+                    rows.append(base_row)
                 except Exception as e:
                     logger.error(f"Error parsing QA pair at index {i}: {e}")
                     continue
@@ -334,6 +420,7 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
                     continue
                 try:
                     pair = shuffle_mcq(pair)
+                    pair = _normalize_pair_fields(pair)
                     pair["question_mode"] = question_mode
 
                     if question_mode == "open-ended":
@@ -352,24 +439,31 @@ def parse_multi_hop_responses(responses, index_map, stage_cfg):
 
                     citations = validate_list(pair.get("citations", []))
 
-                    rows.append(
-                        QuestionRow(
-                            chunk_id=None,
-                            source_chunk_ids=index_map[i][2],
-                            document_id=index_map[i][1],
-                            additional_instructions=stage_cfg.additional_instructions,
-                            question=str(pair.get("question", "")).strip(),
-                            self_answer=str(pair.get("answer", "")).strip(),
-                            choices=choices,
-                            estimated_difficulty=force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10),
-                            self_assessed_question_type=str(pair.get("question_type", "")).strip(),
-                            question_mode=pair["question_mode"],
-                            generating_model=model,
-                            thought_process=str(pair.get("thought_process", "")),
-                            raw_response=raw,
-                            citations=citations,
-                        ).to_dict(format="multi-hop")
-                    )
+                    # Build standard QuestionRow output
+                    base_row = QuestionRow(
+                        chunk_id=None,
+                        source_chunk_ids=index_map[i][2],
+                        document_id=index_map[i][1],
+                        additional_instructions=stage_cfg.additional_instructions,
+                        question=str(pair.get("question", "")).strip(),
+                        self_answer=str(pair.get("answer", "")).strip(),
+                        choices=choices,
+                        estimated_difficulty=force_int_in_range(pair.get("estimated_difficulty", 5), 1, 10),
+                        self_assessed_question_type=str(pair.get("question_type", "")).strip(),
+                        question_mode=pair["question_mode"],
+                        generating_model=model,
+                        thought_process=str(pair.get("thought_process", "")),
+                        raw_response=raw,
+                        citations=citations,
+                    ).to_dict(format="multi-hop")
+                    # Remove estimated_difficulty if not explicitly provided in LLM response
+                    if not _has_difficulty_field(pair):
+                        base_row.pop("estimated_difficulty", None)
+                    # Merge custom schema fields (preserves fields like probing_follow_ups, etc.)
+                    custom_fields = _extract_custom_fields(pair)
+                    if custom_fields:
+                        base_row.update(custom_fields)
+                    rows.append(base_row)
                 except Exception as e:
                     logger.warning(f"Parse error in multi-hop QA for doc {index_map[i][1]}: {e}")
                     continue

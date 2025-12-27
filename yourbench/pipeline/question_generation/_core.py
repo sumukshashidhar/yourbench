@@ -4,6 +4,7 @@ from typing import Any
 from loguru import logger
 
 from datasets import Dataset
+from yourbench.utils.schema_loader import load_schema_from_spec
 from yourbench.utils.chunking_utils import get_sampling_cfg
 from yourbench.utils.dataset_engine import custom_load_dataset, custom_save_dataset
 from yourbench.utils.parsing_engine import (
@@ -11,6 +12,7 @@ from yourbench.utils.parsing_engine import (
     _remove_duplicate_questions,
     parse_single_shot_responses,
 )
+from yourbench.utils.prompt_builder import build_system_prompt
 from yourbench.utils.logging_context import log_step, log_stage
 from yourbench.utils.cross_document_utils import create_cross_document_dataset
 from yourbench.utils.inference.inference_core import run_inference
@@ -21,10 +23,17 @@ from yourbench.utils.inference.inference_builders import (
 
 
 def _get_system_prompt(stage_cfg: Any, mode: str, is_multi: bool = False) -> str:
-    """Get appropriate system prompt based on mode and stage type."""
+    """Get system prompt, substituting schema placeholders if custom schema is specified."""
     prefix = "multi_hop_" if is_multi else "single_shot_"
     suffix = "_multi" if mode == "multi-choice" else ""
-    return getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
+    template = getattr(stage_cfg, f"{prefix}system_prompt{suffix}")
+
+    schema_spec = getattr(stage_cfg, "question_schema", None)
+    if not schema_spec:
+        return template
+
+    schema_class = load_schema_from_spec(schema_spec, mode)
+    return build_system_prompt(template, schema_class)
 
 
 def _validate_mode(mode: str) -> str:
@@ -120,7 +129,6 @@ def run_multi_hop(config) -> None:
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
     logger.info(f"Loaded {len(chunked_ds)} documents for multi-hop")
 
-    # Process regular multi-hop
     _process_questions(
         chunked_ds, "multi_hop_questions", system_msg, stage_cfg, config, "multi_hop_question_generation"
     )
@@ -142,7 +150,6 @@ def run_cross_document(config) -> None:
     chunked_ds = custom_load_dataset(config=config, subset="chunked")
     logger.info(f"Loaded {len(chunked_ds)} documents for cross-document")
 
-    # Create cross-document configuration dict for compatibility
     cross_cfg = {
         "enable": True,
         "max_combinations": stage_cfg.max_combinations,
