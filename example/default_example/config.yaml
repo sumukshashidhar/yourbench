@@ -1,0 +1,14 @@
+hf_configuration:
+  hf_dataset_name: yourbench-simple-example
+
+model_list:
+  - model_name: zai-org/GLM-4.5
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/default_example/data
+    output_dir: example/default_example/processed
+  summarization:
+  chunking:
+  single_shot_question_generation:
+  prepare_lighteval:

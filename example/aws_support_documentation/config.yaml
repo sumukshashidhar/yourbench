@@ -1,0 +1,29 @@
+hf_configuration:
+  hf_dataset_name: aws_bedrock_documentation_demo
+  hf_organization: $HF_ORGANIZATION
+  private: true # Set to true if you want to keep the dataset private
+
+model_list:
+  - model_name: openai/gpt-oss-120b
+    base_url: https://openrouter.ai/api/v1
+    api_key: $OPENROUTER_API_KEY
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/aws_support_documentation/data
+    output_dir: example/aws_support_documentation/processed
+  summarization:
+  chunking:
+  single_shot_question_generation:
+    single_shot_system_prompt: example/aws_support_documentation/custom_prompts/single_shot_system_prompt.md
+  multi_hop_question_generation:
+    multi_hop_system_prompt: example/aws_support_documentation/custom_prompts/multi_hop_system_prompt.md
+  cross_document_question_generation:
+    cross_document_system_prompt: example/aws_support_documentation/custom_prompts/multi_hop_system_prompt.md
+    max_combinations: 10 # default is 100
+    chunks_per_document: 1 # default is 1
+    num_docs_per_combination:
+    - 2 # default is 2
+    - 4 # default is 5
+  prepare_lighteval:
+  citation_score_filtering:
