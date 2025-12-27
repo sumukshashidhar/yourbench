@@ -4,7 +4,7 @@ YourBench supports using any OpenAI-compatible model by configuring the `base_ur
 
 ## OpenRouter Example
 
-OpenRouter exposes an OpenAI-compatible API. You can target it by setting the `base_url` and using the `OPENROUTER_API_KEY` environment variable. Provider-specific options like `reasoning` can be passed via `extra_parameters`.
+OpenRouter exposes an OpenAI-compatible API. Set `base_url` and `OPENROUTER_API_KEY`. Provider-specific options (like `reasoning`) go in `extra_parameters`.
 
 ```yaml
 model_list:
@@ -17,11 +17,13 @@ model_list:
         effort: medium
 ```
 
-From the CLI when running against a folder of documents:
+With uvx CLI:
 
 ```bash
 export OPENROUTER_API_KEY=your_openrouter_key
-yourbench run ./docs --model "x-ai/grok-4-fast:free" \
+uvx --from yourbench yourbench run example/default_example/config.yaml \
+  --debug \
+  --model x-ai/grok-4-fast:free \
   --base-url https://openrouter.ai/api/v1 \
   --model-extra-parameters '{"reasoning": {"effort": "medium"}}'
 ```

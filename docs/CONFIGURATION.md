@@ -23,6 +23,7 @@ YourBench uses YAML configuration files to define your pipeline settings. This g
   - [Custom Prompts](#custom-prompts)
   - [Custom Question Schemas](#custom-question-schemas)
   - [Model Role Assignment](#model-role-assignment)
+- [Minimal Example](#minimal-example)
 - [Configuration Examples](#configuration-examples)
 
 ## Overview
@@ -57,6 +58,33 @@ Key points:
 - **Pipeline stages are enabled by presence** - if a stage appears in `pipeline:`, it runs
 - **Environment variables** can be used with `$VAR_NAME` syntax
 - **Model roles** are auto-assigned if not specified (uses first model in `model_list`)
+
+## Minimal Example
+
+Smallest working config (ingestion → chunking → single-shot → LightEval). Requires env vars in `.env` (`OPENAI_API_KEY`; optionally `OPENAI_BASE_URL`, `HF_TOKEN`, `HF_ORGANIZATION`).
+
+```yaml
+hf_configuration:
+  hf_dataset_name: my-dataset
+
+model_list:
+  - model_name: ${OPENAI_MODEL:-gpt-4o-mini}
+    api_key: $OPENAI_API_KEY
+    base_url: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+
+pipeline:
+  ingestion:
+    source_documents_dir: example/default_example/data
+  chunking:
+  single_shot_question_generation:
+  prepare_lighteval:
+```
+
+Run it:
+
+```bash
+uvx --from yourbench yourbench run minimal.yaml --debug
+```
 
 ## Core Components
 

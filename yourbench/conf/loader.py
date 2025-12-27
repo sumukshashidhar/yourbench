@@ -186,8 +186,8 @@ def _load_prompts(config: YourbenchConfig) -> None:
 
             # Set the value on the Pydantic model
             setattr(obj, field, new_value)
-        except Exception:
-            pass  # Silently skip if path doesn't exist
+        except Exception as exc:
+            logger.warning("Failed to load prompt", path=".".join(path_tuple), default=default_key, error=exc)
 
 
 def _assign_model_roles(config: YourbenchConfig) -> None:

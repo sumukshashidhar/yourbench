@@ -38,18 +38,18 @@ Generate high-quality QA pairs and evaluation datasets from any source documents
 
 ## Quick Start
 
-Run instantly with [uv](https://docs.astral.sh/uv/getting-started/installation/) (no install needed):
+Use [uv](https://docs.astral.sh/uv/getting-started/installation/) to run the packaged CLI directly:
 
 ```bash
-uvx yourbench <YOUR_DOCUMENT_FOLDER> --model openai/gpt-4o-mini
+uvx --from yourbench yourbench run example/default_example/config.yaml --debug
 ```
 
-Set `HF_TOKEN` to also upload to the Hugging Face Hub.
+The example config works out-of-the-box with env vars from `.env` (see `.env.template`).
 
-**Or with a config file:**
+Install locally if you prefer:
 
 ```bash
-pip install yourbench
+uv pip install yourbench
 yourbench run example/default_example/config.yaml
 ```
 
@@ -126,6 +126,7 @@ class DataFormat(BaseModel):
 | [FAQ](./docs/FAQ.md) | Common questions and troubleshooting |
 | [OpenAI-Compatible Models](./docs/USING_OPENAI_COMPATIBLE_MODELS.md) | Use vLLM, Ollama, etc. |
 | [Dataset Columns](./docs/DATASET_COLUMNS_DESCRIPTION.md) | Output field descriptions |
+| [Academic Paper](./docs/academic/paper.pdf) | COLM 2025 submission |
 
 ## Try Online
 
